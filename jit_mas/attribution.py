@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Sequence
 
@@ -28,15 +29,60 @@ class Proposals(Record):
     proposals: list[ChangeProposal] = Field(default_factory=list)
 
 
+def feedback_view(feedback: EvaluationFeedback) -> dict:
+    """Keep complete criterion feedback, not duplicated evaluator request/response audits."""
+    feedback = EvaluationFeedback.model_validate(feedback)
+    view = feedback.model_dump(mode="json", exclude={"raw", "rubrics"})
+    view["rubrics"] = []
+    for rubric in feedback.rubrics:
+        row = rubric.model_dump(mode="json", exclude={"raw"})
+        # Quote verification and other semantic judge findings are not audit duplication.
+        for field in ("axis", "confidence", "evidence_locations", "missing_elements", "error"):
+            if field in rubric.raw:
+                row[field] = copy.deepcopy(rubric.raw[field])
+        row["signed_contribution"] = None if rubric.score is None else rubric.weight * rubric.score
+        row["desired_score"] = 1.0 if rubric.weight > 0 else 0.0 if rubric.weight < 0 else None
+        if rubric.status != "ok" or rubric.score is None:
+            row["assessment"] = "evaluation_unavailable"
+        elif rubric.weight < 0:
+            row["assessment"] = "penalty_avoided" if rubric.score == 0 else "penalty_applied"
+        elif rubric.weight == 0:
+            row["assessment"] = "zero_weight"
+        else:
+            row["assessment"] = ("positive_criterion_met" if rubric.score == 1 else
+                                 "positive_criterion_missed" if rubric.score == 0 else
+                                 "positive_criterion_partial")
+        view["rubrics"].append(row)
+    return view
+
+
+SIGNED_SCORE_PROMPT = """Interpret scoring by signed_contribution = weight * score, not
+the verdict word alone. Positive-weight criteria reward satisfaction. Negative-weight
+criteria describe behavior to avoid: Satisfied (score=1) applies a penalty, whereas
+Not Satisfied (score=0) avoids that penalty and is the desired outcome. Do not claim
+that absence of a negative-weight behavior lost points, or propose satisfying that
+negative criterion to improve the official score. desired_score and assessment are
+derived diagnostics; they never replace the original criterion, verdict or score.
+An unavailable evaluation does not establish success or failure."""
+
+
 ALIGN_PROMPT = """Semantically align predicted quality requirements with independently
-evaluated criteria. IDs or literal text need not match. Support paraphrases, partial
+evaluated criteria. Determine matching by meaning, not equality of predicted and evaluated
+IDs or literal text. Support paraphrases, partial
 coverage, one-to-many splits, many-to-one merges and many-to-many mappings. Preserve
 uncertain matches with their confidence and rationale. Distinguish prohibition from a
 desired behavior; negative evaluator weights describe penalties and remain signed.
 Report unmatched predictions without assuming they were wrong: evaluation can be
 nonexhaustive. Include every omitted evaluated criterion and unmatched prediction.
 Importance is a planner priority, not the evaluator weight: compare relative magnitude
-only with a stated rationale. Do not modify either input graph or evaluation record."""
+only with a stated rationale. Do not modify either input graph or evaluation record.
+Copy predicted_ids only from valid_predicted_ids and evaluated_ids only from
+valid_evaluated_ids, preserving every character including long prefixes and suffixes.
+Never invent, abbreviate, renumber or substitute criterion text for an ID. Each match
+requires nonempty predicted_ids AND evaluated_ids; use missed_evaluated_ids and
+unmatched_predicted_ids for omissions, never an empty-sided match. Evidence quotes with
+evidence_locations.verified=false are not confirmed verbatim excerpts; confidence is
+the evaluator's reported confidence, not proof of correctness.""" + "\n" + SIGNED_SCORE_PROMPT
 
 OUTLINE_PROMPT = """Develop an initial, evidence-supported attribution hypothesis after
 submission and independent evaluation. Inspect both frozen quality predictions, their
@@ -49,6 +95,12 @@ requirements/priorities), organization (ownership, handoffs, review or budget), 
 insufficient/conflicting evidence). An unowned missed requirement does not justify blaming
 an arbitrary agent. Cite only supplied evidence IDs, record opposing evidence, alternatives
 and uncertainty. This is a hypothesis, not an identified causal effect."""
+
+FEEDBACK_IDS_PROMPT = """Copy rubric IDs exactly from the supplied graphs and feedback;
+copy evidence references exactly from evidence_ids. A feedback:<rubric_id> reference is
+an evidence ID, not a rubric ID. Quote verification flags describe whether the quoted
+text was found verbatim; do not treat unverified quotes as exact observations or change
+the recorded official score based on this diagnostic.""" + "\n" + SIGNED_SCORE_PROMPT
 
 LOCAL_ATTRIBUTION_PROMPT = """Analyze your own execution with your complete observable local
 context, the relevant rubric feedback, global questions and upstream/downstream evidence.
@@ -74,21 +126,32 @@ attribution findings. Each proposal changes one experience in exactly one bank: 
 (task signals and quality prediction), organization (capability grouping, ownership,
 dependencies, review and budget), or execution (a reusable capability-specific practice).
 Store transferable instructions, never answers or hidden criterion text specific to the
-source task. Record applicability, task signals, capability signature for execution advice,
+source task. Do not copy a private source criterion's numerical threshold or target
+algorithm names into a cross-task rule. Applicability and task_signals must depend on
+public task features; future agents cannot assume access to private benchmark rubrics.
+Record applicability, task signals, capability signature for execution advice,
 source task, evidence and counterevidence, concrete diff, old state version, expected benefit,
 risks and a paired independent-task validation plan. Success findings can yield conditional
 positive advice. Only supported findings justify a proposal; abstain when evidence is
 insufficient. Cite evidence IDs from the findings and do not invent new evidence. All proposed
 experience has validation_status=staged and validation_result remains empty. Proposing is
 not accepting; only actual paired reruns may validate a change. Do not edit evaluator,
-hidden rubrics, split manifests, runtime or budget guards. Return at most three proposals."""
+hidden rubrics, split manifests, runtime or budget guards. Return at most three proposals.
+Both proposal.evidence and proposal.experience.evidence must contain exact IDs from
+valid_supporting_evidence_ids. experience.counterevidence must use exact IDs from
+valid_counterevidence_ids. A finding_id identifies an analysis, not an observation:
+refer to finding IDs only in rationale, never substitute them for evidence IDs. Follow
+the finding's supporting_evidence references instead. Do not abbreviate or renumber IDs.
+When scoring_context is available, ground any claimed score improvement in its signed
+criterion interpretation rather than assuming every Not Satisfied verdict is a defect.""" + "\n" + SIGNED_SCORE_PROMPT
 
 
 class RubricAttributor(JsonModelCalls):
     def __init__(self, global_model: Callable,
                  local_model_factory: Callable[[str], Callable] | None = None, *,
-                 max_parallel: int = 2, local_attribution: bool = True):
-        super().__init__()
+                 max_parallel: int = 2, local_attribution: bool = True,
+                 max_corrections: int = 1):
+        super().__init__(max_corrections=max_corrections)
         self.global_model = global_model
         self.local_model_factory = local_model_factory or (lambda _aid: global_model)
         self.max_parallel = max_parallel
@@ -96,19 +159,27 @@ class RubricAttributor(JsonModelCalls):
         self.last_global_outline: AttributionOutline | None = None
         self.last_local_findings: dict[str, Findings] = {}
         self.last_alignments: dict[str, RubricAlignment] = {}
+        self._scoring_context: dict | None = None
 
     def align(self, graph: RubricGraph, feedback: EvaluationFeedback) -> RubricAlignment:
-        alignment = self.ask(self.global_model, "align", ALIGN_PROMPT,
-                             {"prediction": graph, "feedback": feedback}, RubricAlignment)
         predicted = {r.rubric_id for r in graph.rubrics}
         evaluated = {r.rubric_id for r in feedback.rubrics}
+
+        def validate(alignment):
+            for match in alignment.matches:
+                if (not match.predicted_ids or not match.evaluated_ids
+                        or not set(match.predicted_ids) <= predicted
+                        or not set(match.evaluated_ids) <= evaluated):
+                    raise ValueError("Alignment contains empty or unknown rubric references")
+
+        alignment = self.ask(self.global_model, "align", ALIGN_PROMPT,
+                             {"prediction": graph, "feedback": feedback_view(feedback),
+                              "valid_predicted_ids": [r.rubric_id for r in graph.rubrics],
+                              "valid_evaluated_ids": [r.rubric_id for r in feedback.rubrics]}, RubricAlignment,
+                             validate=validate)
         matched_predicted: set[str] = set()
         matched_evaluated: set[str] = set()
         for match in alignment.matches:
-            if (not match.predicted_ids or not match.evaluated_ids
-                    or not set(match.predicted_ids) <= predicted
-                    or not set(match.evaluated_ids) <= evaluated):
-                raise ValueError("Alignment contains empty or unknown rubric references")
             matched_predicted.update(match.predicted_ids)
             matched_evaluated.update(match.evaluated_ids)
         # Unmatched sets are bookkeeping, not another semantic model judgment.
@@ -156,19 +227,27 @@ class RubricAttributor(JsonModelCalls):
             "artifact", "artifact_created", "artifact_published", "submitted", "final_answer",
             "handoff", "message_sent"}]
         submission_id = "submission:" + digest(data.get("answer"))
+        evaluation = feedback_view(feedback)
+        self._scoring_context = {"task_id": feedback.task_id, "criteria": [
+            {key: row[key] for key in ("rubric_id", "criterion", "weight", "score",
+                                       "signed_contribution", "desired_score", "assessment")}
+            for row in evaluation["rubrics"]]}
         context = {"task": task, "global_graph": global_graph, "planned_graph": planned_graph,
-                   "team": team, "feedback": feedback, "alignments": self.last_alignments,
+                   "team": team, "feedback": evaluation, "alignments": self.last_alignments,
                    "submission": {"evidence_id": submission_id, "answer": data.get("answer")},
                    "event_index": event_index, "shared_artifacts": shared,
                    "evidence_ids": [*event_by_id, submission_id,
                                     *["feedback:" + r.rubric_id for r in feedback.rubrics],
                                     "planning:global", "planning:planned", "planning:team"]}
-        outline = self.ask(self.global_model, "attribute_global", OUTLINE_PROMPT,
-                           context, AttributionOutline)
-        self.last_global_outline = outline
         known_agents = {agent.agent_id for agent in team.agents}
-        if not set(outline.questions) <= known_agents:
-            raise ValueError("Global attribution addressed an unknown agent")
+
+        def validate_outline(outline):
+            if not set(outline.questions) <= known_agents:
+                raise ValueError("Global attribution addressed an unknown agent")
+
+        outline = self.ask(self.global_model, "attribute_global", OUTLINE_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
+                           context, AttributionOutline, validate=validate_outline)
+        self.last_global_outline = outline
         evaluated_to_predicted: dict[str, set[str]] = {}
         for match in planned_alignment.matches:
             for evaluated in match.evaluated_ids:
@@ -182,8 +261,8 @@ class RubricAttributor(JsonModelCalls):
                     categories=["external_or_uncertain"], agent_ids=[aid],
                     component="trace", hypothesis="Complete local observable trace is unavailable",
                     alternatives=["The agent may not have been scheduled"], uncertainty=1.0)])
-            relevant = [r for r in feedback.rubrics if
-                        evaluated_to_predicted.get(r.rubric_id, set()).intersection(agent.rubric_ids)]
+            relevant = [r for r in evaluation["rubrics"] if
+                        evaluated_to_predicted.get(r["rubric_id"], set()).intersection(agent.rubric_ids)]
             # Full local I/O is retained; only indexed, connected cross-agent events are shared.
             related = [event for event in events if event.get("agent_id") == aid
                        or event.get("recipient") == aid
@@ -195,18 +274,26 @@ class RubricAttributor(JsonModelCalls):
                        "event_index": event_index, "submission": context["submission"],
                        "evidence_ids": context["evidence_ids"]}
             model = self.local_model_factory(aid)
-            findings = self.ask(model, "attribute_local", LOCAL_ATTRIBUTION_PROMPT,
-                                payload, Findings, agent_id=aid)
-            requested = list(dict.fromkeys(findings.evidence_requests))
-            if len(requested) > 8 or any(eid not in event_by_id for eid in requested):
-                raise ValueError("Local attribution requested unavailable or too many events")
-            if requested:
-                findings = self.ask(model, "attribute_local_followup", LOCAL_ATTRIBUTION_PROMPT,
-                                    {**payload, "prior_analysis": findings,
-                                     "requested_evidence": [event_by_id[eid] for eid in requested],
-                                     "remaining_exchanges": 0}, Findings, agent_id=aid)
+
+            def validate_requests(findings):
+                requested = set(findings.evidence_requests)
+                if len(requested) > 8 or not requested <= event_by_id.keys():
+                    raise ValueError("Local attribution requested unavailable or too many events")
+
+            def validate_followup(findings):
                 if findings.evidence_requests:
                     raise ValueError("Local attribution exceeded its evidence exchange limit")
+
+            findings = self.ask(model, "attribute_local", LOCAL_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
+                                payload, Findings, agent_id=aid, validate=validate_requests)
+            requested = list(dict.fromkeys(findings.evidence_requests))
+            if requested:
+                findings = self.ask(model, "attribute_local_followup",
+                                    LOCAL_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
+                                    {**payload, "prior_analysis": findings,
+                                     "requested_evidence": [event_by_id[eid] for eid in requested],
+                                     "remaining_exchanges": 0}, Findings, agent_id=aid,
+                                    validate=validate_followup)
             return aid, findings
 
         self.last_local_findings = {}
@@ -214,22 +301,27 @@ class RubricAttributor(JsonModelCalls):
             with ThreadPoolExecutor(max_workers=self.max_parallel) as pool:
                 futures = [pool.submit(analyze_agent, agent) for agent in team.agents]
                 self.last_local_findings = dict(future.result() for future in futures)
-        final = self.ask(self.global_model, "attribute_integrate", INTEGRATE_PROMPT,
-                         {**context, "global_outline": outline,
-                          "local_findings": self.last_local_findings}, Findings)
         valid_evidence = set(context["evidence_ids"])
         valid_rubrics = ({r.rubric_id for r in planned_graph.rubrics}
                          | {r.rubric_id for r in global_graph.rubrics}
                          | {r.rubric_id for r in feedback.rubrics})
-        finding_ids: set[str] = set()
+
+        def validate_findings(final):
+            finding_ids: set[str] = set()
+            for finding in final.findings:
+                if finding.finding_id in finding_ids:
+                    raise ValueError("Duplicate attribution finding ID")
+                finding_ids.add(finding.finding_id)
+                if not set(finding.agent_ids) <= known_agents or not set(finding.rubric_ids) <= valid_rubrics:
+                    raise ValueError("Attribution references unknown agents or rubrics")
+                if not set(finding.supporting_evidence + finding.opposing_evidence) <= valid_evidence:
+                    raise ValueError("Attribution invented an evidence reference")
+
+        final = self.ask(self.global_model, "attribute_integrate", INTEGRATE_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
+                         {**context, "global_outline": outline,
+                          "local_findings": self.last_local_findings}, Findings,
+                         validate=validate_findings)
         for finding in final.findings:
-            if finding.finding_id in finding_ids:
-                raise ValueError("Duplicate attribution finding ID")
-            finding_ids.add(finding.finding_id)
-            if not set(finding.agent_ids) <= known_agents or not set(finding.rubric_ids) <= valid_rubrics:
-                raise ValueError("Attribution references unknown agents or rubrics")
-            if not set(finding.supporting_evidence + finding.opposing_evidence) <= valid_evidence:
-                raise ValueError("Attribution invented an evidence reference")
             if not finding.supporting_evidence:
                 finding.categories = ["external_or_uncertain"]
                 finding.uncertainty = max(finding.uncertainty, 0.9)
@@ -253,10 +345,21 @@ class RubricAttributor(JsonModelCalls):
                      and any(category != "external_or_uncertain" for category in finding.categories)]
         if not supported:
             return []
-        proposals = self.ask(self.global_model, "propose", PROPOSE_PROMPT,
+        evidence = {eid for finding in supported for eid in finding.supporting_evidence}
+        counterevidence = evidence | {eid for finding in supported for eid in finding.opposing_evidence}
+        scoring = (self._scoring_context if self._scoring_context
+                   and self._scoring_context["task_id"] == task.task_id else None)
+        return self.ask(self.global_model, "propose", PROPOSE_PROMPT,
                              {"task": task, "findings": supported,
-                              "base_version": base_version, "experiences": experiences},
-                             Proposals).proposals
+                              "base_version": base_version, "experiences": experiences,
+                              "valid_supporting_evidence_ids": sorted(evidence),
+                              "valid_counterevidence_ids": sorted(counterevidence),
+                              "scoring_context": scoring},
+                             Proposals, validate=lambda result: self._validate_proposals(
+                                 result.proposals, task, supported, base_version, experiences)).proposals
+
+    @staticmethod
+    def _validate_proposals(proposals, task, supported, base_version, experiences):
         if len(proposals) > 3:
             raise ValueError("At most three single-experience proposals are allowed")
         evidence = {eid for finding in supported for eid in finding.supporting_evidence}
@@ -271,11 +374,17 @@ class RubricAttributor(JsonModelCalls):
             if exp.source_task_ids != [task.task_id]:
                 raise ValueError("Proposal must cite the observed source task")
             if not set(proposal.evidence + exp.evidence) <= evidence:
-                raise ValueError("Proposal evidence is not supported by attribution")
+                raise ValueError("Proposal evidence is not supported by attribution: "
+                    f"proposal_id={proposal.proposal_id}; "
+                    f"invalid_proposal_evidence_ids={sorted(set(proposal.evidence) - evidence)}; "
+                    f"invalid_experience_evidence_ids={sorted(set(exp.evidence) - evidence)}; "
+                    f"valid_supporting_evidence_ids={sorted(evidence)}. "
+                    "finding_id is for rationale, not an evidence reference.")
             if not set(exp.counterevidence) <= counterevidence | evidence:
-                raise ValueError("Proposal invented counterevidence")
+                raise ValueError("Proposal invented counterevidence: "
+                    f"invalid_counterevidence_ids={sorted(set(exp.counterevidence) - (counterevidence | evidence))}; "
+                    f"valid_counterevidence_ids={sorted(counterevidence | evidence)}")
             if exp.bank == "execution" and not exp.capability.strip():
                 raise ValueError("Execution experience requires a reusable capability signature")
             if proposal.replaces_id and proposal.replaces_id not in existing:
                 raise ValueError("Proposal replaces an unknown experience")
-        return proposals

@@ -4,16 +4,32 @@ from __future__ import annotations
 
 import copy
 import json
-import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Sequence, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter, ValidationError, model_validator
 
-from .schemas import AgentSpec, LocalPlan, PlannedTeam, Prediction, PublicTask
+from .experience import capability_matches
+from .schemas import (
+    AgentSpec, LocalPlan, PlannedTeam, Prediction, PublicTask, Record, RubricGraph, TeamSpec,
+)
 
 T = TypeVar("T", bound=BaseModel)
+
+
+class _ReconciliationResponse(Record):
+    graph: RubricGraph
+    team: TeamSpec
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_legacy_plan_echo(cls, value: Any) -> Any:
+        # Older scripted providers echoed plans; authors' validated originals remain authoritative.
+        if isinstance(value, dict) and "local_plans" in value:
+            TypeAdapter(list[LocalPlan]).validate_python(value["local_plans"])
+            return {key: item for key, item in value.items() if key != "local_plans"}
+        return value
 
 
 def as_json(value: Any) -> Any:
@@ -29,29 +45,68 @@ def as_json(value: Any) -> Any:
 class JsonModelCalls:
     """Each call is a fresh context; records contain only observable I/O."""
 
-    def __init__(self):
+    def __init__(self, *, max_corrections: int = 1):
+        if type(max_corrections) is not int or not 0 <= max_corrections <= 1:
+            raise ValueError("At most one structured-response correction is allowed")
+        self.max_corrections = max_corrections
         self.call_records: list[dict[str, Any]] = []
         self._records_lock = threading.Lock()
 
+    @staticmethod
+    def _validation_errors(exc: ValueError) -> list[dict]:
+        if isinstance(exc, ValidationError):
+            return [{"location": list(item["loc"]), "type": item["type"], "message": item["msg"]}
+                    for item in exc.errors(include_input=False, include_url=False)]
+        if isinstance(exc, json.JSONDecodeError):
+            return [{"type": "json_decode", "message": exc.msg,
+                     "line": exc.lineno, "column": exc.colno}]
+        return [{"type": "contract", "message": str(exc)}]
+
     def ask(self, model: Callable, phase: str, instructions: str, payload: dict,
-            schema: type[T], *, agent_id: str = "global") -> T:
-        messages = [
-            {"role": "system", "content": instructions + "\nReturn only one JSON object "
-             "conforming to this JSON Schema:\n" + json.dumps(schema.model_json_schema())},
-            {"role": "user", "content": json.dumps(
-                {"phase": phase, "agent_id": agent_id, **as_json(payload)}, ensure_ascii=False)},
-        ]
-        response = model(copy.deepcopy(messages))
-        content = response if isinstance(response, str) else getattr(response, "content", None)
-        if not isinstance(content, str):
-            raise ValueError(f"{phase}: model response must contain JSON text")
-        with self._records_lock:
-            self.call_records.append({"phase": phase, "agent_id": agent_id,
-                                      "messages": messages, "response": content})
-        stripped = content.strip()
-        if stripped.startswith("```") and stripped.endswith("```"):
-            stripped = "\n".join(stripped.splitlines()[1:-1])
-        return schema.model_validate(json.loads(stripped))
+            schema: type[T], *, agent_id: str = "global",
+            validate: Callable[[T], None] | None = None) -> T:
+        system = instructions + "\nReturn only one JSON object conforming to this JSON Schema:\n" \
+            + json.dumps(schema.model_json_schema())
+        original_payload = {"phase": phase, "agent_id": agent_id, **as_json(payload)}
+        correction = None
+        for attempt in range(self.max_corrections + 1):
+            request = copy.deepcopy(original_payload)
+            if correction is not None:
+                request["response_correction"] = correction
+            messages = [{"role": "system", "content": system},
+                        {"role": "user", "content": json.dumps(request, ensure_ascii=False)}]
+            # Transport, authentication and budget failures are not output corrections.
+            response = model(copy.deepcopy(messages))
+            content = response if isinstance(response, str) else getattr(response, "content", None)
+            record = {"phase": phase, "agent_id": agent_id, "attempt": attempt,
+                      "messages": messages, "response": content}
+            try:
+                if not isinstance(content, str):
+                    raise ValueError(f"{phase}: model response must contain JSON text")
+                stripped = content.strip()
+                if stripped.startswith("```") and stripped.endswith("```"):
+                    stripped = "\n".join(stripped.splitlines()[1:-1])
+                result = schema.model_validate(json.loads(stripped))
+                if validate is not None:
+                    validate(result)
+            except ValueError as exc:
+                errors = self._validation_errors(exc)
+                record["validation_errors"] = errors
+                if attempt == self.max_corrections:
+                    raise
+                correction = {
+                    "instruction": "Your previous response failed the stated output contract. "
+                    "Return one complete corrected JSON object using the original inputs and "
+                    "these validation errors. Do not alter evidence, task constraints or budgets "
+                    "to evade validation. This is the only correction attempt.",
+                    "previous_response": content, "validation_errors": errors,
+                }
+            else:
+                return result
+            finally:
+                with self._records_lock:
+                    self.call_records.append(record)
+        raise RuntimeError("Structured-response attempts unexpectedly exhausted")
 
 
 PREDICT_PROMPT = """You organize an executable team for this public task before any answer
@@ -64,7 +119,15 @@ One agent may cover several requirements, and several agents may contribute to o
 Use one agent when sufficient. Explain evidence needs and rubric relationships; a rubric
 relationship is not automatically an execution dependency or a causal claim. Accepted
 historical experience is conditional advice, not a source of task answers. Do not answer
-the task. Choose only public tools and remain within the supplied limits."""
+the task. Choose only public tools and remain within the supplied limits. Candidate IDs
+and rubric IDs must each be unique; every candidate rubric_id and every graph edge
+endpoint must reference a rubric in this graph. Estimate each candidate's max_tokens
+from its complete expected output, including JSON encoding and checkpoint overhead.
+When limits.execution_max_tokens is supplied, every candidate.max_tokens must stay
+within that per-response execution-model ceiling; a larger request cannot raise it.
+Final synthesis must emit the full requested deliverable, even when its role is called
+editor. Allocate real execution calls for a possible output-format correction within
+the shared call limit; do not assume retries or final rewrites are free."""
 
 LOCAL_PLAN_PROMPT = """You are an independent candidate agent planning from your assigned
 capability, the public task, and the initial quality graph. Inspect the draft critically.
@@ -73,32 +136,82 @@ dependencies, tools, resource needs, uncovered requirements, and risks. You may 
 the global draft, add missed requirements, refine ambiguous ones, or recommend merging
 redundant responsibilities. New requirements need new stable rubric IDs. Do not merely
 confirm acceptance, impersonate other agents, or produce the final answer. Preserve your
-assigned agent_id and capability. Use only public tools. Treat experience as conditional."""
+assigned agent_id and capability. Your rubric_ids may reference only the initial graph
+or your own additions. Use only public tools. Treat experience as conditional.
+In expected_outputs and risks, state the expected artifact length and whether the
+candidate's output-token allocation can contain it plus valid JSON and checkpoints.
+Use limits.execution_max_tokens, when present, as the actual output ceiling; requesting
+more than the execution model supports cannot make a longer artifact fit.
+If your role may synthesize the final answer, budget for the entire requested deliverable,
+not merely editorial feedback. Request any needed output-format correction in max_calls;
+all local requests compete for the same team call budget and must be reconciled."""
 
 RECONCILE_PROMPT = """Reconcile the global draft with independent local plans for this task.
 Consider every local addition, challenge, gap and resource request. Incorporate useful
 discoveries, merge redundant responsibilities, resolve conflicting dependencies, and
 record the selection rationale, including reasons for rejecting material local suggestions.
 Generate the revised graph and an executable TeamSpec. Preserve stable rubric IDs for
-unchanged requirements. Coverage is many-to-many; assign a primary owner and appropriate
-review arrangements. Agents' rubric_ids must agree with coverage. All selected tools must
-be public. Execution dependencies must be acyclic; rubric relationships need not be.
-Ensure the final synthesizer depends transitively on all contributing agents and has enough
-budget for synthesis and checks. Its job is to reconcile conflicts and gaps in the requested
-output genre, not just concatenate contributions. Agent allocations share the team budget.
+unchanged requirements. Coverage is many-to-many. The synthesizer reconciles conflicts
+and gaps in the requested output genre, not just concatenates contributions; reserve
+enough budget for synthesis and checks. Represent any merged responsibilities in the
+agents array itself, not only in the selection rationale.
+The synthesizer must independently emit the complete final deliverable requested by
+the task, not just review notes, an editing preamble, or a pointer to an upstream draft.
+Size its max_tokens for that final output plus JSON escaping, evidence IDs, checkpoints
+and a margin for valid closure. max_tokens is a per-response output ceiling, not a
+context allowance. Editing a full article still requires enough tokens to return the
+full article; a genuinely short requested summary may need fewer tokens than its sources.
+Budget a concise final response without duplicating drafts, review narration or preambles.
+When the shared limit permits, reserve at least one additional execution call for a
+possible JSON/output-contract correction in the synthesizer's max_calls. This reserve
+counts in sum(agent.max_calls) and team.total_max_calls; corrections are not free or
+extra-budget. Reconcile other agents' requests within the same limit, merging roles or
+reducing unnecessary work when needed instead of spending every call on first attempts.
 The roster, dependencies, checkpoints and budgets should follow this task's requirements,
-not a fixed workflow. Include the supplied local plans unchanged in local_plans. Return no
-answer to the task and do not invent evaluation feedback."""
+not a fixed workflow. Return only graph and team; the coordinator preserves the supplied
+local plans separately, so do not echo them. Return no answer to the task and do not invent
+evaluation feedback.
+
+Before returning, check ALL cross-field constraints against the actual JSON you will emit:
+- 1 <= len(team.agents) <= limits.max_agents. Agent IDs are unique. synthesizer_id
+  references an existing selected agent; the synthesizer counts toward this limit. When
+  the roster is full, assign synthesis to a selected agent instead of adding another.
+- depends_on contains only selected agent IDs, with no self-dependency or cycle. A
+  dependency means the downstream agent receives the upstream agent's artifact.
+- The synthesizer depends transitively on every other selected agent (or has no
+  dependencies when it is the only agent). Rubric graph relationships are not this DAG.
+  Each selected agent executes once in DAG order. A writer cannot synthesize before
+  downstream reviewers run and then implicitly run again. Select an existing downstream
+  agent for final synthesis and connect all contributors without cycles, or merge roles.
+- Rubric IDs are unique and every graph edge endpoint exists in graph.rubrics. Keys of
+  coverage, primary and reviewers must be rubric IDs in this graph; their values must
+  reference selected agent IDs. Every rubric has nonempty coverage and a primary owner
+  in coverage[rubric_id]. Each agent.rubric_ids is exactly the set of rubric IDs whose
+  coverage includes that agent.
+- For each reviewer in reviewers[rubric_id], reviewer != primary[rubric_id], and that
+  primary owner must be an ancestor of the reviewer through depends_on, directly or
+  transitively. An upstream agent cannot review a downstream owner's future artifact.
+  Do not add backward review dependencies that create cycles. reviewers is optional:
+  omit a rubric or use an empty list when no independent downstream reviewer is feasible;
+  put self-checks in checkpoints instead of claiming independent review.
+- sum(agent.max_calls) <= team.total_max_calls <= limits.total_max_calls, and
+  team.max_parallel <= limits.max_parallel. All agent tools must be in task.tools.
+- If limits.execution_max_tokens is present, every agent.max_tokens must be <= that
+  actual execution-model output ceiling, including the synthesizer. Fit the requested
+  deliverable within this bound rather than claiming an unsupported larger allowance."""
 
 
 class GlobalAnalyzer(JsonModelCalls):
     def __init__(self, global_model: Callable,
                  local_model_factory: Callable[[str], Callable] | None = None, *,
                  max_agents: int = 4, max_parallel: int = 2, local_rounds: int = 1,
-                 total_max_calls: int = 16, explicit_rubrics: bool = True):
-        super().__init__()
+                 total_max_calls: int = 16, explicit_rubrics: bool = True,
+                 max_corrections: int = 1, execution_max_tokens: int | None = None):
+        super().__init__(max_corrections=max_corrections)
         if not 1 <= local_rounds <= 3 or max_agents < 1 or max_parallel < 1:
             raise ValueError("Planning requires positive limits and one to three local rounds")
+        if execution_max_tokens is not None and (type(execution_max_tokens) is not int or execution_max_tokens < 1):
+            raise ValueError("execution_max_tokens must be a positive integer or None")
         self.global_model = global_model
         self.local_model_factory = local_model_factory or (lambda _agent_id: global_model)
         self.max_agents = max_agents
@@ -106,11 +219,15 @@ class GlobalAnalyzer(JsonModelCalls):
         self.local_rounds = local_rounds
         self.total_max_calls = total_max_calls
         self.explicit_rubrics = explicit_rubrics
+        self.execution_max_tokens = execution_max_tokens
         self.last_prediction: Prediction | None = None
 
     def _limits(self) -> dict:
-        return {"max_agents": self.max_agents, "max_parallel": self.max_parallel,
-                "total_max_calls": self.total_max_calls}
+        limits = {"max_agents": self.max_agents, "max_parallel": self.max_parallel,
+                  "total_max_calls": self.total_max_calls}
+        if self.execution_max_tokens is not None:
+            limits["execution_max_tokens"] = self.execution_max_tokens
+        return limits
 
     def _prompt(self, prompt: str) -> str:
         if self.explicit_rubrics:
@@ -124,7 +241,12 @@ class GlobalAnalyzer(JsonModelCalls):
         task = PublicTask.model_validate(task)
         prediction = self.ask(self.global_model, "predict", self._prompt(PREDICT_PROMPT),
                               {"task": task, "experiences": experiences,
-                               "limits": self._limits()}, Prediction)
+                               "limits": self._limits()}, Prediction,
+                              validate=lambda item: self._validate_prediction(task, item))
+        self.last_prediction = prediction.model_copy(deep=True)
+        return prediction
+
+    def _validate_prediction(self, task: PublicTask, prediction: Prediction) -> None:
         if not self.explicit_rubrics and (prediction.graph.rubrics or prediction.graph.edges):
             raise ValueError("Explicit rubrics are disabled for this ablation")
         ids = [agent.agent_id for agent in prediction.candidates]
@@ -133,29 +255,33 @@ class GlobalAnalyzer(JsonModelCalls):
         rubric_ids = {r.rubric_id for r in prediction.graph.rubrics}
         for agent in prediction.candidates:
             self._check_agent(task, agent, rubric_ids)
-        self.last_prediction = prediction.model_copy(deep=True)
-        return prediction
 
-    @staticmethod
-    def _check_agent(task: PublicTask, agent: AgentSpec, rubric_ids: set[str]):
+    def _check_agent(self, task: PublicTask, agent: AgentSpec, rubric_ids: set[str]):
         if not set(agent.tools) <= set(task.tools):
             raise ValueError(f"Agent {agent.agent_id} requested unavailable tools")
         if not set(agent.rubric_ids) <= rubric_ids:
             raise ValueError(f"Agent {agent.agent_id} references unknown rubrics")
+        if self.execution_max_tokens is not None and agent.max_tokens > self.execution_max_tokens:
+            raise ValueError(f"Agent {agent.agent_id}.max_tokens={agent.max_tokens} exceeds "
+                             f"limits.execution_max_tokens={self.execution_max_tokens}; "
+                             "fit its complete output and JSON overhead within the actual ceiling")
 
     def local_plan(self, task: PublicTask, prediction: Prediction, candidate: AgentSpec,
                    experiences: Sequence = ()) -> LocalPlan:
-        capability = set(re.findall(r"\w+", candidate.capability.casefold()))
         local_experiences = []
         for experience in as_json(experiences):
-            signature = set(re.findall(r"\w+", experience.get("capability", "").casefold()))
-            if experience.get("bank") != "execution" or capability.intersection(signature):
+            if (experience.get("bank") != "execution"
+                    or capability_matches(experience.get("capability", ""), candidate.capability)):
                 local_experiences.append(experience)
-        plan = self.ask(self.local_model_factory(candidate.agent_id), "local_plan",
+        return self.ask(self.local_model_factory(candidate.agent_id), "local_plan",
                         self._prompt(LOCAL_PLAN_PROMPT),
                         {"task": task, "prediction": prediction, "candidate": candidate,
                          "experiences": local_experiences, "limits": self._limits()},
-                        LocalPlan, agent_id=candidate.agent_id)
+                        LocalPlan, agent_id=candidate.agent_id,
+                        validate=lambda item: self._validate_local_plan(task, prediction, candidate, item))
+
+    def _validate_local_plan(self, task: PublicTask, prediction: Prediction,
+                             candidate: AgentSpec, plan: LocalPlan) -> None:
         if plan.agent_id != candidate.agent_id or plan.capability != candidate.capability:
             raise ValueError("Local plan changed its agent identity or capability")
         if not set(plan.tools) <= set(task.tools):
@@ -168,30 +294,43 @@ class GlobalAnalyzer(JsonModelCalls):
             raise ValueError("Local additions must use unique, new rubric IDs")
         if not set(plan.rubric_ids) <= known | set(added):
             raise ValueError("Local plan references unknown rubrics")
-        return plan
 
     def reconcile(self, task: PublicTask, prediction: Prediction,
                   plans: Sequence[LocalPlan], experiences: Sequence = ()) -> PlannedTeam:
-        result = self.ask(self.global_model, "reconcile", self._prompt(RECONCILE_PROMPT),
-                          {"task": task, "prediction": prediction, "local_plans": plans,
-                           "experiences": experiences, "limits": self._limits()}, PlannedTeam)
+        response = self.ask(self.global_model, "reconcile", self._prompt(RECONCILE_PROMPT),
+                            {"task": task, "prediction": prediction, "local_plans": plans,
+                             "experiences": experiences, "limits": self._limits()},
+                            _ReconciliationResponse,
+                            validate=lambda item: self._validate_reconciliation(task, item))
         # Local testimony belongs to its author, not the reconciler.
-        result.local_plans = [plan.model_copy(deep=True) for plan in plans]
+        result = PlannedTeam(graph=response.graph, team=response.team,
+                             local_plans=[plan.model_copy(deep=True) for plan in plans])
+        return result
+
+    def _validate_reconciliation(self, task: PublicTask, result: _ReconciliationResponse) -> None:
         team = result.team
         if not self.explicit_rubrics and (result.graph.rubrics or result.graph.edges
                                          or team.coverage or team.primary or team.reviewers):
             raise ValueError("Explicit rubrics are disabled for this ablation")
         if (len(team.agents) > self.max_agents or team.max_parallel > self.max_parallel
                 or team.total_max_calls > self.total_max_calls):
-            raise ValueError("Reconciled team exceeds configured resource limits")
+            raise ValueError("Reconciled team exceeds configured resource limits: "
+                             f"agents={len(team.agents)} <= {self.max_agents}, "
+                             f"max_parallel={team.max_parallel} <= {self.max_parallel}, "
+                             f"total_max_calls={team.total_max_calls} <= {self.total_max_calls} required")
         known = {r.rubric_id for r in result.graph.rubrics}
         if not set(team.coverage) <= known or not set(team.reviewers) <= known:
             raise ValueError("Team coverage references unknown rubrics")
+        violations = []
         for agent in team.agents:
-            self._check_agent(task, agent, known)
+            try:
+                self._check_agent(task, agent, known)
+            except ValueError as exc:
+                violations.append(str(exc))
             assigned = {rid for rid, owners in team.coverage.items() if agent.agent_id in owners}
             if assigned != set(agent.rubric_ids):
-                raise ValueError("Agent assignments disagree with rubric coverage")
+                raise ValueError("Agent assignments disagree with rubric coverage: "
+                                 f"{agent.agent_id}.rubric_ids must be {sorted(assigned)}")
         if any(not team.coverage.get(rid) or rid not in team.primary for rid in known):
             raise ValueError("Every planned rubric requires coverage and a primary owner")
         dependencies = {agent.agent_id: set(agent.depends_on) for agent in team.agents}
@@ -201,8 +340,22 @@ class GlobalAnalyzer(JsonModelCalls):
             previous = set(ancestors)
             ancestors.update(dep for aid in previous for dep in dependencies[aid])
         if ancestors != set(dependencies) - {team.synthesizer_id}:
-            raise ValueError("Final synthesizer must depend on every contributing agent")
-        return result
+            missing = sorted(set(dependencies) - {team.synthesizer_id} - ancestors)
+            edges = sorted((upstream, downstream) for downstream, upstreams in dependencies.items()
+                           for upstream in upstreams)
+            upstreams = {upstream for upstream, _ in edges}
+            terminals = sorted(set(dependencies) - upstreams)
+            violations.append("Final synthesizer must depend on every contributing agent: "
+                             f"synthesizer_id={team.synthesizer_id!r}; ancestors={sorted(ancestors)}; "
+                             f"missing_contributor_ids={missing}; "
+                             f"edges_upstream_to_downstream={edges}; terminal_candidates={terminals}. "
+                             "Each agent executes once in DAG order. Select an existing downstream "
+                             "agent and connect every missing contributor without a cycle, or merge "
+                             "responsibilities and remove redundant agents. Changing only the "
+                             "synthesizer_id may be insufficient; never add backward edges to an "
+                             "upstream writer that already feeds its reviewers.")
+        if violations:
+            raise ValueError("; ".join(violations))
 
     def build(self, task: PublicTask, experiences: Sequence = (), *,
               local_planning: bool = True) -> PlannedTeam:

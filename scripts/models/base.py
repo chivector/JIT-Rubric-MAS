@@ -181,17 +181,23 @@ def get_clean_message_list(
                             "image_url": {"url": make_image_url(encode_image_base64(element.pop("image")))},
                         })
 
+        content = message["content"]
+        if flatten_messages_as_text and isinstance(content, list):
+            if any(part.get("type") != "text" for part in content):
+                raise ValueError("Cannot flatten non-text message content")
+            content = "\n\n".join(part["text"] for part in content)
         if len(output_message_list) > 0 and message["role"] == output_message_list[-1]["role"]:
-            assert isinstance(message["content"], list), "Error: wrong content:" + str(message["content"])
-            if flatten_messages_as_text:
-                output_message_list[-1]["content"] += message["content"][0]["text"]
+            previous = output_message_list[-1]["content"]
+            if isinstance(previous, str) and isinstance(content, str):
+                output_message_list[-1]["content"] = previous + "\n\n" + content
+            elif isinstance(previous, (str, list)) and isinstance(content, (str, list)):
+                # Preserve multimodal parts when adjacent messages use different forms.
+                left = [{"type": "text", "text": previous}] if isinstance(previous, str) else previous
+                right = [{"type": "text", "text": content}] if isinstance(content, str) else content
+                output_message_list[-1]["content"] = left + right
             else:
-                output_message_list[-1]["content"] += message["content"]
+                raise ValueError("Adjacent message content must be text or a list of content parts")
         else:
-            if flatten_messages_as_text:
-                content = message["content"][0]["text"]
-            else:
-                content = message["content"]
             output_message_list.append({"role": message["role"], "content": content})
     return output_message_list
 

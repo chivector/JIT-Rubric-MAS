@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import inspect
 import json
 import uuid
 from dataclasses import dataclass, field
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from jinja2 import Environment, TemplateSyntaxError, meta
 
 from jit.harness_ops import SECTION_TAG_TO_FILE, WORKSPACE_DIR, _parse_harness_response
 from jit.meta_agent import MetaReActAgent
@@ -18,10 +20,287 @@ from jit.schemas import MetaAgentRequest
 from jit.selector import _judge_case, _pick
 from scripts.models.base import ChatMessage
 
-from .execution import _data, content_hash, validate_team
+from .execution import (TeamAction, TeamMemory, TeamPlanning, TeamServices,
+                        TeamToolPolicy, _data, content_hash, run_team, validate_team)
 from .schemas import PublicTask, RubricGraph, TeamSpec
 
 SEED_DIR = Path(__file__).resolve().parents[1] / "harness_factory" / "harnesses" / "rubric_mas"
+
+_MODULE_CONTRACTS = {
+    "memory.py": ("MemoryStrategy", TeamMemory, {
+        "initialize": (2, {}), "build_context": (1, {}), "update": (1, {}),
+        "update_plan": (1, {}), "update_summary": (1, {}), "get_all_steps": (0, {}),
+    }),
+    "planning.py": ("PlanningStrategy", TeamPlanning, {
+        "bind_team": (1, {}), "init_plan": (4, {}), "should_replan": (2, {}),
+        "update_plan": (4, {}), "get_directive": (0, {}),
+    }),
+    "action.py": ("ActionStrategy", TeamAction, {"bind_team": (2, {}), "run": (2, {})}),
+    "tool_policy.py": ("ToolPolicyStrategy", TeamToolPolicy, {
+        "initialize": (1, {"enable_skills": False}), "select_tools": (4, {}),
+    }),
+}
+
+
+def _mas_contract() -> str:
+    """Render the installed API, so the model need not invent an MAS framework."""
+    lines = [
+        "JIT-MAS BINDING CONTRACT FOR THIS REQUEST",
+        "This extension specializes the generic JIT examples above. Keep the original five tagged "
+        "blocks and native loader, but use the following installed public API for MAS execution.",
+        "Exact module export names are mandatory; do not rename them TeamMemoryStrategy, "
+        "TeamPlanningStrategy, TeamActionStrategy, or TeamToolPolicyStrategy.",
+    ]
+    for filename, (export, base, methods) in _MODULE_CONTRACTS.items():
+        lines.extend([
+            f"{filename}: from jit_mas.execution import {base.__name__}",
+            f"class {export}({base.__name__}):",
+            '    """Task-specific specialization; inherited methods are already executable."""',
+            f"Installed {base.__name__} constructor: {inspect.signature(base)}",
+        ])
+        lines.extend(f"  {name}{inspect.signature(getattr(base, name))}" for name in methods)
+    lines.extend([
+        "These are API examples, not a required fixed team or a complete required output. "
+        "Design task-appropriate module policies and agent_prompt text. Retain superclass invariants "
+        "when overriding methods. The supplied TeamSpec determines roles, allocation and dependencies.",
+        "When overriding __init__, forward only parameters accepted by the installed base constructor "
+        "shown above. In particular TeamPlanning accepts prompts, not summary_interval; any additional "
+        "task-specific setting belongs on the generated subclass after super().__init__(prompts=prompts).",
+        "Installed TeamAction implementation (already available, do not redefine this base):",
+        inspect.getsource(TeamAction),
+        f"Installed helper: run_team{inspect.signature(run_team)} -> RunResult",
+        "At runtime Action.bind_team(team, services) receives team as a plain validated TeamSpec "
+        "dictionary and services as a TeamServices dataclass OBJECT. Use attribute access, e.g. "
+        "services.model_factory(agent_id), services.public_task, services.rubrics, services.experiences. "
+        "services is not a dict; services['model_factory'] and services.get(...) are invalid.",
+        "services.public_task and services.rubrics are typed models (model_dump() is available). "
+        "The runtime populates TeamServices; do not instantiate another services object, another "
+        "API client or an unrelated execution framework.",
+        f"TeamServices.event{inspect.signature(TeamServices.event)}",
+        f"TeamServices.reserve_call{inspect.signature(TeamServices.reserve_call)}",
+        "The recommended Action.run is return super().run(task, ctx). It already owns the complete "
+        "bounded loop, gives each role a separate Memory and metered model, enforces tool allowlists, "
+        "schedules dependencies/concurrency, records full I/O and executes the synthesizer exactly once. "
+        "Custom actions must preserve all these contracts. Do not switch a shared memory's current_role.",
+        "ctx.model is a coordinator guard in this MAS runner, not an execution model. Calling "
+        "ctx.model(...) fails. Use inherited execution or properly budgeted role models obtained "
+        "from services.model_factory. ctx.get_tool_schemas(tools=None) returns a JSON STRING; "
+        "the Tool objects are in ctx.tool_policy.select_tools(...).tools, not that string.",
+        "RunResult has a real sub_runs: list[RunResult] field. Never put sub_runs only inside "
+        "metadata or return plain dictionaries instead of role RunResult values. Role metadata "
+        "must include agent_id and each StepRecord preserves model_input_messages and "
+        "model_output_messages. A successful outer result uses terminated_reason='final_answer'.",
+        "prompt.yaml must define nonempty system_prompt and agent_prompt, plus planning, summary, "
+        "final_answer and step mappings. system_prompt may use only Jinja tools/skills_prompt. "
+        "agent_prompt is plain text, appended to each role's independent system message; task, role, "
+        "upstream artifacts and assigned rubric details arrive separately as structured JSON.",
+        'The exact role completion JSON is {"answer":"...","evidence_ids":[],"checkpoints":{}}. '
+        "For each assigned checkpoint, use its EXACT name as a key with boolean true only after "
+        "checking it. Missing or false checkpoint keys prevent completion. Optional reasoning must "
+        "not replace answer/checkpoints. Every role may return answer for local completion; only "
+        "the designated synthesizer submits the team's final answer.",
+        'The tool JSON is {"tools":[{"name":"...","arguments":{}}]}. Built-in collaboration '
+        "operations are send_message(recipient,content), read_evidence(event_id), raise_issue(content). "
+        "Other tools must be in the current agent's allowlist. Preserve relevant sources and "
+        "uncertainty; do not force citations onto unrelated creative tasks.",
+        "Do not read team.json at module scope, hard-code current agent IDs or mutate evaluator, "
+        "budget, accepted experience, or task-global state. Generate all FIVE modules/config now.",
+    ])
+    return "\n\n".join(lines)
+
+
+class _ContractModel:
+    """Specialize generation/repair inputs without altering any model output."""
+
+    def __init__(self, model):
+        self.model = model
+        self.last_messages = None
+
+    def __call__(self, messages, *args, **kwargs):
+        messages = copy.deepcopy(messages)
+        supplement = _mas_contract()
+        system = next((m for m in messages if m.get("role") == "system"), None)
+        if system is None:
+            messages.insert(0, {"role": "system", "content": supplement})
+        elif isinstance(system.get("content"), list):
+            system["content"].append({"type": "text", "text": supplement})
+        else:
+            system["content"] = str(system.get("content", "")) + "\n\n" + supplement
+        self.last_messages = copy.deepcopy(messages)
+        return self.model(messages, *args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self.model, name)
+
+
+def _record_actual_prompt(agent, event, *, normalized=False):
+    messages = agent.model.last_messages
+    if messages is None:
+        return
+    # MessageRole is a str Enum whose str() contains the enum name on some
+    # Python versions; compare values instead to keep JIT's existing log keys.
+    event["prompt" if normalized else "llm_prompt"] = {
+        "system_prompt": next(("\n\n".join(p.get("text", "") for p in m["content"])
+                                if isinstance(m["content"], list) else m["content"]
+                                for m in messages if m["role"] == "system"), ""),
+        "user_prompt": next(("\n\n".join(p.get("text", "") for p in m["content"])
+                              if isinstance(m["content"], list) else m["content"]
+                              for m in messages if m["role"] == "user"), ""),
+    }
+    event["model_input_messages"] = copy.deepcopy(messages)
+
+
+def _symbol(node, imports):
+    if isinstance(node, ast.Name):
+        return imports.get(node.id, node.id)
+    if isinstance(node, ast.Attribute):
+        return _symbol(node.value, imports) + "." + node.attr
+    return ""
+
+
+def _method_signature(node):
+    parameters = []
+    positional = node.args.posonlyargs + node.args.args
+    first_default = len(positional) - len(node.args.defaults)
+    for index, argument in enumerate(positional):
+        kind = (inspect.Parameter.POSITIONAL_ONLY if index < len(node.args.posonlyargs)
+                else inspect.Parameter.POSITIONAL_OR_KEYWORD)
+        default = None if index >= first_default else inspect.Parameter.empty
+        parameters.append(inspect.Parameter(argument.arg, kind, default=default))
+    if node.args.vararg:
+        parameters.append(inspect.Parameter(node.args.vararg.arg, inspect.Parameter.VAR_POSITIONAL))
+    for argument, default in zip(node.args.kwonlyargs, node.args.kw_defaults):
+        parameters.append(inspect.Parameter(argument.arg, inspect.Parameter.KEYWORD_ONLY,
+            default=None if default is not None else inspect.Parameter.empty))
+    if node.args.kwarg:
+        parameters.append(inspect.Parameter(node.args.kwarg.arg, inspect.Parameter.VAR_KEYWORD))
+    return inspect.Signature(parameters)
+
+
+def _module_interface_errors(filename, tree):
+    export, installed_base, requirements = _MODULE_CONTRACTS[filename]
+    errors, imports, classes, aliases = [], {}, {}, {}
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom):
+            imports.update({alias.asname or alias.name: f"{node.module}.{alias.name}" for alias in node.names})
+        elif isinstance(node, ast.Import):
+            imports.update({alias.asname or alias.name: alias.name for alias in node.names})
+        elif isinstance(node, ast.ClassDef):
+            classes[node.name] = node
+        elif isinstance(node, ast.Assign) and isinstance(node.value, ast.Name):
+            aliases.update({target.id: node.value.id for target in node.targets if isinstance(target, ast.Name)})
+
+    def resolve(name):
+        seen = set()
+        while name in aliases and name not in seen:
+            seen.add(name)
+            name = aliases[name]
+        return name
+
+    target = classes.get(resolve(export))
+    exported_base = imports.get(resolve(export)) == f"jit_mas.execution.{installed_base.__name__}"
+    if target is None and not exported_base:
+        errors.append(f"{filename}: must export class {export}; found {', '.join(classes) or 'no classes'}")
+        # Continue examining a misnamed class, so one repair sees all interface defects.
+        target = next(iter(classes.values()), None)
+
+    def lookup(class_node, method, seen=None):
+        if class_node is None:
+            return getattr(installed_base, method, None) if exported_base else None
+        seen = set() if seen is None else seen
+        if class_node.name in seen:
+            return None
+        seen.add(class_node.name)
+        own = next((n for n in class_node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and n.name == method), None)
+        if own is not None:
+            return own
+        for base in class_node.bases:
+            symbol = _symbol(base, imports)
+            if symbol == f"jit_mas.execution.{installed_base.__name__}":
+                return getattr(installed_base, method, None)
+            inherited = classes.get(resolve(symbol))
+            if inherited is not None:
+                found = lookup(inherited, method, seen)
+                if found is not None:
+                    return found
+        return None
+
+    for method, (positional, keywords) in {"__init__": (0, {"prompts": {}}), **requirements}.items():
+        implementation = lookup(target, method)
+        if implementation is None:
+            errors.append(f"{filename}: {export} must implement {method}{inspect.signature(getattr(installed_base, method))} "
+                          f"or inherit {installed_base.__name__}")
+            continue
+        if isinstance(implementation, ast.AsyncFunctionDef):
+            errors.append(f"{filename}: {export}.{method} must be synchronous")
+            continue
+        try:
+            signature = (_method_signature(implementation) if isinstance(implementation, ast.FunctionDef)
+                         else inspect.signature(implementation))
+            signature.bind(None, *([None] * positional), **keywords)
+        except (TypeError, ValueError) as exc:
+            errors.append(f"{filename}: incompatible {export}.{method}; expected calls compatible with "
+                          f"{method}{inspect.signature(getattr(installed_base, method))}: {exc}")
+
+    for class_node in classes.values():
+        if len(class_node.bases) != 1 or _symbol(class_node.bases[0], imports) != (
+                f"jit_mas.execution.{installed_base.__name__}"):
+            continue
+        constructor = next((node for node in class_node.body
+                            if isinstance(node, ast.FunctionDef) and node.name == "__init__"), None)
+        if constructor is None:
+            continue
+        for node in ast.walk(constructor):
+            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "__init__" and isinstance(node.func.value, ast.Call)):
+                continue
+            receiver = node.func.value
+            if not (isinstance(receiver.func, ast.Name) and receiver.func.id == "super"
+                    and not receiver.args and not receiver.keywords):
+                continue
+            signature = inspect.signature(installed_base.__init__)
+            keywords = {keyword.arg: None for keyword in node.keywords if keyword.arg is not None}
+            expanded = any(isinstance(argument, ast.Starred) for argument in node.args)
+            expanded = expanded or any(keyword.arg is None for keyword in node.keywords)
+            try:
+                # Unknown unpacked values cannot be checked statically, but explicit
+                # unsupported keywords are still definite constructor mismatches.
+                if expanded:
+                    signature.bind_partial(None, **keywords)
+                else:
+                    signature.bind(None, *([None] * len(node.args)), **keywords)
+            except TypeError as exc:
+                errors.append(f"{filename}:{node.lineno}: incompatible {class_node.name} super().__init__; "
+                              f"installed {installed_base.__name__}.__init__{signature}: {exc}")
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            if isinstance(node.func.value, ast.Name) and node.func.value.id == "ctx" and node.func.attr == "model":
+                errors.append(f"{filename}:{node.lineno}: ctx.model is a coordinator guard; use inherited TeamAction "
+                              "or the bound services.model_factory(agent_id) with budget guards")
+            receiver = node.func.value
+            service_receiver = (isinstance(receiver, ast.Name) and receiver.id == "services" or
+                                isinstance(receiver, ast.Attribute) and receiver.attr == "services")
+            if service_receiver and node.func.attr in {"get", "items", "keys", "values", "setdefault"}:
+                errors.append(f"{filename}:{node.lineno}: TeamServices is a dataclass object; use attribute access")
+        if isinstance(node, ast.Subscript):
+            value = node.value
+            if (isinstance(value, ast.Name) and value.id == "services" or
+                    isinstance(value, ast.Attribute) and value.attr == "services"):
+                errors.append(f"{filename}:{node.lineno}: TeamServices is not subscriptable; use services.field")
+    if filename == "action.py" and target is not None:
+        run_method = next((n for n in target.body if isinstance(n, ast.FunctionDef) and n.name == "run"), None)
+        if run_method is not None:
+            for node in ast.walk(run_method):
+                if isinstance(node, ast.Return) and isinstance(node.value, ast.Call):
+                    if _symbol(node.value.func, imports).rsplit(".", 1)[-1] != "RunResult":
+                        continue
+                    keywords = {kw.arg: kw.value for kw in node.value.keywords}
+                    if "sub_runs" not in keywords and None not in keywords:
+                        errors.append("action.py: outer RunResult must populate sub_runs=list[RunResult], "
+                                      "not metadata['sub_runs']; inherited TeamAction.run already does this")
+    return errors
 
 
 def seed_response() -> str:
@@ -157,8 +436,7 @@ class JITHarnessSynthesizer:
             config.setdefault("api_key", "EMPTY")
         agent = MetaReActAgent(config, {"meta_references": {"mode": "desc"},
                                        "meta_review": {"enabled": False}}, workspace_name=name)
-        if self.meta_model is not None:
-            agent.model = self.meta_model
+        agent.model = _ContractModel(self.meta_model if self.meta_model is not None else agent.model)
         self._agents[name] = agent
         return agent
 
@@ -166,7 +444,8 @@ class JITHarnessSynthesizer:
     def _description(sidecar):
         reference = (SEED_DIR.parent.parent / "descriptions" / "rubric_mas.md").read_text(encoding="utf-8")
         return (
-            "Generate a task-conditioned JIT MAS harness. These are PUBLIC inputs only:\n"
+            "Generate a task-conditioned JIT MAS harness using the exact JIT-MAS binding contract "
+            "appended to the system message. These are PUBLIC inputs only:\n"
             + json.dumps(sidecar, ensure_ascii=False, indent=2)
             + "\n\nMAS extension contract (preserve the original five tagged blocks):\n"
             + reference
@@ -176,31 +455,52 @@ class JITHarnessSynthesizer:
             "services.model_factory interface. TeamSpec must determine actual roles, tools, "
             "dependencies, checkpoints and budgets. Do not hard-code another team. "
             "Do not load team.json at module scope or write any process-wide task state. "
-            "Use services.public_task/rubrics/experiences at run time. Each action must return "
+            "Use services.public_task/rubrics/experiences as object attributes at run time. "
+            "Export MemoryStrategy, PlanningStrategy, ActionStrategy, ToolPolicyStrategy exactly. "
+            "Subclass the installed Team* implementations to reuse actual guards and full traces. "
+            "Each action must return "
             "RunResult with each role's full observed I/O in sub_runs and immutable event metadata. "
             "Runtime errors may be repaired; no evaluator feedback is available. "
             "Keep system_prompt, agent_prompt, planning, summary, final_answer, step in prompt.yaml."
         )
 
     def _validate(self, agent):
+        errors = []
         error = agent._static_harness_checks()
         if not error.startswith("No static errors detected"):
-            raise ValueError(error)
-        files = {name: (agent.workspace_dir / name).read_text(encoding="utf-8")
-                 for name in SECTION_TAG_TO_FILE.values()}
-        for filename, class_name in [("memory.py", "MemoryStrategy"),
-                                     ("planning.py", "PlanningStrategy"),
-                                     ("action.py", "ActionStrategy"),
-                                     ("tool_policy.py", "ToolPolicyStrategy")]:
-            tree = ast.parse(files[filename], filename)
-            if not any(isinstance(n, ast.ClassDef) and n.name == class_name for n in tree.body):
-                raise ValueError(f"{filename} must export class {class_name}")
-        action_tree = ast.parse(files["action.py"])
-        action_class = next(n for n in action_tree.body if isinstance(n, ast.ClassDef) and n.name == "ActionStrategy")
-        inherits_team = any(isinstance(b, ast.Name) and b.id == "TeamAction" for b in action_class.bases)
-        bound_method = any(isinstance(n, ast.FunctionDef) and n.name == "bind_team" for n in action_class.body)
-        if not inherits_team and not bound_method:
-            raise ValueError("ActionStrategy must inherit TeamAction or implement bind_team")
+            errors.append(error)
+        files = {}
+        for filename in SECTION_TAG_TO_FILE.values():
+            path = agent.workspace_dir / filename
+            if path.is_file():
+                files[filename] = path.read_text(encoding="utf-8")
+        for filename in _MODULE_CONTRACTS:
+            if filename not in files:
+                continue
+            try:
+                tree = ast.parse(files[filename], filename)
+            except SyntaxError:
+                continue  # Already included in the original JIT static report.
+            errors.extend(_module_interface_errors(filename, tree))
+        try:
+            prompts = yaml.safe_load(files.get("prompt.yaml", ""))
+        except yaml.YAMLError:
+            prompts = None
+        if isinstance(prompts, dict):
+            for key in ("system_prompt", "agent_prompt"):
+                if not isinstance(prompts.get(key), str) or not prompts[key].strip():
+                    errors.append(f"prompt.yaml: {key} must be a nonempty string")
+            if isinstance(prompts.get("system_prompt"), str):
+                try:
+                    variables = meta.find_undeclared_variables(Environment().parse(prompts["system_prompt"]))
+                    unknown = variables - {"tools", "skills_prompt"}
+                    if unknown:
+                        errors.append(f"prompt.yaml: system_prompt uses unavailable template variables {sorted(unknown)}")
+                except TemplateSyntaxError as exc:
+                    errors.append(f"prompt.yaml: invalid system_prompt template: {exc}")
+        if errors:
+            raise ValueError("JIT-MAS interface validation failed; fix all listed defects together:\n- "
+                             + "\n- ".join(dict.fromkeys(errors)))
         if self.backend == "scripted" and files != _parse_harness_response(seed_response()):
             raise ValueError("scripted backend emitted untrusted code; use native_jit with isolation")
         return files
@@ -234,6 +534,8 @@ class JITHarnessSynthesizer:
             result = agent.run(MetaAgentRequest(benchmark_adapter=adapter,
                 item={"id": _data(task)["task_id"]}, tools=[], generate_only=True,
                 max_repairs=0, repair_only_on_error=True))
+            if result.meta_agent_trajectory:
+                _record_actual_prompt(agent, result.meta_agent_trajectory[-1], normalized=True)
             trajectory = list(result.meta_agent_trajectory)
             self._generation_trajectories[name] = trajectory
             repairs = 0
@@ -248,6 +550,7 @@ class JITHarnessSynthesizer:
                         break
                     event = agent._repair_harness(str(exc), [{"error": str(exc)}],
                                                   evaluation_result={}, validation_error=str(exc))
+                    _record_actual_prompt(agent, event)
                     event["stage"] = "protocol_repair"
                     trajectory.append(event)
                     repairs += 1
@@ -298,6 +601,7 @@ class JITHarnessSynthesizer:
             failed_cases[0]["trajectory"] = [s.full_dict() for r in failed_run.sub_runs for s in r.trajectory]
         event = agent._repair_harness(str(failure), failed_cases, evaluation_result={},
                                      validation_error=str(failure))
+        _record_actual_prompt(agent, event)
         event["stage"] = "execution_exception_repair"
         artifact.meta_trajectory.append(event)
         artifact.repair_count += 1

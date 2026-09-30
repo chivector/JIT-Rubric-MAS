@@ -1,5 +1,6 @@
 """Software integration checks use no live endpoint or benchmark calls."""
 
+import ast
 import copy
 import json
 import shutil
@@ -11,7 +12,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from jit_mas.bridge import JITHarnessSynthesizer, ScriptedHarnessModel, seed_response
+from jit_mas.bridge import (JITHarnessSynthesizer, ScriptedHarnessModel,
+                            _module_interface_errors, seed_response)
+from jit.harness_ops import _parse_harness_response
 from jit_mas.budget import BudgetLedger, MeteredModel
 from jit_mas.execution import TeamExecutor, TeamMemory, content_hash, validate_team
 from jit_mas.schemas import AgentSpec, PublicTask, RubricGraph, TeamEvent, TeamSpec
@@ -404,6 +407,136 @@ class BridgeExecutionTests(unittest.TestCase):
         self.assertEqual(unrelated["review_rubrics"], [])
         self.assertIn("Independently examine", models["combine"].calls[0][0]["content"])
         self.assertEqual(result.sub_runs[-1].metadata["review_rubrics"], ["r1"])
+
+    def test_actual_mas_contract_is_in_generation_and_repair_model_inputs(self):
+        class RepairModel(ScriptedHarnessModel):
+            def __call__(self, messages, **kwargs):
+                self.calls.append(copy.deepcopy(messages))
+                response = seed_response()
+                if len(self.calls) == 1:
+                    for export in ("MemoryStrategy", "PlanningStrategy", "ActionStrategy", "ToolPolicyStrategy"):
+                        response = response.replace("class " + export, "class Team" + export)
+                return ChatMessage(role="assistant", content=response)
+
+        model = RepairModel()
+        synth, artifact = self.synthesize(meta_model=model, max_repairs=1)
+        self.assertEqual(len(model.calls), 2)
+        for messages in model.calls:
+            system = json.dumps(messages[0]["content"])
+            self.assertIn("JIT-MAS BINDING CONTRACT", system)
+            self.assertIn("class MemoryStrategy(TeamMemory)", system)
+            self.assertIn("class ActionStrategy(TeamAction)", system)
+            self.assertIn("def bind_team(self, team, services)", system)
+            self.assertIn("TeamServices dataclass OBJECT", system)
+            self.assertIn("EXACT name", system)
+        repair_input = json.dumps(model.calls[1])
+        for export in ("MemoryStrategy", "PlanningStrategy", "ActionStrategy", "ToolPolicyStrategy"):
+            self.assertIn("must export class " + export, repair_input)
+        self.assertEqual(artifact.repair_count, 1)
+        self.assertEqual(artifact.meta_trajectory[0]["model_input_messages"], model.calls[0])
+        self.assertEqual(artifact.meta_trajectory[1]["model_input_messages"], model.calls[1])
+        self.assertIn("JIT-MAS BINDING CONTRACT", artifact.meta_trajectory[0]["prompt"]["system_prompt"])
+
+    def test_interface_validation_reports_all_observed_defects_before_execution(self):
+        class InvalidModel(ScriptedHarnessModel):
+            def __call__(self, messages, **kwargs):
+                self.calls.append(copy.deepcopy(messages))
+                response = seed_response().replace(
+                    "class ActionStrategy(TeamAction):\n    pass",
+                    "class TeamActionStrategy(TeamAction):\n"
+                    "    def run(self, task, ctx):\n"
+                    "        self.services.get('model_factory')\n"
+                    "        self.services['public_task']\n"
+                    "        ctx.model([])\n"
+                    "        return RunResult(answer='bad', metadata={'sub_runs': []})\n")
+                response = response.replace("agent_prompt:", "unused_agent_prompt:")
+                return ChatMessage(role="assistant", content=response)
+
+        synth = JITHarnessSynthesizer(backend="native_jit", meta_model=InvalidModel(),
+            meta_config={"model_id": "offline-only", "api_base": "http://127.0.0.1:1/v1"}, max_repairs=0)
+        self.synths.append(synth)
+        with self.assertRaises(RuntimeError) as caught:
+            synth.synthesize(self.task, self.graph, team_fixture())
+        message = str(caught.exception)
+        for text in ("must export class ActionStrategy", "TeamServices is a dataclass",
+                     "TeamServices is not subscriptable", "ctx.model is a coordinator guard",
+                     "must populate sub_runs", "agent_prompt must be a nonempty string"):
+            self.assertIn(text, message)
+
+    def test_native_customization_remains_generated_code_without_source_rewriting(self):
+        response = seed_response().replace("class ActionStrategy(TeamAction):\n    pass",
+            "class ActionStrategy(TeamAction):\n"
+            "    def run(self, task, ctx):\n"
+            "        result = super().run(task, ctx)\n"
+            "        result.metadata['generated_policy'] = 'compare_conflicting_evidence'\n"
+            "        return result\n")
+        model = ScriptedExecution([response])
+        team = TeamSpec(agents=[AgentSpec(agent_id="one", role="One", capability="general")], synthesizer_id="one")
+        synth, artifact = self.synthesize(team, backend="native_jit", meta_model=model,
+            meta_config={"model_id": "offline-only", "api_base": "http://127.0.0.1:1/v1"})
+        for name, emitted in _parse_harness_response(response).items():
+            self.assertEqual((artifact.path / name).read_text(encoding="utf-8"), emitted)
+        result = TeamExecutor(lambda aid: ScriptedExecution([{"answer": "checked"}]),
+                              unsafe_local=True).execute(self.task, team, artifact)
+        self.assertEqual(result.metadata["generated_policy"], "compare_conflicting_evidence")
+        self.assertEqual(result.answer, "checked")
+
+    def test_incompatible_bound_method_signatures_are_rejected_without_import(self):
+        class InvalidSignatureModel(ScriptedHarnessModel):
+            def __call__(self, messages, **kwargs):
+                self.calls.append(copy.deepcopy(messages))
+                return ChatMessage(role="assistant", content=seed_response().replace(
+                    "class ActionStrategy(TeamAction):\n    pass",
+                    "class ActionStrategy(TeamAction):\n"
+                    "    def bind_team(self, team):\n        self.team = team\n"
+                    "    def run(self, task):\n        raise RuntimeError('must never execute')\n"))
+
+        synth = JITHarnessSynthesizer(backend="native_jit", meta_model=InvalidSignatureModel(),
+            meta_config={"model_id": "offline-only", "api_base": "http://127.0.0.1:1/v1"}, max_repairs=0)
+        self.synths.append(synth)
+        with self.assertRaises(RuntimeError) as caught:
+            synth.synthesize(self.task, self.graph, team_fixture())
+        self.assertIn("incompatible ActionStrategy.bind_team", str(caught.exception))
+        self.assertIn("incompatible ActionStrategy.run", str(caught.exception))
+
+    def test_super_constructor_uses_installed_signature_without_executing_code(self):
+        cases = [
+            ("super().__init__(prompts=prompts, summary_interval=summary_interval)", True),
+            ("super().__init__(prompts, summary_interval)", True),
+            ("super().__init__(*args, summary_interval=summary_interval)", True),
+            ("super().__init__(prompts=prompts)", False),
+            ("super().__init__(prompts)", False),
+        ]
+        for call, invalid in cases:
+            with self.subTest(call=call):
+                source = ("from jit_mas.execution import TeamPlanning as InstalledPlanning\n"
+                          "class PlanningStrategy(InstalledPlanning):\n"
+                          "    def __init__(self, prompts=None, summary_interval=4, *args):\n"
+                          "        raise RuntimeError('static validation must not import this')\n"
+                          f"        {call}\n"
+                          "        self.summary_interval = summary_interval\n")
+                errors = _module_interface_errors("planning.py", ast.parse(source))
+                self.assertEqual(bool(errors), invalid, errors)
+                if invalid:
+                    self.assertIn("incompatible PlanningStrategy super().__init__", errors[0])
+                    self.assertIn("installed TeamPlanning.__init__", errors[0])
+
+    def test_constructor_mismatch_reaches_native_bounded_repair_before_execution(self):
+        invalid = seed_response().replace("class PlanningStrategy(TeamPlanning):\n    pass",
+            "class PlanningStrategy(TeamPlanning):\n"
+            "    def __init__(self, prompts=None, summary_interval=4):\n"
+            "        super().__init__(prompts=prompts, summary_interval=summary_interval)\n"
+            "        self.summary_interval = summary_interval\n")
+        corrected = invalid.replace("prompts=prompts, summary_interval=summary_interval", "prompts=prompts")
+        model = ScriptedExecution([invalid, corrected])
+        synth, artifact = self.synthesize(backend="native_jit", meta_model=model,
+            meta_config={"model_id": "offline-only", "api_base": "http://127.0.0.1:1/v1"}, max_repairs=1)
+        self.assertEqual(artifact.repair_count, 1)
+        self.assertEqual(len(model.calls), 2)
+        self.assertIn("unexpected keyword argument 'summary_interval'", json.dumps(model.calls[1]))
+        self.assertIn("TeamPlanning accepts prompts, not summary_interval", json.dumps(model.calls[0]))
+        for filename, content in _parse_harness_response(corrected).items():
+            self.assertEqual((artifact.path / filename).read_text(encoding="utf-8"), content)
 
 
 if __name__ == "__main__":

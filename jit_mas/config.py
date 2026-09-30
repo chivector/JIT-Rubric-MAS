@@ -20,6 +20,8 @@ class ModelConfig(Record):
     max_tokens: int = Field(default=4096, ge=1)
     timeout: float = Field(default=120, gt=0)
     temperature: float = 0
+    thinking: Literal["enabled", "disabled"] | None = None
+    reasoning_effort: Literal["none", "low", "high", "max"] | None = None
 
     def check(self, role):
         if not self.model or not self.endpoint or "${" in self.model or "${" in self.endpoint:
@@ -82,8 +84,13 @@ class NativeModels:
         from scripts.models.openai_server import OpenAIServerModel
 
         cfg = self.config.models[role]
+        options = {}
+        if cfg.thinking is not None:
+            options["extra_body"] = {"thinking": {"type": cfg.thinking}}
+        if cfg.reasoning_effort is not None:
+            options["reasoning_effort"] = cfg.reasoning_effort
         model = OpenAIServerModel(model_id=cfg.model, api_base=cfg.endpoint,
                                   api_key=os.environ[cfg.key_env], temperature=cfg.temperature,
-                                  max_tokens=cfg.max_tokens, max_attempts=1)
+                                  max_tokens=cfg.max_tokens, max_attempts=1, **options)
         model.client = model.client.with_options(max_retries=0, timeout=cfg.timeout)
         return MeteredModel(model, ledger, stage, agent_id, cfg.max_tokens)

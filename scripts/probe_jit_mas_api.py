@@ -97,7 +97,8 @@ def private_smoke_record(task_id):
             ]}
 
 
-def run_probe(credentials, output_dir, stages=DEFAULT_STAGES, *, model_factory=None):
+def run_probe(credentials, output_dir, stages=DEFAULT_STAGES, *, model_factory=None,
+              request_timeout: float = 45, structured_max_tokens: int = 4096):
     """Run selected stages, stop on first failure, and always save metered usage.
 
     model_factory is an offline-test injection point. Each invocation receives
@@ -106,6 +107,11 @@ def run_probe(credentials, output_dir, stages=DEFAULT_STAGES, *, model_factory=N
     selected = set(stages)
     if not selected or selected - set(STAGES):
         raise ValueError("Select at least one known stage")
+    if not 0 < request_timeout <= 300:
+        raise ValueError("request_timeout must be positive and at most 300 seconds")
+    if (not isinstance(structured_max_tokens, int) or isinstance(structured_max_tokens, bool)
+            or not 1 <= structured_max_tokens <= 16000):
+        raise ValueError("structured_max_tokens must be an integer from 1 to 16000")
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     if any(output_dir.iterdir()):
@@ -117,7 +123,8 @@ def run_probe(credentials, output_dir, stages=DEFAULT_STAGES, *, model_factory=N
               "scope": "custom smoke, not benchmark results or performance evidence",
               "model_source": "injected_offline_test" if model_factory else "live_api",
               "native_generated_code_executed": False, "experience_committed": False,
-              "limits": {"max_calls": 20, "max_tokens": 500_000, "request_timeout": 45,
+              "limits": {"max_calls": 20, "max_tokens": 500_000, "request_timeout": request_timeout,
+                         "structured_max_tokens": structured_max_tokens,
                          "model_attempts": 1, "sdk_retries": 0, "max_tool_calls": 0},
               "stages": {stage: {"status": "not_requested"} for stage in STAGES}}
     task = smoke_task()
@@ -127,12 +134,16 @@ def run_probe(credentials, output_dir, stages=DEFAULT_STAGES, *, model_factory=N
         write_json(output_dir / name, redact(value, credentials.api_key))
 
     def model(stage, aid, max_tokens=4096):
+        if stage in {"planning", "attribution"}:
+            max_tokens = structured_max_tokens
         if model_factory:
             return CredentialSafeModel(model_factory(ledger, stage, aid, max_tokens), credentials.api_key)
+        json_options = ({"response_format": {"type": "json_object"}}
+                        if stage in {"planning", "attribution"} else {})
         raw = OpenAIServerModel(model_id=credentials.model, api_base=credentials.endpoint,
                                 api_key=credentials.api_key, max_attempts=1,
-                                max_tokens=max_tokens, timeout=45)
-        raw.client = raw.client.with_options(max_retries=0, timeout=45)
+                                max_tokens=max_tokens, timeout=request_timeout, **json_options)
+        raw.client = raw.client.with_options(max_retries=0, timeout=request_timeout)
         clients.append(raw.client)
         return CredentialSafeModel(MeteredModel(raw, ledger, stage, aid, max_tokens), credentials.api_key)
 
@@ -147,6 +158,8 @@ def run_probe(credentials, output_dir, stages=DEFAULT_STAGES, *, model_factory=N
             if stage not in selected:
                 continue
             row = report["stages"][stage] = {"status": "running", "started_at": utc_now()}
+            report["budget"] = ledger.snapshot()
+            save("report.json", report)
             dependency = DEPENDENCIES.get(stage)
             if failed or (dependency and report["stages"][dependency]["status"] != "passed"):
                 row.update(status="skipped", reason="earlier_failure" if failed else
@@ -190,7 +203,8 @@ def run_probe(credentials, output_dir, stages=DEFAULT_STAGES, *, model_factory=N
                     artifact = seed.synthesize(task, planned.graph, planned.team)
                     save("trusted_seed_harness.json", artifact.to_dict())
                     executor = TeamExecutor(lambda aid: model(stage, aid), ledger=ledger,
-                                            timeout_seconds=200, unsafe_local=False)
+                                            timeout_seconds=max(200, request_timeout * 4 + 20),
+                                            unsafe_local=False)
                     result = executor.execute(task, planned.team, artifact, rubrics=planned.graph)
                     save("execution.json", result.full_dict())
                     if result.terminated_reason != "final_answer" or result.answer is None:
@@ -205,7 +219,7 @@ def run_probe(credentials, output_dir, stages=DEFAULT_STAGES, *, model_factory=N
                     if digest(result.answer) != frozen["answer_hash"]:
                         raise ValueError("Submitted answer changed before evaluation")
                     evaluator = ResearchRubricsAdapter(judge=model(stage, "judge"),
-                        judge_id=credentials.model, judge_timeout=45, max_attempts=1)
+                        judge_id=credentials.model, judge_timeout=request_timeout, max_attempts=1)
                     raw = evaluator.evaluate(str(result.answer), ground_truth=task.task_id,
                                              private_record=private_smoke_record(task.task_id))
                     feedback = convert_feedback(raw)
@@ -265,6 +279,10 @@ def main(argv=None):
     parser.add_argument("--model")
     parser.add_argument("--key-env", help="Environment variable containing the API key; never the key itself")
     parser.add_argument("--output-dir", default="outputs/api_probe_" + time.strftime("%Y%m%d_%H%M%S"))
+    parser.add_argument("--request-timeout", type=float, default=45,
+                        help="Per-request timeout in seconds (greater than 0, at most 300)")
+    parser.add_argument("--structured-max-tokens", type=int, default=4096,
+                        help="Planning and attribution output-token limit (1 to 16000)")
     parser.add_argument("--stages", nargs="+", choices=STAGES, default=list(DEFAULT_STAGES))
     args = parser.parse_args(argv)
     try:
@@ -273,7 +291,9 @@ def main(argv=None):
         else:
             supplied = json.load(sys.stdin)
             credentials = ProbeCredentials(supplied["endpoint"], supplied["model"], supplied["api_key"])
-        report = run_probe(credentials, args.output_dir, args.stages)
+        report = run_probe(credentials, args.output_dir, args.stages,
+                           request_timeout=args.request_timeout,
+                           structured_max_tokens=args.structured_max_tokens)
     except (Exception, SystemExit) as exc:
         # Input validation failures must not print supplied values or traceback.
         print(json.dumps({"status": "failed", "error_type": type(exc).__name__}))

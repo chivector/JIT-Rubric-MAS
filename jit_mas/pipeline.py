@@ -16,6 +16,27 @@ from .schemas import (EvaluationFeedback, ExperienceSnapshot, PlannedTeam, Predi
                       PublicTask, RubricFeedback, RubricGraph, SplitManifest, digest, utc_now)
 from .validation import PairedValidator
 
+SUBMITTED_SOURCE_FILES = ("run_manifest.json", "frozen_plan.json", "planning_calls.json", "harness.json",
+                          "execution.json", "submission.json", "evaluation.json", "budget.json")
+ATTRIBUTION_SOURCE_FILES = SUBMITTED_SOURCE_FILES + (
+    "attribution.json", "complete.json", "resume_provenance.json", "historical_source_budget.json")
+
+
+def submitted_source_digest(source_dir):
+    source = Path(source_dir)
+    return digest({name: hashlib.sha256((source / name).read_bytes()).hexdigest()
+                   for name in SUBMITTED_SOURCE_FILES})
+
+
+def attribution_source_digest(source_dir):
+    source = Path(source_dir)
+    if source.is_file():
+        if source.name != "attribution.json":
+            raise ValueError("Attribution source file must be attribution.json")
+        source = source.parent
+    return digest({name: hashlib.sha256((source / name).read_bytes()).hexdigest()
+                   for name in ATTRIBUTION_SOURCE_FILES})
+
 
 def write_json(path, value):
     path = Path(path)
@@ -83,17 +104,29 @@ class MASPipeline:
             raise ValueError("Normalized duplicate tasks across splits")
 
     def run_task(self, task_id, snapshot: ExperienceSnapshot, *, mode="evaluate", repeat=0,
-                 attribution=False, resume=True):
+                 attribution=False, resume=True, resume_source=None, resume_source_hash=None,
+                 resume_attribution=None, resume_attribution_hash=None):
         ledger = BudgetLedger(self.config.max_model_calls, self.config.max_total_tokens,
                               self.config.max_tool_calls)
         audit = {}
         try:
+            if ((resume_attribution is None) != (resume_attribution_hash is None)
+                    or resume_attribution is not None and resume_source is None):
+                raise ValueError("Frozen attribution requires a source and an explicit attribution content hash")
+            if resume_source is not None:
+                if mode != "evolve" or not attribution:
+                    raise ValueError("Submitted-source continuation requires evolution attribution")
+                return self._resume_submitted_task(task_id, snapshot, ledger, audit,
+                    resume_source, resume_source_hash, resume_attribution, resume_attribution_hash)
             return self._run_task(task_id, snapshot, ledger, audit, mode=mode, repeat=repeat,
                                   attribution=attribution, resume=resume)
         except BaseException as exc:
             run_dir = audit.get("run_dir", self.output_dir / "failures" / uuid.uuid4().hex)
             failure = {"task_id": task_id, "experience_hash": digest(snapshot), "mode": mode,
-                       "error_type": type(exc).__name__, "error": str(exc), "time": utc_now()}
+                       "error_type": type(exc).__name__, "error": str(exc), "time": utc_now(),
+                       "run_dir": str(run_dir), "budget": ledger.snapshot()}
+            exc.jit_mas_run_failure = {key: failure[key] for key in
+                ("task_id", "mode", "run_dir", "error_type", "error", "budget")}
             for name in ("failed_attempts", "meta_trajectory", "artifact"):
                 if hasattr(exc, name):
                     failure[name] = getattr(exc, name)
@@ -105,6 +138,234 @@ class MASPipeline:
         finally:
             if audit.get("run_dir") and not audit.get("cached"):
                 write_json(audit["run_dir"] / "budget.json", ledger.snapshot())
+
+    def _attribute(self, task, snapshot, ledger, run_dir, initial_graph, planned_graph, team, result, feedback):
+        attributor = RubricAttributor(self.models.create("global", "global-post", ledger, "update"),
+            lambda aid: self.models.create("local", aid, ledger, "update"),
+            max_parallel=self.config.max_parallel, local_attribution=self.config.local_attribution)
+        findings, proposals, complete = [], [], False
+        try:
+            findings = attributor.attribute(task, initial_graph, planned_graph, team, result, feedback)
+            proposals = attributor.propose(task, findings, snapshot.version, snapshot.experiences)
+            complete = True
+            return proposals
+        finally:
+            write_json(run_dir / "attribution.json", {"complete": complete,
+                "findings": [f.model_dump(mode="json") for f in findings],
+                "alignments": {k: v.model_dump(mode="json") for k, v in attributor.last_alignments.items()},
+                "calls": attributor.call_records, "proposals": [p.model_dump(mode="json") for p in proposals]})
+
+    def _load_frozen_attribution(self, directory, anchor, source_hash, source_documents,
+                                task, snapshot, initial, planned, team, result, feedback):
+        from .schemas import AttributionFinding, ChangeProposal, RubricAlignment
+
+        location = Path(directory).resolve()
+        if attribution_source_digest(location) != anchor:
+            raise ValueError("Frozen-attribution content hash mismatch")
+        if location.is_file():
+            location = location.parent
+        documents = {name: json.loads((location / name).read_text(encoding="utf-8"))
+                     for name in ATTRIBUTION_SOURCE_FILES}
+        attributed, complete = documents["attribution.json"], documents["complete.json"]
+        provenance, manifest = documents["resume_provenance.json"], documents["run_manifest.json"]
+        if (attributed.get("complete") is not True or complete.get("source_attribution_reused")
+                or attributed.get("proposals") != complete.get("proposals")
+                or complete.get("task_id") != task.task_id or complete.get("mode") != "evolve"
+                or complete.get("backend") != self.config.backend
+                or complete.get("experience_hash") != digest(snapshot)
+                or complete.get("experience_version") != snapshot.version
+                or complete.get("answer_hash") != source_documents["submission.json"]["answer_hash"]
+                or complete.get("evaluation") != feedback.model_dump(mode="json")
+                or complete.get("plan_hashes") != source_documents["frozen_plan.json"]["hashes"]
+                or complete.get("resume_provenance") != provenance
+                or manifest.get("continuation") != provenance
+                or manifest.get("comparison") != source_documents["run_manifest.json"]["comparison"]
+                or provenance.get("source_hash") != source_hash
+                or provenance.get("source_regenerated") is not False
+                or provenance.get("source_rejudged") is not False
+                or not provenance.get("continuation_code_hash")):
+            raise ValueError("Frozen-attribution source/proposal/baseline binding mismatch")
+        for name in SUBMITTED_SOURCE_FILES:
+            if name not in {"budget.json", "run_manifest.json"} and documents[name] != source_documents[name]:
+                raise ValueError("Frozen attribution belongs to different source evidence")
+        if (documents["historical_source_budget.json"] != source_documents["budget.json"]
+                or complete.get("historical_source_budget") != source_documents["budget.json"]):
+            raise ValueError("Frozen-attribution historical source budget mismatch")
+        budget = documents["budget.json"]
+        if (set(budget["by_stage"]) - {"update"} or budget["reserved_tokens"]
+                or any(budget[key] != complete["budget"][key]
+                       for key in ("model_calls", "tokens", "tool_calls", "records"))):
+            raise ValueError("Frozen-attribution budget is not a settled attribution-only budget")
+        known_agents = {agent.agent_id for agent in team.agents}
+        evaluated_ids = {rubric.rubric_id for rubric in feedback.rubrics}
+        initial_ids = {rubric.rubric_id for rubric in initial.rubrics}
+        planned_ids = {rubric.rubric_id for rubric in planned.rubrics}
+        for label, predicted_ids in (("global", initial_ids), ("planned", planned_ids)):
+            alignment = RubricAlignment.model_validate(attributed["alignments"][label])
+            for match in alignment.matches:
+                if (not match.predicted_ids or not match.evaluated_ids
+                        or not set(match.predicted_ids) <= predicted_ids
+                        or not set(match.evaluated_ids) <= evaluated_ids):
+                    raise ValueError("Frozen-attribution alignment references unknown rubrics")
+            matched_predicted = {rid for match in alignment.matches for rid in match.predicted_ids}
+            matched_evaluated = {rid for match in alignment.matches for rid in match.evaluated_ids}
+            if (set(alignment.unmatched_predicted_ids) != predicted_ids - matched_predicted
+                    or set(alignment.missed_evaluated_ids) != evaluated_ids - matched_evaluated):
+                raise ValueError("Frozen-attribution unmatched rubric bookkeeping mismatch")
+        _, _, events = RubricAttributor._execution_view(result)
+        event_ids = {event["event_id"] for event in events}
+        if len(event_ids) != len(events):
+            raise ValueError("Frozen-attribution source has duplicate event IDs")
+        evidence = event_ids | {"submission:" + digest(result["answer"]),
+            "planning:global", "planning:planned", "planning:team"} | {"feedback:" + rid for rid in evaluated_ids}
+        findings = [AttributionFinding.model_validate(row) for row in attributed["findings"]]
+        if len({finding.finding_id for finding in findings}) != len(findings):
+            raise ValueError("Frozen attribution contains duplicate finding IDs")
+        for finding in findings:
+            if (not set(finding.agent_ids) <= known_agents
+                    or not set(finding.rubric_ids) <= initial_ids | planned_ids | evaluated_ids
+                    or not set(finding.supporting_evidence + finding.opposing_evidence) <= evidence):
+                raise ValueError("Frozen-attribution finding invented an evidence/agent/rubric reference")
+        supported = [finding for finding in findings if finding.supporting_evidence
+                     and any(category != "external_or_uncertain" for category in finding.categories)]
+        proposals = [ChangeProposal.model_validate(row) for row in attributed["proposals"]]
+        if len({proposal.proposal_id for proposal in proposals}) != len(proposals):
+            raise ValueError("Frozen attribution contains duplicate proposal IDs")
+        RubricAttributor._validate_proposals(proposals, task, supported, snapshot.version, snapshot.experiences)
+        if [proposal.model_dump(mode="json") for proposal in proposals] != attributed["proposals"]:
+            raise ValueError("Frozen-attribution proposal records were not canonical validated outputs")
+        return location, attributed, proposals, budget, provenance["continuation_code_hash"]
+
+    def _resume_submitted_task(self, task_id, snapshot, ledger, audit, source_dir, source_hash,
+                               attribution_dir=None, attribution_hash=None):
+        from benchmark.adapter.researchrubrics import official_compliance_score
+        from .bridge import SynthesizedHarness
+        from .execution import content_hash
+        from .schemas import TeamSpec
+
+        source = Path(source_dir).resolve()
+        if not source_hash or submitted_source_digest(source) != source_hash:
+            raise ValueError("Submitted-source content hash mismatch")
+        if snapshot.version != 0 or snapshot.experiences or snapshot.accepted_proposals:
+            raise ValueError("Submitted-source continuation requires a fresh empty baseline")
+        documents = {name: json.loads((source / name).read_text(encoding="utf-8"))
+                     for name in SUBMITTED_SOURCE_FILES}
+        manifest, frozen = documents["run_manifest.json"], documents["frozen_plan.json"]
+        comparison, task = manifest["comparison"], self.tasks[task_id]
+        expected = {"config": self.config.model_dump(mode="json"), "task": task.model_dump(mode="json"),
+                    "private_hash": digest(self.private_records[task_id]), "repeat": 0,
+                    "manifest": digest(self.manifest), "tools": sorted(self.tools),
+                    "attachments": input_fingerprints(task)}
+        if any(comparison.get(key) != value for key, value in expected.items()):
+            raise ValueError("Submitted-source task/config/private/split binding mismatch")
+        if (task_id not in self.manifest.evolution or manifest.get("mode") != "evolve"
+                or manifest.get("backend") != self.config.backend
+                or manifest.get("experience_hash") != digest(snapshot)
+                or manifest.get("experience_version") != snapshot.version
+                or frozen.get("experience_hash") != digest(snapshot)):
+            raise ValueError("Submitted-source evolution baseline mismatch")
+        for key in ("R_global", "R_planned", "TeamSpec"):
+            if frozen.get("hashes", {}).get(key) != digest(frozen[key]):
+                raise ValueError("Submitted-source frozen plan hash mismatch")
+        initial = RubricGraph.model_validate(frozen["R_global"])
+        planned = RubricGraph.model_validate(frozen["R_planned"])
+        team = TeamSpec.model_validate(frozen["TeamSpec"])
+        artifact_data = documents["harness.json"]
+        artifact = SynthesizedHarness(**{**artifact_data, "path": Path(artifact_data["path"])})
+        artifact.verify_integrity()
+        sidecar = artifact.sidecar
+        if (artifact.backend != self.config.backend or artifact.task_hash != content_hash(task)
+                or artifact.team_hash != content_hash(team) or sidecar.get("task") != task.model_dump(mode="json")
+                or sidecar.get("team") != team.model_dump(mode="json")
+                or sidecar.get("rubrics") != planned.model_dump(mode="json") or sidecar.get("experiences") != []):
+            raise ValueError("Submitted-source harness sidecar binding mismatch")
+        result, submission = documents["execution.json"], documents["submission.json"]
+        metadata = result.get("metadata", {})
+        if (result.get("terminated_reason") != "final_answer" or result.get("answer") != submission.get("answer")
+                or submission.get("answer_hash") != digest(result.get("answer"))
+                or metadata.get("team_hash") != artifact.team_hash or metadata.get("harness_hash") != artifact.code_hash
+                or metadata.get("backend") != self.config.backend):
+            raise ValueError("Submitted-source answer/execution binding mismatch")
+        feedback = EvaluationFeedback.model_validate(documents["evaluation.json"])
+        evaluator_id = self.evaluator_factory(None).evaluator_version
+        if (not feedback.complete or feedback.task_id != task_id or feedback.score is None
+                or feedback.evaluator_version != comparison.get("evaluator")
+                or feedback.evaluator_version != evaluator_id
+                or convert_feedback(feedback.raw).model_dump(mode="json") != feedback.model_dump(mode="json")):
+            raise ValueError("Submitted-source evaluation identity or completeness mismatch")
+        recorded_submission_hash = "submission_answer_hash" in feedback.raw
+        if recorded_submission_hash and feedback.raw["submission_answer_hash"] != submission["answer_hash"]:
+            raise ValueError("Submitted-source evaluation submission hash mismatch")
+        rows = feedback.raw["feedback"]
+        official = self.private_records[task_id]["rubrics"]
+        if (len(rows) != len(official) or any(
+                row.get("rubric_id") != rubric["rubric_id"] or row.get("criterion") != rubric["criterion"]
+                or row.get("weight") != rubric["weight"] or row.get("status") != "ok"
+                or not row.get("success") or row.get("score") not in (0, 1)
+                or row.get("verdict") != ("Satisfied" if row.get("score") == 1 else "Not Satisfied")
+                for row, rubric in zip(rows, official))
+                or feedback.score != official_compliance_score(rows)):
+            raise ValueError("Submitted-source official criterion evidence mismatch")
+        frozen_attribution = (self._load_frozen_attribution(attribution_dir, attribution_hash, source_hash,
+            documents, task, snapshot, initial, planned, team, result, feedback)
+            if attribution_dir is not None else None)
+        run_key = digest({"source": source_hash, "code": self.code_hash, "attempt": uuid.uuid4().hex})
+        run_dir = self.output_dir / run_key
+        audit["run_dir"] = run_dir
+        run_dir.mkdir(parents=True, exist_ok=False)
+        provenance = {"source_dir": str(source), "source_hash": source_hash,
+            "source_code_hash": comparison["code"], "continuation_code_hash": self.code_hash,
+            "source_submission_reused": True, "source_regenerated": False, "source_rejudged": False,
+            "source_attribution_reused": frozen_attribution is not None,
+            "evaluation_has_recorded_submission_hash": recorded_submission_hash,
+            "evaluation_submission_binding": (
+                "Recorded evaluation submission hash verified against the immutable submitted answer"
+                if recorded_submission_hash else
+                "Legacy evaluation has no recorded submission hash; explicit caller anchor trusted"),
+            "file_sha256": {name: hashlib.sha256((source / name).read_bytes()).hexdigest()
+                            for name in SUBMITTED_SOURCE_FILES}}
+        write_json(run_dir / "resume_provenance.json", provenance)
+        write_json(run_dir / "run_manifest.json", {**manifest, "run_key": run_key, "continuation": provenance})
+        for name in SUBMITTED_SOURCE_FILES:
+            destination = "historical_source_budget.json" if name == "budget.json" else name
+            if name != "run_manifest.json":
+                (run_dir / destination).write_bytes((source / name).read_bytes())
+        if frozen_attribution is None:
+            proposals = self._attribute(task, snapshot, ledger, run_dir, initial, planned, team, result, feedback)
+        else:
+            attribution_location, _, proposals, prior_attribution_budget, attribution_code = frozen_attribution
+            provenance.update(attribution_source_dir=str(attribution_location), attribution_source_hash=attribution_hash,
+                              attribution_code_hash=attribution_code, attribution_regenerated=False)
+            (run_dir / "attribution.json").write_bytes((attribution_location / "attribution.json").read_bytes())
+            write_json(run_dir / "historical_attribution_budget.json", prior_attribution_budget)
+            write_json(run_dir / "resume_provenance.json", provenance)
+            write_json(run_dir / "run_manifest.json", {**manifest, "run_key": run_key, "continuation": provenance})
+            if attribution_source_digest(attribution_location) != attribution_hash:
+                raise ValueError("Frozen-attribution files changed during continuation")
+        if submitted_source_digest(source) != source_hash:
+            raise ValueError("Submitted-source files changed during attribution continuation")
+        budget = ledger.snapshot()
+        outcome = {"run_key": run_key, "task_id": task_id, "mode": "evolve", "backend": self.config.backend,
+            "software_test_only": self.config.backend == "scripted", "resumed": False,
+            "source_submission_reused": True, "resume_provenance": provenance,
+            "source_attribution_reused": frozen_attribution is not None,
+            "historical_source_budget": documents["budget.json"],
+            "experience_version": snapshot.version, "experience_hash": digest(snapshot),
+            "comparison_fingerprint": digest(comparison), "answer_hash": submission["answer_hash"],
+            "submitted_at": submission["submitted_at"], "source_evaluation_reused": True,
+            "plan_hashes": frozen["hashes"],
+            "evaluation": feedback.model_dump(mode="json"), "budget": budget,
+            "proposals": [p.model_dump(mode="json") for p in proposals], "run_dir": str(run_dir),
+            "uncontrolled_variation": ["Source and any explicitly reused attribution retain their recorded historical code"],
+            "costs": {"inference": {}, "external_evaluation": {}, "experience_update": budget["by_stage"].get("update", {}),
+                      "validation": {"model_calls": 0, "tokens": 0, "tool_calls": 0, "cost": None}}}
+        if frozen_attribution is None:
+            outcome["attribution_continued_at"] = utc_now()
+        else:
+            outcome["attribution_reused_at"] = utc_now()
+            outcome["historical_attribution_budget"] = prior_attribution_budget
+        write_json(run_dir / "complete.json", outcome)
+        return outcome
 
     def _run_task(self, task_id, snapshot, ledger, audit, *, mode, repeat, attribution, resume):
         from .execution import TeamExecutor
@@ -152,9 +413,14 @@ class MASPipeline:
                                   lambda aid: model("local", aid, "inference"),
                                   max_agents=self.config.max_agents, max_parallel=self.config.max_parallel,
                                   local_rounds=self.config.local_rounds, total_max_calls=self.config.team_max_calls,
-                                  explicit_rubrics=self.config.explicit_rubrics)
+                                  explicit_rubrics=self.config.explicit_rubrics,
+                                  execution_max_tokens=(self.config.models["exec"].max_tokens
+                                                        if "exec" in self.config.models else None))
         if self.config.fixed_team is None:
-            planned = analyzer.build(task, experience, local_planning=self.config.local_planning)
+            try:
+                planned = analyzer.build(task, experience, local_planning=self.config.local_planning)
+            finally:
+                write_json(run_dir / "planning_calls.json", analyzer.call_records)
             prediction = analyzer.last_prediction
         else:
             if self.config.fixed_team.coverage or any(a.rubric_ids for a in self.config.fixed_team.agents):
@@ -184,21 +450,15 @@ class MASPipeline:
         submission = {"answer": result.answer, "answer_hash": digest(result.answer), "submitted_at": utc_now()}
         write_json(run_dir / "submission.json", submission)
         # Sole transition at which the trusted coordinator opens private evaluation data.
-        feedback = convert_feedback(evaluator.evaluate(str(result.answer), ground_truth=task_id,
-                                                       private_record=self.private_records[task_id]))
+        raw_feedback = evaluator.evaluate(str(result.answer), ground_truth=task_id,
+                                          private_record=self.private_records[task_id])
+        raw_feedback["submission_answer_hash"] = submission["answer_hash"]
+        feedback = convert_feedback(raw_feedback)
         write_json(run_dir / "evaluation.json", feedback)
         proposals = []
         if attribution and feedback.complete:
-            attributor = RubricAttributor(model("global", "global-post", "update"),
-                                          lambda aid: model("local", aid, "update"),
-                                          max_parallel=self.config.max_parallel,
-                                          local_attribution=self.config.local_attribution)
-            findings = attributor.attribute(task, prediction.graph, planned.graph, planned.team, result, feedback)
-            proposals = attributor.propose(task, findings, snapshot.version, snapshot.experiences)
-            write_json(run_dir / "attribution.json", {
-                "findings": [f.model_dump(mode="json") for f in findings],
-                "alignments": {k: v.model_dump(mode="json") for k, v in attributor.last_alignments.items()},
-                "calls": attributor.call_records, "proposals": [p.model_dump(mode="json") for p in proposals]})
+            proposals = self._attribute(task, snapshot, ledger, run_dir, prediction.graph,
+                                       planned.graph, planned.team, result, feedback)
         outcome = {"run_key": run_key, "task_id": task_id, "mode": mode, "backend": self.config.backend,
                    "software_test_only": self.config.backend == "scripted", "resumed": False,
                    "experience_version": snapshot.version, "experience_hash": digest(snapshot),
@@ -216,7 +476,8 @@ class MASPipeline:
         write_json(complete_path, outcome)
         return outcome
 
-    def run(self, mode, task_ids=None, *, limit=1, resume=True):
+    def run(self, mode, task_ids=None, *, limit=1, resume=True, resume_source=None, resume_source_hash=None,
+            resume_attribution=None, resume_attribution_hash=None):
         from .schemas import ChangeProposal
 
         if mode not in ("evolve", "evaluate", "stream"):
@@ -226,6 +487,15 @@ class MASPipeline:
         selected = list(allowed[:limit] if task_ids is None else task_ids)
         if not selected or not set(selected) <= set(allowed):
             raise ValueError("Tasks do not belong to the selected mode's split")
+        if (resume_source is None) != (resume_source_hash is None):
+            raise ValueError("Submitted-source continuation requires both path and content hash")
+        if ((resume_attribution is None) != (resume_attribution_hash is None)
+                or resume_attribution is not None and resume_source is None):
+            raise ValueError("Frozen attribution requires a source and an explicit attribution content hash")
+        if resume_source is not None and (mode != "evolve" or len(selected) != 1
+                or self.store.snapshot().version != 0 or self.store.snapshot().experiences
+                or self.store.task_run(mode, selected[0]) is not None):
+            raise ValueError("Submitted-source continuation requires one evolution task and a fresh store")
         if mode == "stream" and selected != [item for item in allowed if item in selected]:
             raise ValueError("Stream order must match the manifest")
         frozen = self.store.snapshot()
@@ -257,7 +527,10 @@ class MASPipeline:
             if update and not journal:
                 self.store.save_task_run(mode, task_id, identity, state, "started")
             outcome = (journal["outcome"] if journal and journal["outcome"] else
-                       self.run_task(task_id, state, mode=mode, attribution=update, resume=resume))
+                       self.run_task(task_id, state, mode=mode, attribution=update, resume=resume,
+                           **({"resume_source": resume_source, "resume_source_hash": resume_source_hash,
+                               "resume_attribution": resume_attribution, "resume_attribution_hash": resume_attribution_hash}
+                              if resume_source is not None else {})))
             if update:
                 self.store.save_task_run(mode, task_id, identity, state, "submitted", outcome)
             outcome["validations"] = []
@@ -279,7 +552,7 @@ class MASPipeline:
                         self.store.commit(proposal, validation)
                     outcome["validations"].append(validation.model_dump(mode="json"))
                     for pair in validation.pairs:
-                        for side in ("baseline", "candidate"):
+                        for side in ("baseline", "candidate", "failed_run"):
                             budget = pair.get(side, {}).get("budget", {})
                             for field in ("model_calls", "tokens", "tool_calls"):
                                 outcome["costs"]["validation"][field] += budget.get(field, 0)

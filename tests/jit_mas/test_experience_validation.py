@@ -5,6 +5,7 @@ import sqlite3
 
 import pytest
 
+from jit_mas.budget import BudgetExceeded
 from jit_mas.experience import ExperienceStore, candidate_snapshot, retrieve
 from jit_mas.schemas import (
     ChangeProposal, EvaluationFeedback, Experience, ExperienceSnapshot,
@@ -115,6 +116,52 @@ def test_validation_disallows_other_splits_and_duplicate_tasks(task_ids):
 ])
 def test_incomplete_or_incomparable_rebuilds_stay_pending(rebuild):
     assert validate(rebuild=rebuild).status == "pending"
+
+
+def test_candidate_failure_preserves_completed_baseline_and_failed_run_budget():
+    rebuild = Rebuild()
+    calls = []
+
+    def fail_candidate(task_id, snapshot, repeat, label):
+        calls.append((task_id, label))
+        if label == "candidate":
+            error = RuntimeError("Candidate execution failed")
+            error.jit_mas_run_failure = {
+                "task_id": task_id, "run_dir": "failed-candidate",
+                "budget": {"model_calls": 2, "tokens": 17, "tool_calls": 0}}
+            raise error
+        result = rebuild(task_id, snapshot, repeat, label)
+        result["budget"] = {"model_calls": 3, "tokens": 31, "tool_calls": 0}
+        return result
+
+    result = validate(rebuild=fail_candidate)
+    assert result.status == "pending"
+    assert len(calls) == 4
+    for pair in result.pairs:
+        assert pair["baseline"]["evaluation"]["complete"]
+        assert pair["baseline"]["budget"]["model_calls"] == 3
+        assert "candidate" not in pair
+        assert pair["failed_side"] == "candidate"
+        assert pair["failed_run"]["budget"]["tokens"] == 17
+
+
+@pytest.mark.parametrize("failed_side,expected_calls", [("baseline", 1), ("candidate", 2)])
+def test_exhausted_budget_stops_dispatching_remaining_validation_tasks(failed_side, expected_calls):
+    rebuild = Rebuild()
+    calls = []
+
+    def bounded(task_id, snapshot, repeat, label):
+        calls.append((task_id, label))
+        if label == failed_side:
+            raise BudgetExceeded("Session budget exhausted")
+        return rebuild(task_id, snapshot, repeat, label)
+
+    result = validate(rebuild=bounded)
+    assert result.status == "pending"
+    assert len(calls) == expected_calls
+    assert len(result.pairs) == 1
+    assert result.pairs[0]["failed_side"] == failed_side
+    assert "BudgetExceeded" in result.pairs[0]["error"]
 
 
 def test_quality_loss_cannot_be_offset_by_other_tasks():

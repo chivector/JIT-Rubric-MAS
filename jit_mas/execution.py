@@ -22,6 +22,7 @@ from scripts.kernel.types import (
     SummaryState, TaskInput, ToolCall, ToolSelection,
 )
 from scripts.tools.registry import ToolRegistry
+from jit_mas.experience import capability_matches
 from jit_mas.schemas import PublicTask, RubricGraph, TeamSpec, utc_now
 
 
@@ -217,18 +218,53 @@ def validate_team(team, public_task=None):
     return team
 
 
+class ResponseProtocolError(ValueError):
+    """An invalid completion may be corrected only within allocated agent calls."""
+
+
+def _validate_completion_fields(parsed):
+    if parsed.get("answer") is not None and (
+            not isinstance(parsed["answer"], str) or not parsed["answer"].strip()):
+        raise ResponseProtocolError("answer must be a nonempty string")
+    if not isinstance(parsed.get("checkpoints", {}), dict):
+        raise ResponseProtocolError("checkpoints must be an object")
+    evidence = parsed.get("evidence_ids", [])
+    if not isinstance(evidence, list) or any(not isinstance(item, str) for item in evidence):
+        raise ResponseProtocolError("evidence_ids must be a list of exact event ID strings")
+
+
 def _parse_response(response):
     content = getattr(response, "content", response)
     if isinstance(content, dict):
-        return content
-    text = str(content or "").strip()
-    if text.startswith("```"):
-        text = "\n".join(text.splitlines()[1:-1])
-    try:
-        parsed = json.loads(text)
-    except (json.JSONDecodeError, TypeError):
-        return {"answer": text} if text else {}
-    return parsed if isinstance(parsed, dict) else {"answer": str(parsed)}
+        parsed = content
+    else:
+        text = str(content or "").strip()
+        if text.startswith("```"):
+            text = "\n".join(text.splitlines()[1:-1])
+        try:
+            parsed = json.loads(text)
+        except (json.JSONDecodeError, TypeError) as exc:
+            raise ResponseProtocolError("Expected a complete JSON object; response may be truncated") from exc
+    if not isinstance(parsed, dict):
+        raise ResponseProtocolError("Response must be a JSON object, not a scalar or list")
+    _validate_completion_fields(parsed)
+    calls = parsed.get("tools", [])
+    if not isinstance(calls, list) or any(not isinstance(call, dict) or
+            not isinstance(call.get("name"), str) for call in calls):
+        raise ResponseProtocolError("tools must be a list of named tool calls")
+    # Validate every completion before executing any tool with possible side effects.
+    for call in calls:
+        arguments = call.get("arguments", {})
+        if isinstance(arguments, str):
+            try:
+                arguments = json.loads(arguments)
+            except (json.JSONDecodeError, TypeError) as exc:
+                raise ResponseProtocolError("Tool arguments must encode a complete JSON object") from exc
+        if not isinstance(arguments, dict):
+            raise ResponseProtocolError("Tool arguments must be an object")
+        if call["name"] in {"final_answer", "complete"}:
+            _validate_completion_fields(arguments)
+    return parsed
 
 
 def _run_agent(agent, team, ctx, services):
@@ -254,7 +290,13 @@ def _run_agent(agent, team, ctx, services):
     experiences = [_data(e) for e in services.experiences]
     local_experiences = [e for e in experiences
                          if e.get("kind", e.get("bank", "")) == "execution"
-                         and (not e.get("capability") or e.get("capability") == agent["capability"])]
+                         and capability_matches(e.get("capability", ""), agent["capability"])]
+    model = services.model_factory(aid)
+    output_limit = agent.get("max_tokens", 4096)
+    model_limit = getattr(model, "max_tokens", None)
+    if isinstance(model_limit, int) and model_limit > 0:
+        output_limit = min(output_limit, model_limit)
+    call_limit = min(agent.get("max_calls", 3), ctx.max_steps)
     instruction = {
         "public_task": _data(services.public_task), "agent": agent,
         "predicted_requirements": relevant, "upstream_artifacts": dependencies,
@@ -262,14 +304,26 @@ def _run_agent(agent, team, ctx, services):
         "review_owners": {rid: team.get("primary", {}).get(rid) for rid in review_rubrics},
         "execution_experiences": local_experiences,
         "submission": "final_answer" if synth else "subtask_complete",
+        "output_budget": {"max_tokens_per_response": output_limit, "max_model_calls": call_limit},
     }
     system = str(ctx.prompt_templates.get("agent_prompt", "")) + (
         "\nYou have an independent conversation. Follow only your assigned responsibilities. "
         "Use tools via {\"tools\":[{\"name\":\"...\",\"arguments\":{...}}]}. "
         "Complete with {\"answer\":\"...\",\"evidence_ids\":[],\"checkpoints\":{}}. "
-        "Checkpoints must all be checked before completion. You may send_message(recipient,content), "
+        "Return one JSON object, not a prose or Markdown envelope. Put the requested final prose "
+        "inside the answer string. In checkpoints, use every exact name from agent.checkpoints "
+        "as a key and boolean true only after actually checking it. Missing or false checkpoints "
+        "prevent completion; self-reported checks do not replace external evaluation. "
+        "You may send_message(recipient,content), "
         "read_evidence(event_id), or raise_issue(content) to request missing input or dispute evidence. "
         "Never claim unobserved evidence or broadcast private conversations."
+    )
+    system += (
+        f"\nEach complete JSON response has a hard ceiling of {output_limit} output tokens, "
+        "including escaped prose, evidence IDs, checkpoints and closing braces. Plan a concise "
+        f"answer well below this ceiling (roughly {max(1, output_limit // 2)} English words or fewer); "
+        "token-to-word ratios vary, so leave room for structure and all required checks. "
+        "Never start an answer too long to close its JSON object. Shorten wording, not factual accuracy."
     )
     if primary_rubrics:
         system += "\nYou are the primary owner for primary_rubrics: produce evidence or artifacts addressing each."
@@ -284,11 +338,12 @@ def _run_agent(agent, team, ctx, services):
         system += (
             "\nSynthesize a coherent final response: resolve contradictory artifacts, state unresolved "
             "gaps and uncertainty, and preserve relevant sources. Do not merely concatenate outputs. "
-            "Cite evidence_ids only for artifacts actually incorporated; citations are optional for creative tasks."
+            "Cite evidence_ids only for artifacts actually incorporated; citations are optional for creative tasks. "
+            "The answer must be the final deliverable itself, not an editing report, review preface, "
+            "or draft followed by a second revised copy. Integrate relevant review corrections concisely."
         )
     memory = type(ctx.memory)(prompts=ctx.prompt_templates)
     memory.initialize(system, TaskInput(task=json.dumps(instruction, ensure_ascii=False)))
-    model = services.model_factory(aid)
     allowed = set(agent.get("tools", []))
     catalog = ctx.tool_policy.select_tools("", 0, memory.build_context()).tools
     absent = allowed - set(catalog)
@@ -299,7 +354,7 @@ def _run_agent(agent, team, ctx, services):
     answer = None
     reason = "max_calls"
     evidence_ids = []
-    for step_index in range(min(agent.get("max_calls", 3), ctx.max_steps)):
+    for step_index in range(call_limit):
         messages = memory.build_context().messages
         with services.lock:
             incoming = services.messages.pop(aid, [])
@@ -309,14 +364,16 @@ def _run_agent(agent, team, ctx, services):
             messages.append({"role": "user", "content": json.dumps(
                 {"directed_message": message, "consumed_event_id": consumed})})
         tool_schemas = ctx.get_tool_schemas({name: catalog[name] for name in allowed}) if allowed else "[]"
-        messages.append({"role": "user", "content": "Allowed tool schemas: " + tool_schemas})
+        messages.append({"role": "user", "content": "Allowed tool schemas: " + tool_schemas
+                         + f"\nRemaining allocated calls (including this one): {call_limit - step_index}. "
+                         + f"Return a complete JSON object within {output_limit} output tokens."})
         step = StepRecord(step_number=step_index + 1, model_input_messages=copy.deepcopy(messages),
                           start_time=time.time())
         observations = []
         try:
             services.reserve_call(team.get("total_max_calls", 16))
             response = _bounded_call(model, services.timeout_seconds, messages,
-                                     max_tokens=agent.get("max_tokens", 4096))
+                                     max_tokens=output_limit)
             step.model_output_messages = response
             usage = model.get_token_counts() if hasattr(model, "get_token_counts") else {}
             step.input_token_count = int(usage.get("input_token_count", 0))
@@ -383,6 +440,11 @@ def _run_agent(agent, team, ctx, services):
                     reason = "final_answer" if synth else "subtask_complete"
             if not parsed:
                 observations.append("Empty response; complete your assignment or request a tool.")
+        except ResponseProtocolError as exc:
+            step.error = exc
+            observations.append(f"ResponseProtocolError: {exc}. Rewrite a shorter, complete JSON object; "
+                                "do not continue the prior fragment. Preserve the required checkpoints.")
+            services.event(aid, "execution_error", observations[-1], parents=[before])
         except Exception as exc:
             step.error = exc
             observations.append(f"{type(exc).__name__}: {exc}")

@@ -9,6 +9,7 @@ from jit_mas.config import MASConfig, NativeModels
 from jit_mas.experience import ExperienceStore
 from jit_mas.offline import FixtureModels
 from jit_mas.schemas import AgentSpec, Experience, ExperienceSnapshot, TeamSpec, digest
+from jit_mas.pipeline import attribution_source_digest, submitted_source_digest
 from scripts.run_jit_mas import make_pipeline
 
 
@@ -36,6 +37,7 @@ def test_complete_vertical_loop_and_reuse(setup):
     assert len(outcome["validations"][0]["pairs"]) == 2
     assert store.snapshot().version == 1
     assert outcome["submitted_at"] < outcome["evaluated_at"]
+    assert read_run(outcome, "evaluation.json")["raw"]["submission_answer_hash"] == outcome["answer_hash"]
     frozen = read_run(outcome, "frozen_plan.json")
     assert frozen["R_global"] != frozen["R_planned"]
     assert frozen["hashes"]["TeamSpec"] == digest(frozen["TeamSpec"])
@@ -164,14 +166,361 @@ def test_stage_failure_preserves_budget_and_error(setup, monkeypatch):
             wrapped.model = broken
         return wrapped
     monkeypatch.setattr(provider, "create", create)
-    with pytest.raises(RuntimeError, match="synthetic transport"):
+    with pytest.raises(RuntimeError, match="synthetic transport") as caught:
         pipeline.run("evaluate")
     failures = list(pipeline.output_dir.rglob("failure.json"))
     assert len(failures) == 1
     budget = json.loads(failures[0].with_name("budget.json").read_text())
     assert budget["model_calls"] == 1 and budget["tokens"] > 0
     assert budget["reserved_tokens"] == 0
+    for field in ("model_calls", "tokens", "reserved_tokens", "records"):
+        assert caught.value.jit_mas_run_failure["budget"][field] == budget[field]
+        assert json.loads(failures[0].read_text())["budget"][field] == budget[field]
     assert store.snapshot().version == 0
+
+
+def test_failed_validation_counts_baseline_and_candidate_attempts_without_committing(setup, monkeypatch):
+    pipeline, store, _ = setup
+    original = pipeline._run_task
+
+    def fail_candidate(task_id, snapshot, ledger, audit, **kwargs):
+        if kwargs["mode"] == "validation" and snapshot.experiences:
+            ticket = ledger.reserve("inference", "offline-failed-candidate", 10, 20)
+            ledger.settle(ticket, 3, 2, error="RuntimeError")
+            raise RuntimeError("Offline candidate failure after a charged request")
+        return original(task_id, snapshot, ledger, audit, **kwargs)
+
+    monkeypatch.setattr(pipeline, "_run_task", fail_candidate)
+    outcome = pipeline.run("evolve")[0]
+    validation = outcome["validations"][0]
+    assert validation["status"] == "pending"
+    assert store.snapshot().version == 0
+    expected = {"model_calls": 0, "tokens": 0, "tool_calls": 0}
+    for pair in validation["pairs"]:
+        assert pair["baseline"]["evaluation"]["complete"]
+        assert pair["failed_side"] == "candidate"
+        assert pair["failed_run"]["budget"]["model_calls"] == 1
+        assert (Path(pair["failed_run"]["run_dir"]) / "failure.json").is_file()
+        for side in ("baseline", "failed_run"):
+            for field in expected:
+                expected[field] += pair[side]["budget"][field]
+    assert all(outcome["costs"]["validation"][field] == value for field, value in expected.items())
+    held_out = pipeline.run("evaluate")[0]
+    assert held_out["experience_version"] == 0
+    assert store.snapshot().version == 0
+
+
+def test_failed_attribution_persists_received_calls_after_submission(setup, monkeypatch):
+    pipeline, store, provider = setup
+    create = provider.create
+
+    def corrupt_post(role, agent_id, ledger, stage):
+        model = create(role, agent_id, ledger, stage)
+        if agent_id != "global-post":
+            return model
+
+        class InvalidJSON:
+            def __call__(self, messages, **kwargs):
+                response = model(messages, **kwargs)
+                response.content = '{"matches":'
+                return response
+
+        return InvalidJSON()
+
+    monkeypatch.setattr(provider, "create", corrupt_post)
+    with pytest.raises(json.JSONDecodeError):
+        pipeline.run("evolve")
+    path = next(pipeline.output_dir.glob("*/attribution.json"))
+    recorded = json.loads(path.read_text(encoding="utf-8"))
+    assert not recorded["complete"]
+    assert len(recorded["calls"]) == 2
+    assert all(call["phase"] == "align" and call["response"] == '{"matches":'
+               for call in recorded["calls"])
+    assert recorded["proposals"] == []
+    assert path.with_name("submission.json").is_file()
+    assert json.loads(path.with_name("evaluation.json").read_text())["complete"]
+    assert path.with_name("failure.json").is_file()
+    assert store.snapshot().version == 0
+
+
+def test_explicit_submitted_resume_reuses_immutable_answer_and_eval_only(setup, tmp_path, monkeypatch):
+    pipeline, _, _ = setup
+    task_id = pipeline.manifest.evolution[0]
+    source = pipeline.run_task(task_id, ExperienceSnapshot(), mode="evolve", attribution=False, resume=False)
+    source_dir = Path(source["run_dir"])
+    manifest_path = source_dir / "run_manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["comparison"]["code"] = "historical-source-code"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    anchor = submitted_source_digest(source_dir)
+    original = {path.name: path.read_bytes() for path in source_dir.iterdir() if path.is_file()}
+    provider = FixtureModels()
+    state = ExperienceStore(tmp_path / "continuation.sqlite")
+    continued = make_pipeline(pipeline.config, state, tmp_path / "continued", fixture_models=provider)
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Source continuation must not generate or execute another source harness")
+
+    monkeypatch.setattr(continued, "synthesizer_factory", forbidden)
+    try:
+        outcome = continued.run_task(task_id, state.snapshot(), mode="evolve", attribution=True,
+            resume_source=source_dir, resume_source_hash=anchor)
+        assert provider.calls and all(call["agent_id"] in {"global-post", "analyst", "integrator"}
+                                      for call in provider.calls)
+        assert all(call["role"] in {"global", "local"} for call in provider.calls)
+        assert set(outcome["budget"]["by_stage"]) == {"update"}
+        assert outcome["answer_hash"] == source["answer_hash"]
+        assert outcome["evaluation"] == source["evaluation"]
+        assert outcome["comparison_fingerprint"] == digest(manifest["comparison"])
+        assert outcome["resume_provenance"]["source_code_hash"] == "historical-source-code"
+        assert outcome["resume_provenance"]["continuation_code_hash"] == continued.code_hash
+        assert outcome["source_submission_reused"] and outcome["source_evaluation_reused"]
+        assert outcome["resume_provenance"]["evaluation_has_recorded_submission_hash"]
+        assert outcome["historical_source_budget"]["model_calls"] == source["budget"]["model_calls"]
+        assert outcome["proposals"]
+        assert submitted_source_digest(source_dir) == anchor
+        assert all((source_dir / name).read_bytes() == content for name, content in original.items())
+        for name in ("submission.json", "evaluation.json", "execution.json"):
+            assert (Path(outcome["run_dir"]) / name).read_bytes() == original[name]
+    finally:
+        state.close()
+
+
+@pytest.mark.parametrize("mutation", ["anchor", "task", "private", "config", "answer", "evaluation",
+                                      "evaluation_answer_hash", "evaluation_null_hash", "sidecar"])
+def test_submitted_resume_rejects_changed_source_before_model_calls(setup, tmp_path, mutation):
+    pipeline, _, _ = setup
+    task_id = pipeline.manifest.evolution[0]
+    source = pipeline.run_task(task_id, ExperienceSnapshot(), mode="evolve", attribution=False, resume=False)
+    source_dir = Path(source["run_dir"])
+    anchor = submitted_source_digest(source_dir)
+    if mutation in {"task", "private", "config"}:
+        path = source_dir / "run_manifest.json"
+        manifest = json.loads(path.read_text())
+        if mutation == "task":
+            manifest["comparison"]["task"]["question"] = "Wrong public task"
+        elif mutation == "private":
+            manifest["comparison"]["private_hash"] = "wrong-private-record"
+        else:
+            manifest["comparison"]["config"]["max_total_tokens"] += 1
+        path.write_text(json.dumps(manifest), encoding="utf-8")
+        anchor = submitted_source_digest(source_dir)
+    elif mutation in {"anchor", "answer"}:
+        path = source_dir / "submission.json"
+        submission = json.loads(path.read_text())
+        submission["answer"] = "Changed answer"
+        path.write_text(json.dumps(submission), encoding="utf-8")
+        if mutation == "answer":
+            anchor = submitted_source_digest(source_dir)
+    elif mutation in {"evaluation", "evaluation_answer_hash", "evaluation_null_hash"}:
+        path = source_dir / "evaluation.json"
+        evaluation = json.loads(path.read_text())
+        if mutation == "evaluation":
+            evaluation["complete"] = False
+        else:
+            evaluation["raw"]["submission_answer_hash"] = (
+                "wrong-submission-hash" if mutation == "evaluation_answer_hash" else None)
+        path.write_text(json.dumps(evaluation), encoding="utf-8")
+        anchor = submitted_source_digest(source_dir)
+    else:
+        artifact = json.loads((source_dir / "harness.json").read_text())
+        path = Path(artifact["path"]) / "team.json"
+        sidecar = json.loads(path.read_text())
+        sidecar["task"]["question"] = "Changed sidecar task"
+        path.write_text(json.dumps(sidecar), encoding="utf-8")
+    provider = FixtureModels()
+    state = ExperienceStore(tmp_path / "continuation.sqlite")
+    continued = make_pipeline(pipeline.config, state, tmp_path / "continued", fixture_models=provider)
+    try:
+        with pytest.raises(ValueError):
+            continued.run_task(task_id, state.snapshot(), mode="evolve", attribution=True,
+                resume_source=source_dir, resume_source_hash=anchor)
+        assert provider.calls == []
+        assert state.snapshot().version == 0
+    finally:
+        state.close()
+
+
+def test_legacy_submitted_resume_reports_missing_answer_binding_without_fabricating_it(setup, tmp_path):
+    pipeline, _, _ = setup
+    task_id = pipeline.manifest.evolution[0]
+    source = pipeline.run_task(task_id, ExperienceSnapshot(), mode="evolve", attribution=False, resume=False)
+    source_dir = Path(source["run_dir"])
+    path = source_dir / "evaluation.json"
+    evaluation = json.loads(path.read_text())
+    del evaluation["raw"]["submission_answer_hash"]
+    path.write_text(json.dumps(evaluation), encoding="utf-8")
+    original_bytes = path.read_bytes()
+    anchor = submitted_source_digest(source_dir)
+    state = ExperienceStore(tmp_path / "continuation.sqlite")
+    continued = make_pipeline(pipeline.config, state, tmp_path / "continued", fixture_models=FixtureModels())
+    try:
+        outcome = continued.run_task(task_id, state.snapshot(), mode="evolve", attribution=True,
+            resume_source=source_dir, resume_source_hash=anchor)
+        provenance = outcome["resume_provenance"]
+        assert not provenance["evaluation_has_recorded_submission_hash"]
+        assert provenance["evaluation_submission_binding"] == (
+            "Legacy evaluation has no recorded submission hash; explicit caller anchor trusted")
+        assert "submission_answer_hash" not in outcome["evaluation"]["raw"]
+        assert path.read_bytes() == original_bytes
+        assert (Path(outcome["run_dir"]) / "evaluation.json").read_bytes() == original_bytes
+        assert submitted_source_digest(source_dir) == anchor
+    finally:
+        state.close()
+
+
+def test_submitted_resume_runs_fresh_paired_validation_then_held_out(setup, tmp_path):
+    pipeline, _, _ = setup
+    task_id = pipeline.manifest.evolution[0]
+    source = pipeline.run_task(task_id, ExperienceSnapshot(), mode="evolve", attribution=False, resume=False)
+    provider = FixtureModels()
+    state = ExperienceStore(tmp_path / "continuation.sqlite")
+    continued = make_pipeline(pipeline.config, state, tmp_path / "continued", fixture_models=provider)
+    try:
+        outcome = continued.run("evolve", resume=False, resume_source=source["run_dir"],
+            resume_source_hash=submitted_source_digest(source["run_dir"]))[0]
+        assert outcome["source_submission_reused"]
+        validation = outcome["validations"][0]
+        assert validation["status"] == "accepted"
+        for pair in validation["pairs"]:
+            for side in ("baseline", "candidate"):
+                assert not pair[side]["resumed"]
+                assert not pair[side].get("source_submission_reused", False)
+                assert pair[side]["budget"]["by_stage"]["evaluation"]["model_calls"] > 0
+        assert state.snapshot().version == 1
+        held_out = continued.run("evaluate", resume=False)[0]
+        assert held_out["experience_version"] == 1
+        assert held_out["budget"]["by_stage"]["evaluation"]["model_calls"] > 0
+        with pytest.raises(ValueError, match="fresh store"):
+            continued.run("evolve", resume_source=source["run_dir"],
+                resume_source_hash=submitted_source_digest(source["run_dir"]))
+    finally:
+        state.close()
+
+
+def _frozen_attribution_source(setup, tmp_path):
+    pipeline, _, _ = setup
+    task_id = pipeline.manifest.evolution[0]
+    source = pipeline.run_task(task_id, ExperienceSnapshot(), mode="evolve", attribution=False, resume=False)
+    anchor = submitted_source_digest(source["run_dir"])
+    state = ExperienceStore(tmp_path / "attribution-state.sqlite")
+    first = make_pipeline(pipeline.config, state, tmp_path / "first-attribution", fixture_models=FixtureModels())
+    try:
+        attributed = first.run_task(task_id, state.snapshot(), mode="evolve", attribution=True,
+            resume_source=source["run_dir"], resume_source_hash=anchor)
+    finally:
+        state.close()
+    return source, anchor, attributed
+
+
+def test_frozen_attribution_replay_uses_exact_proposals_without_any_model_calls(setup, tmp_path, monkeypatch):
+    pipeline, _, _ = setup
+    source, anchor, attributed = _frozen_attribution_source(setup, tmp_path)
+    location = Path(attributed["run_dir"])
+    attribute_anchor = attribution_source_digest(location)
+    original = {path.name: path.read_bytes() for path in location.iterdir() if path.is_file()}
+    state = ExperienceStore(tmp_path / "replay-state.sqlite")
+    provider = FixtureModels()
+    replay = make_pipeline(pipeline.config, state, tmp_path / "replay", fixture_models=provider)
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Frozen attribution replay must never construct/call a model")
+
+    monkeypatch.setattr(provider, "create", forbidden)
+    try:
+        outcome = replay.run_task(source["task_id"], state.snapshot(), mode="evolve", attribution=True,
+            resume_source=source["run_dir"], resume_source_hash=anchor,
+            resume_attribution=location / "attribution.json", resume_attribution_hash=attribute_anchor)
+        assert outcome["budget"]["model_calls"] == outcome["budget"]["tokens"] == 0
+        assert outcome["proposals"] == attributed["proposals"]
+        assert outcome["source_attribution_reused"]
+        assert "attribution_continued_at" not in outcome
+        assert outcome["resume_provenance"]["attribution_code_hash"] == attributed["resume_provenance"]["continuation_code_hash"]
+        assert outcome["historical_attribution_budget"]["model_calls"] == attributed["budget"]["model_calls"]
+        assert set(outcome["historical_attribution_budget"]["by_stage"]) == {"update"}
+        assert outcome["historical_source_budget"] == attributed["historical_source_budget"]
+        assert (Path(outcome["run_dir"]) / "attribution.json").read_bytes() == original["attribution.json"]
+        assert all((location / name).read_bytes() == content for name, content in original.items())
+        assert submitted_source_digest(source["run_dir"]) == anchor
+    finally:
+        state.close()
+
+
+@pytest.mark.parametrize("mutation", ["anchor", "incomplete", "proposal_mismatch", "source_hash",
+                                      "source_evaluation", "finding_evidence", "proposal_evidence", "baseline"])
+def test_frozen_attribution_replay_rejects_tampering_before_model_calls(setup, tmp_path, mutation):
+    pipeline, _, _ = setup
+    source, anchor, attributed = _frozen_attribution_source(setup, tmp_path)
+    location = Path(attributed["run_dir"])
+    attribute_anchor = attribution_source_digest(location)
+    attribution = json.loads((location / "attribution.json").read_text())
+    complete = json.loads((location / "complete.json").read_text())
+    if mutation in {"anchor", "incomplete"}:
+        attribution["complete"] = False
+    elif mutation == "proposal_mismatch":
+        complete["proposals"][0]["experience"]["instruction"] = "Different frozen proposal"
+    elif mutation == "source_hash":
+        provenance = json.loads((location / "resume_provenance.json").read_text())
+        provenance["source_hash"] = "different-source"
+        complete["resume_provenance"] = provenance
+        manifest = json.loads((location / "run_manifest.json").read_text())
+        manifest["continuation"] = provenance
+        (location / "resume_provenance.json").write_text(json.dumps(provenance), encoding="utf-8")
+        (location / "run_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    elif mutation == "source_evaluation":
+        evaluation = json.loads((location / "evaluation.json").read_text())
+        evaluation["score"] = 99
+        (location / "evaluation.json").write_text(json.dumps(evaluation), encoding="utf-8")
+    elif mutation == "finding_evidence":
+        attribution["findings"][0]["supporting_evidence"] = ["invented-event"]
+    elif mutation == "proposal_evidence":
+        attribution["proposals"][0]["evidence"] = ["invented-event"]
+        complete["proposals"] = attribution["proposals"]
+    else:
+        complete["experience_version"] = 1
+    (location / "attribution.json").write_text(json.dumps(attribution), encoding="utf-8")
+    (location / "complete.json").write_text(json.dumps(complete), encoding="utf-8")
+    if mutation != "anchor":
+        attribute_anchor = attribution_source_digest(location)
+    state = ExperienceStore(tmp_path / "replay-state.sqlite")
+    provider = FixtureModels()
+    replay = make_pipeline(pipeline.config, state, tmp_path / "replay", fixture_models=provider)
+    try:
+        with pytest.raises(ValueError):
+            replay.run_task(source["task_id"], state.snapshot(), mode="evolve", attribution=True,
+                resume_source=source["run_dir"], resume_source_hash=anchor,
+                resume_attribution=location, resume_attribution_hash=attribute_anchor)
+        assert not provider.calls
+        assert state.snapshot().version == 0
+    finally:
+        state.close()
+
+
+def test_frozen_first_proposal_gets_fresh_paired_runs_and_held_out(setup, tmp_path):
+    pipeline, _, _ = setup
+    source, anchor, attributed = _frozen_attribution_source(setup, tmp_path)
+    state = ExperienceStore(tmp_path / "replay-state.sqlite")
+    replay = make_pipeline(pipeline.config, state, tmp_path / "replay", fixture_models=FixtureModels())
+    try:
+        outcome = replay.run("evolve", resume=False,
+            resume_source=source["run_dir"], resume_source_hash=anchor,
+            resume_attribution=attributed["run_dir"],
+            resume_attribution_hash=attribution_source_digest(attributed["run_dir"]))[0]
+        assert outcome["budget"]["model_calls"] == 0
+        assert outcome["proposals"] == attributed["proposals"]
+        validation = outcome["validations"][0]
+        assert validation["proposal_id"] == attributed["proposals"][0]["proposal_id"]
+        assert validation["status"] == "accepted"
+        for pair in validation["pairs"]:
+            for side in ("baseline", "candidate"):
+                assert not pair[side]["resumed"]
+                assert not pair[side].get("source_submission_reused", False)
+                assert pair[side]["budget"]["by_stage"]["evaluation"]["model_calls"] > 0
+        held_out = replay.run("evaluate", resume=False)[0]
+        assert held_out["experience_version"] == 1
+        assert held_out["budget"]["by_stage"]["evaluation"]["model_calls"] > 0
+    finally:
+        state.close()
 
 
 def test_all_three_banks_reach_their_stage_and_capability(setup):

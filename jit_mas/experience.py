@@ -3,11 +3,23 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from pathlib import Path
 
 from .schemas import (ChangeProposal, ExperienceSnapshot, PublicTask,
                       ValidationResult, digest, utc_now)
+
+
+def capability_matches(scope: str, capability: str) -> bool:
+    """Retrieve scoped advice across task-specific role names, not exact prose."""
+    if not scope.strip():
+        return True
+    ignored = {"a", "an", "and", "as", "at", "be", "by", "for", "from", "in", "is",
+               "it", "of", "on", "or", "the", "to", "with"}
+    def terms(text):
+        return set(re.findall(r"[^\W_]+", text.casefold())) - ignored
+    return bool(terms(scope).intersection(terms(capability)))
 
 
 def candidate_snapshot(base: ExperienceSnapshot, proposal: ChangeProposal) -> ExperienceSnapshot:
@@ -176,7 +188,7 @@ def retrieve(snapshot: ExperienceSnapshot, task: PublicTask, *, excluded_task_id
             continue
         if before and entry.created_at >= before:
             continue
-        if capability and entry.bank == "execution" and entry.capability != capability:
+        if capability and entry.bank == "execution" and not capability_matches(entry.capability, capability):
             continue
         found.append(entry.model_dump(mode="json"))
     return found[-limit:]

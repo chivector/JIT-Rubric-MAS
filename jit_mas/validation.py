@@ -6,6 +6,7 @@ from typing import Callable
 
 from pydantic import Field
 
+from .budget import BudgetExceeded
 from .experience import candidate_snapshot
 from .schemas import (ChangeProposal, ExperienceSnapshot, Record, SplitManifest,
                       EvaluationFeedback, ValidationResult, digest)
@@ -39,14 +40,19 @@ class PairedValidator:
         if len(ids) >= self.config.min_tasks:
             status, reason = "accepted", "Paired task quality improved without criterion regression"
             deltas, invalid, regression = [], False, False
+            budget_exhausted = False
             for task_id in ids:
                 per_task = []
                 for repeat in range(self.config.repeats):
                     pair = {"task_id": task_id, "repeat": repeat}
+                    active_side = "baseline"
                     try:
                         old = self.rebuild(task_id, baseline.model_copy(deep=True), repeat, "baseline")
+                        pair["baseline"] = old
+                        active_side = "candidate"
                         new = self.rebuild(task_id, candidate.model_copy(deep=True), repeat, "candidate")
-                        pair.update(baseline=old, candidate=new)
+                        pair["candidate"] = new
+                        active_side = None
                         old_eval = EvaluationFeedback.model_validate(old["evaluation"]).model_dump(mode="json")
                         new_eval = EvaluationFeedback.model_validate(new["evaluation"]).model_dump(mode="json")
                         for run, evaluation in ((old, old_eval), (new, new_eval)):
@@ -84,9 +90,18 @@ class PairedValidator:
                     except Exception as exc:
                         invalid = True
                         pair["error"] = f"{type(exc).__name__}: {exc}"
+                        if active_side is not None:
+                            pair["failed_side"] = active_side
+                        if hasattr(exc, "jit_mas_run_failure"):
+                            pair["failed_run"] = exc.jit_mas_run_failure
+                        budget_exhausted = isinstance(exc, BudgetExceeded)
                     pairs.append(pair)
+                    if budget_exhausted:
+                        break
                 if per_task:
                     deltas.append(sum(per_task) / len(per_task))
+                if budget_exhausted:
+                    break
             if invalid or len(deltas) < self.config.min_tasks:
                 status, reason = "pending", "Incomplete or incomparable paired evidence"
             elif regression:
