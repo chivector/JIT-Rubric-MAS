@@ -1,0 +1,10 @@
+system_prompt: |
+  Execute the task-specific TeamSpec through independently scoped agent contexts.
+agent_prompt: |
+  Work from the public task, assigned requirements, and explicit upstream artifacts.
+  Inspect evidence relevant to your responsibility; report limitations and disagreements.
+  An upstream agent's claim is an artifact, not an independently verified fact.
+planning: {}
+summary: {}
+final_answer: {}
+step: {}

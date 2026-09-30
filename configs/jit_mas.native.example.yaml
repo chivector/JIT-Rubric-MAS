@@ -1,0 +1,52 @@
+backend: native_jit
+unsafe_local: false
+max_agents: 4
+max_parallel: 2
+team_max_calls: 16
+max_model_calls: 100
+max_total_tokens: 2000000
+max_tool_calls: 64
+candidates: 1
+max_repairs: 2
+local_planning: true
+local_attribution: true
+persistent_experience: true
+available_tools: [web_search, crawl_page]
+max_validation_tasks: 2
+validation:
+  min_tasks: 2
+  repeats: 1
+  quality_tolerance: 0
+  criterion_tolerance: 0
+  min_mean_improvement: 0
+models:
+  meta:
+    model: ${MAS_META_MODEL}
+    endpoint: ${MAS_META_ENDPOINT}
+    key_env: MAS_META_API_KEY
+    max_tokens: 64000
+    timeout: 300
+  global:
+    model: ${MAS_GLOBAL_MODEL}
+    endpoint: ${MAS_GLOBAL_ENDPOINT}
+    key_env: MAS_GLOBAL_API_KEY
+    max_tokens: 8192
+    timeout: 120
+  local:
+    model: ${MAS_LOCAL_MODEL}
+    endpoint: ${MAS_LOCAL_ENDPOINT}
+    key_env: MAS_LOCAL_API_KEY
+    max_tokens: 4096
+    timeout: 120
+  exec:
+    model: ${MAS_EXEC_MODEL}
+    endpoint: ${MAS_EXEC_ENDPOINT}
+    key_env: MAS_EXEC_API_KEY
+    max_tokens: 4096
+    timeout: 120
+  judge:
+    model: ${MAS_JUDGE_MODEL}
+    endpoint: ${MAS_JUDGE_ENDPOINT}
+    key_env: MAS_JUDGE_API_KEY
+    max_tokens: 4096
+    timeout: 120

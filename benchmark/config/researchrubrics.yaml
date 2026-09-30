@@ -1,0 +1,34 @@
+# Dataset preparation and evaluator differences: docs/jit_mas_researchrubrics.md.
+harness: plan_and_execute
+
+model:
+  model_id: "${EXEC_MODEL}"
+  api_base: "${OPENAI_API_BASE}"
+  api_key: "${OPENAI_API_KEY}"
+  max_tokens: 8192
+  temperature: 0
+
+tools:
+  - web_search
+  - crawl_page
+  - final_answer
+
+execution:
+  max_steps: 40
+  concurrency: 1
+
+prompts_type: default
+
+benchmark:
+  name: researchrubrics
+  dataset_path: "${RESEARCHRUBRICS_DATASET}"
+  output_path: ./outputs/researchrubrics_results.jsonl
+  judge:
+    model_id: "${JUDGE_MODEL}"
+    api_base: "${JUDGE_API_BASE}"
+    api_key: "${JUDGE_API_KEY}"
+    max_tokens: 4096
+  adapter_kwargs:
+    max_attempts: 3
+    judge_timeout: 120
+    max_document_chars: 400000

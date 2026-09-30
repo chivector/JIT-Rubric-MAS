@@ -1,0 +1,8 @@
+backend: scripted
+local_planning: true
+local_attribution: true
+persistent_experience: true
+max_validation_tasks: 2
+validation:
+  min_tasks: 2
+  repeats: 1
