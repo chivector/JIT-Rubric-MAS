@@ -1,0 +1,21 @@
+{
+  "status": "completed",
+  "arm": "single_agent_direct",
+  "generation_completed": 33,
+  "generation_failed": 0,
+  "scoring_completed": 33,
+  "scoring_denominator": 33,
+  "full_task_mean": 0.4275497708174814,
+  "judge_model": "gpt-5.4",
+  "judge_response_models": [
+    "gpt-5.4-2026-03-05",
+    "gpt-5.4"
+  ],
+  "knowledge_policy": "model_general_knowledge_allowed",
+  "comparison_available": false,
+  "limitations": [
+    "Closed-book exploratory run; shared public evidence was not used.",
+    "JIT-MAS was not run in this directory.",
+    "Twenty-two complete prior judgments were reused after matching evaluator and answer identities."
+  ]
+}
