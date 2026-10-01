@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from jit_mas.bridge import (JITHarnessSynthesizer, ScriptedHarnessModel,
-                            _module_interface_errors, seed_response)
+                            _mas_contract, _module_interface_errors, seed_response)
 from jit.harness_ops import _parse_harness_response
 from jit_mas.budget import BudgetLedger, MeteredModel
 from jit_mas.execution import TeamExecutor, TeamMemory, content_hash, validate_team
@@ -553,6 +553,14 @@ class BridgeExecutionTests(unittest.TestCase):
         self.assertEqual(artifact.meta_trajectory[0]["model_input_messages"], model.calls[0])
         self.assertEqual(artifact.meta_trajectory[1]["model_input_messages"], model.calls[1])
         self.assertIn("JIT-MAS BINDING CONTRACT", artifact.meta_trajectory[0]["prompt"]["system_prompt"])
+
+    def test_iterative_contract_overrides_historical_single_pass_guidance(self):
+        contract = _mas_contract("iterative_shared_ledger")
+        for phrase in ("single-pass execution", "calls each role model exactly once",
+                       "There is no draft-review-rewrite loop", "no peer messaging"):
+            self.assertNotIn(phrase, contract)
+        self.assertIn("cooperative_shared_ledger", contract)
+        self.assertIn("reactivate completed roles", contract)
 
     def test_seed_description_matches_honest_role_completion_contract(self):
         description = (Path(__file__).resolve().parents[2] /
