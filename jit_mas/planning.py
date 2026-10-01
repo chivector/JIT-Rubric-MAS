@@ -346,6 +346,36 @@ class GlobalAnalyzer(JsonModelCalls):
 
     def _prompt(self, prompt: str) -> str:
         if self.execution_mode == "iterative_shared_ledger":
+            # The planning constants also document the historical single-pass
+            # control. Remove those prohibitions before adding the iterative
+            # contract, so a model cannot receive two incompatible schedules.
+            for old, new in (
+                ("Execution is single-pass: each selected agent receives one model call and publishes once.",
+                 "Execution may be iterative: each selected agent can receive additional model turns and revise a published artifact."),
+                ("Each selected role executes once in DAG order, with exactly one model call. A role cannot claim it will incorporate\nfeedback from its downstream reviewer later; propose a downstream synthesis responsibility\nor a merge for reconciliation instead of an implicit second execution or backward edge.",
+                 "The dependency DAG provides initial inputs; roles may later resume to answer public peer requests and incorporate new ledger evidence while preserving private history."),
+                ("Set every AgentSpec.max_calls=1 explicitly. There is no execution-time JSON\ncorrection, second draft or communication round; fit a complete response in that call.",
+                 "Set AgentSpec.max_calls to the configured ceiling, or null when the iterative task removes that optional ceiling. Token and timeout budgets remain binding."),
+                ("Set LocalPlan.max_calls=1; the reconciled AgentSpec.max_calls\nmust also be 1. Do not request correction calls or communication rounds.",
+                 "Set LocalPlan.max_calls to the configured iterative ceiling, or null when no role ceiling is requested. Peer communication and follow-up turns are allowed."),
+                ("Each selected agent executes once in DAG order. A writer cannot synthesize before\ndownstream reviewers run and then implicitly run again. Select an existing downstream\nagent for final synthesis and connect all contributors without cycles, or merge roles.\nResponsibilities and checkpoints may refer only to information available at that role's\nturn. An upstream writer cannot truthfully check that it incorporated future reviewer\nfeedback. Assign incorporation to a downstream role; do not claim an impossible check.",
+                 "The DAG orders initial availability, while cooperative scheduling may resume a role after peer requests or revised artifacts. Final synthesis waits for pending peer requests and terminal dependency outcomes."),
+                ("A reviewer is\na single-pass consumer of published evidence, never an interactive feedback loop.",
+                 "A reviewer may be resumed for public clarification or revision; private role history remains scoped to that role."),
+                ("The Writer consumes the shared ledger once.",
+                 "The Writer consumes ledger updates as they arrive and may revise before final submission."),
+                ("Do not allocate send_message, read_evidence, raise_issue or feedback request rounds.",
+                 "Allocate send_message only when public peer clarification is useful; it reactivates the addressed role without a fixed round count."),
+                ("Any external tool batch runs after that\nsingle response and enters the shared ledger without another model call.",
+                 "External tool results enter the shared ledger and may be followed by additional role turns."),
+                ("one external tool batch may add raw evidence after their response, without another model call.",
+                 "External tools may be requested across iterative turns within the configured tool and timeout budgets."),
+                ("no task-internal negotiation or clarification.",
+                 "task-internal peer clarification is allowed through the auditable shared ledger."),
+                ("Do not plan send_message, read_evidence, raise_issue or a follow-up request.",
+                 "Plan send_message only where peer clarification is task-relevant; follow-up requests must remain public and auditable."),
+            ):
+                prompt = prompt.replace(old, new)
             prompt += ("\nEXECUTION MODE: iterative_shared_ledger. Roles may revisit their work and "
                        "communicate through an auditable shared ledger. Contributors may request "
                        "allowed tools, receive tool results, and continue; the Writer may use tools "
@@ -354,6 +384,54 @@ class GlobalAnalyzer(JsonModelCalls):
                        "only when that configured ceiling is null. Configured call/tool ceilings, "
                        "token and timeout budgets remain binding. Plan termination on "
                        "completion, convergence, or those enforced budgets, never on a fixed round count.")
+            prompt += ("\nITERATIVE OVERRIDE (takes precedence over any historical single-pass wording above): "
+                       "Do not restrict a role to one call, one publication, one tool batch or one ledger read. "
+                       "The cooperative scheduler may reactivate completed roles for public peer requests, "
+                       "updated artifacts and clarification. Preserve each role's private history; expose only "
+                       "published ledger events. The synthesizer must wait for pending requests and failed "
+                       "dependencies, then submit one terminal answer. Do not introduce a fixed round count; "
+                       "configured role/team call ceilings, token budgets and timeout remain binding.")
+            # Normalize residual historical phrases whose source strings are
+            # assembled from adjacent literals (and therefore contain spaces,
+            # not source-line newlines).
+            for old, new in (
+                ("single-pass", "one-way historical"),
+                ("exactly one model call", "one or more model calls"),
+                ("max_calls=1", "a finite max_calls ceiling"),
+                ("single-pass consumer", "forward consumer"),
+                ("without another model call", "with additional role turns allowed"),
+                ("never send_message", "send_message only when peer clarification is useful"),
+                ("Do not allocate send_message", "Allocate send_message only when peer clarification is useful"),
+                ("shared ledger once", "shared ledger as updates arrive"),
+                ("consumes the shared ledger once", "consumes ledger updates before final submission"),
+                ("no task-internal negotiation or clarification", "task-internal peer clarification is allowed"),
+                ("no task-internal negotiation", "task-internal peer clarification is allowed"),
+                ("The Writer has tools=[]", "The Writer may use allowed task tools"),
+                ("The final Writer uses tools=[]", "The final Writer may use allowed task tools"),
+                ("the final Writer uses tools=[]", "the final Writer may use allowed task tools"),
+                ("the final synthesizer must have tools=[]", "the final synthesizer's tools must be within task.tools"),
+                ("the synthesizer must have tools=[]", "the synthesizer's tools must be within task.tools"),
+                ("its tools=[]", "its tools must be within task.tools"),
+                ("External tool calls may be batched once by a contributor; their results enter the ledger without another model turn.",
+                 "Allowed roles may request external tools across turns; results enter the ledger and can trigger another model turn."),
+                ("Any external tool batch runs after that single response and enters the shared ledger without a return call.",
+                 "External tool requests may span turns; results enter the shared ledger before later role turns."),
+                ("one external tool batch may add raw evidence after their response, with additional role turns allowed.",
+                 "External tools may add raw evidence across role turns."),
+                ("Do not plan send_message, read_evidence, raise_issue, debate, role revisits or iterative review.",
+                 "Plan public send_message clarification, role revisits and iterative review when task-relevant."),
+                ("Plan only forward publication and consumption", "Plan public publication, clarification and revision"),
+                ("External tool calls may be batched once by a contributor; their", "Allowed roles may request external tools across turns; their"),
+                ("results enter the ledger without another model turn.", "results enter the ledger and can trigger another model turn."),
+                ("Any external tool batch runs after that", "External tool requests may span turns and"),
+                ("single response and enters the shared ledger without a return call.", "multiple turns and enter the shared ledger before later turns."),
+                ("one external tool batch may add raw evidence after", "External tools may add raw evidence across turns after"),
+                ("their response, with additional role turns allowed.", "their latest turn."),
+                ("uses tools=[]", "may use allowed task tools"),
+                ("Do not\nplan send_message", "Plan public send_message"),
+                ("Plan only forward publication", "Plan public publication, clarification and revision"),
+            ):
+                prompt = prompt.replace(old, new)
         if self.explicit_rubrics:
             return prompt
         return prompt + "\nABLATION: Do not explicitly predict rubrics. Return graph rubrics=[] " \

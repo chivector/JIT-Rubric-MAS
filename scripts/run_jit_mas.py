@@ -17,7 +17,7 @@ from jit_mas.schemas import PublicTask, SplitManifest
 
 
 def make_pipeline(config, store, output, *, data=None, splits=None, fixture_models=None,
-                  benchmark="researchrubrics", evidence_dir=None):
+                  benchmark="researchrubrics", evidence_dir=None, checker=None):
     from benchmark.adapter.researchrubrics import ResearchRubricsAdapter
     from jit_mas.bridge import JITHarnessSynthesizer
 
@@ -44,7 +44,10 @@ def make_pipeline(config, store, output, *, data=None, splits=None, fixture_mode
             manifest = SplitManifest.model_validate(split_document.get("runtime_split_manifest", split_document))
         if evidence_dir:
             from jit_mas.evidence import load_evidence_tasks
-            tasks = load_evidence_tasks(tasks, evidence_dir, expected_count=len(tasks))
+            selected_ids = set(manifest.evolution + manifest.validation + manifest.test + manifest.stream)
+            selected_tasks = {task_id: tasks[task_id] for task_id in selected_ids}
+            evidence_tasks = load_evidence_tasks(selected_tasks, evidence_dir, expected_count=len(selected_tasks))
+            tasks = {**tasks, **evidence_tasks}
             config = config.model_copy(update={"available_tools": []})
         from scripts.tools.registry import ToolRegistry
         registry = ToolRegistry()
@@ -65,7 +68,7 @@ def make_pipeline(config, store, output, *, data=None, splits=None, fixture_mode
             kwargs = {"judge_api_base": spec.endpoint, "judge_max_tokens": spec.max_tokens,
                       "judge_timeout": spec.timeout}
         if dataset is not None:
-            return dataset.evaluator(judge, judge_id=judge_id, **kwargs)
+            return dataset.evaluator(judge, judge_id=judge_id, checker=checker, **kwargs)
         return ResearchRubricsAdapter(judge=judge, judge_id=judge_id, **kwargs)
 
     def synthesizer_factory(meta):

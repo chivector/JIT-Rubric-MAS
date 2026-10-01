@@ -221,6 +221,15 @@ def load_benchmark(name: str, path, *, available_tools=()) -> BenchmarkDataset:
                 if type(source_id) not in (int, str) or not str(source_id).strip():
                     raise ValueError("Invalid source identity")
                 criteria = raw.get("criteria")
+                checklist = raw.get("checklist")
+                if criteria is None and isinstance(checklist, list):
+                    criteria = []
+                    for item in checklist:
+                        if not isinstance(item, dict) or not isinstance(item.get("name"), str):
+                            raise ValueError("Invalid WritingBench checklist item")
+                        if not item["name"].strip() or not isinstance(item.get("criteria_description"), str):
+                            raise ValueError("Invalid WritingBench checklist description")
+                        criteria.append(copy.deepcopy(item) | {"criterion": item["name"]})
                 if not isinstance(criteria, list) or not criteria:
                     raise ValueError("Missing private criteria")
                 normalized = []
@@ -518,7 +527,7 @@ class WritingBenchEvaluator(_MeteredEvaluator):
                 raise ValueError("Invalid criterion records")
             calls = 1
             data = self._call({"task": _text(private_record.get("query")),
-                               "criteria": labels, "submission": prediction})
+                               "criteria": copy.deepcopy(criteria), "submission": prediction})
             scores = data.get("scores")
             if (not isinstance(scores, list) or len(scores) != len(labels)
                     or any(not isinstance(row, dict) for row in scores)):
@@ -559,7 +568,9 @@ class WritingBenchEvaluator(_MeteredEvaluator):
 def _checker_results(prediction, private_record, checker):
     instruction_ids = private_record.get("instruction_id_list", [])
     kwargs = private_record.get("kwargs", [])
-    if callable(checker):
+    if hasattr(checker, "check_record"):
+        result = checker.check_record(prediction, copy.deepcopy(private_record))
+    elif callable(checker):
         try:
             result = checker(prediction, instruction_ids, kwargs)
         except TypeError:
@@ -612,6 +623,8 @@ class _InstructionEvaluator(_MeteredEvaluator):
                           instruction_accuracy=sum(verdicts) / len(verdicts),
                           strict=self.name == "ifeval_strict", checker_source=self.source,
                           adapter_deviations=["pinned author checker", "no checker-guided repair"])
+            if hasattr(self.checker, "identity"):
+                result["checker_identity"] = copy.deepcopy(self.checker.identity)
             return result
         except Exception as exc:
             feedback = [{"rubric_id": task_id + ":checker", "criterion": "Instruction-following checks",

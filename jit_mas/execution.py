@@ -1,4 +1,4 @@
-"""Single-pass shared-ledger team primitives for an ordinary JIT Action module."""
+"""Single-pass and cooperative shared-ledger team primitives for JIT Action modules."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ def content_hash(value: Any) -> str:
                                      default=str).encode("utf-8")).hexdigest()
 
 
-def _bounded_call(call: Callable, timeout: float, *args, **kwargs):
+def _bounded_call(call: Callable, timeout: float, *args, deadline_remaining=None, **kwargs):
     """Bound waiting on cooperative API/tool clients, without blocking shutdown.
 
     This is not an isolation boundary: a timed-out local callable can still be
@@ -51,10 +51,17 @@ def _bounded_call(call: Callable, timeout: float, *args, **kwargs):
             result.put((False, exc))
 
     threading.Thread(target=invoke, daemon=True).start()
-    try:
-        ok, value = result.get(timeout=max(0.001, timeout))
-    except queue.Empty as exc:
-        raise TimeoutError(f"call exceeded {timeout:g} seconds") from exc
+    while True:
+        remaining = deadline_remaining() if deadline_remaining is not None else timeout
+        if remaining <= 0:
+            raise TimeoutError(f"call exceeded {timeout:g} seconds")
+        try:
+            ok, value = result.get(timeout=max(0.001, min(remaining, 0.1)
+                                              if deadline_remaining is not None else remaining))
+            break
+        except queue.Empty as exc:
+            if deadline_remaining is None:
+                raise TimeoutError(f"call exceeded {timeout:g} seconds") from exc
     if not ok:
         if isinstance(value, (KeyboardInterrupt, SystemExit)):
             raise RuntimeError(f"client terminated: {value}") from value
@@ -157,6 +164,18 @@ class TeamServices:
     started_at: float = field(default_factory=time.monotonic)
     call_counts: dict = field(default_factory=dict)
     agent_pool: AgentPoolSnapshot | None = None
+    task_seconds_at_start: float | None = field(init=False, default=None)
+
+    def __post_init__(self):
+        if self.ledger is not None and callable(getattr(self.ledger, "remaining_seconds", None)):
+            self.task_seconds_at_start = self.ledger.remaining_seconds()
+
+    def remaining_seconds(self):
+        if self.task_seconds_at_start is not None:
+            task_remaining = self.ledger.remaining_seconds()
+            elapsed = self.task_seconds_at_start - task_remaining
+            return max(0.0, min(self.timeout_seconds, self.task_seconds_at_start) - elapsed)
+        return max(0.0, self.timeout_seconds - (time.monotonic() - self.started_at))
 
     def event(self, agent_id, kind, content, *, parents=(), recipient="", source=""):
         with self.lock:
@@ -181,7 +200,7 @@ class TeamServices:
                 raise RuntimeError(f"AgentSpec.max_calls exhausted for agent '{agent_id}'")
             if limit is not None and self.calls >= limit:
                 raise RuntimeError("TeamSpec.total_max_calls exhausted")
-            if time.monotonic() - self.started_at >= self.timeout_seconds:
+            if self.remaining_seconds() <= 0:
                 self.cancelled.set()
                 raise TimeoutError("team execution timeout")
             self.called_agents.add(agent_id)
@@ -440,7 +459,12 @@ def _role_messages(messages, persistent):
     return copy.deepcopy(messages[:2] + messages[2:][-window:])
 
 
-def _run_agent_iterative(agent, team, ctx, services):
+def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=False,
+                         defer_final_submission=False):
+    if state is not None and state.get("initialized"):
+        return _continue_agent_iterative(agent, team, ctx, services, state,
+                                         one_turn=one_turn,
+                                         defer_final_submission=defer_final_submission)
     aid = agent["agent_id"]
     persistent = _persistent_role(agent, services)
     synth = aid == team["synthesizer_id"]
@@ -473,11 +497,19 @@ def _run_agent_iterative(agent, team, ctx, services):
         "Every tool request is {name, arguments}; arguments must be a JSON object conforming "
         "to its supplied schema. Cite only evidence IDs received in your ledger or observations. "
         "A terminal response must include the complete answer and all assigned checkpoints. "
-        "send_message posts to an exact peer agent_id; only active peers can reply."
+        "send_message posts to an exact peer agent_id and reactivates a completed teammate. "
+        "After asking a peer, the scheduler lets that peer respond before continuing your role. "
+        "A completed contribution may be resumed to answer questions or revise its public artifact. "
+        "The synthesizer submits only after all teammates and pending peer requests complete."
     )
     shared_ledger = _iterative_public_ledger(services, aid)
     ledger_hash = content_hash(shared_ledger)
     observed_ids = _ledger_evidence_ids(shared_ledger)
+    services.event(aid, "shared_ledger_read", {"ledger_hash": ledger_hash},
+                   parents=sorted(observed_ids))
+    if services.ledger is not None:
+        services.ledger.charge_communication(
+            len(json.dumps(shared_ledger, ensure_ascii=False).encode("utf-8")), stage="execution")
     instruction = {"public_task": _data(services.public_task), "agent": agent,
                    "shared_ledger": shared_ledger,
                    "rubrics": _data(services.rubrics) or {"rubrics": []},
@@ -487,14 +519,14 @@ def _run_agent_iterative(agent, team, ctx, services):
                                                      capability=agent["capability"])["matched"]],
                    "allowed_tool_schemas": ctx.get_tool_schemas(role_tools) if allowed else "[]",
                    "communication_tools": [{"name": "send_message",
-                       "description": "Post a message for an active teammate's next ledger refresh.",
+                       "description": "Ask or inform a teammate, resuming its private role history if needed.",
                        "parameters": {"type": "object", "properties": {
                            "recipient": {"type": "string", "enum": peer_ids},
                            "content": {"type": "string", "minLength": 1}},
                            "required": ["recipient", "content"], "additionalProperties": False}}],
                    "coordination": "iterative_shared_ledger",
-                   "scheduling": {"strategy": "dependency_dag_once",
-                                  "reactivate_completed_agents": False},
+                   "scheduling": {"strategy": "cooperative_shared_ledger",
+                                  "reactivate_completed_agents": True},
                    "submission": "final_answer" if synth else "contribution",
                    "completion_example": completion_example,
                    "output_budget": {"max_tokens_per_response": output_limit,
@@ -503,15 +535,41 @@ def _run_agent_iterative(agent, team, ctx, services):
         instruction["persistent_agent"] = persistent
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(instruction, ensure_ascii=False)}]
-    trajectory = []
-    answer = None
-    contribution = {"requirements": [], "outline": [], "evidence_spans": [], "source_references": []}
-    checkpoint_reports = {}
-    evidence_ids = []
-    pending_observation_ids = set()
-    reason = "error"
+    state = state if state is not None else {}
+    state.update(initialized=True, persistent=persistent, model=model, before=before,
+                 output_limit=output_limit, allowed=allowed, peer_ids=peer_ids,
+                 messages=messages, trajectory=[], answer=None,
+                 contribution={"requirements": [], "outline": [], "evidence_spans": [],
+                               "source_references": []}, checkpoint_reports={}, evidence_ids=[],
+                 pending_observation_ids=set(), observed_ids=observed_ids,
+                 ledger_hash=ledger_hash, handled_message_ids=set(), awaiting_messages=[])
+    return _continue_agent_iterative(agent, team, ctx, services, state,
+                                     one_turn=one_turn,
+                                     defer_final_submission=defer_final_submission)
+
+
+def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
+                              defer_final_submission):
+    aid = agent["agent_id"]
+    synth = aid == team["synthesizer_id"]
+    persistent = state["persistent"]
+    model = state["model"]
+    before = state["before"]
+    output_limit = state["output_limit"]
+    allowed = state["allowed"]
+    peer_ids = state["peer_ids"]
+    messages = state["messages"]
+    trajectory = state["trajectory"]
+    answer = state["answer"]
+    contribution = state["contribution"]
+    checkpoint_reports = state["checkpoint_reports"]
+    evidence_ids = state["evidence_ids"]
+    pending_observation_ids = state["pending_observation_ids"]
+    observed_ids = state["observed_ids"]
+    ledger_hash = state["ledger_hash"]
+    reason = "running"
     while not services.cancelled.is_set():
-        remaining = services.timeout_seconds - (time.monotonic() - services.started_at)
+        remaining = services.remaining_seconds()
         if remaining <= 0:
             services.cancelled.set()
             reason = "timeout"
@@ -526,16 +584,21 @@ def _run_agent_iterative(agent, team, ctx, services):
                 messages.append({"role": "user", "content": update_content})
             observed_ids.update(_ledger_evidence_ids(updated_ledger))
             ledger_hash = updated_hash
+            services.event(aid, "shared_ledger_read", {"ledger_hash": ledger_hash},
+                           parents=sorted(_ledger_evidence_ids(updated_ledger)))
             if services.ledger is not None:
                 services.ledger.charge_communication(
                     len(update_content.encode("utf-8")), stage="execution")
         observed_ids.update(pending_observation_ids)
         pending_observation_ids.clear()
+        state["handled_message_ids"].update(item["event_id"]
+                                           for item in updated_ledger["communications"])
         context_messages = _role_messages(messages, persistent)
         step = StepRecord(step_number=len(trajectory) + 1, model_input_messages=context_messages,
                           start_time=time.time())
         try:
             response = _bounded_call(model, min(services.timeout_seconds, remaining), context_messages,
+                                     deadline_remaining=services.remaining_seconds,
                                      max_tokens=output_limit)
             step.model_output_messages = response
             usage = model.get_token_counts() if hasattr(model, "get_token_counts") else {}
@@ -543,7 +606,7 @@ def _run_agent_iterative(agent, team, ctx, services):
             step.output_token_count = int(usage.get("output_token_count", 0))
             step.total_token_count = step.input_token_count + step.output_token_count
             output_event = services.event(aid, "model_output", step.full_dict()["model_output_messages"],
-                                          parents=[before])
+                                          parents=[before, *sorted(observed_ids)])
             parsed = _parse_response(response)
             if "continue" in parsed and not isinstance(parsed["continue"], bool):
                 raise ResponseProtocolError("continue must be a boolean")
@@ -593,7 +656,7 @@ def _run_agent_iterative(agent, team, ctx, services):
                     continue
                 if services.cancelled.is_set():
                     raise TimeoutError("team cancelled before tool dispatch")
-                remaining = services.timeout_seconds - (time.monotonic() - services.started_at)
+                remaining = services.remaining_seconds()
                 if remaining <= 0:
                     raise TimeoutError("team execution timeout")
                 if name == "send_message":
@@ -604,10 +667,12 @@ def _run_agent_iterative(agent, team, ctx, services):
                     if services.ledger is not None:
                         services.ledger.charge_communication(len(message.encode("utf-8")), stage="execution")
                     observations.append({"event_id": event_id, "recipient": recipient, "content": message})
+                    state["awaiting_messages"].append((recipient, event_id))
                     continue
                 if services.ledger is not None:
                     services.ledger.charge_tool(stage="execution", agent_id=aid, tool_name=name)
-                observation = _bounded_call(ctx.execute_tool, min(services.timeout_seconds, remaining), name, args)
+                observation = _bounded_call(ctx.execute_tool, min(services.timeout_seconds, remaining), name, args,
+                                            deadline_remaining=services.remaining_seconds)
                 event_id = services.event(aid, "retrieved", {"tool": name, "arguments": args,
                                                                "output": observation},
                                           parents=[output_event], source=name)
@@ -651,17 +716,24 @@ def _run_agent_iterative(agent, team, ctx, services):
         step.end_time = time.time()
         step.duration = step.end_time - step.start_time
         trajectory.append(step)
-    if reason not in {"final_answer", "subtask_complete"}:
+        if one_turn:
+            reason = "yielded"
+            break
+    if reason == "running":
+        reason = "timeout" if services.cancelled.is_set() else "error"
+    if reason not in {"final_answer", "subtask_complete", "yielded"}:
         answer = None
         with services.lock:
             services.artifacts.pop(aid, None)
-    if reason == "final_answer" and answer is not None and synth:
+    if reason == "final_answer" and answer is not None and synth and not defer_final_submission:
         services.event(aid, "final_answer", answer, parents=evidence_ids)
+    state.update(answer=answer, contribution=contribution, checkpoint_reports=checkpoint_reports,
+                 evidence_ids=evidence_ids, ledger_hash=ledger_hash)
     return RunResult(answer=answer, trajectory=trajectory, terminated_reason=reason,
                      metadata={"agent_id": aid, "role": agent["role"], "capability": agent["capability"],
                                "coordination": "iterative_shared_ledger", "model_calls": len(trajectory),
-                               "scheduling": {"strategy": "dependency_dag_once",
-                                              "reactivate_completed_agents": False},
+                               "scheduling": {"strategy": "cooperative_shared_ledger",
+                                              "reactivate_completed_agents": True},
                                "checkpoint_reports": checkpoint_reports,
                                "observed_evidence_ids": sorted(observed_ids),
                                "pool_agent_id": agent.get("pool_agent_id"),
@@ -955,6 +1027,133 @@ def _run_agent(agent, team, ctx, services):
                                "event_ids": [e["event_id"] for e in services.events if e["agent_id"] == aid]})
 
 
+def _run_team_iterative(team, ctx, services):
+    agents = {agent["agent_id"]: agent for agent in team["agents"]}
+    states = {}
+    statuses = {aid: "unstarted" for aid in agents}
+    results = {}
+    dispatch_order = {aid: 0 for aid in agents}
+    dispatch_count = 0
+    synthesizer = team["synthesizer_id"]
+    while not services.cancelled.is_set():
+        if services.remaining_seconds() <= 0:
+            services.cancelled.set()
+            break
+        while True:
+            failed = {aid for aid, status in statuses.items() if status == "failed"}
+            blocked = [aid for aid, agent in agents.items() if statuses[aid] != "failed"
+                       and failed.intersection(agent.get("depends_on", []))]
+            if not blocked:
+                break
+            for aid in blocked:
+                services.event(aid, "dependency_failed", {"failed": sorted(failed)})
+                statuses[aid] = "failed"
+                prior = results.get(aid)
+                results[aid] = RunResult(terminated_reason="dependency_failed",
+                                        trajectory=prior.trajectory if prior else [],
+                                        metadata={"agent_id": aid})
+                with services.lock:
+                    services.artifacts.pop(aid, None)
+        if statuses[synthesizer] == "failed":
+            break
+        with services.lock:
+            communications = [copy.deepcopy(event) for event in services.events
+                              if event["kind"] == "peer_message"]
+        inbox = {}
+        for event in communications:
+            recipient = event["recipient"]
+            if (recipient in agents and statuses[recipient] != "failed"
+                    and event["event_id"] not in states.get(recipient, {}).get("handled_message_ids", set())):
+                inbox.setdefault(recipient, []).append(event["event_id"])
+        for aid, pending_ids in inbox.items():
+            if statuses[aid] == "completed":
+                statuses[aid] = "active"
+                services.event(aid, "agent_resumed", {"reason": "peer_message",
+                                                       "message_event_ids": pending_ids},
+                               parents=pending_ids)
+                with services.lock:
+                    if aid in services.artifacts:
+                        services.artifacts[aid]["complete"] = False
+        waiting = {}
+        for aid, state in states.items():
+            unavailable = [recipient for recipient, event_id in state["awaiting_messages"]
+                           if statuses.get(recipient) == "failed"]
+            if unavailable and statuses[aid] != "failed":
+                services.event(aid, "peer_unavailable", {"recipients": sorted(set(unavailable))})
+                statuses[aid] = "failed"
+                prior = results.get(aid)
+                results[aid] = RunResult(terminated_reason="peer_unavailable",
+                                        trajectory=prior.trajectory if prior else [],
+                                        metadata={"agent_id": aid,
+                                                  "unavailable_peers": sorted(set(unavailable))})
+                with services.lock:
+                    services.artifacts.pop(aid, None)
+                state["awaiting_messages"] = []
+                continue
+            pending = [(recipient, event_id) for recipient, event_id in state["awaiting_messages"]
+                       if not (event_id in states.get(recipient, {}).get("handled_message_ids", set())
+                               and statuses[recipient] == "completed")]
+            state["awaiting_messages"] = pending
+            waiting[aid] = bool(pending)
+        if all(status == "completed" for status in statuses.values()) and not inbox:
+            current_ledger = _iterative_public_ledger(services, synthesizer)
+            if content_hash(current_ledger) != states[synthesizer]["ledger_hash"]:
+                statuses[synthesizer] = "active"
+                services.event(synthesizer, "agent_resumed", {"reason": "updated_team_artifacts"})
+                with services.lock:
+                    services.artifacts[synthesizer]["complete"] = False
+            else:
+                final = results[synthesizer]
+                services.event(synthesizer, "final_answer", final.answer,
+                               parents=states[synthesizer]["evidence_ids"])
+                for aid, result in results.items():
+                    result.metadata["event_ids"] = [event["event_id"] for event in services.events
+                                                    if event["agent_id"] == aid]
+                return results
+        ordered = sorted(agents, key=lambda aid: dispatch_order[aid])
+        ready = [aid for aid in ordered if aid in inbox]
+        ready.extend(aid for aid in ordered if aid not in ready and statuses[aid] == "active"
+                     and not waiting.get(aid, False))
+        ready.extend(aid for aid in ordered if aid not in ready and statuses[aid] == "unstarted"
+                     and all(statuses[dependency] == "completed"
+                             for dependency in agents[aid].get("depends_on", [])))
+        if not ready:
+            ready = [aid for aid in ordered if statuses[aid] == "active"]
+        if not ready:
+            break
+        selected = ready[:team.get("max_parallel", 2)]
+        for aid in selected:
+            statuses[aid] = "active"
+            dispatch_count += 1
+            dispatch_order[aid] = dispatch_count
+        with ThreadPoolExecutor(max_workers=team.get("max_parallel", 2)) as pool:
+            futures = {pool.submit(_run_agent_iterative, agents[aid], team, ctx, services,
+                                   state=states.setdefault(aid, {}), one_turn=True,
+                                   defer_final_submission=True): aid for aid in selected}
+            for future in as_completed(futures):
+                aid = futures[future]
+                try:
+                    results[aid] = future.result()
+                except Exception as exc:
+                    services.event(aid, "execution_error", str(exc))
+                    results[aid] = RunResult(terminated_reason="error",
+                                            trajectory=states[aid].get("trajectory", []),
+                                            metadata={"agent_id": aid, "error": str(exc)})
+                reason = results[aid].terminated_reason
+                statuses[aid] = ("completed" if reason in {"subtask_complete", "final_answer"}
+                                 else "active" if reason == "yielded" else "failed")
+    for aid, status in statuses.items():
+        if status != "failed":
+            services.event(aid, "cancelled", "team ended without a final coordinated submission")
+            prior = results.get(aid)
+            results[aid] = RunResult(terminated_reason="cancelled",
+                                    trajectory=prior.trajectory if prior else [],
+                                    metadata={"agent_id": aid})
+            with services.lock:
+                services.artifacts.pop(aid, None)
+    return results
+
+
 def run_team(task, ctx, team, services):
     """Schedule a validated team with either legacy or iterative ledger coordination."""
     team = validate_team(team, services.public_task)
@@ -965,8 +1164,10 @@ def run_team(task, ctx, team, services):
     ctx.planning.bind_team(team)
     plan = ctx.planning.init_plan(task, ctx.memory.build_context(), "", ctx.model)
     ctx.memory.update_plan(plan)
-    pending = {a["agent_id"]: a for a in team["agents"]}
-    results = {}
+    pending = ({a["agent_id"]: a for a in team["agents"]}
+               if services.execution_mode != "iterative_shared_ledger" else {})
+    results = (_run_team_iterative(team, ctx, services)
+               if services.execution_mode == "iterative_shared_ledger" else {})
     while pending and not services.cancelled.is_set():
         # Propagate a failed producer through every dependent before dispatching work.
         while True:
@@ -1014,8 +1215,8 @@ def run_team(task, ctx, team, services):
                                "coordination": ("single_pass_shared_ledger"
                                                 if services.execution_mode == "single_pass"
                                                 else services.execution_mode),
-                               **({"scheduling": {"strategy": "dependency_dag_once",
-                                                  "reactivate_completed_agents": False}}
+                               **({"scheduling": {"strategy": "cooperative_shared_ledger",
+                                                  "reactivate_completed_agents": True}}
                                   if services.execution_mode == "iterative_shared_ledger" else {}),
                                "shared_ledger": copy.deepcopy(services.shared_ledger),
                                "shared_ledger_hash": content_hash(services.shared_ledger),

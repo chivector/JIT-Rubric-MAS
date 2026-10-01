@@ -1,0 +1,46 @@
+backend: native_jit
+execution_mode: iterative_shared_ledger
+unsafe_local: true
+max_agents: 3
+max_parallel: 2
+team_max_calls: null
+max_model_calls: null
+max_tool_calls: null
+max_total_tokens: 2000000
+task_timeout: 900
+execution_timeout: 900
+max_inflight_requests: 2
+candidates: 1
+max_repairs: 2
+local_rounds: 1
+local_planning: true
+local_attribution: true
+persistent_experience: true
+evolving_agent_pool: true
+available_tools: []
+models:
+  meta: &generator
+    model: deepseek-v4-flash-vision
+    endpoint: ${MAS_GENERATOR_ENDPOINT}
+    key_env: MAS_GENERATOR_API_KEY
+    max_tokens: 16000
+    timeout: 180
+    temperature: 0
+    context_window: 131072
+    context_margin: 2048
+    context_policy: oldest_turns
+  global: *generator
+  local: *generator
+  exec:
+    <<: *generator
+    max_tokens: 8192
+  judge:
+    model: cc-gpt-5.6-sol
+    endpoint: ${MAS_JUDGE_ENDPOINT}
+    key_env: MAS_JUDGE_API_KEY
+    max_tokens: 16000
+    timeout: 180
+    temperature: 0
+    context_window: 131072
+    context_margin: 2048
+    context_policy: reject

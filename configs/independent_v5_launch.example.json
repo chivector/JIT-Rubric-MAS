@@ -1,0 +1,41 @@
+{
+  "configuration": "jit_mas.independent_v5.yaml",
+  "joint_manifest": "../paper/experiments/joint_task_splits_v5.json",
+  "workers": 2,
+  "benchmarks": {
+    "researchrubrics": {
+      "data": "../outputs/researchrubrics_live_20260930/processed_data.jsonl",
+      "evidence_dir": "../outputs/independent_v5_preparation/evidence/researchrubrics"
+    },
+    "deepsearchqa": {
+      "data": "../dataset/deepsearchqa/DSQA-pinned-v3.csv",
+      "evidence_dir": "../outputs/independent_v5_preparation/evidence/deepsearchqa"
+    },
+    "writingbench": {
+      "data": "../dataset/writingbench/benchmark_all.jsonl"
+    },
+    "deepresearch_bench_ii": {
+      "data": "../dataset/deepresearch_bench_ii/tasks_and_rubrics.jsonl",
+      "evidence_dir": "../outputs/independent_v5_preparation/evidence/deepresearch_bench_ii"
+    },
+    "ifeval": {
+      "data": "../dataset/ifeval/ifeval_input_data.jsonl"
+    },
+    "ifbench": {
+      "data": "../dataset/ifbench/IFBench_test.jsonl"
+    }
+  },
+  "served_models": {
+    "meta": {"requested_model": "deepseek-v4-flash-vision", "returned_model": "REPLACE_AFTER_LIVE_PREFLIGHT"},
+    "global": {"requested_model": "deepseek-v4-flash-vision", "returned_model": "REPLACE_AFTER_LIVE_PREFLIGHT"},
+    "local": {"requested_model": "deepseek-v4-flash-vision", "returned_model": "REPLACE_AFTER_LIVE_PREFLIGHT"},
+    "exec": {"requested_model": "deepseek-v4-flash-vision", "returned_model": "REPLACE_AFTER_LIVE_PREFLIGHT"},
+    "judge": {"requested_model": "cc-gpt-5.6-sol", "returned_model": "REPLACE_AFTER_LIVE_PREFLIGHT"}
+  },
+  "preflight": {
+    "passed": true,
+    "synthetic_only": true,
+    "report_path": "../outputs/independent_v5_preparation/preflight.json",
+    "report_sha256": "REPLACE_AFTER_CONFIGURED_PREFLIGHT"
+  }
+}

@@ -84,7 +84,7 @@ def test_writer_can_cite_delivered_upstream_artifact():
         payload = json.loads(messages[1]["content"])
         upstream = payload["shared_ledger"]["contributions"][0]
         assert upstream["answer"] == "Supported findings"
-        assert payload["scheduling"]["reactivate_completed_agents"] is False
+        assert payload["scheduling"]["reactivate_completed_agents"] is True
         return {"answer": "Final guide", "evidence_ids": [upstream["event_id"]]}
 
     model = ScriptedModel([complete])

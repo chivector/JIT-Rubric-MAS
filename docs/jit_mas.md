@@ -45,9 +45,11 @@ task-specific five-block generation path remains available with `evolving_agent_
   small combined-role tasks remain supported. Missing information becomes an explicit limitation.
   In `iterative_shared_ledger` mode, an active role can receive tool results and updated ledger
   observations on later calls; the Writer can use permitted tools and revise before submitting.
-  The dependency scheduler dispatches each role once, so messages do not reactivate completed
-  peers. Only a successful terminal contribution enters the downstream artifact set; a failed
-  role's draft is not a final answer.
+  The cooperative scheduler dispatches initial DAG-ready roles, then may reactivate completed
+  peers when public messages or revised artifacts require clarification. Each role keeps its
+  private history while only public ledger events cross role boundaries. Finite call ceilings,
+  token budgets, and timeouts remain binding; no fixed round count is imposed. Only a successful
+  terminal contribution enters the downstream artifact set; a failed role's draft is not a final answer.
 - `attribution.py` retains the initial and reconciled predictions separately. Global analysis
   sees an event index and shared artifacts; each local analysis sees its own complete observed
   inputs/outputs and connected evidence, with one bounded indexed evidence request. Findings

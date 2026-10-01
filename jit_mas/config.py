@@ -21,6 +21,16 @@ class ModelConfig(Record):
     temperature: float = 0
     thinking: Literal["enabled", "disabled"] | None = None
     reasoning_effort: Literal["none", "low", "high", "max"] | None = None
+    context_window: int | None = Field(default=None, ge=1)
+    context_margin: int = Field(default=2048, ge=0)
+    context_policy: Literal["reject", "oldest_turns"] = "reject"
+    expected_response_model: str | None = None
+
+    @model_validator(mode="after")
+    def context_limits(self):
+        if self.context_window is not None and self.max_tokens + self.context_margin >= self.context_window:
+            raise ValueError("Context window must exceed the output reservation and margin")
+        return self
 
     def check(self, role):
         if not self.model or not self.endpoint or "${" in self.model or "${" in self.endpoint:
@@ -46,6 +56,8 @@ class MASConfig(Record):
     max_repairs: int = Field(default=2, ge=0, le=5)
     candidates: int = Field(default=1, ge=1, le=4)
     execution_timeout: float = Field(default=120, gt=0)
+    task_timeout: float | None = Field(default=None, gt=0)
+    max_inflight_requests: int | None = Field(default=None, ge=1)
     local_planning: bool = True
     # These rounds reconcile plans before execution, never rerun task contributors.
     local_rounds: int = Field(default=1, ge=1, le=3)
@@ -104,4 +116,9 @@ class NativeModels:
                                   api_key=os.environ[cfg.key_env], temperature=cfg.temperature,
                                   max_tokens=cfg.max_tokens, max_attempts=1, **options)
         model.client = model.client.with_options(max_retries=0, timeout=cfg.timeout)
-        return MeteredModel(model, ledger, stage, agent_id, cfg.max_tokens)
+        from .request_policy import RequestPolicyModel, request_gate
+        model = RequestPolicyModel(model, gate=request_gate(self.config.max_inflight_requests),
+            ledger=ledger, timeout=cfg.timeout, expected_model=cfg.expected_response_model)
+        return MeteredModel(model, ledger, stage, agent_id, cfg.max_tokens,
+                            context_window=cfg.context_window, context_margin=cfg.context_margin,
+                            context_policy=cfg.context_policy)

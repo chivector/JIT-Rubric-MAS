@@ -74,7 +74,9 @@ def code_fingerprint():
                 files.append((path.relative_to(root).as_posix(), digest(path.read_text(encoding="utf-8"))))
     for filename in ("run_jit_mas.py", "mas_baseline_methods.py", "run_benchmark_experiment.py",
                      "run_benchmark_test.py", "prepare_benchmark_suite.py", "prepare_benchmark_evidence.py",
-                     "summarize_benchmark_suite.py"):
+                     "summarize_benchmark_suite.py", "run_independent_experiment.py",
+                     "preflight_independent_experiment.py", "verify_instruction_checkers.py",
+                     "prepare_independent_protocol.py", "prepare_public_evidence.py"):
         path = root / "scripts" / filename
         if path.is_file():
             files.append((path.relative_to(root).as_posix(), digest(path.read_text(encoding="utf-8"))))
@@ -139,7 +141,7 @@ class MASPipeline:
         if type(repeat) is not int or repeat < 0:
             raise ValueError("Repeat must be a nonnegative integer")
         ledger = BudgetLedger(self.config.max_model_calls, self.config.max_total_tokens,
-                              self.config.max_tool_calls)
+                              self.config.max_tool_calls, timeout_seconds=self.config.task_timeout)
         audit = {}
         try:
             if ((resume_attribution is None) != (resume_attribution_hash is None)

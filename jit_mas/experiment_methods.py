@@ -53,7 +53,8 @@ def _file_hash(path):
 
 
 def _budget(config):
-    return BudgetLedger(config.max_model_calls, config.max_total_tokens, config.max_tool_calls)
+    return BudgetLedger(config.max_model_calls, config.max_total_tokens, config.max_tool_calls,
+                        timeout_seconds=config.task_timeout)
 
 
 def _analyzer(pipeline, ledger, *, explicit_rubrics=True, graph=None):

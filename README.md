@@ -24,8 +24,9 @@ Analyst/Evidence contributions feed a deterministic ledger, and the Writer reads
 the completed snapshot once before independent evaluation. Each execution role
 has at most one model call. The optional `iterative_shared_ledger` mode returns
 tool results and new ledger inputs to active roles for further calls, including
-Writer revisions, within the configured resource limits. The DAG scheduler
-dispatches each role once and does not reactivate a completed peer. See the
+Writer revisions, within the configured resource limits. The cooperative scheduler
+may reactivate completed peers when public messages or revised artifacts require
+clarification; finite call ceilings, token budgets, and timeouts remain binding. See the
 [executor contract and migration guide](docs/jit_mas_single_pass.md).
 The original JIT description and results below belong to the upstream project;
 they are not performance claims for this extension.

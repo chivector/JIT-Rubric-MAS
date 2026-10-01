@@ -166,6 +166,24 @@ def _mas_contract(execution_mode="single_pass") -> str:
         "budget, stored experience, or task-global state. Generate all FIVE modules/config now.",
     ])
     if execution_mode == "iterative_shared_ledger":
+        iterative_replacements = (
+            ("single-pass execution", "cooperative shared-ledger execution"),
+            ("gives each role a separate Memory and metered model", "gives each role private Memory and metered models"),
+            ("schedules dependencies/concurrency, records full I/O and calls each role model exactly once",
+             "schedules initial dependencies/concurrency, records every turn and preserves role histories across reactivation"),
+            ("reads the frozen ledger and writes the full deliverable once", "reads ledger updates and revises before writing the full deliverable"),
+            ("There is no draft-review-rewrite loop, clarification, negotiation, peer messaging, or second role-model call, even when max_calls is larger.",
+             "Public clarification, peer messaging, artifact revision and additional role-model calls are allowed within the cooperative scheduler and configured budgets."),
+            ("without another model call or inventing analysis.", "and may be followed by another role turn within configured budgets."),
+            ("Only a tool producer may omit answer.", "Only a tool producer may omit answer on a nonterminal turn."),
+        )
+        def _replace_iterative(line, replacements):
+            for old, new in replacements:
+                line = line.replace(old, new)
+            return line
+        lines = [
+            _replace_iterative(line, iterative_replacements) for line in lines
+        ]
         lines.extend([
             "EXECUTION MODE: iterative_shared_ledger.",
             "The bound TeamSpec may omit model-call, tool-call and role-call ceilings. Preserve "
@@ -174,7 +192,14 @@ def _mas_contract(execution_mode="single_pass") -> str:
             "auditable shared-ledger events, request allowed tools, receive results, and revise. "
             "Do not impose a fixed round limit or suppress a valid continuation. Private role "
             "histories remain private; only published artifacts, tool results and peer messages "
-            "enter the shared ledger."
+            "enter the shared ledger.",
+            "ITERATIVE OVERRIDE: Any earlier single-pass, one-call, one-publication, frozen-ledger, "
+            "no-negotiation or no-peer-message wording in this contract is historical and does not apply "
+            "to this request. Use cooperative_shared_ledger scheduling: retain each role's private history, "
+            "reactivate completed roles for public peer requests and revised artifacts, deliver tool results "
+            "and ledger updates on subsequent turns, and let the synthesizer continue until a terminal answer "
+            "is ready. Do not add a fixed round limit. Respect configured optional call ceilings when finite; "
+            "when null, token and timeout budgets are the only terminal resource ceilings."
         ])
     return "\n\n".join(lines)
 
@@ -612,7 +637,7 @@ class JITHarnessSynthesizer:
                          "ceilings represented by null, allow public ledger revisits, peer messages, "
                          "tool-result continuation and Writer revisions; token and timeout budgets "
                          "remain terminal and no fixed round cap may be introduced.")
-        return (
+        description = (
             "Generate a task-conditioned JIT MAS harness using the exact JIT-MAS binding contract "
             "appended to the system message. These are PUBLIC inputs only:\n"
             + json.dumps(sidecar, ensure_ascii=False, indent=2)
@@ -634,7 +659,30 @@ class JITHarnessSynthesizer:
             "role-model invocation may be repaired; no evaluator feedback is available. "
             "Keep system_prompt, agent_prompt, planning, summary, final_answer, step in prompt.yaml."
             + mode_note
+            + ("\nITERATIVE OVERRIDE: The mode note supersedes historical single-pass generation guidance. "
+               "Generate cooperative_shared_ledger execution with private per-role histories, public peer "
+               "requests, role reactivation, ledger/tool updates and Writer revisions. Do not generate a "
+               "fixed round cap or suppress continuation; finite configured ceilings, token budgets and "
+               "timeouts remain binding."
+               if sidecar.get("team", {}).get("execution_mode") == "iterative_shared_ledger" else "")
         )
+        if sidecar.get("team", {}).get("execution_mode") == "iterative_shared_ledger":
+            description = description.replace(
+                "Generate single-pass contributor ledger publication followed by one Writer model call; "
+                "no task-internal negotiation or clarification.",
+                "Generate cooperative shared-ledger publication with revisable role turns and public peer clarification; "
+                "the Writer may continue and revise before terminal submission.")
+            for old, new in (
+                ("single-pass", "historical one-way"),
+                ("one Writer model call", "Writer continuation and revision"),
+                ("no task-internal negotiation or clarification", "public task-internal peer clarification is allowed"),
+                ("no task-internal negotiation", "public task-internal peer clarification is allowed"),
+                ("no draft-review-rewrite loop", "cooperative review and revision"),
+                ("without another model call", "with additional role turns allowed"),
+                ("second role-model call", "additional role-model turns"),
+            ):
+                description = description.replace(old, new)
+        return description
 
     def _validate(self, agent):
         errors = []

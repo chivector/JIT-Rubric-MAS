@@ -50,6 +50,30 @@ def test_writingbench_retains_native_mean_and_reports_normalized_score(tmp_path)
     assert result["model_calls"] == len(calls) == 1
 
 
+def test_writingbench_loads_author_checklist_schema_and_preserves_scale_details(tmp_path):
+    rows = [{"index": 7, "query": "Write synthetic outline", "lang": "en",
+             "domain1": "Synthetic", "domain2": "Outline", "checklist": [
+                 {"name": "Structure", "criteria_description": "Has all sections",
+                  "1-2": "Missing", "3-4": "Partial", "5-6": "Basic",
+                  "7-8": "Complete", "9-10": "Excellent"}]}]
+    dataset = load_benchmark("writingbench", write_rows(tmp_path, "writingbench_checklist", rows))
+    task_id = "writingbench:7"
+    calls = []
+
+    def judge(messages, **kwargs):
+        calls.append(messages)
+        payload = json.loads(messages[1]["content"])
+        assert payload["criteria"][0]["name"] == "Structure"
+        assert payload["criteria"][0]["9-10"] == "Excellent"
+        return {"scores": [{"criterion": "Structure", "score": 8, "reason": "Synthetic"}]}
+
+    result = dataset.evaluator(judge).evaluate(
+        "Synthetic submission", task_id, private_record=dataset.private_records[task_id])
+    assert result["complete"]
+    assert result["native_mean"] == 8
+    assert len(calls) == 1
+
+
 @pytest.mark.parametrize("benchmark", ["ifeval", "ifbench"])
 @pytest.mark.parametrize("verdicts,expected", [([True, False], 0), ([True, True], 1)])
 def test_instruction_benchmarks_report_prompt_accuracy_and_separate_instruction_accuracy(
