@@ -1,0 +1,32 @@
+{
+  "status": "blocked_judge_quota",
+  "arm": "single_agent_direct",
+  "generation": {
+    "completed": 33,
+    "failed": 0,
+    "answers_reused": 33,
+    "model": "deepseek-v4-flash-vision"
+  },
+  "scoring": {
+    "denominator": 33,
+    "complete_tasks": 22,
+    "partial_tasks": 5,
+    "interrupted_or_unstarted_tasks": 6,
+    "complete_subset_mean": 0.4448748830074624,
+    "all_task_mean": null,
+    "judge_model": "gpt-5.4",
+    "rubrics_total": 826,
+    "rubrics_successful_recorded": 551,
+    "rubrics_failed_recorded": 114,
+    "rubrics_unrecorded": 161
+  },
+  "judge_quota_error": "pre_consume_token_quota_failed",
+  "limitations": [
+    "This is a closed-book exploratory run; the shared evidence protocol was not used.",
+    "The complete-subset mean is not a 33-task benchmark score.",
+    "The JIT-MAS arm was not run, so there is no comparison.",
+    "Thirty-two answers were reused after an earlier transient generation failure; one answer was regenerated.",
+    "Judge responses used both gpt-5.4 and gpt-5.4-2026-03-05 provider identifiers."
+  ],
+  "resume": "After replenishing judge quota, rerun with --arm baseline --reuse-baseline-from outputs/rr_single_agent_run0_worldknowledge_20261001_v4 --reuse-evaluations-from outputs/rr_single_agent_run0_worldknowledge_20261001_v6 and a new output directory."
+}

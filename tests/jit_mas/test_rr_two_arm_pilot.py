@@ -184,6 +184,230 @@ def _synthetic_pinned_inputs(tmp_path):
     return data, joint_path, expected_hash
 
 
+def test_baseline_only_release_registers_33_slots_and_retains_failed_task(tmp_path):
+    manifest = pilot._manifest(JOINT_MANIFEST)
+    reports = {"baseline": {"submitted_outcomes": [], "failures": [
+        {"task_id": manifest.test[-1], "error_type": "ConnectionFailure",
+         "budget": {"usage_unknown": True}}]}}
+    release = pilot._test_release(tmp_path, manifest, reports)
+
+    assert list(release.slots) == [f"baseline:{task_id}" for task_id in manifest.test]
+    assert len(release.slots) == 33
+    assert len(pilot._read(tmp_path / "test_release" / "seal.json")["submission_hashes"]) == 33
+    failed = release.evaluate(f"baseline:{manifest.test[-1]}",
+                              lambda _record: pytest.fail("Failed generation cannot call a judge"))
+    assert failed["status"] == "submission_failed"
+    assert failed["official_score"] is None
+    assert pilot._paired_comparison(reports, manifest)["available"] is False
+
+
+def test_main_baseline_only_calls_baseline_and_seals_only_33_test_slots(monkeypatch, tmp_path):
+    data, joint, _expected_hash = _synthetic_pinned_inputs(tmp_path)
+    manifest = pilot._manifest(joint)
+    calls = []
+    monkeypatch.setenv("RR_EXEC_API_KEY", "offline-generator-key")
+    monkeypatch.setenv("RR_JUDGE_API_KEY", "offline-judge-key")
+    monkeypatch.setattr(socket, "socket", lambda *_args, **_kwargs: pytest.fail("Network access is forbidden"))
+
+    def fake_baseline(args, config, received_manifest, evidence_dir, output):
+        calls.append("baseline")
+        assert received_manifest.test == manifest.test
+        assert args.arm == "baseline"
+        output.mkdir()
+        outcomes = []
+        for task_id in manifest.test:
+            task_dir = output / "tasks" / task_id
+            task_dir.mkdir(parents=True)
+            answer = f"Synthetic answer for {task_id}."
+            submission = {"answer": answer, "answer_hash": pilot.digest(answer)}
+            pilot.write_json(task_dir / "submission.json", submission)
+            outcomes.append({"task_id": task_id, "status": "submitted_unscored", "evaluation": None,
+                             "run_dir": str(task_dir), "answer_hash": submission["answer_hash"], "proposals": []})
+        return {"arm": "single_agent_direct", "status": "submitted", "submitted_outcomes": outcomes,
+                "failures": [], "results": {"mean_score": None, "completed": 0}}
+
+    def fake_scoring(args, config, received_manifest, evidence_dir, output, reports):
+        calls.append("score")
+        assert set(reports) == {"baseline"}
+        release = pilot._test_release(output, received_manifest, reports)
+        assert len(release.slots) == 33
+        assert all(slot["method"] == "baseline" for slot in release.slots.values())
+        reports["baseline"].update(status="completed", results={"completed": 33, "denominator": 33,
+                                                               "scored_denominator": 33, "mean_score": 0.5})
+
+    monkeypatch.setattr(pilot, "run_baseline", fake_baseline)
+    monkeypatch.setattr(pilot, "run_ours", lambda *_args, **_kwargs: pytest.fail("Baseline-only launched ours"))
+    monkeypatch.setattr(pilot, "_score_deferred", fake_scoring)
+    output = tmp_path / "baseline-only"
+
+    assert pilot.main(["--data", str(data), "--joint-manifest", str(joint), "--output", str(output),
+                       "--closed-book", "--arm", "baseline"]) == 0
+
+    assert calls == ["baseline", "score"]
+    comparison = pilot._read(output / "comparison.json")
+    assert set(comparison["reports"]) == {"baseline"}
+    assert comparison["paired"]["available"] is False
+    assert comparison["metadata"]["selected_arm"] == "baseline"
+    assert comparison["metadata"]["parallel_arms"] is False
+    assert len(pilot._read(output / "test_release" / "inventory.json")["slots"]) == 33
+    assert not (output / "ours").exists()
+
+
+def _saved_baseline_generation(tmp_path):
+    data, joint, expected_hash = _synthetic_pinned_inputs(tmp_path)
+    manifest = pilot._manifest(joint)
+    args = SimpleNamespace(data=str(data), joint_manifest=str(joint), exec_model="offline-generator",
+                           exec_endpoint="https://example.org/v1", judge_model="offline-judge",
+                           judge_endpoint="https://example.com/v1", timeout=10, arm="baseline",
+                           closed_book=True, reuse_baseline_from=tmp_path / "source")
+    config = pilot._config(args)
+    source = args.reuse_baseline_from
+    task_id = manifest.test[0]
+    run_dir = source / "baseline" / "tasks" / task_id
+    run_dir.mkdir(parents=True)
+    answer = f"Saved synthetic answer for {task_id}."
+    submission = {"answer": answer, "answer_hash": pilot.digest(answer), "submitted_at": "offline-time"}
+    budget = {"model_calls": 1, "tokens": 8, "reserved_tokens": 0, "tool_calls": 0, "records": [
+        {"call_id": "saved-generation", "kind": "model", "stage": "inference", "agent_id": "direct",
+         "input_tokens": 5, "output_tokens": 3, "estimated": False}]}
+    outcome = {"task_id": task_id, "method": "direct_single", "mode": "evaluate",
+               "status": "submitted_unscored", "evaluation": None, "run_dir": str(run_dir.resolve()),
+               "answer_hash": submission["answer_hash"], "submitted_at": submission["submitted_at"],
+               "budget": budget, "proposals": [], "experience_updates": []}
+    metadata = {"manifest": manifest.model_dump(mode="json"), "execution_model": args.exec_model,
+                "data_sha256": expected_hash, "knowledge_policy": "model_general_knowledge_allowed",
+                "config": {"models": {"exec": config.models["exec"].model_dump(mode="json")}}}
+    pilot.write_json(source / "pilot_metadata.json", metadata)
+    pilot.write_json(source / "generation_reports.json", {"baseline": {"submitted_outcomes": [outcome]}})
+    pilot.write_json(run_dir / "submission.json", submission)
+    pilot.write_json(run_dir / "complete.json", outcome)
+    pilot.write_json(run_dir / "budget.json", budget)
+    return args, config, manifest, outcome
+
+
+def test_baseline_reuse_preserves_frozen_answer_and_budget_with_import_provenance(tmp_path):
+    args, config, manifest, saved = _saved_baseline_generation(tmp_path)
+    source = args.reuse_baseline_from
+    before = {str(path.relative_to(source)): path.read_bytes() for path in source.rglob("*") if path.is_file()}
+
+    reusable = pilot._baseline_reuse(args, manifest, config)
+    imported = pilot._import_baseline_outcome(reusable[saved["task_id"]], tmp_path / "destination")
+
+    assert list(reusable) == [manifest.test[0]]
+    assert imported["answer_hash"] == saved["answer_hash"]
+    assert imported["budget"] == saved["budget"]
+    assert imported["generation_reused_from"] == saved["run_dir"]
+    assert "_reuse_source_dir" not in imported
+    destination = Path(imported["run_dir"])
+    assert destination == (tmp_path / "destination" / "tasks" / saved["task_id"]).resolve()
+    assert pilot._read(destination / "complete.json") == imported
+    assert (destination / "submission.json").read_bytes() == (Path(saved["run_dir"]) / "submission.json").read_bytes()
+    after = {str(path.relative_to(source)): path.read_bytes() for path in source.rglob("*") if path.is_file()}
+    assert after == before
+
+
+@pytest.mark.parametrize("change", ["answer", "outcome_hash", "model", "split_order", "dataset_hash",
+                                    "unknown_budget", "reserved_budget", "duplicate_id", "outside_test",
+                                    "already_scored", "execution_config", "knowledge_policy"])
+def test_baseline_reuse_rejects_changed_or_unsettled_generation(tmp_path, change):
+    args, config, manifest, saved = _saved_baseline_generation(tmp_path)
+    source = args.reuse_baseline_from
+    metadata = pilot._read(source / "pilot_metadata.json")
+    reports = pilot._read(source / "generation_reports.json")
+    outcome = reports["baseline"]["submitted_outcomes"][0]
+    if change == "answer":
+        submission_path = Path(saved["run_dir"]) / "submission.json"
+        submission = pilot._read(submission_path)
+        submission["answer"] = "Changed answer."
+        pilot.write_json(submission_path, submission)
+    elif change == "outcome_hash":
+        outcome["answer_hash"] = "invalid"
+    elif change == "model":
+        metadata["execution_model"] = "another-generator"
+    elif change == "split_order":
+        metadata["manifest"]["test"].reverse()
+    elif change == "dataset_hash":
+        metadata["data_sha256"] = "invalid"
+    elif change == "unknown_budget":
+        outcome["budget"]["usage_unknown"] = True
+    elif change == "reserved_budget":
+        outcome["budget"]["reserved_tokens"] = 1
+    elif change == "duplicate_id":
+        reports["baseline"]["submitted_outcomes"].append(dict(outcome))
+    elif change == "outside_test":
+        outcome["task_id"] = manifest.evolution[0]
+    elif change == "already_scored":
+        outcome["evaluation"] = {"complete": True, "score": 0.5}
+    elif change == "execution_config":
+        metadata["config"]["models"]["exec"]["max_tokens"] += 1
+    elif change == "knowledge_policy":
+        metadata["knowledge_policy"] = "fixed_shared_evidence_only"
+    pilot.write_json(source / "pilot_metadata.json", metadata)
+    pilot.write_json(source / "generation_reports.json", reports)
+
+    with pytest.raises((ValueError, pilot.CheckpointIntegrityError)):
+        pilot._baseline_reuse(args, manifest, config)
+
+
+def _sealed_baseline_with_cached_evaluation(tmp_path):
+    args, config, manifest, outcome = _saved_baseline_generation(tmp_path)
+    release = pilot._test_release(tmp_path / "destination", manifest,
+                                  {"baseline": {"submitted_outcomes": [outcome], "failures": []}})
+    row = {"slot": release.slots[f"baseline:{outcome['task_id']}"], "complete": True,
+           "official_score": 0.2, "answer_hash": outcome["answer_hash"],
+           "evaluation": {"evaluator_version": "offline-evaluator", "complete": True},
+           "evaluation_budget": {"reserved_tokens": 0, "model_calls": 1, "tokens": 8, "records": []}}
+    first = tmp_path / "first-score"
+    second = tmp_path / "second-score"
+    filename = f"{pilot.digest(row['slot']['slot_id'])}.json"
+    pilot.write_json(first / "test_release" / "evaluations" / filename, row)
+    later = {**row, "official_score": 0.9}
+    pilot.write_json(second / "test_release" / "evaluations" / filename, later)
+    args.reuse_evaluations_from = [first, second]
+    return args, release, row, first, second, filename
+
+
+def test_cached_evaluation_reuse_preserves_first_complete_judgment_and_source(tmp_path):
+    args, release, row, first, second, filename = _sealed_baseline_with_cached_evaluation(tmp_path)
+    first_path = first / "test_release" / "evaluations" / filename
+    second_path = second / "test_release" / "evaluations" / filename
+    before = first_path.read_bytes(), second_path.read_bytes()
+
+    cached = pilot._cached_evaluations(args, release, "baseline", "offline-evaluator")
+
+    assert list(cached) == [row["slot"]["task_id"]]
+    assert cached[row["slot"]["task_id"]] == {**row, "evaluation_reused_from": str(first_path.resolve())}
+    assert (first_path.read_bytes(), second_path.read_bytes()) == before
+
+
+@pytest.mark.parametrize("skip", ["partial", "evaluator_version"])
+def test_cached_evaluation_reuse_skips_incomplete_or_different_judge(tmp_path, skip):
+    args, release, row, first, second, filename = _sealed_baseline_with_cached_evaluation(tmp_path)
+    if skip == "partial":
+        row["complete"] = False
+    else:
+        row["evaluation"]["evaluator_version"] = "different-evaluator"
+    pilot.write_json(first / "test_release" / "evaluations" / filename, row)
+
+    cached = pilot._cached_evaluations(args, release, "baseline", "offline-evaluator")
+
+    assert cached[row["slot"]["task_id"]]["evaluation_reused_from"] == str(
+        (second / "test_release" / "evaluations" / filename).resolve())
+
+
+@pytest.mark.parametrize("invalid", ["answer_hash", "unsettled_budget"])
+def test_cached_evaluation_reuse_rejects_changed_answer_or_unsettled_calls(tmp_path, invalid):
+    args, release, row, first, _second, filename = _sealed_baseline_with_cached_evaluation(tmp_path)
+    if invalid == "answer_hash":
+        row["answer_hash"] = "invalid"
+    else:
+        row["evaluation_budget"]["reserved_tokens"] = 1
+    pilot.write_json(first / "test_release" / "evaluations" / filename, row)
+
+    with pytest.raises(ValueError, match="(?i)(answer|unsettled)"):
+        pilot._cached_evaluations(args, release, "baseline", "offline-evaluator")
+
+
 def test_preflight_verifies_actual_bytes_without_credentials_or_network(monkeypatch, tmp_path):
     data, joint, expected_hash = _synthetic_pinned_inputs(tmp_path)
     args = SimpleNamespace(data=str(data), joint_manifest=str(joint), exec_model="synthetic-generator",
@@ -221,12 +445,24 @@ def test_check_only_never_launches_arms_or_requires_credentials(monkeypatch, tmp
     assert not (output / "ours").exists()
 
 
-def test_baseline_submits_exactly_one_output_per_test_task_without_network(monkeypatch, tmp_path):
+@pytest.mark.parametrize("reused_count", [0, 32])
+def test_baseline_submits_exactly_one_output_per_test_task_without_network(monkeypatch, tmp_path, reused_count):
     manifest = pilot._manifest(JOINT_MANIFEST)
     args = SimpleNamespace(data="fixture.jsonl", timeout=10)
     config = SimpleNamespace(max_model_calls=10_000, max_total_tokens=1_000_000,
                              models={"exec": SimpleNamespace(max_tokens=8192)})
     calls = []
+    args.baseline_reuse = {}
+    for task_id in manifest.test[:reused_count]:
+        source = tmp_path / "saved" / task_id
+        source.mkdir(parents=True)
+        answer = f"Saved answer for {task_id}."
+        submission = {"answer": answer, "answer_hash": pilot.digest(answer)}
+        pilot.write_json(source / "submission.json", submission)
+        args.baseline_reuse[task_id] = {"task_id": task_id, "status": "submitted_unscored",
+            "evaluation": None, "run_dir": str(source), "_reuse_source_dir": str(source),
+            "answer_hash": submission["answer_hash"], "proposals": [],
+            "budget": {"model_calls": 1, "tokens": 8, "reserved_tokens": 0, "tool_calls": 0, "records": []}}
 
     class Model:
         def __call__(self, messages, **_kwargs):
@@ -260,12 +496,12 @@ def test_baseline_submits_exactly_one_output_per_test_task_without_network(monke
     assert report["results"]["denominator"] == len(manifest.test) == 33
     assert report["results"]["completed"] == 0
     assert report["failures"] == []
-    assert len(calls) == len(manifest.test)
-    assert calls == manifest.test
+    assert calls == manifest.test[reused_count:]
     assert len(list((tmp_path / "baseline" / "tasks").iterdir())) == 33
-    assert len(list(tmp_path.rglob("submission.json"))) == 33
+    assert len(list((tmp_path / "baseline").rglob("submission.json"))) == 33
     assert not list(tmp_path.rglob("evaluation.json"))
     assert all(outcome["budget"]["model_calls"] == 1 for outcome in report["submitted_outcomes"])
+    assert sum("generation_reused_from" in outcome for outcome in report["submitted_outcomes"]) == reused_count
 
 
 def test_main_starts_both_arms_before_waiting_for_either(monkeypatch, tmp_path):

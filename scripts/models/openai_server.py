@@ -93,12 +93,23 @@ class OpenAIServerModel(Model):
 
         super().__init__(**kwargs)
         self.model_id = model_id
-        self.client = openai.OpenAI(
+        client_kwargs = dict(
             base_url=api_base,
             api_key=api_key,
             organization=organization,
             project=project,
         )
+        tls_verify = os.getenv("JIT_MAS_TLS_VERIFY", "").strip().lower()
+        tls_endpoint = os.getenv("JIT_MAS_TLS_ENDPOINT")
+        disable_tls = tls_verify in {"0", "false", "no", "off"} and (not tls_endpoint or api_base == tls_endpoint)
+        disable_keepalive = os.getenv("JIT_MAS_DISABLE_KEEPALIVE", "0") == "1"
+        if disable_tls or disable_keepalive:
+            import httpx
+            client_kwargs["http_client"] = httpx.Client(
+                verify=not disable_tls,
+                limits=httpx.Limits(max_keepalive_connections=0 if disable_keepalive else 20, max_connections=100),
+            )
+        self.client = openai.OpenAI(**client_kwargs)
         self.custom_role_conversions = custom_role_conversions
         self.max_attempts = max(1, int(max_attempts))
 

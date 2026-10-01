@@ -16,6 +16,7 @@ import hashlib
 import math
 import os
 import logging
+import shutil
 from pathlib import Path
 import time
 
@@ -24,12 +25,22 @@ from jit_mas.config import MASConfig, ModelConfig
 from jit_mas.bridge import JITHarnessSynthesizer
 from jit_mas.experience import ExperienceStore
 from jit_mas.independent_protocol import normalize_score
-from jit_mas.pipeline import code_fingerprint, write_json
+from jit_mas.pipeline import code_fingerprint, write_json as _write_json
 from jit_mas.schemas import ExperienceSnapshot, SplitManifest, digest, utc_now
 from scripts.mas_baseline_methods import JudgeEnvelopeModel, run_direct
 from scripts.benchmark_jit_mas_live import SafeTransport
 from scripts.run_jit_mas import make_pipeline
 from jit_mas.test_release import TestRelease, score_with_pipeline
+
+
+def write_json(path, value):
+    for attempt in range(5):
+        try:
+            return _write_json(path, value)
+        except PermissionError:
+            if attempt == 4:
+                raise
+            time.sleep(0.1 * (attempt + 1))
 
 
 def _read(path):
@@ -64,7 +75,7 @@ def _config(args):
                       context_window=131072, context_margin=2048,
                       context_policy="oldest_turns")
     judge = dict(model=args.judge_model, endpoint=args.judge_endpoint,
-                 key_env="RR_JUDGE_API_KEY", max_tokens=16000, timeout=args.timeout,
+                 key_env="RR_JUDGE_API_KEY", max_tokens=getattr(args, "judge_max_tokens", 16000), timeout=args.timeout,
                  temperature=0, thinking="disabled", reasoning_effort="none",
                  context_window=131072, context_margin=2048,
                  context_policy="oldest_turns")
@@ -76,7 +87,7 @@ def _config(args):
                 "judge": ModelConfig(**judge)},
         max_agents=3, max_parallel=2, team_max_calls=None, max_model_calls=None,
         max_total_tokens=2_000_000, max_tool_calls=None, max_repairs=2, candidates=1,
-        max_inflight_requests=2,
+        max_inflight_requests=getattr(args, "max_inflight_requests", 2),
         execution_timeout=900, task_timeout=900, local_planning=True, local_rounds=1,
         local_attribution=True, persistent_experience=True, evolving_agent_pool=True,
         explicit_rubrics=True, available_tools=[])
@@ -114,7 +125,7 @@ def _pipeline(config, store, output, args, manifest, evidence_dir):
             return ResearchRubricsAdapter(
                 judge=judge, judge_id=spec.model, judge_api_base=spec.endpoint,
                 judge_max_tokens=spec.max_tokens, judge_timeout=spec.timeout,
-                max_attempts=1, judge_factory=independent_judge,
+                max_attempts=getattr(args, "judge_attempts", 1), judge_factory=independent_judge,
                 max_parallel_judgments=judge_parallel)
 
         pipeline.evaluator_factory = evaluator_factory
@@ -259,7 +270,7 @@ def _score_rows(outcomes, failures=(), expected_ids=()):
 def _test_release(output, manifest, reports):
     inventory = [{"slot_id": f"{arm}:{task_id}", "task_id": task_id,
                   "method": arm, "repeat": 0}
-                 for arm in ("baseline", "ours") for task_id in manifest.test]
+                 for arm in reports for task_id in manifest.test]
     release = TestRelease(output / "test_release", inventory)
     for arm, report in reports.items():
         outcomes = {row["task_id"]: row for row in report.get("submitted_outcomes", [])}
@@ -288,10 +299,15 @@ def _score_deferred(args, config, manifest, evidence_dir, output, reports):
         before = digest(store.snapshot())
         try:
             pipeline = _pipeline(config, store, output / arm / "scoring", args, manifest, evidence_dir)
+            cached = {}
+            if getattr(args, "reuse_evaluations_from", []):
+                evaluator_version = pipeline.evaluator_factory(None).evaluator_version
+                cached = _cached_evaluations(args, release, arm, evaluator_version)
             results = []
             for task_id in manifest.test:
                 _assert_identity(args)
-                result = release.evaluate(f"{arm}:{task_id}", lambda record: score_with_pipeline(pipeline, record))
+                result = release.evaluate(f"{arm}:{task_id}", lambda record: cached[task_id]
+                                          if task_id in cached else score_with_pipeline(pipeline, record))
                 results.append(result)
                 write_json(output / arm / "scoring_progress.json", {"results": results})
             scored = [row["official_score"] for row in results
@@ -310,8 +326,8 @@ def _score_deferred(args, config, manifest, evidence_dir, output, reports):
         finally:
             store.close()
 
-    with ThreadPoolExecutor(max_workers=2) as workers:
-        futures = [workers.submit(score_arm, arm) for arm in ("baseline", "ours")]
+    with ThreadPoolExecutor(max_workers=min(2, len(reports))) as workers:
+        futures = [workers.submit(score_arm, arm) for arm in reports]
         for future in futures:
             future.result()
 
@@ -335,6 +351,77 @@ def _run_arm(function, args, config, manifest, evidence_dir, output):
         return failed
 
 
+def _cached_evaluations(args, release, arm, evaluator_version):
+    cached = {}
+    for source in getattr(args, "reuse_evaluations_from", []):
+        directory = Path(source).resolve() / "test_release" / "evaluations"
+        for path in sorted(directory.glob("*.json")):
+            row = _read(path)
+            task_id = row["slot"]["task_id"]
+            if row["slot"]["method"] != arm or task_id in cached or row.get("complete") is not True:
+                continue
+            if row.get("evaluation", {}).get("evaluator_version") != evaluator_version:
+                continue
+            record = release._read(release._path(f"{arm}:{task_id}"))
+            if record["status"] != "submitted" or row.get("answer_hash") != record["submission"]["answer_hash"]:
+                raise ValueError("Cached evaluation answer differs from the sealed answer")
+            if row.get("evaluation_budget", {}).get("reserved_tokens", 0):
+                raise ValueError("Cached evaluation has unsettled calls")
+            copied = dict(row)
+            copied["evaluation_reused_from"] = str(path)
+            cached[task_id] = copied
+    return cached
+
+
+def _baseline_reuse(args, manifest, config):
+    source = getattr(args, "reuse_baseline_from", None)
+    if source is None:
+        return {}
+    if args.arm != "baseline" or not args.closed_book:
+        raise ValueError("Baseline reuse requires an isolated closed-book baseline")
+    source = Path(source).resolve()
+    metadata = _read(source / "pilot_metadata.json")
+    if (metadata["manifest"]["test"] != manifest.test
+            or metadata["execution_model"] != config.models["exec"].model
+            or metadata["data_sha256"] != _sha256_file(args.data)
+            or metadata.get("knowledge_policy") != "model_general_knowledge_allowed"):
+        raise ValueError("Reused baseline has a different data, split, model or knowledge policy")
+    source_exec = metadata.get("config", {}).get("models", {}).get("exec")
+    if source_exec is not None and source_exec != config.models["exec"].model_dump(mode="json"):
+        raise ValueError("Reused baseline execution configuration differs")
+    reports = _read(source / "generation_reports.json")
+    imported = {}
+    for saved in reports["baseline"].get("submitted_outcomes", []):
+        outcome = dict(saved)
+        task_id = outcome["task_id"]
+        if task_id not in manifest.test or task_id in imported:
+            raise ValueError("Reused baseline task IDs must be unique frozen TEST members")
+        if outcome.get("status") != "submitted_unscored" or outcome.get("evaluation") is not None:
+            raise ValueError("Only unscored baseline generation outcomes can be reused")
+        run_dir = Path(outcome["run_dir"]).resolve()
+        if not run_dir.is_relative_to(source) or not run_dir.is_dir():
+            run_dir = source / "baseline" / "tasks" / task_id
+        submission = _read(run_dir / "submission.json")
+        if digest(submission["answer"]) != submission["answer_hash"] or outcome["answer_hash"] != submission["answer_hash"]:
+            raise ValueError("Reused baseline answer hash mismatch")
+        from jit_mas.test_release import remaining_task_budget
+        remaining_task_budget(config, outcome)
+        outcome["_reuse_source_dir"] = str(run_dir)
+        imported[task_id] = outcome
+    return imported
+
+
+def _import_baseline_outcome(outcome, output):
+    imported = dict(outcome)
+    source = Path(imported.pop("_reuse_source_dir"))
+    destination = output / "tasks" / imported["task_id"]
+    shutil.copytree(source, destination, ignore=shutil.ignore_patterns("complete.json", "*.tmp"))
+    imported["run_dir"] = str(destination.resolve())
+    imported["generation_reused_from"] = str(source)
+    write_json(destination / "complete.json", imported)
+    return imported
+
+
 def run_baseline(args, config, manifest, evidence_dir, output):
     started = time.monotonic()
     started_at = utc_now()
@@ -350,6 +437,11 @@ def run_baseline(args, config, manifest, evidence_dir, output):
         write_json(output / "report.json", report)
         for task_id in manifest.test:
             _assert_identity(args)
+            reusable = getattr(args, "baseline_reuse", {}).get(task_id)
+            if reusable is not None:
+                outcomes.append(_import_baseline_outcome(reusable, output))
+                write_json(output / "report.json", report)
+                continue
             task_dir = output / "tasks" / task_id
             write_json(output / "started" / f"{task_id}.json", {"task_id": task_id, "started_at": utc_now()})
             try:
@@ -609,6 +701,8 @@ def _cost_summary(directory):
 
 
 def _paired_comparison(reports, manifest):
+    if set(reports) != {"baseline", "ours"}:
+        return {"available": False, "reason": "Both arms are required for paired comparison"}
     by_arm = {arm: {row["slot"]["task_id"]: row for row in reports[arm].get(
         "results" if arm == "baseline" else "test", {}).get("tasks", []) if "slot" in row}
               for arm in ("baseline", "ours")}
@@ -642,16 +736,29 @@ def main(argv=None):
     parser.add_argument("--judge-model", default="gpt-5.6-sol")
     parser.add_argument("--timeout", type=float, default=180)
     parser.add_argument("--judge-parallel", type=int, default=2)
+    parser.add_argument("--max-inflight-requests", type=int, default=2)
+    parser.add_argument("--judge-max-tokens", type=int, default=16000)
+    parser.add_argument("--judge-attempts", type=int, default=1)
+    parser.add_argument("--arm", choices=("both", "baseline", "ours"), default="both",
+                        help="Run both arms in parallel, or isolate one arm for recovery/debugging.")
+    parser.add_argument("--reuse-baseline-from", help="Import sealed baseline answers and fill only missing generations")
+    parser.add_argument("--reuse-evaluations-from", action="append", default=[],
+                        help="Reuse complete judgments only when evaluator and answer identities match")
     parser.add_argument("--evidence-dir")
     parser.add_argument("--closed-book", action="store_true")
     parser.add_argument("--check-only", action="store_true")
     args = parser.parse_args(argv)
-    if args.judge_parallel < 1 or args.judge_parallel > 2:
-        parser.error("--judge-parallel must be 1 or 2 under the frozen request cap")
+    if not 1 <= args.max_inflight_requests <= 16:
+        parser.error("--max-inflight-requests must be between 1 and 16")
+    if not 1 <= args.judge_parallel <= 16:
+        parser.error("--judge-parallel must be between 1 and 16")
+    if args.judge_max_tokens < 1 or not 1 <= args.judge_attempts <= 3:
+        parser.error("Judge token limit must be positive and attempts must be between 1 and 3")
     if not Path(args.data).is_file() or not Path(args.joint_manifest).is_file():
         parser.error("Pinned data and joint manifest must exist")
     manifest = _manifest(args.joint_manifest)
     config = _config(args)
+    args.baseline_reuse = _baseline_reuse(args, manifest, config)
     evidence_dir = Path(args.evidence_dir).resolve() if args.evidence_dir else None
     if evidence_dir is None and not args.closed_book:
         parser.error("Shared public evidence is required; --closed-book explicitly registers a protocol deviation")
@@ -670,6 +777,13 @@ def main(argv=None):
     files = [Path(args.data).resolve(), Path(args.joint_manifest).resolve(), split_path]
     if evidence_dir:
         files.extend(sorted(path for path in evidence_dir.rglob("*") if path.is_file()))
+    if args.reuse_baseline_from:
+        source = Path(args.reuse_baseline_from).resolve()
+        files.extend([source / "pilot_metadata.json", source / "generation_reports.json"])
+        for outcome in args.baseline_reuse.values():
+            files.extend(sorted(path for path in Path(outcome["_reuse_source_dir"]).rglob("*") if path.is_file()))
+    for source in args.reuse_evaluations_from:
+        files.extend(sorted((Path(source).resolve() / "test_release" / "evaluations").glob("*.json")))
     args.frozen_identity = {"code": code_fingerprint(), "runner": _runner_hash(), "config": digest(config),
                             "judge_parallel": args.judge_parallel,
                             "files": {str(path): _sha256_file(path) for path in files}}
@@ -678,9 +792,19 @@ def main(argv=None):
                 "execution_model": args.exec_model, "execution_endpoint": args.exec_endpoint,
                 "judge_model": args.judge_model, "judge_endpoint": args.judge_endpoint,
                 "judge_parallel": args.judge_parallel, "process_request_cap": config.max_inflight_requests,
+                "judge_attempts": args.judge_attempts,
+                "model_attempts": os.getenv("JIT_MAS_MODEL_ATTEMPTS", "1"),
+                "consecutive_failure_limit": os.getenv("MODULAR_AGENT_MAX_CONSECUTIVE_API_FAILURES", "5"),
+                "tls_verify": os.getenv("JIT_MAS_TLS_VERIFY", "default"),
+                "tls_endpoint": os.getenv("JIT_MAS_TLS_ENDPOINT"),
+                "disable_keepalive": os.getenv("JIT_MAS_DISABLE_KEEPALIVE", "0"),
+                "baseline_generation_source": str(Path(args.reuse_baseline_from).resolve()) if args.reuse_baseline_from else None,
+                "reused_generation_count": len(args.baseline_reuse),
+                "evaluation_cache_sources": [str(Path(source).resolve()) for source in args.reuse_evaluations_from],
                 "config": config.model_dump(mode="json"), "frozen_identity": args.frozen_identity,
                 "protocol_scope": "RR-only run0 projection of v5; not the full mixed-benchmark campaign",
-                "parallel_arms": True, "repeats": 1, "test_feedback_updates_experience": False,
+                "parallel_arms": args.arm == "both", "selected_arm": args.arm,
+                "repeats": 1, "test_feedback_updates_experience": False,
                 "knowledge_policy": ("model_general_knowledge_allowed" if args.closed_book
                                       else "fixed_shared_evidence_only"),
                 "status": "preflight_passed" if args.check_only else "running",
@@ -689,10 +813,15 @@ def main(argv=None):
     if args.check_only:
         print(json.dumps({"status": "preflight_passed", "paid_requests": 0, **preflight}, ensure_ascii=True))
         return 0
-    with ThreadPoolExecutor(max_workers=2) as workers:
-        baseline = workers.submit(_run_arm, run_baseline, args, config, manifest, evidence_dir, output / "baseline")
-        ours = workers.submit(_run_arm, run_ours, args, config, manifest, evidence_dir, output / "ours")
-        reports = {"baseline": baseline.result(), "ours": ours.result()}
+    if args.arm == "both":
+        with ThreadPoolExecutor(max_workers=2) as workers:
+            baseline = workers.submit(_run_arm, run_baseline, args, config, manifest, evidence_dir, output / "baseline")
+            ours = workers.submit(_run_arm, run_ours, args, config, manifest, evidence_dir, output / "ours")
+            reports = {"baseline": baseline.result(), "ours": ours.result()}
+    elif args.arm == "baseline":
+        reports = {"baseline": _run_arm(run_baseline, args, config, manifest, evidence_dir, output / "baseline")}
+    else:
+        reports = {"ours": _run_arm(run_ours, args, config, manifest, evidence_dir, output / "ours")}
     write_json(output / "generation_reports.json", reports)
     _score_deferred(args, config, manifest, evidence_dir, output, reports)
     for arm, report in reports.items():
@@ -703,12 +832,15 @@ def main(argv=None):
     write_json(output / "pilot_metadata.json", metadata)
     write_json(output / "comparison.json", {"metadata": metadata, "reports": reports,
                                             "paired": _paired_comparison(reports, manifest)})
-    print(json.dumps({"status": metadata["status"], "output": str(output),
-                      "baseline_mean": reports["baseline"]["results"]["mean_score"],
-                      "ours_mean": reports["ours"]["test"]["mean_score"],
-                      "mean_scope": "complete-only; fixed-task means are null until all tasks complete",
-                      "baseline_completed": reports["baseline"]["results"]["completed"],
-                      "ours_completed": reports["ours"]["test"]["completed"]}, ensure_ascii=True))
+    summary = {"status": metadata["status"], "output": str(output),
+               "mean_scope": "complete-only; fixed-task means are null until all tasks complete"}
+    if "baseline" in reports:
+        summary.update(baseline_mean=reports["baseline"]["results"]["mean_score"],
+                       baseline_completed=reports["baseline"]["results"]["completed"])
+    if "ours" in reports:
+        summary.update(ours_mean=reports["ours"]["test"]["mean_score"],
+                       ours_completed=reports["ours"]["test"]["completed"])
+    print(json.dumps(summary, ensure_ascii=True))
     return 0 if metadata["status"] == "completed" else 1
 
 

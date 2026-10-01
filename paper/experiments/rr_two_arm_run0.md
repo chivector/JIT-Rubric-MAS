@@ -23,6 +23,12 @@
 
 凭据只从进程环境 `RR_EXEC_API_KEY` 与 `RR_JUDGE_API_KEY` 读取，不写入实验配置。默认模型为 `deepseek-v4-flash-vision` 和 `gpt-5.6-sol`。`--check-only` 验证固定数据 SHA256、成员与证据包，不调用模型，也不要求凭据。预检目录与正式运行目录分别使用新路径。
 
+用户允许通用知识后，探索版可使用 `--closed-book`。`--arm baseline` 单独运行固定 33 道 TEST；`--arm ours` 单独进化、选版后测试；默认 `--arm both` 同时启动两臂。
+
+连接故障后可用 `--arm baseline --closed-book --reuse-baseline-from <source-output-directory>` 在新目录保留已有未评分生成记录，只生成缺失题。来源数据、TEST 成员、执行配置与答案哈希均须一致；复制的生成预算和来源路径写入产物。新评分必须统一 judge 身份，不能混用旧 judge 的分数。此类恢复包含此前失败请求的重试，须披露，不能表述为无故障的初始一次运行。
+
+`--judge-model`、`--judge-max-tokens`、`--judge-attempts`、`--judge-parallel` 与 `--max-inflight-requests` 均在新运行前固定。`JIT_MAS_MODEL_ATTEMPTS` 控制传输重试；`JIT_MAS_DISABLE_KEEPALIVE=1` 禁用连接复用。默认启用 TLS 校验；临时 `JIT_MAS_TLS_VERIFY=0` 可配合 `JIT_MAS_TLS_ENDPOINT` 仅限制指定执行端点，评分端点保留校验。传输故障的 token 用量可能仅为估计，无法据此可靠估算费用。
+
 默认 `--judge-parallel 2` 在每个 rubric 使用独立 judge 实例并共享当前题的计量账本；整个进程的请求并发仍最多 2。两臂使用同一评分并发、原始 rubric 顺序、提示和有符号权重聚合。可显式冻结为 `--judge-parallel 1` 使用顺序评分。
 
 产物包括 `pilot_metadata.json`、两臂 `report.json`、checkpoint journal、逐题提交和预算、`test_release/seal.json`、逐题评分及 `comparison.json`。运行期间冻结代码、配置、数据、清单与证据哈希；工程修复须保留旧记录并另建新版本，不能边跑边修改冻结身份。
