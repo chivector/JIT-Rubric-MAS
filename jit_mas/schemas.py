@@ -181,6 +181,33 @@ class AgentSpec(Record):
         return self
 
 
+class AgentBudgetEstimate(Record):
+    agent_id: str = Field(min_length=1)
+    expected_model_calls: int = Field(ge=1)
+    expected_input_tokens: int = Field(ge=0)
+    expected_output_tokens: int = Field(ge=1)
+    expected_tool_calls: int = Field(default=0, ge=0)
+    expected_communication_bytes: int = Field(default=0, ge=0)
+    rationale: str = Field(min_length=1)
+
+
+class TeamBudgetPlan(Record):
+    agents: list[AgentBudgetEstimate] = Field(min_length=1)
+    reserved_future_tokens: int = Field(default=0, ge=0)
+    reserved_future_model_calls: int = Field(default=0, ge=0)
+    quality_cost_tradeoff: str = Field(min_length=1)
+    stopping_policy: str = Field(min_length=1)
+
+    def totals(self) -> dict[str, int]:
+        return {
+            "model_calls": sum(agent.expected_model_calls for agent in self.agents),
+            "input_tokens": sum(agent.expected_input_tokens for agent in self.agents),
+            "output_tokens": sum(agent.expected_output_tokens for agent in self.agents),
+            "tool_calls": sum(agent.expected_tool_calls for agent in self.agents),
+            "communication_bytes": sum(agent.expected_communication_bytes for agent in self.agents),
+        }
+
+
 class TeamSpec(Record):
     execution_mode: Literal["single_pass", "iterative_shared_ledger"] = "single_pass"
     agents: list[AgentSpec] = Field(min_length=1, max_length=16)
@@ -192,6 +219,7 @@ class TeamSpec(Record):
     termination: str = "All required artifacts and final synthesis submitted"
     max_parallel: int = Field(default=2, ge=1, le=16)
     total_max_calls: int | None = Field(default=16, ge=1)
+    budget_plan: TeamBudgetPlan | None = None
 
     @model_validator(mode="after")
     def validate_team(self):
@@ -202,6 +230,23 @@ class TeamSpec(Record):
             raise ValueError("single-pass execution requires AgentSpec.max_calls=1")
         if self.total_max_calls is not None and all(a.max_calls is not None for a in self.agents) and sum(a.max_calls for a in self.agents) > self.total_max_calls:
             raise ValueError("Agent allocations exceed team call budget")
+        if self.budget_plan is not None:
+            estimates = {estimate.agent_id: estimate for estimate in self.budget_plan.agents}
+            if len(estimates) != len(self.budget_plan.agents) or set(estimates) != set(ids):
+                raise ValueError("Budget estimates must identify every selected agent exactly once")
+            for agent in self.agents:
+                estimate = estimates[agent.agent_id]
+                if self.execution_mode == "single_pass" and estimate.expected_model_calls != 1:
+                    raise ValueError("single-pass budget estimates require expected_model_calls=1")
+                if agent.max_calls is not None and estimate.expected_model_calls > agent.max_calls:
+                    raise ValueError("Expected agent calls exceed the configured role ceiling")
+                if estimate.expected_output_tokens > agent.max_tokens * estimate.expected_model_calls:
+                    raise ValueError("Expected output tokens exceed the role response ceilings")
+                if estimate.expected_tool_calls and not agent.tools:
+                    raise ValueError("Expected external tool calls require allowed agent tools")
+            if (self.total_max_calls is not None
+                    and self.budget_plan.totals()["model_calls"] > self.total_max_calls):
+                raise ValueError("Expected calls exceed the team call ceiling")
         remaining = {a.agent_id: set(a.depends_on) for a in self.agents}
         if any(not deps <= set(ids) for deps in remaining.values()):
             raise ValueError("Unknown execution dependency")

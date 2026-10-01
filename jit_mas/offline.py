@@ -171,10 +171,21 @@ class FixtureModel:
                     if responsibility not in a["responsibilities"]:
                         a["responsibilities"].append(responsibility)
             coverage = {rid: [a["agent_id"] for a in agents if rid in a["rubric_ids"]] for rid in ids}
+            budget = {}
+            if p["limits"].get("resource_budget") is not None:
+                budget["budget_plan"] = {"agents": [{
+                    "agent_id": agent["agent_id"], "expected_model_calls": 1,
+                    "expected_input_tokens": 2048, "expected_output_tokens": agent["max_tokens"],
+                    "expected_tool_calls": 0, "expected_communication_bytes": 1024,
+                    "rationale": "Synthetic estimate for one complete role contribution."}
+                    for agent in agents], "reserved_future_tokens": 8192,
+                    "reserved_future_model_calls": 1,
+                    "quality_cost_tradeoff": "Use compact complementary roles and preserve final synthesis.",
+                    "stopping_policy": "Submit the complete artifact within the shared token and time budget."}
             return {"graph": graph, "team": {"execution_mode": p["limits"].get("execution_mode", "single_pass"), "agents": agents, "synthesizer_id": agents[-1]["agent_id"],
                 "coverage": coverage, "primary": {rid: owners[0] for rid, owners in coverage.items()},
                 "total_max_calls": None if p["limits"].get("execution_mode") == "iterative_shared_ledger" else len(agents), "max_parallel": min(2, p["limits"]["max_parallel"]),
-                "selection_rationale": "Synthetic task-conditioned single-pass ledger allocation"},
+                "selection_rationale": "Synthetic task-conditioned single-pass ledger allocation", **budget},
                 "local_plans": p["local_plans"]}
         if phase == "align":
             matches = []

@@ -215,6 +215,14 @@ class _ContractModel:
     def __call__(self, messages, *args, **kwargs):
         messages = copy.deepcopy(messages)
         supplement = _mas_contract(self.execution_mode)
+        ledger = getattr(self.model, "ledger", None)
+        if ledger is not None:
+            supplement += (
+                "\nBudget-aware harness generation: preserve the bound team, reuse installed "
+                "capabilities, avoid duplicate construction, and account for this generation or "
+                "repair request within the shared budget. Future-stage reserves are planning "
+                "estimates; runtime guards enforce the total ceiling.\nCurrent shared resource budget:\n"
+                + json.dumps(ledger.resource_context(), ensure_ascii=False))
         system = next((m for m in messages if m.get("role") == "system"), None)
         if system is None:
             messages.insert(0, {"role": "system", "content": supplement})
@@ -648,6 +656,11 @@ class JITHarnessSynthesizer:
             "as protocol-compatible bases, or implement the same bind_team and independent "
             "services.model_factory interface. TeamSpec must determine actual roles, tools, "
             "dependencies, checkpoints and budgets. Do not hard-code another team. "
+            "Honor the team's budget_plan as a quality-cost planning estimate: prefer concise "
+            "task-relevant context, reuse retained capabilities, avoid duplicate work, and preserve "
+            "tokens for final synthesis and required downstream stages. Expected calls are estimates, "
+            "not new execution ceilings. Runtime resource_budget comes from the shared ledger; "
+            "never grant a fresh task budget to each role or bypass its guards. "
             "Do not load team.json at module scope or write any process-wide task state. "
             "Use services.public_task/rubrics/experiences as object attributes at run time. "
             "Export MemoryStrategy, PlanningStrategy, ActionStrategy, ToolPolicyStrategy exactly. "
@@ -745,6 +758,9 @@ class JITHarnessSynthesizer:
         sidecar = {"schema_version": "1.0", "task": _data(task), "rubrics": _data(rubrics),
                    "team": team_data, "experiences": [_data(e) for e in experiences],
                    "backend": self.backend}
+        ledger = getattr(self.meta_model, "ledger", None)
+        if ledger is not None:
+            sidecar["resource_budget_at_generation"] = ledger.resource_context()
         if agent_pool is not None:
             from .agent_pool import validate_bindings
             from .schemas import AgentPoolSnapshot

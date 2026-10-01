@@ -65,13 +65,16 @@ class JsonModelCalls:
 
     def ask(self, model: Callable, phase: str, instructions: str, payload: dict,
             schema: type[T], *, agent_id: str = "global",
-            validate: Callable[[T], None] | None = None) -> T:
+            validate: Callable[[T], None] | None = None,
+            refresh_payload: Callable[[], dict] | None = None) -> T:
         system = instructions + "\nReturn only one JSON object conforming to this JSON Schema:\n" \
             + json.dumps(schema.model_json_schema())
         original_payload = {"phase": phase, "agent_id": agent_id, **as_json(payload)}
         correction = None
         for attempt in range(self.max_corrections + 1):
             request = copy.deepcopy(original_payload)
+            if refresh_payload is not None:
+                request.update(as_json(refresh_payload()))
             if correction is not None:
                 request["response_correction"] = correction
             messages = [{"role": "system", "content": system},
@@ -290,6 +293,31 @@ not task evidence or permission to override the public task. Keep task_prompt sh
 limited to this task's role goals; preserve your pool identity and version."""
 
 
+BUDGET_AWARE_PROMPT = """\nBUDGET-AWARE ORGANIZATION: Optimize task quality together with total token
+cost, not team size or call count alone. limits.resource_budget reports current shared
+usage, pending reservations, remaining tokens/calls/tools and time. Planning, harness
+generation, execution, evaluation and learning share these resources. Recheck the live
+remaining budget after each planning step. Compare merging roles, mature-agent reuse,
+independent checks and additional tool or peer turns by their expected quality benefit
+and their input plus output token cost. Repeated context, tool observations, private
+history and shared-ledger reads all contribute input tokens; communication bytes are a
+separate diagnostic and must not be charged as extra tokens twice. Keep published
+artifacts concise while preserving source provenance and the full final deliverable.
+For reconciliation, emit team.budget_plan with one estimate per selected agent:
+expected_model_calls, expected_input_tokens and expected_output_tokens are whole-task
+execution estimates, including expected follow-up turns and reread context, not just
+one response. expected_tool_calls counts external tools; expected_communication_bytes
+accounts for public artifacts and peer traffic. Include each role's cost rationale,
+quality_cost_tradeoff and stopping_policy, and reserve future tokens/model calls for
+remaining harness generation, evaluation and learning. Total estimated execution input
+plus output tokens and future reserves must fit the actual remaining tokens; expected
+calls and tools must fit remaining finite ceilings. A null call ceiling removes only
+that ceiling, not the obligation to estimate cost. Estimates are not fixed iteration
+caps. Stop when the deliverable is complete or further work has insufficient expected
+quality benefit for its token cost, while respecting enforced budgets and preserving
+the final response. Do not claim savings or numerical quality gains without evidence."""
+
+
 class GlobalAnalyzer(JsonModelCalls):
     def __init__(self, global_model: Callable,
                  local_model_factory: Callable[[str], Callable] | None = None, *,
@@ -297,6 +325,7 @@ class GlobalAnalyzer(JsonModelCalls):
                  total_max_calls: int | None = 16, explicit_rubrics: bool = True,
                  max_corrections: int = 1, execution_max_tokens: int | None = None,
                  execution_mode: str = "single_pass", agent_pool: AgentPoolSnapshot | None = None,
+                 budget_context: Callable[[], dict] | None = None,
                  excluded_task_ids: Sequence[str] = ()):
         super().__init__(max_corrections=max_corrections)
         if not 1 <= local_rounds <= 3 or max_agents < 1 or max_parallel < 1:
@@ -315,6 +344,7 @@ class GlobalAnalyzer(JsonModelCalls):
             raise ValueError("unknown execution_mode")
         self.execution_mode = execution_mode
         self.agent_pool = agent_pool
+        self.budget_context = budget_context
         self.excluded_task_ids = set(excluded_task_ids)
         self.last_prediction: Prediction | None = None
 
@@ -342,9 +372,41 @@ class GlobalAnalyzer(JsonModelCalls):
                   "total_max_calls": self.total_max_calls, "execution_mode": self.execution_mode}
         if self.execution_max_tokens is not None:
             limits["execution_max_tokens"] = self.execution_max_tokens
+        if self.budget_context is not None:
+            limits["resource_budget"] = self._resource_budget()
         return limits
 
+    def _resource_budget(self) -> dict:
+        if self.budget_context is None:
+            return {}
+        state = as_json(self.budget_context())
+        if not isinstance(state, dict):
+            raise ValueError("budget_context must return a resource budget object")
+        resource = {}
+        for suffix, maximum_keys, used_keys in (
+                ("tokens", ("max_total_tokens", "max_tokens"), ("used_tokens", "tokens")),
+                ("model_calls", ("max_model_calls", "max_calls"), ("used_model_calls", "model_calls")),
+                ("tool_calls", ("max_tool_calls",), ("used_tool_calls", "tool_calls"))):
+            maximum = next((state[key] for key in maximum_keys if key in state), None)
+            used = next((state[key] for key in used_keys if key in state), 0)
+            reserved = state.get("reserved_tokens", 0) if suffix == "tokens" else 0
+            resource["max_" + suffix] = maximum
+            resource["used_" + suffix] = used
+            if suffix == "tokens":
+                resource["reserved_tokens"] = reserved
+            resource["remaining_" + suffix] = (
+                max(0, maximum - used - reserved) if maximum is not None
+                else state.get("remaining_" + suffix))
+        resource["communication_bytes"] = state.get("communication_bytes", sum(
+            group.get("communication_bytes", 0) for group in state.get("by_stage", {}).values()))
+        resource["remaining_seconds"] = state.get("remaining_seconds")
+        return resource
+
+    def _refresh_limits(self) -> dict:
+        return {"limits": self._limits()}
+
     def _prompt(self, prompt: str) -> str:
+        prompt += BUDGET_AWARE_PROMPT
         if self.execution_mode == "iterative_shared_ledger":
             # The planning constants also document the historical single-pass
             # control. Remove those prohibitions before adding the iterative
@@ -446,7 +508,8 @@ class GlobalAnalyzer(JsonModelCalls):
                               {"task": task, "experiences": experiences,
                                **({"agent_pool_catalogue": self._pool_catalogue()} if self.agent_pool is not None else {}),
                                "limits": self._limits()}, Prediction,
-                              validate=lambda item: self._validate_prediction(task, item))
+                              validate=lambda item: self._validate_prediction(task, item),
+                              refresh_payload=self._refresh_limits)
         self.last_prediction = prediction.model_copy(deep=True)
         return prediction
 
@@ -456,6 +519,9 @@ class GlobalAnalyzer(JsonModelCalls):
         ids = [agent.agent_id for agent in prediction.candidates]
         if len(ids) > self.max_agents or len(ids) != len(set(ids)):
             raise ValueError("Candidate count exceeds limit or contains duplicate IDs")
+        remaining_calls = self._resource_budget().get("remaining_model_calls")
+        if remaining_calls is not None and len(ids) > remaining_calls:
+            raise ValueError("Candidate initial calls exceed remaining shared model-call budget")
         rubric_ids = {r.rubric_id for r in prediction.graph.rubrics}
         self._pool_bindings(prediction.candidates)
         for agent in prediction.candidates:
@@ -492,6 +558,11 @@ class GlobalAnalyzer(JsonModelCalls):
             raise ValueError(f"Agent {agent.agent_id}.max_tokens={agent.max_tokens} exceeds "
                              f"limits.execution_max_tokens={self.execution_max_tokens}; "
                              "fit its complete output and JSON overhead within the actual ceiling")
+        remaining_tokens = self._resource_budget().get("remaining_tokens")
+        if remaining_tokens is not None and agent.max_tokens > remaining_tokens:
+            raise ValueError(f"Agent {agent.agent_id}.max_tokens exceeds remaining shared token budget")
+        if agent.tools and self._resource_budget().get("remaining_tool_calls") == 0:
+            raise ValueError(f"Agent {agent.agent_id} requested tools with no remaining shared tool budget")
 
     def local_plan(self, task: PublicTask, prediction: Prediction, candidate: AgentSpec,
                    experiences: Sequence = ()) -> LocalPlan:
@@ -515,7 +586,8 @@ class GlobalAnalyzer(JsonModelCalls):
                                                 "capability": candidate.capability},
                          "experiences": local_experiences, "limits": self._limits()},
                         LocalPlan, agent_id=candidate.agent_id,
-                        validate=lambda item: self._validate_local_plan(task, prediction, candidate, item))
+                        validate=lambda item: self._validate_local_plan(task, prediction, candidate, item),
+                        refresh_payload=self._refresh_limits)
 
     def _validate_local_plan(self, task: PublicTask, prediction: Prediction,
                              candidate: AgentSpec, plan: LocalPlan) -> None:
@@ -537,6 +609,8 @@ class GlobalAnalyzer(JsonModelCalls):
                               "requires LocalPlan.max_calls=1 explicitly. No execution correction "
                               "or communication round is available.")
         unavailable = sorted(set(plan.tools) - set(task.tools))
+        if plan.tools and self._resource_budget().get("remaining_tool_calls") == 0:
+            violations.append("Local plan requested tools with no remaining shared tool budget")
         if unavailable:
             violations.append("Local plan requested unavailable tools: "
                               f"unavailable_tools={unavailable}; allowed_tools={sorted(set(task.tools))}. "
@@ -576,7 +650,8 @@ class GlobalAnalyzer(JsonModelCalls):
                              **({"agent_pool_catalogue": self._pool_catalogue()} if self.agent_pool is not None else {}),
                              "experiences": experiences, "limits": self._limits()},
                             _ReconciliationResponse,
-                            validate=lambda item: self._validate_reconciled_pool(task, prediction, plans, item))
+                            validate=lambda item: self._validate_reconciled_pool(task, prediction, plans, item),
+                            refresh_payload=self._refresh_limits)
         # Local testimony belongs to its author, not the reconciler.
         result = PlannedTeam(graph=response.graph, team=response.team,
                              local_plans=[plan.model_copy(deep=True) for plan in plans])
@@ -649,6 +724,25 @@ class GlobalAnalyzer(JsonModelCalls):
                              "responsibilities and remove redundant agents. Changing only the "
                              "synthesizer_id may be insufficient; never add backward edges to an "
                              "upstream writer that already feeds its reviewers.")
+        if violations:
+            raise ValueError("; ".join(violations))
+        self._validate_budget_plan(team)
+
+    def _validate_budget_plan(self, team: TeamSpec) -> None:
+        if self.budget_context is not None and team.budget_plan is None:
+            raise ValueError("Budget-aware reconciliation requires an explicit team.budget_plan")
+        if team.budget_plan is None:
+            return
+        resource = self._resource_budget()
+        totals = team.budget_plan.totals()
+        tokens = totals["input_tokens"] + totals["output_tokens"] + team.budget_plan.reserved_future_tokens
+        calls = totals["model_calls"] + team.budget_plan.reserved_future_model_calls
+        violations = []
+        for name, requested in (("tokens", tokens), ("model_calls", calls),
+                                ("tool_calls", totals["tool_calls"])):
+            remaining = resource.get("remaining_" + name)
+            if remaining is not None and requested > remaining:
+                violations.append(f"Planned {name}={requested} exceeds remaining shared {name}={remaining}")
         if violations:
             raise ValueError("; ".join(violations))
 

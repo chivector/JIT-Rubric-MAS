@@ -501,6 +501,10 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
         "After asking a peer, the scheduler lets that peer respond before continuing your role. "
         "A completed contribution may be resumed to answer questions or revise its public artifact. "
         "The synthesizer submits only after all teammates and pending peer requests complete."
+        " Use resource_budget to conserve shared tokens: avoid duplicate analysis and full draft "
+        "copies, send concise evidence-linked messages, and reserve room for the complete final "
+        "deliverable. Follow budget_policy's completion and quality-cost stopping guidance. "
+        "budget_estimate is a forecast, not a fixed call or round limit."
     )
     shared_ledger = _iterative_public_ledger(services, aid)
     ledger_hash = content_hash(shared_ledger)
@@ -509,7 +513,7 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
                    parents=sorted(observed_ids))
     if services.ledger is not None:
         services.ledger.charge_communication(
-            len(json.dumps(shared_ledger, ensure_ascii=False).encode("utf-8")), stage="execution")
+            len(json.dumps(shared_ledger, ensure_ascii=False).encode("utf-8")), stage="execution", agent_id=aid)
     instruction = {"public_task": _data(services.public_task), "agent": agent,
                    "shared_ledger": shared_ledger,
                    "rubrics": _data(services.rubrics) or {"rubrics": []},
@@ -529,6 +533,11 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
                                   "reactivate_completed_agents": True},
                    "submission": "final_answer" if synth else "contribution",
                    "completion_example": completion_example,
+                   "budget_estimate": next((estimate for estimate in
+                       (team.get("budget_plan") or {}).get("agents", [])
+                       if estimate["agent_id"] == aid), None),
+                   "budget_policy": {key: value for key, value in (team.get("budget_plan") or {}).items()
+                                     if key != "agents"},
                    "output_budget": {"max_tokens_per_response": output_limit,
                                      "max_model_calls": None, "max_tool_calls": None}}
     if persistent is not None:
@@ -588,11 +597,15 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                            parents=sorted(_ledger_evidence_ids(updated_ledger)))
             if services.ledger is not None:
                 services.ledger.charge_communication(
-                    len(update_content.encode("utf-8")), stage="execution")
+                    len(update_content.encode("utf-8")), stage="execution", agent_id=aid)
         observed_ids.update(pending_observation_ids)
         pending_observation_ids.clear()
         state["handled_message_ids"].update(item["event_id"]
                                            for item in updated_ledger["communications"])
+        if services.ledger is not None:
+            instruction = json.loads(messages[1]["content"])
+            instruction["resource_budget"] = services.ledger.resource_context()
+            messages[1]["content"] = json.dumps(instruction, ensure_ascii=False)
         context_messages = _role_messages(messages, persistent)
         step = StepRecord(step_number=len(trajectory) + 1, model_input_messages=context_messages,
                           start_time=time.time())
@@ -665,7 +678,7 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                     event_id = services.event(aid, "peer_message", {"content": message},
                                               parents=[output_event], recipient=recipient, source="send_message")
                     if services.ledger is not None:
-                        services.ledger.charge_communication(len(message.encode("utf-8")), stage="execution")
+                        services.ledger.charge_communication(len(message.encode("utf-8")), stage="execution", agent_id=aid)
                     observations.append({"event_id": event_id, "recipient": recipient, "content": message})
                     state["awaiting_messages"].append((recipient, event_id))
                     continue
@@ -760,7 +773,7 @@ def _run_agent(agent, team, ctx, services):
                                     parents=sorted(observed_ids))
         observed_ids.add(read_event)
         if services.ledger is not None:
-            services.ledger.charge_communication(len(json.dumps(shared_ledger, ensure_ascii=False).encode("utf-8")))
+            services.ledger.charge_communication(len(json.dumps(shared_ledger, ensure_ascii=False).encode("utf-8")), agent_id=aid)
     rubric_data = _data(services.rubrics) or {"rubrics": []}
     primary_rubrics = [rid for rid, owner in team.get("primary", {}).items() if owner == aid]
     review_rubrics = [rid for rid, reviewers in team.get("reviewers", {}).items() if aid in reviewers]
@@ -797,6 +810,12 @@ def _run_agent(agent, team, ctx, services):
         "coordination": "single_pass_shared_ledger",
         "submission": "final_answer" if synth else "subtask_complete",
         "completion_example": completion_example,
+        "resource_budget": services.ledger.resource_context() if services.ledger is not None else None,
+        "budget_estimate": next((estimate for estimate in
+            (team.get("budget_plan") or {}).get("agents", [])
+            if estimate["agent_id"] == aid), None),
+        "budget_policy": {key: value for key, value in (team.get("budget_plan") or {}).items()
+                          if key != "agents"},
         "output_budget": {"max_tokens_per_response": output_limit, "max_model_calls": 1},
     }
     if persistent is not None:
@@ -1204,12 +1223,38 @@ def run_team(task, ctx, team, services):
         results[aid] = RunResult(terminated_reason="cancelled", metadata={"agent_id": aid})
     if services.execution_mode == "iterative_shared_ledger":
         services.shared_ledger = _iterative_public_ledger(services)
-    final = results[team["synthesizer_id"]]
+    if services.ledger is not None:
+        budget = services.ledger.snapshot()
+        for agent in team["agents"]:
+            aid = agent["agent_id"]
+            own_records = [record for record in budget["records"] if record.get("agent_id") == aid]
+            model_records = [record for record in own_records if record["kind"] == "model"]
+            services.event(aid, "resource_usage", {
+                "scope": "pre_submission_role_calls_including_local_planning",
+                "model_calls": len(model_records),
+                "input_tokens": sum(record["input_tokens"] for record in model_records),
+                "output_tokens": sum(record["output_tokens"] for record in model_records),
+                "tool_calls": sum(record["kind"] == "tool" for record in own_records),
+                "communication_bytes": sum(record["bytes"] for record in own_records
+                                           if record["kind"] == "communication"),
+                "estimated": any(record["estimated"] for record in model_records), "cost": None})
+            if aid in results:
+                results[aid].metadata["event_ids"] = [event["event_id"] for event in services.events
+                                                     if event["agent_id"] == aid]
+        services.event("coordinator", "resource_usage", {
+            "scope": "pre_submission_shared_task", "resource_budget": services.ledger.resource_context(),
+            "by_stage": budget["by_stage"], "cost": None})
+    final = results.get(team["synthesizer_id"],
+                        RunResult(answer=None, terminated_reason="cancelled",
+                                  metadata={"agent_id": team["synthesizer_id"]}))
     submitted = final.answer is not None and (services.execution_mode != "iterative_shared_ledger"
                                              or final.terminated_reason == "final_answer")
     return RunResult(answer=final.answer if submitted else None,
                      terminated_reason="final_answer" if submitted else "error",
-                     sub_runs=[results[a["agent_id"]] for a in team["agents"]],
+                     sub_runs=[results.get(a["agent_id"],
+                                           RunResult(terminated_reason="cancelled",
+                                                     metadata={"agent_id": a["agent_id"]}))
+                               for a in team["agents"]],
                      metadata={"run_id": services.run_id, "events": copy.deepcopy(services.events),
                                "artifacts": copy.deepcopy(services.artifacts),
                                "coordination": ("single_pass_shared_ledger"

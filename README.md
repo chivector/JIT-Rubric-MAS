@@ -19,6 +19,11 @@ dual evolution of Meta-Agent organization experience and a persistent Agent Pool
 Meta selects reusable agents and adapts their goals and topology; agents retain and
 update their own prompts, skills, memory, reasoning and harness policies. Both layers
 share atomic, versioned snapshots. See [the extension guide](docs/jit_mas.md).
+MAS design is budget-aware: planners receive live shared token usage and reservations,
+record each selected role's cost estimates and quality trade-offs in `budget_plan`, and
+check that expected execution plus later-stage reserves fit the remaining resources.
+Roles receive refreshed token budgets, and evolution uses their observed costs alongside
+quality feedback. Estimated calls do not impose an additional collaboration-round cap.
 By default, task execution uses single-pass shared-ledger coordination: task-conditioned
 Analyst/Evidence contributions feed a deterministic ledger, and the Writer reads
 the completed snapshot once before independent evaluation. Each execution role

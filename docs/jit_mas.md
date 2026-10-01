@@ -84,6 +84,15 @@ full/recent conversation memory and allowed/preferred-first tool ordering; it do
 arbitrary new Python for each agent. Tool permissions, topology, execution mode and budgets
 remain enforced by the current task.
 
+The MAS generator considers quality and token cost together. Each global/local planning
+request receives the live shared budget, including consumed and reserved tokens. Reconciliation
+records a typed `TeamSpec.budget_plan` with per-role input/output token, model/tool call and
+communication estimates, later-stage reserves, a quality-cost rationale and a stopping policy.
+Estimates must fit the remaining shared resources and role response ceilings; they do not
+create extra call or round caps. Actors receive current resources and their role estimate.
+Observed role costs enter evidence-linked evolution reflection, with unknown usage flagged
+and monetary prices left null. Estimates guide design; actual ledger guards enforce limits.
+
 `execution_mode` defaults to `single_pass`. See the [single-pass executor contract](jit_mas_single_pass.md)
 for its unidirectional architecture and migration boundaries. For `iterative_shared_ledger`,
 agent, team, task-model and tool-call ceilings remain configurable; setting an optional call

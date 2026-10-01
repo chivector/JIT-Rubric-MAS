@@ -34,6 +34,17 @@ def test_joint_evolution_reuses_mature_agents_without_regenerating_harness(tmp_p
         assert harness["selection"]["strategy"] == "pooled_agent_reuse"
         assert harness["meta_trajectory"] == []
         assert read_artifact(first, "agent_evolution.json")["complete"]
+        frozen_team = read_artifact(first, "frozen_plan.json")["TeamSpec"]
+        assert {row["agent_id"] for row in frozen_team["budget_plan"]["agents"]} == {"analyst", "evidence", "writer"}
+        planning_calls = read_artifact(first, "planning_calls.json")
+        initial_budget = json.loads(planning_calls[0]["messages"][1]["content"])["limits"]["resource_budget"]
+        final_budget = json.loads(planning_calls[-1]["messages"][1]["content"])["limits"]["resource_budget"]
+        assert final_budget["remaining_tokens"] < initial_budget["remaining_tokens"]
+        reflection_calls = read_artifact(first, "agent_evolution.json")["calls"]
+        for reflection in reflection_calls:
+            payload = json.loads(reflection["messages"][1]["content"])
+            assert payload["resource_usage"][0]["input_tokens"] > 0
+            assert payload["resource_usage"][0]["cost"] is None
         frozen_hash = digest(snapshot)
         following = pipeline.run("evaluate", limit=2)
         assert digest(store.snapshot()) == frozen_hash

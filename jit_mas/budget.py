@@ -105,10 +105,26 @@ class BudgetLedger:
             self._records.append({"kind": "tool", "stage": stage,
                                   "agent_id": agent_id, "tool_name": tool_name})
 
-    def charge_communication(self, amount, stage="execution"):
+    def charge_communication(self, amount, stage="execution", agent_id=""):
         with self._lock:
             self._records.append({"kind": "communication", "stage": stage,
+                                  "agent_id": agent_id,
                                   "bytes": max(0, int(amount))})
+
+    def resource_context(self):
+        with self._lock:
+            return {"max_total_tokens": self.max_tokens, "tokens": self._tokens,
+                    "reserved_tokens": self._reserved,
+                    "remaining_tokens": max(0, self.max_tokens - self._tokens - self._reserved),
+                    "max_model_calls": self.max_calls, "model_calls": self._calls,
+                    "remaining_model_calls": (None if self.max_calls is None
+                                              else max(0, self.max_calls - self._calls)),
+                    "max_tool_calls": self.max_tool_calls, "tool_calls": self._tools,
+                    "remaining_tool_calls": (None if self.max_tool_calls is None
+                                             else max(0, self.max_tool_calls - self._tools)),
+                    "communication_bytes": sum(record["bytes"] for record in self._records
+                                               if record["kind"] == "communication"),
+                    "remaining_seconds": self.remaining_seconds(), "cost": None}
 
     def snapshot(self):
         with self._lock:

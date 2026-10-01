@@ -212,6 +212,19 @@ successes or executed results. Evidence preparation, scoring, human audits
 and optional separately registered experiments require their own accounting.
 This protocol does not authorize an automatic suite run.
 
+The MAS generator is budget-aware at design time: its frozen policy receives
+the task token ceiling, per-response ceiling, and live consumed/reserved/remaining
+token ledger. Its structured team budget plan estimates input/output tokens,
+model and tool calls, communication volume and later-stage reserves, with
+quality--cost trade-offs and feasibility checked against the remaining budget.
+Expected calls do not impose a fixed number of collaboration rounds. Measure
+actual tokens and failures alongside native quality, distinguish estimates from
+observations, and leave unknown prices null. Cost experience may be updated
+only on evolution tasks; validation and testing remain read-only. The registered
+validation quality and tie-breaking rules are unchanged: no retrospective token
+penalty selects a different checkpoint. Additional budget levels or a control
+without budget awareness require separate registration.
+
 Freeze per-task public evidence, serving metadata, prompts, code, resource
 ceilings and any retry policy before running the amended execution
 inventory. Private criteria and target answers remain evaluator-only.

@@ -81,6 +81,22 @@ def test_call_and_tool_limits_are_shared_and_communication_does_not_rebill_token
     assert ledger.snapshot()["by_stage"]["execution"]["communication_bytes"] == 120
 
 
+def test_resource_context_subtracts_live_reservations_without_exposing_call_records():
+    ledger = BudgetLedger(max_calls=3, max_tokens=100, max_tool_calls=2)
+    settled = ledger.reserve("inference", "global", 10, 10)
+    ledger.settle(settled, 5, 5)
+    pending = ledger.reserve("inference", "writer", 20, 10)
+    ledger.charge_tool("inference", "writer", "lookup")
+    context = ledger.resource_context()
+    assert context["tokens"] == 10 and context["reserved_tokens"] == 30
+    assert context["remaining_tokens"] == 60 and context["max_total_tokens"] == 100
+    assert context["remaining_model_calls"] == 1 and context["remaining_tool_calls"] == 1
+    assert "records" not in context and context["cost"] is None
+    ledger.settle(pending, 10, 10)
+    assert ledger.resource_context()["remaining_tokens"] == 70
+    assert BudgetLedger(max_calls=None, max_tool_calls=None).resource_context()["remaining_model_calls"] is None
+
+
 @pytest.mark.parametrize("input_bound,output_bound", [(-1, 1), (1, -1)])
 def test_negative_reservations_cannot_expand_budget(input_bound, output_bound):
     ledger = BudgetLedger(max_tokens=10)

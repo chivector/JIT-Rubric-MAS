@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from jit_mas.bridge import (JITHarnessSynthesizer, ScriptedHarnessModel,
-                            _mas_contract, _module_interface_errors, seed_response)
+                            _ContractModel, _mas_contract, _module_interface_errors, seed_response)
 from jit.harness_ops import _parse_harness_response
 from jit_mas.budget import BudgetLedger, MeteredModel
 from jit_mas.execution import TeamExecutor, TeamMemory, content_hash, validate_team
@@ -561,6 +561,19 @@ class BridgeExecutionTests(unittest.TestCase):
             self.assertNotIn(phrase, contract)
         self.assertIn("cooperative_shared_ledger", contract)
         self.assertIn("reactivate completed roles", contract)
+
+    def test_generation_and_repair_context_refresh_shared_token_usage(self):
+        ledger = BudgetLedger(max_tokens=1000000)
+        messages = [{"role": "system", "content": "Generate or repair the bound harness."},
+                    {"role": "user", "content": "Synthetic public task"}]
+        model = MeteredModel(lambda inputs, **kwargs: "Synthetic response", ledger, "inference", "meta", 128)
+        wrapped = _ContractModel(model)
+        wrapped(messages)
+        wrapped(messages)
+        budgets = [json.loads(call["messages"][0]["content"].split(
+            "Current shared resource budget:\n", 1)[1]) for call in model.calls]
+        self.assertGreater(budgets[0]["remaining_tokens"], budgets[1]["remaining_tokens"])
+        self.assertEqual(messages[0]["content"], "Generate or repair the bound harness.")
 
     def test_seed_description_matches_honest_role_completion_contract(self):
         description = (Path(__file__).resolve().parents[2] /

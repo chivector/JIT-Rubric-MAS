@@ -9,7 +9,7 @@ import pytest
 
 from jit_mas.budget import BudgetLedger, MeteredModel
 from jit_mas.execution import TeamMemory, TeamPlanning, TeamServices, _SinglePassModel, run_team
-from jit_mas.schemas import AgentSpec, PublicTask, RubricGraph, TeamSpec
+from jit_mas.schemas import AgentSpec, PublicTask, RubricGraph, TeamBudgetPlan, TeamSpec
 from scripts.kernel.types import TaskInput, ToolSelection
 from scripts.models.base import ChatMessage
 
@@ -103,6 +103,34 @@ def test_writer_reactivates_completed_searcher_with_private_history_preserved():
     assert len(final_events) == 1
     assert final_events[0]["parent_event_ids"] == [services.artifacts["searcher"]["event_id"]]
     assert result.metadata["scheduling"]["reactivate_completed_agents"] is True
+
+
+def test_iterative_roles_receive_decreasing_shared_token_budget_and_observed_costs():
+    ledger = BudgetLedger(max_calls=None, max_tokens=100000, max_tool_calls=None)
+    team, models, services, context = setup_roles(
+        [{"answer": "Source findings"}],
+        [{"answer": "Draft", "continue": True}, {"answer": "Complete guide"}], ledger=ledger)
+    team.budget_plan = TeamBudgetPlan(agents=[{
+        "agent_id": agent.agent_id, "expected_model_calls": 1,
+        "expected_input_tokens": 2048, "expected_output_tokens": 128,
+        "rationale": "A compact contribution should cover the public requirements."}
+        for agent in team.agents], reserved_future_tokens=1000,
+        quality_cost_tradeoff="Preserve supported evidence and final synthesis.",
+        stopping_policy="Complete the deliverable before unnecessary extra work.")
+    result = run_team("Produce a guide", context, team, services)
+    payloads = [json.loads(call[1]["content"]) for call in models["writer"].calls]
+    budgets = [payload["resource_budget"] for payload in payloads]
+    assert result.answer == "Complete guide" and len(budgets) == 2
+    assert budgets[1]["remaining_tokens"] < budgets[0]["remaining_tokens"] < 100000
+    assert all(budget["max_model_calls"] is None for budget in budgets)
+    assert all(payload["budget_estimate"]["expected_model_calls"] == 1 for payload in payloads)
+    assert payloads[0]["budget_policy"]["reserved_future_tokens"] == 1000
+    assert payloads[0]["budget_policy"]["stopping_policy"] == team.budget_plan.stopping_policy
+    costs = [event["content"] for event in result.metadata["events"]
+             if event["kind"] == "resource_usage" and event["agent_id"] == "writer"]
+    assert costs[0]["model_calls"] == 2 and costs[0]["input_tokens"] > 0
+    assert costs[0]["communication_bytes"] > 0
+    assert costs[0]["estimated"] is True and costs[0]["cost"] is None
 
 
 @pytest.mark.parametrize("requests", [1, 5, 12])

@@ -62,6 +62,7 @@ def _analyzer(pipeline, ledger, *, explicit_rubrics=True, graph=None):
     kwargs = dict(max_agents=config.max_agents, max_parallel=config.max_parallel,
                   total_max_calls=config.team_max_calls, local_rounds=config.local_rounds,
                   explicit_rubrics=explicit_rubrics,
+                  budget_context=ledger.resource_context,
                   execution_max_tokens=config.models["exec"].max_tokens if "exec" in config.models else 8192)
     cls = _FrozenQualityAnalyzer if graph is not None else GlobalAnalyzer
     return cls(pipeline.models.create("global", "global", ledger, "inference"),
@@ -93,7 +94,7 @@ class _FrozenQualityAnalyzer(GlobalAnalyzer):
         prediction = self.ask(self.global_model, "predict", self._prompt(PREDICT_PROMPT),
                               {"task": task, "experiences": experiences,
                                "fixed_quality_graph": self.fixed_graph, "limits": self._limits()},
-                              Prediction, validate=validate)
+                              Prediction, validate=validate, refresh_payload=self._refresh_limits)
         self.last_prediction = prediction.model_copy(deep=True)
         return prediction
 

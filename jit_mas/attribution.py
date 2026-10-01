@@ -118,6 +118,13 @@ insufficient/conflicting evidence). An unowned missed requirement does not justi
 an arbitrary agent. Cite only supplied evidence IDs, record opposing evidence, alternatives
 and uncertainty. This is a hypothesis, not an identified causal effect."""
 
+COST_ATTRIBUTION_PROMPT = """Use observed resource_usage alongside team.budget_plan to inspect
+token use, repeated context and redundant collaboration. Forecasts are not actual usage;
+local planning and execution may be included in a role's recorded costs. Propose conditional
+organization or execution lessons that conserve tokens without weakening public requirements
+or factual checks. A shorter answer or fewer calls alone does not prove better quality-cost
+efficiency; unknown prices remain unknown."""
+
 FEEDBACK_IDS_PROMPT = """Copy rubric IDs exactly from the supplied graphs and feedback;
 copy evidence references exactly from evidence_ids. A feedback:<rubric_id> reference is
 an evidence ID, not a rubric ID. Quote verification flags describe whether the quoted
@@ -295,7 +302,7 @@ class RubricAttributor(JsonModelCalls):
                        for event in events]
         shared = [event for event in events if event.get("kind") in {
             "artifact", "artifact_created", "artifact_published", "submitted", "final_answer",
-            "handoff", "message_sent"}]
+            "handoff", "message_sent", "resource_usage"}]
         submission_id = "submission:" + digest(data.get("answer"))
         evaluation = feedback_view(feedback)
         self._scoring_context = {"task_id": feedback.task_id, "criteria": [
@@ -318,7 +325,7 @@ class RubricAttributor(JsonModelCalls):
             if not set(outline.questions) <= known_agents:
                 raise ValueError("Global attribution addressed an unknown agent")
 
-        outline = self.ask(self.global_model, "attribute_global", OUTLINE_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
+        outline = self.ask(self.global_model, "attribute_global", OUTLINE_PROMPT + "\n" + COST_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
                            context, AttributionOutline, validate=validate_outline)
         self.last_global_outline = outline
         evaluated_to_predicted: dict[str, set[str]] = {}
@@ -390,7 +397,7 @@ class RubricAttributor(JsonModelCalls):
                 if not set(finding.supporting_evidence + finding.opposing_evidence) <= valid_evidence:
                     raise ValueError("Attribution invented an evidence reference")
 
-        final = self.ask(self.global_model, "attribute_integrate", INTEGRATE_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
+        final = self.ask(self.global_model, "attribute_integrate", INTEGRATE_PROMPT + "\n" + COST_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
                          {**context, "global_outline": outline,
                           "local_findings": self.last_local_findings}, Findings,
                          validate=validate_findings)

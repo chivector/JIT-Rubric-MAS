@@ -27,6 +27,10 @@ The evaluation_summary measures the submitted team's artifact, not your individu
 contribution or a causal effect of your policy. It is post-submission feedback only.
 You own your skills, memory, prompt, reasoning,
 planning, harness, and communication habits; the Meta-Agent owns team selection and topology.
+Use your observed resource_usage to identify redundant context, repeated work and
+unnecessary communication. Retain conditional ways to conserve tokens while preserving
+task constraints, factual checks and the complete deliverable. Token estimates and team
+scores do not establish a causal quality-cost improvement; unknown prices remain unknown.
 Keep identity, base_agent_version, source_task_id, and update_id exactly as supplied.
 Distill short conditional process lessons, never a task answer, benchmark criterion,
 reference answer, hidden evaluator threshold, or requirement to imitate one task's output.
@@ -260,6 +264,8 @@ class MASPipeline:
         valid_ids.update({"planning:team", summary["evidence_id"]})
         valid_ids.update(rubric["evidence_id"] for rubric in summary["rubrics"])
         return {"own_events": own_events, "evaluation_summary": summary,
+                "resource_usage": [event["content"] for event in own_events
+                                   if event.get("kind") == "resource_usage"],
                 "valid_evidence_ids": sorted(valid_ids)}
 
     @staticmethod
@@ -591,6 +597,7 @@ class MASPipeline:
                                   execution_max_tokens=(self.config.models["exec"].max_tokens
                                                         if "exec" in self.config.models else None),
                                   agent_pool=pool,
+                                  budget_context=ledger.resource_context,
                                   excluded_task_ids=self.manifest.validation + self.manifest.test)
         if self.config.fixed_team is None:
             try:
