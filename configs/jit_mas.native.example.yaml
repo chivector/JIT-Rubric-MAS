@@ -14,6 +14,7 @@ local_planning: true
 local_rounds: 1  # Pre-execution planning, not task-execution dialogue.
 local_attribution: true
 persistent_experience: true
+evolving_agent_pool: true
 available_tools: [web_search, crawl_page]
 # Evolution/stream updates are persisted directly after attribution.
 models:

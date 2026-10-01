@@ -34,14 +34,15 @@ class ModelConfig(Record):
 
 class MASConfig(Record):
     backend: Literal["scripted", "native_jit"] = "native_jit"
+    execution_mode: Literal["single_pass", "iterative_shared_ledger"] = "single_pass"
     unsafe_local: bool = False
     models: dict[str, ModelConfig] = Field(default_factory=dict)
     max_agents: int = Field(default=4, ge=1, le=16)
     max_parallel: int = Field(default=2, ge=1, le=16)
-    team_max_calls: int = Field(default=16, ge=1)
-    max_model_calls: int = Field(default=100, ge=1)
+    team_max_calls: int | None = Field(default=16, ge=1)
+    max_model_calls: int | None = Field(default=100, ge=1)
     max_total_tokens: int = Field(default=2_000_000, ge=1)
-    max_tool_calls: int = Field(default=64, ge=0)
+    max_tool_calls: int | None = Field(default=64, ge=0)
     max_repairs: int = Field(default=2, ge=0, le=5)
     candidates: int = Field(default=1, ge=1, le=4)
     execution_timeout: float = Field(default=120, gt=0)
@@ -50,6 +51,7 @@ class MASConfig(Record):
     local_rounds: int = Field(default=1, ge=1, le=3)
     local_attribution: bool = True
     persistent_experience: bool = True
+    evolving_agent_pool: bool = True
     explicit_rubrics: bool = True
     fixed_team: TeamSpec | None = None
     seed: int = 0
@@ -67,8 +69,11 @@ class MASConfig(Record):
     def fixed_team_limits(self):
         team = self.fixed_team
         if team and (len(team.agents) > self.max_agents or team.max_parallel > self.max_parallel
-                     or team.total_max_calls > self.team_max_calls):
+                     or (self.team_max_calls is not None
+                         and (team.total_max_calls is None or team.total_max_calls > self.team_max_calls))):
             raise ValueError("Fixed team exceeds configured agent, concurrency or call limits")
+        if team and team.execution_mode != self.execution_mode:
+            raise ValueError("Fixed team execution_mode must match MASConfig.execution_mode")
         return self
 
     def check_native(self):

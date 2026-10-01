@@ -38,7 +38,7 @@ def execution_case():
     synth = JITHarnessSynthesizer()
     ledger = BudgetLedger()
 
-    def execute(replies, max_calls=2):
+    def execute(replies, max_calls=1):
         team = TeamSpec(agents=[AgentSpec(agent_id="final", role="Editor", capability="writing",
             max_calls=max_calls, max_tokens=4096)], synthesizer_id="final", total_max_calls=max_calls)
         artifact = synth.synthesize(task, RubricGraph(rubrics=[]), team)

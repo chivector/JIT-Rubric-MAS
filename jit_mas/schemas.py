@@ -83,6 +83,78 @@ class RubricGraph(Record):
         return self
 
 
+class AgentHarnessPolicy(Record):
+    harness_id: Literal["rubric_mas"] = "rubric_mas"
+    memory_policy: Literal["full", "recent"] = "full"
+    memory_window: int = Field(default=8, ge=1, le=100)
+    tool_policy: Literal["all_allowed", "preferred_first"] = "all_allowed"
+
+
+class AgentMemoryLesson(Record):
+    lesson_id: str = Field(min_length=1)
+    instruction: str = Field(min_length=1, max_length=3000)
+    applicability: str = Field(min_length=1)
+    capability: str = ""
+    task_signals: list[str] = Field(default_factory=list)
+    source_task_ids: list[str] = Field(min_length=1)
+    evidence: list[str] = Field(min_length=1)
+    counterevidence: list[str] = Field(default_factory=list)
+    created_at: str = Field(default_factory=utc_now)
+
+
+class AgentProfile(Record):
+    pool_agent_id: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
+    version: int = Field(default=1, ge=1)
+    role: str = Field(min_length=1)
+    capabilities: list[str] = Field(min_length=1)
+    prompt: str = Field(min_length=1, max_length=6000)
+    skills: dict[str, str] = Field(default_factory=dict)
+    preferred_tools: list[str] = Field(default_factory=list)
+    memory: list[AgentMemoryLesson] = Field(default_factory=list)
+    reasoning_strategy: str = ""
+    planning_strategy: str = ""
+    communication: str = ""
+    harness: AgentHarnessPolicy = Field(default_factory=AgentHarnessPolicy)
+    source_task_ids: list[str] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def distinct_history(self):
+        ids = [lesson.lesson_id for lesson in self.memory]
+        if len(ids) != len(set(ids)) or len(self.source_task_ids) != len(set(self.source_task_ids)):
+            raise ValueError("Agent history must have distinct lessons and tasks")
+        return self
+
+
+class AgentPoolSnapshot(Record):
+    version: int = Field(default=0, ge=0)
+    profiles: list[AgentProfile] = Field(default_factory=list)
+    applied_updates: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def distinct_agents(self):
+        ids = [profile.pool_agent_id for profile in self.profiles]
+        if len(ids) != len(set(ids)) or len(self.applied_updates) != len(set(self.applied_updates)):
+            raise ValueError("Agent Pool IDs and update IDs must be unique")
+        return self
+
+
+class AgentEvolutionUpdate(Record):
+    update_id: str = Field(min_length=1)
+    pool_agent_id: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
+    base_agent_version: int = Field(ge=1)
+    source_task_id: str = Field(min_length=1)
+    lessons: list[AgentMemoryLesson] = Field(default_factory=list)
+    prompt: str | None = Field(default=None, min_length=1, max_length=6000)
+    skills: dict[str, str] | None = None
+    preferred_tools: list[str] | None = None
+    reasoning_strategy: str | None = None
+    planning_strategy: str | None = None
+    communication: str | None = None
+    harness: AgentHarnessPolicy | None = None
+    evidence: list[str] = Field(min_length=1)
+
+
 class AgentSpec(Record):
     agent_id: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
     role: str
@@ -91,12 +163,26 @@ class AgentSpec(Record):
     responsibilities: list[str] = Field(default_factory=list)
     tools: list[str] = Field(default_factory=list)
     depends_on: list[str] = Field(default_factory=list)
-    max_calls: int = Field(default=1, ge=1)
+    max_calls: int | None = Field(default=1, ge=1)
     max_tokens: int = Field(default=4096, ge=1)
     checkpoints: list[str] = Field(default_factory=list)
+    pool_agent_id: str | None = None
+    pool_agent_version: int | None = Field(default=None, ge=1)
+    task_prompt: str = ""
+    selected_skills: list[str] | None = None
+    reasoning_strategy: str = ""
+    harness: AgentHarnessPolicy | None = None
+    communication: str = ""
+
+    @model_validator(mode="after")
+    def bound_identity(self):
+        if (self.pool_agent_id is None) != (self.pool_agent_version is None):
+            raise ValueError("Pool identity and version must be bound together")
+        return self
 
 
 class TeamSpec(Record):
+    execution_mode: Literal["single_pass", "iterative_shared_ledger"] = "single_pass"
     agents: list[AgentSpec] = Field(min_length=1, max_length=16)
     synthesizer_id: str
     coverage: dict[str, list[str]] = Field(default_factory=dict)
@@ -105,14 +191,16 @@ class TeamSpec(Record):
     selection_rationale: str = ""
     termination: str = "All required artifacts and final synthesis submitted"
     max_parallel: int = Field(default=2, ge=1, le=16)
-    total_max_calls: int = Field(default=16, ge=1)
+    total_max_calls: int | None = Field(default=16, ge=1)
 
     @model_validator(mode="after")
     def validate_team(self):
         ids = [a.agent_id for a in self.agents]
         if len(ids) != len(set(ids)) or self.synthesizer_id not in ids:
             raise ValueError("Duplicate agent ID or unknown synthesizer")
-        if sum(a.max_calls for a in self.agents) > self.total_max_calls:
+        if self.execution_mode == "single_pass" and any(a.max_calls != 1 for a in self.agents):
+            raise ValueError("single-pass execution requires AgentSpec.max_calls=1")
+        if self.total_max_calls is not None and all(a.max_calls is not None for a in self.agents) and sum(a.max_calls for a in self.agents) > self.total_max_calls:
             raise ValueError("Agent allocations exceed team call budget")
         remaining = {a.agent_id: set(a.depends_on) for a in self.agents}
         if any(not deps <= set(ids) for deps in remaining.values()):
@@ -158,10 +246,14 @@ class LocalPlan(Record):
     expected_outputs: list[str] = Field(default_factory=list)
     depends_on: list[str] = Field(default_factory=list)
     tools: list[str] = Field(default_factory=list)
-    max_calls: int = Field(default=1, ge=1)
+    max_calls: int | None = Field(default=1, ge=1)
     uncovered: list[str] = Field(default_factory=list)
     risks: list[str] = Field(default_factory=list)
     challenge: str = ""
+    selected_skills: list[str] | None = None
+    reasoning_strategy: str = ""
+    harness: AgentHarnessPolicy | None = None
+    communication: str = ""
 
 
 class Prediction(Record):
@@ -299,6 +391,7 @@ class ExperienceSnapshot(Record):
     policy_versions: dict[str, str] = Field(default_factory=lambda: {
         "jit_mas": "1.0", "experience_update": "direct-v1"})
     applied_proposals: list[str] = Field(default_factory=list)
+    agent_pool: AgentPoolSnapshot = Field(default_factory=AgentPoolSnapshot)
 
     @model_validator(mode="before")
     @classmethod

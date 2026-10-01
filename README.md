@@ -15,11 +15,17 @@
 
 This repository extends [upstream JIT](https://github.com/bingreeky/JIT) with
 rubric prediction, task-conditioned team planning, execution, attribution, and
-direct, versioned experience updates after attribution (without an accept/hold/reject quality gate). See [the extension guide](docs/jit_mas.md).
-Task execution uses single-pass shared-ledger coordination: task-conditioned
+dual evolution of Meta-Agent organization experience and a persistent Agent Pool.
+Meta selects reusable agents and adapts their goals and topology; agents retain and
+update their own prompts, skills, memory, reasoning and harness policies. Both layers
+share atomic, versioned snapshots. See [the extension guide](docs/jit_mas.md).
+By default, task execution uses single-pass shared-ledger coordination: task-conditioned
 Analyst/Evidence contributions feed a deterministic ledger, and the Writer reads
 the completed snapshot once before independent evaluation. Each execution role
-has at most one model call, with no task-level message loop. See the
+has at most one model call. The optional `iterative_shared_ledger` mode returns
+tool results and new ledger inputs to active roles for further calls, including
+Writer revisions, within the configured resource limits. The DAG scheduler
+dispatches each role once and does not reactivate a completed peer. See the
 [executor contract and migration guide](docs/jit_mas_single_pass.md).
 The original JIT description and results below belong to the upstream project;
 they are not performance claims for this extension.
@@ -86,14 +92,35 @@ and small native-run instructions are documented in [docs/jit_mas.md](docs/jit_m
 Run `python -m scripts.run_jit_mas --mode smoke` for synthetic software verification.
 This does not run a real benchmark, call paid APIs, or train model parameters.
 
-The [registered three-benchmark plan](paper/experiments/benchmark_plan_v3_ZH.md)
-covers ResearchRubrics, DeepSearchQA, and frozen transfer to DeepResearch Bench II.
-It includes fixed public-ID manifests, full-validation checkpoint selection,
+The frozen [joint six-benchmark subset protocol](paper/experiments/experiment_plan_v5_ZH.md)
+uses one shared evolution trajectory across ResearchRubrics, DeepSearchQA and
+WritingBench, followed by the same frozen generator state on all six benchmarks.
+It selects 60 evolution, 30 validation and 273 test tasks from the unchanged v4
+parent partitions. Three source-order runs and one artifact per task/state give
+2,541 nominal core task slots, not API requests. Terminal-state and extra
+mechanism conditions are not enabled by default. There is no Dev partition;
+unselected tasks, including former RR quarantine, remain unused this round. See the
+[exact task numbers](paper/experiments/task_assignments_v5.md) and
+[machine-readable assignments](paper/experiments/joint_task_splits_v5.json).
+Verify all memberships and mixed source orders without private data or API calls:
+`python -m scripts.prepare_joint_subset --check paper/experiments/joint_task_splits_v5.json`.
+The [full v4 parent plan](paper/experiments/experiment_plan_v4_ZH.md) is retained
+as immutable provenance, not an instruction to run the full pool.
+
+The [independent evolution protocol](paper/experiments/experiment_plan_v5_independent_ZH.md)
+reuses those task memberships and registers separate source trajectories with
+3,381 task slots. Its status is `PROTOCOL_FROZEN_NOT_RUN`; the launch guide lists
+the remaining formal-run prerequisites. The [dual evolution implementation note](paper/experiments/dual_evolution_agent_pool_ZH.md)
+describes the shared Meta and Agent Pool state and its current limits.
+
+The historical [three-benchmark implementation](paper/experiments/benchmark_plan_v3_ZH.md)
+includes full-validation checkpoint selection,
 shared evidence packs, metered benchmark-specific judges, and sealed test
 submission before feedback release. Run
 `python -m scripts.run_benchmark_experiment --mode evolve --smoke --output outputs/checkpoint_smoke`
 and `python -m scripts.run_benchmark_test --mode smoke --campaign outputs/test_smoke`
-to verify these paths offline. Formal model results have not been collected.
+to verify those paths offline. These v3 smoke tests are not a six-benchmark v5
+execution campaign; no formal model results or final evolved generator are claimed.
 
 ## Setup
 

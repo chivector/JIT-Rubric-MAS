@@ -76,7 +76,7 @@ class FileReviewGate:
         request_path = self.output_dir / review_key / "request.json"
         decision_path = request_path.with_name("decision.json")
         sidecar = artifact.sidecar
-        allowed = {"schema_version", "task", "rubrics", "team", "experiences", "backend"}
+        allowed = {"schema_version", "task", "rubrics", "team", "experiences", "backend", "agent_pool"}
         if not isinstance(sidecar, dict) or set(sidecar) - allowed:
             raise PermissionError("review sidecar must contain only public generation fields")
         files = {name: str((Path(artifact.path) / name).resolve())

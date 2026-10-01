@@ -6,7 +6,8 @@ import sqlite3
 import pytest
 
 from jit_mas.experience import ExperienceStore, candidate_snapshot, retrieve
-from jit_mas.schemas import ChangeProposal, Experience, ExperienceSnapshot, PublicTask, digest
+from jit_mas.schemas import (AgentEvolutionUpdate, AgentMemoryLesson, ChangeProposal,
+                              Experience, ExperienceSnapshot, PublicTask, digest)
 
 
 def proposal(base_version=0, proposal_id="proposal-1", experience_id="experience-1", replaces_id=None):
@@ -368,5 +369,163 @@ def test_read_only_journal_cannot_change(tmp_path):
         assert store.task_run("stream", "stream-1")["status"] == "started"
         with pytest.raises(PermissionError):
             store.save_task_run("stream", "stream-1", "policy-v1", base, "complete", {})
+    finally:
+        store.close()
+
+
+def agent_update(task_id="evolution-1", update_id="agent-update-1", base_agent_version=1):
+    return AgentEvolutionUpdate(
+        update_id=update_id, pool_agent_id="writer", base_agent_version=base_agent_version,
+        source_task_id=task_id,
+        lessons=[AgentMemoryLesson(lesson_id="lesson-1", instruction="Preserve source links.",
+                                   applicability="evidence synthesis", source_task_ids=[task_id],
+                                   evidence=["run-1:evidence"], created_at="2026-10-01T00:00:00+00:00")],
+        communication="Publish concise evidence-linked drafts.", evidence=["run-1:evidence"])
+
+
+def test_agent_pool_update_is_atomic_idempotent_and_survives_restart(tmp_path):
+    path = tmp_path / "evolution.db"
+    store = ExperienceStore(path)
+    try:
+        first = store.commit_evolution(source_task_id="evolution-1", base_version=0,
+                                       updates=[agent_update()])
+        assert first.version == 1 and first.agent_pool.version == 1
+        writer = next(profile for profile in first.agent_pool.profiles if profile.pool_agent_id == "writer")
+        assert writer.version == 2 and "lesson-1" in {lesson.lesson_id for lesson in writer.memory}
+        assert store.commit_evolution(source_task_id="evolution-1", base_version=0,
+                                      updates=[agent_update()]) == first
+        assert store.snapshot().version == 1
+    finally:
+        store.close()
+    reopened = ExperienceStore(path)
+    try:
+        assert reopened.snapshot() == first
+        with pytest.raises(ValueError, match="Stale"):
+            reopened.commit_evolution(source_task_id="evolution-2", base_version=0,
+                                      updates=[agent_update("evolution-2", "agent-update-2")])
+    finally:
+        reopened.close()
+
+
+def test_agent_pool_update_rolls_back_as_one_snapshot_and_readonly_is_frozen(tmp_path):
+    path = tmp_path / "evolution.db"
+    store = ExperienceStore(path)
+    try:
+        applied = store.commit_evolution(source_task_id="evolution-1", base_version=0,
+                                         updates=[agent_update()])
+        assert store.rollback(0).agent_pool.profiles == []
+        assert store.snapshot().version == 0
+        assert store.snapshot(1) == applied
+    finally:
+        store.close()
+    frozen = ExperienceStore(path, read_only=True)
+    try:
+        assert frozen.snapshot(1) == applied
+        with pytest.raises(PermissionError, match="Frozen"):
+            frozen.commit_evolution(source_task_id="evolution-2", base_version=0,
+                                    updates=[agent_update("evolution-2", "agent-update-2")])
+    finally:
+        frozen.close()
+
+
+def test_dual_evolution_commits_both_layers_once_and_preserves_pool_on_meta_write(tmp_path):
+    store = ExperienceStore(tmp_path / "evolution.db")
+    try:
+        meta, update = proposal(), agent_update()
+        evolved = store.commit_evolution(source_task_id="evolution-1", base_version=0,
+                                         proposal=meta, updates=[update], update_id="dual-1")
+        assert evolved.version == evolved.agent_pool.version == 1
+        assert evolved.applied_proposals == [meta.proposal_id]
+        assert evolved.agent_pool.applied_updates == [update.update_id]
+        assert store.commit(meta) == evolved
+        assert store.commit_evolution(source_task_id="evolution-1", base_version=0,
+                                      proposal=meta, updates=[update], update_id="dual-1") == evolved
+        next_meta = proposal(base_version=1, proposal_id="meta-2", experience_id="meta-2")
+        following = store.commit(next_meta)
+        assert following.version == 2
+        assert following.agent_pool == evolved.agent_pool
+        assert digest(candidate_snapshot(evolved, next_meta).agent_pool) == digest(evolved.agent_pool)
+        store.rollback(0)
+        assert store.commit_evolution(source_task_id="evolution-1", base_version=0,
+                                      proposal=meta, updates=[update], update_id="dual-1") == evolved
+        assert store.snapshot().version == 0
+    finally:
+        store.close()
+
+
+def test_partial_dual_evolution_write_failure_rolls_back_both_layers(tmp_path):
+    store = ExperienceStore(tmp_path / "evolution.db")
+    try:
+        store.db.execute("CREATE TRIGGER fail_evolution BEFORE INSERT ON evolution_commits BEGIN SELECT RAISE(ABORT, 'simulated evolution failure'); END")
+        with pytest.raises(sqlite3.DatabaseError, match="simulated"):
+            store.commit_evolution(source_task_id="evolution-1", base_version=0,
+                                    proposal=proposal(), updates=[agent_update()])
+        assert store.snapshot() == ExperienceSnapshot()
+        assert store.db.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0] == 1
+        for table in ("proposals", "commits", "evolution_commits", "audit"):
+            assert store.db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == 0
+        store.db.execute("DROP TRIGGER fail_evolution")
+        assert store.commit_evolution(source_task_id="evolution-1", base_version=0,
+                                       proposal=proposal(), updates=[agent_update()]).version == 1
+    finally:
+        store.close()
+
+
+@pytest.mark.parametrize("violation", ["source", "lesson_source", "agent_version", "duplicate",
+                                        "meta_source", "meta_version"])
+def test_invalid_dual_evolution_batch_cannot_change_snapshot(tmp_path, violation):
+    store = ExperienceStore(tmp_path / "evolution.db")
+    change, update = proposal(), agent_update()
+    updates = [update]
+    if violation == "source":
+        update.source_task_id = "another-task"
+    elif violation == "lesson_source":
+        update.lessons[0].source_task_ids = ["another-task"]
+    elif violation == "agent_version":
+        update.base_agent_version = 9
+    elif violation == "duplicate":
+        updates.append(update.model_copy(deep=True))
+    elif violation == "meta_source":
+        change.source_task_id = "another-task"
+    else:
+        change.base_version = 8
+    try:
+        with pytest.raises(ValueError):
+            store.commit_evolution(source_task_id="evolution-1", base_version=0,
+                                    proposal=change, updates=updates)
+        assert store.snapshot() == ExperienceSnapshot()
+        assert store.db.execute("SELECT COUNT(*) FROM evolution_commits").fetchone()[0] == 0
+    finally:
+        store.close()
+
+
+def test_evolution_update_identity_cannot_be_rebound_or_reapplied(tmp_path):
+    store = ExperienceStore(tmp_path / "evolution.db")
+    try:
+        update = agent_update()
+        first = store.commit_evolution(source_task_id="evolution-1", base_version=0,
+                                       updates=[update], update_id="batch-1")
+        mutated = update.model_copy(deep=True)
+        mutated.communication = "Different retained behavior"
+        with pytest.raises(ValueError, match="different content"):
+            store.commit_evolution(source_task_id="evolution-1", base_version=0,
+                                    updates=[mutated], update_id="batch-1")
+        with pytest.raises(ValueError, match="Duplicate"):
+            store.commit_evolution(source_task_id="evolution-1", base_version=1,
+                                    updates=[update], update_id="batch-2")
+        assert store.snapshot() == first
+        assert store.db.execute("SELECT COUNT(*) FROM evolution_commits").fetchone()[0] == 1
+    finally:
+        store.close()
+
+
+def test_empty_evolution_batch_preserves_current_version(tmp_path):
+    store = ExperienceStore(tmp_path / "evolution.db")
+    try:
+        assert store.commit_evolution(source_task_id="evolution-1", base_version=0) == store.snapshot()
+        store.commit_evolution(source_task_id="evolution-1", base_version=0, updates=[agent_update()])
+        with pytest.raises(ValueError, match="Stale"):
+            store.commit_evolution(source_task_id="evolution-2", base_version=0)
+        assert store.commit_evolution(source_task_id="evolution-2", base_version=1).version == 1
     finally:
         store.close()

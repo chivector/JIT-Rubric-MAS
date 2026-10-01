@@ -17,7 +17,8 @@ class BudgetExceeded(RuntimeError):
 
 class BudgetLedger:
     def __init__(self, max_calls=200, max_tokens=2_000_000, max_tool_calls=100):
-        if min(max_calls, max_tokens, max_tool_calls) < 0:
+        finite = [value for value in (max_calls, max_tokens, max_tool_calls) if value is not None]
+        if any(not isinstance(value, int) or value < 0 for value in finite):
             raise ValueError("Budgets cannot be negative")
         self.max_calls, self.max_tokens = max_calls, max_tokens
         self.max_tool_calls = max_tool_calls
@@ -32,7 +33,7 @@ class BudgetLedger:
             raise ValueError("Input bound must be nonnegative and output bound positive integers")
         total = input_bound + output_bound
         with self._lock:
-            if self._calls >= self.max_calls:
+            if self.max_calls is not None and self._calls >= self.max_calls:
                 raise BudgetExceeded("Team model-call budget exhausted")
             if self._tokens + self._reserved + total > self.max_tokens:
                 raise BudgetExceeded("Team token budget exhausted before request")
@@ -59,7 +60,7 @@ class BudgetLedger:
 
     def charge_tool(self, stage="execution", agent_id="", tool_name=""):
         with self._lock:
-            if self._tools >= self.max_tool_calls:
+            if self.max_tool_calls is not None and self._tools >= self.max_tool_calls:
                 raise BudgetExceeded("Team tool budget exhausted")
             self._tools += 1
             self._records.append({"kind": "tool", "stage": stage,

@@ -196,7 +196,8 @@ class BridgeExecutionTests(unittest.TestCase):
 
     def test_checkpoint_blocks_premature_completion(self):
         team = TeamSpec(agents=[AgentSpec(agent_id="one", role="One", capability="general",
-                                          checkpoints=["verify_consistency"], max_calls=2)], synthesizer_id="one")
+                                          checkpoints=["verify_consistency"], max_calls=1)],
+                        synthesizer_id="one", total_max_calls=1)
         _, artifact = self.synthesize(team)
         model = ScriptedExecution([{"answer": "premature"},
                                     {"answer": "checked", "checkpoints": {"verify_consistency": True}}])
@@ -288,9 +289,9 @@ class BridgeExecutionTests(unittest.TestCase):
 
         self.task.tools = ["lookup"]
         team = TeamSpec(agents=[
-            AgentSpec(agent_id="collect", role="Collect", capability="research", tools=["lookup"], max_calls=2),
-            AgentSpec(agent_id="combine", role="Combine", capability="synthesis", depends_on=["collect"], max_calls=2)],
-            synthesizer_id="combine")
+            AgentSpec(agent_id="collect", role="Collect", capability="research", tools=["lookup"], max_calls=1),
+            AgentSpec(agent_id="combine", role="Combine", capability="synthesis", depends_on=["collect"], max_calls=1)],
+            synthesizer_id="combine", total_max_calls=2)
         _, artifact = self.synthesize(team)
         source_event = []
 

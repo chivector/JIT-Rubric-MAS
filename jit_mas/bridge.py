@@ -42,7 +42,7 @@ _MODULE_CONTRACTS = {
 }
 
 
-def _mas_contract() -> str:
+def _mas_contract(execution_mode="single_pass") -> str:
     """Render the installed API, so the model need not invent an MAS framework."""
     lines = [
         "JIT-MAS BINDING CONTRACT FOR THIS REQUEST",
@@ -165,19 +165,31 @@ def _mas_contract() -> str:
         "Do not read team.json at module scope, hard-code current agent IDs or mutate evaluator, "
         "budget, stored experience, or task-global state. Generate all FIVE modules/config now.",
     ])
+    if execution_mode == "iterative_shared_ledger":
+        lines.extend([
+            "EXECUTION MODE: iterative_shared_ledger.",
+            "The bound TeamSpec may omit model-call, tool-call and role-call ceilings. Preserve "
+            "None values and rely on enforced token and timeout budgets as terminal conditions.",
+            "Contributors and the Writer may revisit their public artifacts, communicate through "
+            "auditable shared-ledger events, request allowed tools, receive results, and revise. "
+            "Do not impose a fixed round limit or suppress a valid continuation. Private role "
+            "histories remain private; only published artifacts, tool results and peer messages "
+            "enter the shared ledger."
+        ])
     return "\n\n".join(lines)
 
 
 class _ContractModel:
     """Specialize generation/repair inputs without altering any model output."""
 
-    def __init__(self, model):
+    def __init__(self, model, execution_mode="single_pass"):
         self.model = model
+        self.execution_mode = execution_mode
         self.last_messages = None
 
     def __call__(self, messages, *args, **kwargs):
         messages = copy.deepcopy(messages)
-        supplement = _mas_contract()
+        supplement = _mas_contract(self.execution_mode)
         system = next((m for m in messages if m.get("role") == "system"), None)
         if system is None:
             messages.insert(0, {"role": "system", "content": supplement})
@@ -586,13 +598,20 @@ class JITHarnessSynthesizer:
             config.setdefault("api_key", "EMPTY")
         agent = MetaReActAgent(config, {"meta_references": {"mode": "desc"},
                                        "meta_review": {"enabled": False}}, workspace_name=name)
-        agent.model = _ContractModel(self.meta_model if self.meta_model is not None else agent.model)
+        agent.model = _ContractModel(self.meta_model if self.meta_model is not None else agent.model,
+                                     getattr(self, "_execution_mode", "single_pass"))
         self._agents[name] = agent
         return agent
 
     @staticmethod
     def _description(sidecar):
         reference = (SEED_DIR.parent.parent / "descriptions" / "rubric_mas.md").read_text(encoding="utf-8")
+        mode_note = ""
+        if sidecar.get("team", {}).get("execution_mode") == "iterative_shared_ledger":
+            mode_note = (" The execution mode is iterative_shared_ledger: preserve unlimited call "
+                         "ceilings represented by null, allow public ledger revisits, peer messages, "
+                         "tool-result continuation and Writer revisions; token and timeout budgets "
+                         "remain terminal and no fixed round cap may be introduced.")
         return (
             "Generate a task-conditioned JIT MAS harness using the exact JIT-MAS binding contract "
             "appended to the system message. These are PUBLIC inputs only:\n"
@@ -614,6 +633,7 @@ class JITHarnessSynthesizer:
             "no task-internal negotiation or clarification. Only code/interface failures before any "
             "role-model invocation may be repaired; no evaluator feedback is available. "
             "Keep system_prompt, agent_prompt, planning, summary, final_answer, step in prompt.yaml."
+            + mode_note
         )
 
     def _validate(self, agent):
@@ -657,25 +677,36 @@ class JITHarnessSynthesizer:
             raise ValueError("scripted backend emitted untrusted code; use native_jit with isolation")
         return files
 
-    def synthesize(self, task, rubrics, team, experiences=()):
+    def synthesize(self, task, rubrics, team, experiences=(), *, agent_pool=None):
         prior_names = set(self._agents)
         calls = getattr(self.meta_model, "calls", [])
         first_call = len(calls) if isinstance(calls, list) else 0
         try:
-            return self._synthesize(task, rubrics, team, experiences)
+            return self._synthesize(task, rubrics, team, experiences, agent_pool=agent_pool)
         except BaseException as exc:
             self._attach_failure(exc, names=[name for name in self._agents if name not in prior_names],
                                  first_model_call=first_call)
             raise
 
-    def _synthesize(self, task, rubrics, team, experiences=()):
+    def _synthesize(self, task, rubrics, team, experiences=(), *, agent_pool=None):
         task = PublicTask.model_validate(_data(task))
         rubrics = RubricGraph.model_validate(_data(rubrics))
         team = TeamSpec.model_validate(_data(team))
+        self._execution_mode = team.execution_mode
         team_data = validate_team(team, task)
         sidecar = {"schema_version": "1.0", "task": _data(task), "rubrics": _data(rubrics),
                    "team": team_data, "experiences": [_data(e) for e in experiences],
                    "backend": self.backend}
+        if agent_pool is not None:
+            from .agent_pool import validate_bindings
+            from .schemas import AgentPoolSnapshot
+
+            pool = AgentPoolSnapshot.model_validate(_data(agent_pool))
+            validate_bindings(pool, team)
+            sidecar["agent_pool"] = pool.model_dump(mode="json")
+            return self._reuse_pool_harness(sidecar)
+        if any(agent.pool_agent_id is not None for agent in team.agents):
+            raise ValueError("Bound Agent Pool members require a frozen pool sidecar")
         description = self._description(sidecar)
         public_tools = {name: tool for name, tool in self.tools.items() if name in _data(task)["tools"]}
         adapter = _PublicGenerationAdapter(description, public_tools)
@@ -738,6 +769,24 @@ class JITHarnessSynthesizer:
         selected.selection = selection
         selected.verify_integrity()
         return selected
+
+    def _reuse_pool_harness(self, sidecar):
+        name = "mas_" + uuid.uuid4().hex
+        agent = self._agent(name)
+        agent.workspace_dir.mkdir(parents=True, exist_ok=False)
+        (agent.workspace_dir / "__init__.py").write_text("", encoding="utf-8")
+        files = _parse_harness_response(seed_response())
+        for filename, content in files.items():
+            (agent.workspace_dir / filename).write_text(content, encoding="utf-8")
+        files = self._validate(agent)
+        (agent.workspace_dir / "team.json").write_text(
+            json.dumps(sidecar, ensure_ascii=False, indent=2), encoding="utf-8")
+        artifact = SynthesizedHarness(name, agent.workspace_dir, self.backend,
+            content_hash(sidecar["team"]), content_hash(sidecar["task"]), content_hash(files),
+            content_hash(sidecar), selection={"strategy": "pooled_agent_reuse",
+                "agent_pool_hash": content_hash(sidecar["agent_pool"])})
+        artifact.verify_integrity()
+        return artifact
 
     def repair(self, artifact, failure, failed_run=None):
         """Bounded exception-only repair. Task quality or evaluator scores are forbidden."""

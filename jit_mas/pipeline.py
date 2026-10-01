@@ -11,14 +11,31 @@ from .attribution import RubricAttributor
 from .budget import BudgetLedger
 from .config import MASConfig
 from .experience import ExperienceStore, retrieve
-from .planning import GlobalAnalyzer
-from .schemas import (EvaluationFeedback, ExperienceSnapshot, PlannedTeam, Prediction,
+from .planning import GlobalAnalyzer, JsonModelCalls
+from .schemas import (AgentEvolutionUpdate, EvaluationFeedback, ExperienceSnapshot, PlannedTeam, Prediction,
                       PublicTask, RubricFeedback, RubricGraph, SplitManifest, digest, utc_now)
 
 SUBMITTED_SOURCE_FILES = ("run_manifest.json", "frozen_plan.json", "planning_calls.json", "harness.json",
                           "execution.json", "submission.json", "evaluation.json", "budget.json")
 ATTRIBUTION_SOURCE_FILES = SUBMITTED_SOURCE_FILES + (
     "attribution.json", "complete.json", "resume_provenance.json", "historical_source_budget.json")
+
+AGENT_EVOLVE_PROMPT = """You are the persistent agent in agent_profile reflecting on your own
+completed role. Improve how you perform that role using the supplied local trace,
+own_events, numerical evaluation_summary, and evidence-supported attribution findings.
+The evaluation_summary measures the submitted team's artifact, not your individual
+contribution or a causal effect of your policy. It is post-submission feedback only.
+You own your skills, memory, prompt, reasoning,
+planning, harness, and communication habits; the Meta-Agent owns team selection and topology.
+Keep identity, base_agent_version, source_task_id, and update_id exactly as supplied.
+Distill short conditional process lessons, never a task answer, benchmark criterion,
+reference answer, hidden evaluator threshold, or requirement to imitate one task's output.
+Retained state will be used on new tasks. Preserve capabilities and useful existing skills;
+when revising skills, provide the complete mapping. Optional changes may be null when
+the evidence does not support a change. Lessons use the current source_task_id and exact
+valid_evidence_ids. Cite only supplied process evidence or numerical feedback. Do not invent events or
+claim that successful reflection establishes a causal improvement. If evidence is weak,
+retain the existing policy and record only a cautious, conditional lesson."""
 
 
 def submitted_source_digest(source_dir):
@@ -33,8 +50,8 @@ def attribution_source_digest(source_dir):
         if source.name != "attribution.json":
             raise ValueError("Attribution source file must be attribution.json")
         source = source.parent
-    return digest({name: hashlib.sha256((source / name).read_bytes()).hexdigest()
-                   for name in ATTRIBUTION_SOURCE_FILES})
+    names = ATTRIBUTION_SOURCE_FILES + (("agent_evolution.json",) if (source / "agent_evolution.json").is_file() else ())
+    return digest({name: hashlib.sha256((source / name).read_bytes()).hexdigest() for name in names})
 
 
 def write_json(path, value):
@@ -170,6 +187,91 @@ class MASPipeline:
                 "alignments": {k: v.model_dump(mode="json") for k, v in attributor.last_alignments.items()},
                 "calls": attributor.call_records, "proposals": [p.model_dump(mode="json") for p in proposals]})
 
+    def _evolve_agents(self, task, ledger, result, team, pool, run_dir):
+        """Ask each selected pooled agent to distill evidence-scoped process lessons."""
+        if not pool or not getattr(pool, "profiles", None):
+            return []
+        from .agent_pool import get_profile
+        from .schemas import AttributionFinding
+        attributed = json.loads((run_dir / "attribution.json").read_text(encoding="utf-8"))
+        attributed_findings = [AttributionFinding.model_validate(item) for item in attributed["findings"]]
+        feedback = EvaluationFeedback.model_validate_json((run_dir / "evaluation.json").read_text(encoding="utf-8"))
+        reflection_calls = []
+        runs = result.full_dict() if hasattr(result, "full_dict") else result
+        by_agent = {}
+        def collect(run):
+            aid = run.get("metadata", {}).get("agent_id")
+            if aid:
+                by_agent[aid] = run
+            for child in run.get("sub_runs", []):
+                collect(child)
+        collect(runs)
+        event_index = runs.get("metadata", {}).get("events", [])
+        updates = []
+        for agent in team.agents:
+            profile = get_profile(pool, agent.pool_agent_id, agent.pool_agent_version)
+            local = by_agent.get(agent.agent_id, {})
+            evidence = self._agent_reflection_evidence(agent.agent_id, event_index, feedback)
+            valid_ids = set(evidence["valid_evidence_ids"])
+            findings = [finding for finding in attributed_findings
+                        if agent.agent_id in finding.agent_ids]
+            payload = {"task": task, "agent": agent, "team": team, "agent_profile": profile,
+                       "local_execution": local, "attribution_findings": findings,
+                       **evidence,
+                       "base_agent_version": profile.version, "source_task_id": task.task_id,
+                       "update_id": digest({"task_id": task.task_id, "agent_id": agent.agent_id,
+                                             "base_agent_version": profile.version,
+                                             "evidence": sorted(valid_ids)})}
+            model = self.models.create("local", agent.agent_id, ledger, "update")
+            caller = JsonModelCalls(max_corrections=1)
+            try:
+                update = caller.ask(model, "agent_evolve", AGENT_EVOLVE_PROMPT, payload,
+                                    AgentEvolutionUpdate, agent_id=agent.agent_id,
+                                    validate=lambda item, p=profile, ids=valid_ids, uid=payload["update_id"]:
+                                        self._validate_agent_update(item, p, task.task_id, ids, uid))
+            finally:
+                reflection_calls.extend(caller.call_records)
+                write_json(run_dir / "agent_evolution.json", {"complete": False,
+                    "calls": reflection_calls, "updates": [item.model_dump(mode="json") for item in updates]})
+            updates.append(update)
+        write_json(run_dir / "agent_evolution.json", {"complete": True,
+            "calls": reflection_calls, "updates": [item.model_dump(mode="json") for item in updates]})
+        return updates
+
+    @staticmethod
+    def _agent_reflection_evidence(agent_id, events, feedback):
+        own_events = [event for event in events if event.get("agent_id") == agent_id]
+        summary = {"evidence_id": "evaluation:summary", "scope": "submission",
+                   "score": feedback.score, "complete": feedback.complete,
+                   "evaluator_version": feedback.evaluator_version, "aggregation": feedback.aggregation,
+                   "causal_limit": "Team submission feedback does not establish individual contribution or causal improvement.",
+                   "rubrics": [{"evidence_id": "feedback:" + rubric.rubric_id,
+                                "rubric_id": rubric.rubric_id, "weight": rubric.weight,
+                                "score": rubric.score,
+                                "verdict": rubric.verdict if rubric.verdict.casefold() in
+                                    {"yes", "no", "abstain", "pass", "fail", "true", "false", "missing", "error",
+                                     "satisfied", "not satisfied"}
+                                    else "unavailable",
+                                "status": rubric.status}
+                               for rubric in feedback.rubrics]}
+        valid_ids = {event["event_id"] for event in own_events if event.get("event_id")}
+        valid_ids.update({"planning:team", summary["evidence_id"]})
+        valid_ids.update(rubric["evidence_id"] for rubric in summary["rubrics"])
+        return {"own_events": own_events, "evaluation_summary": summary,
+                "valid_evidence_ids": sorted(valid_ids)}
+
+    @staticmethod
+    def _validate_agent_update(update, profile, task_id, valid_ids, update_id):
+        if (update.pool_agent_id != profile.pool_agent_id or update.base_agent_version != profile.version
+                or update.source_task_id != task_id or update.update_id != update_id):
+            raise ValueError("Agent evolution changed immutable pool identity or source task")
+        if not set(update.evidence) <= valid_ids:
+            raise ValueError("Agent evolution cited unavailable process evidence")
+        for lesson in update.lessons:
+            if (lesson.source_task_ids != [task_id] or not set(lesson.evidence) <= set(update.evidence)
+                    or not set(lesson.counterevidence) <= set(update.evidence)):
+                raise ValueError("Agent memory lesson invented source tasks or unavailable process evidence")
+
     def _load_frozen_attribution(self, directory, anchor, source_hash, source_documents,
                                 task, snapshot, initial, planned, team, result, feedback):
         from .schemas import AttributionFinding, ChangeProposal, RubricAlignment
@@ -249,7 +351,33 @@ class MASPipeline:
         RubricAttributor._validate_proposals(proposals, task, supported, snapshot.version, snapshot.experiences)
         if [proposal.model_dump(mode="json") for proposal in proposals] != attributed["proposals"]:
             raise ValueError("Frozen-attribution proposal records were not canonical validated outputs")
-        return location, attributed, proposals, budget, provenance["continuation_code_hash"]
+        agent_updates = [AgentEvolutionUpdate.model_validate(item) for item in complete.get("agent_updates", [])]
+        if self.config.evolving_agent_pool and any(agent.pool_agent_id for agent in team.agents):
+            from .agent_pool import get_profile
+            from .schemas import AgentPoolSnapshot
+            frozen_pool = source_documents["frozen_plan.json"].get("AgentPool")
+            reflection_path = location / "agent_evolution.json"
+            if frozen_pool is None or len(agent_updates) != len(team.agents) or not reflection_path.is_file():
+                raise ValueError("Pooled frozen attribution requires recorded self-evolution updates")
+            reflection = json.loads(reflection_path.read_text(encoding="utf-8"))
+            if reflection.get("complete") is not True or reflection.get("updates") != complete["agent_updates"]:
+                raise ValueError("Frozen self-evolution records differ from the completed updates")
+            pool = AgentPoolSnapshot.model_validate(frozen_pool)
+            by_member = {item.pool_agent_id: item for item in agent_updates}
+            if len(by_member) != len(agent_updates):
+                raise ValueError("Frozen agent evolution contains duplicate members")
+            for agent in team.agents:
+                profile = get_profile(pool, agent.pool_agent_id, agent.pool_agent_version)
+                local_ids = set(self._agent_reflection_evidence(agent.agent_id, events, feedback)["valid_evidence_ids"])
+                expected_id = digest({"task_id": task.task_id, "agent_id": agent.agent_id,
+                                      "base_agent_version": profile.version, "evidence": sorted(local_ids)})
+                item = by_member.get(profile.pool_agent_id)
+                if item is None:
+                    raise ValueError("Frozen agent evolution omitted a selected pool member")
+                self._validate_agent_update(item, profile, task.task_id, local_ids, expected_id)
+        elif agent_updates:
+            raise ValueError("Frozen agent evolution lacks a bound Agent Pool source")
+        return location, attributed, proposals, budget, provenance["continuation_code_hash"], agent_updates
 
     def _resume_submitted_task(self, task_id, snapshot, ledger, audit, source_dir, source_hash,
                                attribution_dir=None, attribution_hash=None):
@@ -294,6 +422,13 @@ class MASPipeline:
                 or sidecar.get("team") != team.model_dump(mode="json")
                 or sidecar.get("rubrics") != planned.model_dump(mode="json") or sidecar.get("experiences") != []):
             raise ValueError("Submitted-source harness sidecar binding mismatch")
+        if any(agent.pool_agent_id for agent in team.agents):
+            from .schemas import AgentPoolSnapshot
+            from .agent_pool import validate_bindings
+            if (frozen.get("hashes", {}).get("AgentPool") != digest(frozen.get("AgentPool"))
+                    or frozen.get("AgentPool") != sidecar.get("agent_pool")):
+                raise ValueError("Submitted-source frozen Agent Pool binding mismatch")
+            validate_bindings(AgentPoolSnapshot.model_validate(frozen["AgentPool"]), team)
         result, submission = documents["execution.json"], documents["submission.json"]
         metadata = result.get("metadata", {})
         if (result.get("terminated_reason") != "final_answer" or result.get("answer") != submission.get("answer")
@@ -347,11 +482,18 @@ class MASPipeline:
                 (run_dir / destination).write_bytes((source / name).read_bytes())
         if frozen_attribution is None:
             proposals = self._attribute(task, snapshot, ledger, run_dir, initial, planned, team, result, feedback)
+            agent_updates = []
+            if self.config.evolving_agent_pool and any(agent.pool_agent_id for agent in team.agents):
+                from .schemas import AgentPoolSnapshot
+                agent_updates = self._evolve_agents(task, ledger, result, team,
+                    AgentPoolSnapshot.model_validate(sidecar["agent_pool"]), run_dir)
         else:
-            attribution_location, _, proposals, prior_attribution_budget, attribution_code = frozen_attribution
+            attribution_location, _, proposals, prior_attribution_budget, attribution_code, agent_updates = frozen_attribution
             provenance.update(attribution_source_dir=str(attribution_location), attribution_source_hash=attribution_hash,
                               attribution_code_hash=attribution_code, attribution_regenerated=False)
             (run_dir / "attribution.json").write_bytes((attribution_location / "attribution.json").read_bytes())
+            if agent_updates:
+                (run_dir / "agent_evolution.json").write_bytes((attribution_location / "agent_evolution.json").read_bytes())
             write_json(run_dir / "historical_attribution_budget.json", prior_attribution_budget)
             write_json(run_dir / "resume_provenance.json", provenance)
             write_json(run_dir / "run_manifest.json", {**manifest, "run_key": run_key, "continuation": provenance})
@@ -370,7 +512,8 @@ class MASPipeline:
             "submitted_at": submission["submitted_at"], "source_evaluation_reused": True,
             "plan_hashes": frozen["hashes"],
             "evaluation": feedback.model_dump(mode="json"), "budget": budget,
-            "proposals": [p.model_dump(mode="json") for p in proposals], "run_dir": str(run_dir),
+            "proposals": [p.model_dump(mode="json") for p in proposals],
+            "agent_updates": [item.model_dump(mode="json") for item in agent_updates], "run_dir": str(run_dir),
             "uncontrolled_variation": ["Source and any explicitly reused attribution retain their recorded historical code"],
             "costs": {"inference": {}, "external_evaluation": {},
                       "experience_update": budget["by_stage"].get("update", {})}}
@@ -426,13 +569,27 @@ class MASPipeline:
         experience = retrieve(snapshot, task, excluded_task_ids=self.manifest.validation + self.manifest.test)
         if not self.config.persistent_experience:
             experience = []
+        pool = None
+        if self.config.evolving_agent_pool and self.config.fixed_team is None:
+            from .agent_pool import seed_pool, scope_pool
+            pool = snapshot.agent_pool if self.config.persistent_experience and snapshot.agent_pool.profiles \
+                else seed_pool()
+            excluded = set(self.manifest.validation + self.manifest.test)
+            if any(excluded.intersection(profile.source_task_ids)
+                   or any(excluded.intersection(lesson.source_task_ids) for lesson in profile.memory)
+                   for profile in pool.profiles):
+                raise ValueError("Agent Pool contains held-out source history")
+            pool = scope_pool(pool, task, excluded_task_ids=excluded)
         analyzer = GlobalAnalyzer(model("global", "global", "inference"),
                                   lambda aid: model("local", aid, "inference"),
                                   max_agents=self.config.max_agents, max_parallel=self.config.max_parallel,
                                   local_rounds=self.config.local_rounds, total_max_calls=self.config.team_max_calls,
                                   explicit_rubrics=self.config.explicit_rubrics,
+                                  execution_mode=self.config.execution_mode,
                                   execution_max_tokens=(self.config.models["exec"].max_tokens
-                                                        if "exec" in self.config.models else None))
+                                                        if "exec" in self.config.models else None),
+                                  agent_pool=pool,
+                                  excluded_task_ids=self.manifest.validation + self.manifest.test)
         if self.config.fixed_team is None:
             try:
                 planned = analyzer.build(task, experience, local_planning=self.config.local_planning)
@@ -447,11 +604,16 @@ class MASPipeline:
         frozen = {"created_at": utc_now(), "experience_version": snapshot.version,
                   "experience_hash": digest(snapshot), "R_global": prediction.graph.model_dump(mode="json"),
                   "R_planned": planned.graph.model_dump(mode="json"), "TeamSpec": planned.team.model_dump(mode="json")}
+        if pool is not None:
+            frozen["AgentPool"] = pool.model_dump(mode="json")
         frozen["hashes"] = {key: digest(frozen[key]) for key in ("R_global", "R_planned", "TeamSpec")}
+        if pool is not None:
+            frozen["hashes"]["AgentPool"] = digest(frozen["AgentPool"])
         write_json(run_dir / "frozen_plan.json", frozen)
         write_json(run_dir / "planning_calls.json", analyzer.call_records)
         synth = self.synthesizer_factory(model("meta", "meta", "inference"))
-        artifact = synth.synthesize(task, planned.graph, planned.team, experiences=experience)
+        artifact = synth.synthesize(task, planned.graph, planned.team, experiences=experience,
+                                    agent_pool=pool)
         write_json(run_dir / "harness.json", artifact.to_dict())
         executor = TeamExecutor(lambda aid: model("exec", aid, "inference"), tools=self.tools,
                                 ledger=ledger, timeout_seconds=self.config.execution_timeout,
@@ -500,6 +662,10 @@ class MASPipeline:
         if attribution and feedback.complete:
             proposals = self._attribute(task, snapshot, ledger, run_dir, prediction.graph,
                                        planned.graph, planned.team, result, feedback)
+        agent_updates = []
+        if (pool is not None and attribution and feedback.complete
+                and mode in ("evolve", "stream") and self.config.persistent_experience):
+            agent_updates = self._evolve_agents(task, ledger, result, planned.team, pool, run_dir)
         outcome = {"run_key": run_key, "task_id": task_id, "mode": mode, "backend": self.config.backend,
                    "software_test_only": self.config.backend == "scripted", "resumed": False,
                    "experience_version": snapshot.version, "experience_hash": digest(snapshot),
@@ -507,6 +673,7 @@ class MASPipeline:
                    "submitted_at": submission["submitted_at"], "evaluated_at": utc_now(),
                    "plan_hashes": frozen["hashes"], "evaluation": feedback.model_dump(mode="json"),
                    "budget": ledger.snapshot(), "proposals": [p.model_dump(mode="json") for p in proposals],
+                   "agent_updates": [item.model_dump(mode="json") for item in agent_updates],
                    "run_dir": str(run_dir), "uncontrolled_variation":
                    [] if self.config.backend == "scripted" else ["Provider sampling and live tool evidence are not snapshotted"]}
         stages = outcome["budget"]["by_stage"]
@@ -575,15 +742,30 @@ class MASPipeline:
                 self.store.save_task_run(mode, task_id, identity, state, "submitted", outcome)
             outcome["experience_updates"] = []
             if update:
-                # Preserve the one-update-per-source policy without quality selection.
-                for raw in outcome["proposals"][:1]:
-                    proposal = ChangeProposal.model_validate(raw)
-                    written = self.store.commit(proposal)
-                    outcome["experience_updates"].append({
-                        "proposal_id": proposal.proposal_id, "source_task_id": proposal.source_task_id,
-                        "base_version": proposal.base_version, "version": written.version,
-                        "proposal_hash": digest(proposal), "snapshot_hash": digest(written),
-                        "update_rule": "direct_after_attribution"})
+                proposal = (ChangeProposal.model_validate(outcome["proposals"][0])
+                            if outcome["proposals"] else None)
+                raw_agent_updates = [AgentEvolutionUpdate.model_validate(item)
+                                     for item in outcome.get("agent_updates", [])]
+                if proposal is not None or raw_agent_updates:
+                    baseline = state.version
+                    update_id = digest({"task_id": task_id, "baseline": digest(state),
+                                        "proposal": proposal, "agent_updates": raw_agent_updates})
+                    written = self.store.commit_evolution(source_task_id=task_id,
+                        base_version=baseline, proposal=proposal, updates=raw_agent_updates,
+                        update_id=update_id)
+                    if proposal is not None:
+                        outcome["experience_updates"].append({
+                            "proposal_id": proposal.proposal_id, "source_task_id": proposal.source_task_id,
+                            "base_version": proposal.base_version, "version": written.version,
+                            "proposal_hash": digest(proposal), "snapshot_hash": digest(written),
+                            "update_rule": "direct_after_attribution"})
+                    if raw_agent_updates:
+                        outcome["agent_pool_updates"] = [{
+                            "update_id": item.update_id, "pool_agent_id": item.pool_agent_id,
+                            "base_agent_version": item.base_agent_version,
+                            "version": written.version, "snapshot_hash": digest(written),
+                            "update_rule": "agent_self_reflection_after_attribution"}
+                            for item in raw_agent_updates]
             outcome["next_experience_version"] = self.store.snapshot().version
             if update:
                 self.store.save_task_run(mode, task_id, identity, state, "complete", outcome)

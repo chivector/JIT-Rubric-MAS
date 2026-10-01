@@ -10,7 +10,8 @@ from jit_mas.checkpoints import (
     select_checkpoint, snapshot_store,
 )
 from jit_mas.experience import ExperienceStore
-from jit_mas.schemas import ChangeProposal, Experience, ExperienceSnapshot, digest
+from jit_mas.schemas import (AgentEvolutionUpdate, AgentMemoryLesson, ChangeProposal,
+                              Experience, ExperienceSnapshot, digest)
 
 
 def proposal(store, task_id):
@@ -177,6 +178,34 @@ def test_frozen_store_is_independent_and_cannot_commit(tmp_path, store):
             frozen.db.execute("UPDATE state SET value='99'")
         store.commit(proposal(store, "source-1"))
         assert frozen.snapshot() == initial
+    finally:
+        frozen.close()
+
+
+def test_pooled_profile_roundtrip_is_part_of_frozen_checkpoint_identity(tmp_path, store):
+    update = AgentEvolutionUpdate(update_id="writer-update", pool_agent_id="writer",
+        base_agent_version=1, source_task_id="source-1",
+        lessons=[AgentMemoryLesson(lesson_id="writer-lesson", instruction="Keep provenance linked.",
+            applicability="evidence synthesis", source_task_ids=["source-1"], evidence=["source-1:evidence"],
+            created_at="2026-10-01T00:00:00+00:00")], evidence=["source-1:evidence"])
+    evolved = store.commit_evolution(source_task_id="source-1", base_version=0,
+                                     updates=[update], update_id="evolution-source-1")
+    frozen = snapshot_store(evolved, tmp_path / "pooled-frozen.sqlite")
+    try:
+        assert frozen.snapshot() == evolved
+        writer = next(profile for profile in frozen.snapshot().agent_pool.profiles
+                      if profile.pool_agent_id == "writer")
+        assert writer.memory[0].lesson_id == "writer-lesson"
+        with pytest.raises(PermissionError):
+            frozen.commit_evolution(source_task_id="source-2", base_version=1, updates=[update])
+        store.rollback(0)
+        assert not store.snapshot().agent_pool.profiles
+        assert digest(frozen.snapshot()) == digest(evolved)
+        altered = evolved.model_copy(deep=True)
+        next(profile for profile in altered.agent_pool.profiles
+             if profile.pool_agent_id == "writer").prompt = "Changed pooled prompt"
+        with pytest.raises(CheckpointIntegrityError, match="content changed"):
+            snapshot_store(altered, frozen.path)
     finally:
         frozen.close()
 

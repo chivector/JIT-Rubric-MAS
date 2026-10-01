@@ -284,7 +284,7 @@ def test_split_completion_fields_cannot_bypass_evidence_preflight(execute_team):
 @pytest.mark.parametrize("tool", ["send_message", "read_evidence", "raise_issue"])
 def test_inter_agent_tools_fail_once_without_waiting_or_tool_charge(execute_team, tool):
     team = TeamSpec(agents=[AgentSpec(agent_id="solo", role="Writer", capability="writing",
-                                    max_calls=2)], synthesizer_id="solo", total_max_calls=2)
+                                    max_calls=1)], synthesizer_id="solo", total_max_calls=1)
 
     def respond(_aid, _payload, call, _messages):
         assert call == 1
@@ -329,8 +329,8 @@ def test_parallel_contributors_publish_one_frozen_ledger_and_writer_reads_once(e
         AgentSpec(agent_id="analyst", role="Analyst", capability="requirements"),
         AgentSpec(agent_id="evidence", role="Evidence", capability="source selection"),
         AgentSpec(agent_id="writer", role="Writer", capability="synthesis",
-                  depends_on=["analyst", "evidence"], max_calls=5),
-    ], synthesizer_id="writer", total_max_calls=10, max_parallel=2)
+                  depends_on=["analyst", "evidence"], max_calls=1),
+    ], synthesizer_id="writer", total_max_calls=3, max_parallel=2)
     barrier = threading.Barrier(2, timeout=3)
 
     def respond(aid, payload, call, messages):

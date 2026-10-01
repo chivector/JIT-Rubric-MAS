@@ -127,9 +127,11 @@ def candidate_snapshot(base: ExperienceSnapshot, proposal: ChangeProposal) -> Ex
         raise ValueError("Replacement collides with another experience ID")
     entry = proposal.experience.model_copy(deep=True)
     entries.append(entry)
-    return ExperienceSnapshot(version=base.version, experiences=entries,
-                              policy_versions={**base.policy_versions, "experience_update": "direct-v1"},
-                              applied_proposals=base.applied_proposals + [proposal.proposal_id])
+    candidate = base.model_copy(deep=True)
+    candidate.experiences = entries
+    candidate.policy_versions = {**base.policy_versions, "experience_update": "direct-v1"}
+    candidate.applied_proposals = base.applied_proposals + [proposal.proposal_id]
+    return candidate
 
 
 class ExperienceStore:
@@ -149,6 +151,8 @@ class ExperienceStore:
                     CREATE TABLE IF NOT EXISTS state(key TEXT PRIMARY KEY, value TEXT NOT NULL);
                     CREATE TABLE IF NOT EXISTS proposals(id TEXT PRIMARY KEY, body TEXT NOT NULL);
                     CREATE TABLE IF NOT EXISTS commits(proposal_id TEXT PRIMARY KEY, version INTEGER);
+                    CREATE TABLE IF NOT EXISTS evolution_commits(id TEXT PRIMARY KEY, body TEXT NOT NULL,
+                        version INTEGER NOT NULL);
                     CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, body TEXT NOT NULL);
                     CREATE TABLE IF NOT EXISTS task_runs(mode TEXT, task_id TEXT, identity TEXT,
                         baseline_version INTEGER, baseline_hash TEXT, status TEXT, body TEXT,
@@ -210,6 +214,93 @@ class ExperienceStore:
             self.db.execute("INSERT INTO audit(body) VALUES(?)", (json.dumps({
                 "event": "direct_update", "proposal_id": proposal.proposal_id,
                 "proposal_hash": digest(proposal), "before": base.version, "after": version,
+                "baseline_hash": digest(base), "updated_hash": digest(candidate), "time": utc_now()}),))
+            return candidate
+
+    def commit_evolution(self, *, source_task_id, base_version, proposal=None, updates=(),
+                         update_id=None):
+        """Atomically persist meta experience and the source agents' long-term updates."""
+        from .agent_pool import apply_updates
+        from .schemas import AgentEvolutionUpdate
+
+        self._write_guard()
+        if not isinstance(source_task_id, str) or not source_task_id.strip():
+            raise ValueError("Evolution requires a nonempty source task ID")
+        if type(base_version) is not int or base_version < 0:
+            raise ValueError("Evolution requires a nonnegative base version")
+        if proposal is not None:
+            raw = proposal.model_dump(mode="json") if hasattr(proposal, "model_dump") else proposal
+            proposal = ChangeProposal.model_validate(raw)
+            if (proposal.source_task_id != source_task_id or proposal.base_version != base_version
+                    or proposal.experience.source_task_ids != [source_task_id]):
+                raise ValueError("Evolution proposal changed its source task or base version")
+        normalized = []
+        for update in (updates or ()):
+            raw = update.model_dump(mode="json") if hasattr(update, "model_dump") else update
+            normalized.append(AgentEvolutionUpdate.model_validate(raw))
+        if any(update.source_task_id != source_task_id for update in normalized):
+            raise ValueError("Agent update changed its source task")
+        ids = [update.update_id for update in normalized]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Duplicate agent update IDs")
+        if not normalized:
+            if proposal is not None:
+                return self.commit(proposal)
+            current = self.snapshot()
+            if current.version != base_version:
+                raise ValueError("Stale evolution base version")
+            return current
+        body = {"source_task_id": source_task_id, "base_version": base_version,
+                "proposal": proposal.model_dump(mode="json") if proposal is not None else None,
+                "updates": [update.model_dump(mode="json") for update in normalized]}
+        if update_id is None:
+            update_id = digest(body)
+        if not isinstance(update_id, str) or not update_id.strip():
+            raise ValueError("Evolution requires a nonempty update ID")
+        with self.db:
+            self.db.execute("BEGIN IMMEDIATE")
+            prior = self.db.execute("SELECT body,version FROM evolution_commits WHERE id=?",
+                                    (update_id,)).fetchone()
+            if prior:
+                if digest(json.loads(prior[0])) != digest(body):
+                    raise ValueError("Evolution update ID reused with different content")
+                return self.snapshot(prior[1])
+            base = self.snapshot()
+            if base.version != base_version:
+                raise ValueError("Stale evolution base version")
+            if proposal is not None:
+                stored = self.db.execute("SELECT body FROM proposals WHERE id=?",
+                                         (proposal.proposal_id,)).fetchone()
+                previous = (ChangeProposal.model_validate_json(stored[0]) if stored else
+                            self._legacy_proposal(proposal.proposal_id))
+                if previous is not None and digest(previous) != digest(proposal):
+                    raise ValueError("Proposal ID reused with different content")
+                committed = self.db.execute("SELECT version FROM commits WHERE proposal_id=?",
+                                            (proposal.proposal_id,)).fetchone()
+                if committed:
+                    raise ValueError("Meta proposal already belongs to a committed update")
+                candidate = candidate_snapshot(base, proposal)
+            else:
+                candidate = base.model_copy(deep=True)
+            candidate.agent_pool = apply_updates(base.agent_pool, normalized,
+                                                 source_task_id=source_task_id)
+            candidate.policy_versions = {**candidate.policy_versions, "agent_pool": "dual-evolution-v1"}
+            version = int(self.db.execute("SELECT MAX(version) FROM snapshots").fetchone()[0]) + 1
+            candidate.version = version
+            self.db.execute("INSERT INTO snapshots VALUES(?,?)", (version, candidate.model_dump_json()))
+            self.db.execute("UPDATE state SET value=? WHERE key='current'", (str(version),))
+            if proposal is not None:
+                self.db.execute("INSERT INTO proposals VALUES(?,?)",
+                                (proposal.proposal_id, proposal.model_dump_json()))
+                self.db.execute("INSERT INTO commits(proposal_id,version) VALUES(?,?)",
+                                (proposal.proposal_id, version))
+            self.db.execute("INSERT INTO evolution_commits VALUES(?,?,?)",
+                            (update_id, json.dumps(body, allow_nan=False), version))
+            self.db.execute("INSERT INTO audit(body) VALUES(?)", (json.dumps({
+                "event": "dual_evolution_update", "update_id": update_id,
+                "source_task_id": source_task_id, "update_hash": digest(body),
+                "proposal_id": proposal.proposal_id if proposal is not None else None,
+                "agent_update_ids": ids, "before": base.version, "after": version,
                 "baseline_hash": digest(base), "updated_hash": digest(candidate), "time": utc_now()}),))
             return candidate
 

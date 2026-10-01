@@ -23,7 +23,7 @@ from scripts.kernel.types import (
 )
 from scripts.tools.registry import ToolRegistry
 from jit_mas.experience import experience_applicability
-from jit_mas.schemas import PublicTask, RubricGraph, TeamSpec, utc_now
+from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGraph, TeamSpec, utc_now
 
 
 def _data(value: Any) -> Any:
@@ -153,6 +153,10 @@ class TeamServices:
     called_agents: set = field(default_factory=set)
     started: bool = False
     shared_ledger: dict = field(default_factory=dict)
+    execution_mode: str = "single_pass"
+    started_at: float = field(default_factory=time.monotonic)
+    call_counts: dict = field(default_factory=dict)
+    agent_pool: AgentPoolSnapshot | None = None
 
     def event(self, agent_id, kind, content, *, parents=(), recipient="", source=""):
         with self.lock:
@@ -167,16 +171,22 @@ class TeamServices:
             self.events.append(event)
             return event["event_id"]
 
-    def reserve_call(self, limit, agent_id):
+    def reserve_call(self, limit, agent_id, agent_limit=None):
         with self.lock:
             if self.cancelled.is_set():
                 raise TimeoutError("team cancelled after timeout")
-            if agent_id in self.called_agents:
+            if self.execution_mode == "single_pass" and agent_id in self.called_agents:
                 raise RuntimeError("Single-pass execution permits only one model call per role")
-            if self.calls >= limit:
+            if agent_limit is not None and self.call_counts.get(agent_id, 0) >= agent_limit:
+                raise RuntimeError(f"AgentSpec.max_calls exhausted for agent '{agent_id}'")
+            if limit is not None and self.calls >= limit:
                 raise RuntimeError("TeamSpec.total_max_calls exhausted")
+            if time.monotonic() - self.started_at >= self.timeout_seconds:
+                self.cancelled.set()
+                raise TimeoutError("team execution timeout")
             self.called_agents.add(agent_id)
             self.calls += 1
+            self.call_counts[agent_id] = self.call_counts.get(agent_id, 0) + 1
 
 
 def validate_team(team, public_task=None):
@@ -187,7 +197,7 @@ def validate_team(team, public_task=None):
         raise ValueError("TeamSpec requires unique nonempty agents")
     if team["synthesizer_id"] not in ids:
         raise ValueError("unknown synthesizer")
-    if team.get("max_parallel", 2) < 1 or team.get("total_max_calls", 16) < 1:
+    if team.get("max_parallel", 2) < 1 or (team.get("total_max_calls", 16) is not None and team["total_max_calls"] < 1):
         raise ValueError("team concurrency and call budgets must be positive")
     allowed = set(_data(public_task)["tools"]) if public_task is not None else None
     dependencies = {}
@@ -195,7 +205,7 @@ def validate_team(team, public_task=None):
         deps = set(a.get("depends_on", []))
         if not deps.issubset(ids) or a["agent_id"] in deps:
             raise ValueError("unknown or self-referential agent dependency")
-        if a.get("max_calls", 3) < 1 or a.get("max_tokens", 4096) < 1:
+        if (a.get("max_calls", 3) is not None and a["max_calls"] < 1) or a.get("max_tokens", 4096) < 1:
             raise ValueError("agent budgets must be positive")
         if allowed is not None and not set(a.get("tools", [])).issubset(allowed):
             raise ValueError("agent requested tools outside PublicTask allowlist")
@@ -362,8 +372,308 @@ def _shared_ledger(agent, team, services):
     return result
 
 
-def _run_agent(agent, team, ctx, services):
+def _iterative_public_ledger(services, agent_id=None):
+    result = {"requirements": [], "outline": [], "evidence_spans": [],
+              "source_references": [], "contributions": [], "tool_evidence": [],
+              "communications": []}
+    with services.lock:
+        artifacts = copy.deepcopy(services.artifacts)
+        events = copy.deepcopy(services.events)
+    for aid, artifact in artifacts.items():
+        if aid == agent_id:
+            continue
+        contribution = artifact.get("ledger") or {"requirements": [], "outline": [],
+                                                   "evidence_spans": [], "source_references": []}
+        public = {key: copy.deepcopy(artifact.get(key))
+                  for key in ("agent_id", "answer", "event_id", "version", "complete")}
+        public["agent_id"] = aid
+        public["ledger"] = copy.deepcopy(contribution)
+        result["contributions"].append(public)
+        for key in ("requirements", "outline"):
+            result[key].extend({"agent_id": aid, "text": item} for item in contribution.get(key, []))
+        for key in ("evidence_spans", "source_references"):
+            result[key].extend({**item, "agent_id": aid} for item in contribution.get(key, []))
+    result["tool_evidence"] = [event for event in events if event["kind"] == "retrieved"
+                               and event["agent_id"] != agent_id]
+    result["communications"] = [event for event in events if event["kind"] == "peer_message"
+                                and (agent_id is None or event.get("recipient") == agent_id)]
+    return result
+
+
+def _ledger_evidence_ids(ledger):
+    return {item["event_id"] for key in ("contributions", "tool_evidence", "communications")
+            for item in ledger[key] if item.get("event_id")}
+
+
+def _persistent_role(agent, services):
+    if services.agent_pool is None:
+        return None
+    from .agent_pool import role_context
+    return role_context(services.agent_pool, AgentSpec.model_validate(agent), services.public_task)
+
+
+def _role_prompt(agent, ctx, persistent):
+    if persistent is None:
+        return str(ctx.prompt_templates.get("agent_prompt", ""))
+    return (persistent["prompt"] + "\nRetained role policies:\n" + json.dumps({
+        "skills": persistent["skills"], "reasoning_strategy": persistent["reasoning_strategy"],
+        "planning_strategy": persistent["planning_strategy"],
+        "communication": persistent["communication"]}, ensure_ascii=False)
+        + "\nApply these methods within the public task, frozen collaboration topology and budgets. "
+        "Your retained memory contains conditional process advice, not evidence for current claims. "
+        "Choose tools and methods appropriate to this assignment.\nTask adaptation: "
+        + agent.get("task_prompt", ""))
+
+
+def _role_tools(allowed, catalog, persistent):
+    if persistent is None or persistent["harness"]["tool_policy"] != "preferred_first":
+        return {name: catalog[name] for name in sorted(allowed)}
+    preferred = [name for name in persistent["preferred_tools"] if name in allowed]
+    ordered = list(dict.fromkeys([*preferred, *sorted(allowed)]))
+    return {name: catalog[name] for name in ordered}
+
+
+def _role_messages(messages, persistent):
+    if persistent is None or persistent["harness"]["memory_policy"] != "recent":
+        return copy.deepcopy(messages)
+    window = persistent["harness"]["memory_window"]
+    return copy.deepcopy(messages[:2] + messages[2:][-window:])
+
+
+def _run_agent_iterative(agent, team, ctx, services):
     aid = agent["agent_id"]
+    persistent = _persistent_role(agent, services)
+    synth = aid == team["synthesizer_id"]
+    before = services.event(aid, "agent_started", {"role": agent["role"], "execution_mode": services.execution_mode})
+    model = services.model_factory(aid)
+    output_limit = agent.get("max_tokens", 4096)
+    model_limit = getattr(model, "max_tokens", None)
+    if isinstance(model_limit, int) and model_limit > 0:
+        output_limit = min(output_limit, model_limit)
+    allowed = set(agent.get("tools", []))
+    catalog = ctx.tool_policy.select_tools("", 0, ctx.memory.build_context()).tools
+    absent = allowed - set(catalog)
+    if absent:
+        raise ValueError(f"tools not installed: {sorted(absent)}")
+    role_tools = _role_tools(allowed, catalog, persistent)
+    model._native_tool_registry = role_tools
+    peer_ids = [item["agent_id"] for item in team["agents"] if item["agent_id"] != aid]
+    completion_example = {"answer": "The current complete deliverable." if synth else "Current contribution summary.",
+                          "evidence_ids": [], "checkpoints": {}}
+    if not synth:
+        completion_example["ledger"] = {"requirements": [], "outline": [],
+                                         "evidence_spans": [], "source_references": []}
+    system = _role_prompt(agent, ctx, persistent) + (
+        "\nExecution mode is iterative_shared_ledger. You may continue your role, revisit prior "
+        "artifacts, ask peers through send_message, and request allowed tools. Tool results are "
+        "returned in the next model turn. Publish honest public ledger updates. Return a complete "
+        "JSON object each turn; set continue=true when another turn is needed, and finish with "
+        "continue=false or a complete/final_answer tool. Token and timeout budgets are binding; "
+        "do not wait for a fixed round count. Private conversation history stays private. "
+        "Every tool request is {name, arguments}; arguments must be a JSON object conforming "
+        "to its supplied schema. Cite only evidence IDs received in your ledger or observations. "
+        "A terminal response must include the complete answer and all assigned checkpoints. "
+        "send_message posts to an exact peer agent_id; only active peers can reply."
+    )
+    shared_ledger = _iterative_public_ledger(services, aid)
+    ledger_hash = content_hash(shared_ledger)
+    observed_ids = _ledger_evidence_ids(shared_ledger)
+    instruction = {"public_task": _data(services.public_task), "agent": agent,
+                   "shared_ledger": shared_ledger,
+                   "rubrics": _data(services.rubrics) or {"rubrics": []},
+                   "execution_experiences": [experience for item in services.experiences
+                        if (experience := _data(item)).get("kind", experience.get("bank", "")) == "execution"
+                        and experience_applicability(experience, services.public_task,
+                                                     capability=agent["capability"])["matched"]],
+                   "allowed_tool_schemas": ctx.get_tool_schemas(role_tools) if allowed else "[]",
+                   "communication_tools": [{"name": "send_message",
+                       "description": "Post a message for an active teammate's next ledger refresh.",
+                       "parameters": {"type": "object", "properties": {
+                           "recipient": {"type": "string", "enum": peer_ids},
+                           "content": {"type": "string", "minLength": 1}},
+                           "required": ["recipient", "content"], "additionalProperties": False}}],
+                   "coordination": "iterative_shared_ledger",
+                   "scheduling": {"strategy": "dependency_dag_once",
+                                  "reactivate_completed_agents": False},
+                   "submission": "final_answer" if synth else "contribution",
+                   "completion_example": completion_example,
+                   "output_budget": {"max_tokens_per_response": output_limit,
+                                     "max_model_calls": None, "max_tool_calls": None}}
+    if persistent is not None:
+        instruction["persistent_agent"] = persistent
+    messages = [{"role": "system", "content": system},
+                {"role": "user", "content": json.dumps(instruction, ensure_ascii=False)}]
+    trajectory = []
+    answer = None
+    contribution = {"requirements": [], "outline": [], "evidence_spans": [], "source_references": []}
+    checkpoint_reports = {}
+    evidence_ids = []
+    pending_observation_ids = set()
+    reason = "error"
+    while not services.cancelled.is_set():
+        remaining = services.timeout_seconds - (time.monotonic() - services.started_at)
+        if remaining <= 0:
+            services.cancelled.set()
+            reason = "timeout"
+            break
+        updated_ledger = _iterative_public_ledger(services, aid)
+        updated_hash = content_hash(updated_ledger)
+        if updated_hash != ledger_hash:
+            update_content = "Updated shared ledger: " + json.dumps(updated_ledger, ensure_ascii=False)
+            if len(messages) > 2 and messages[-1]["role"] == "user":
+                messages[-1]["content"] += "\n" + update_content
+            else:
+                messages.append({"role": "user", "content": update_content})
+            observed_ids.update(_ledger_evidence_ids(updated_ledger))
+            ledger_hash = updated_hash
+            if services.ledger is not None:
+                services.ledger.charge_communication(
+                    len(update_content.encode("utf-8")), stage="execution")
+        observed_ids.update(pending_observation_ids)
+        pending_observation_ids.clear()
+        context_messages = _role_messages(messages, persistent)
+        step = StepRecord(step_number=len(trajectory) + 1, model_input_messages=context_messages,
+                          start_time=time.time())
+        try:
+            response = _bounded_call(model, min(services.timeout_seconds, remaining), context_messages,
+                                     max_tokens=output_limit)
+            step.model_output_messages = response
+            usage = model.get_token_counts() if hasattr(model, "get_token_counts") else {}
+            step.input_token_count = int(usage.get("input_token_count", 0))
+            step.output_token_count = int(usage.get("output_token_count", 0))
+            step.total_token_count = step.input_token_count + step.output_token_count
+            output_event = services.event(aid, "model_output", step.full_dict()["model_output_messages"],
+                                          parents=[before])
+            parsed = _parse_response(response)
+            if "continue" in parsed and not isinstance(parsed["continue"], bool):
+                raise ResponseProtocolError("continue must be a boolean")
+            tool_calls = parsed.get("tools", [])
+            terminal = not bool(parsed.get("continue", False))
+            observations = []
+            merged = dict(parsed)
+            for call in tool_calls:
+                name = call["name"]
+                args = call.get("arguments", {})
+                if isinstance(args, str):
+                    args = json.loads(args)
+                if name in {"complete", "final_answer"}:
+                    if name == "final_answer" and not synth:
+                        raise ResponseProtocolError("only the synthesizer may submit final_answer")
+                    merged.update(args)
+                    terminal = True
+                    continue
+                if name == "send_message":
+                    recipient = args.get("recipient")
+                    message = args.get("content", args.get("message", ""))
+                    if (recipient not in peer_ids or not isinstance(message, str) or not message.strip()):
+                        raise ResponseProtocolError("send_message requires an exact peer agent_id and nonempty content")
+                elif name not in allowed:
+                    raise PermissionError(f"tool '{name}' is not allowed for agent '{aid}'")
+            merged["tools"] = []
+            _validate_completion_fields(merged)
+            evidence_ids = merged.get("evidence_ids", [])
+            if not set(evidence_ids) <= observed_ids:
+                raise ResponseProtocolError("Completion cites evidence not observed by this agent")
+            checkpoint_reports, missing = _checkpoint_reports(agent, merged, observed_ids)
+            if any(call["name"] not in {"complete", "final_answer"} for call in tool_calls):
+                terminal = False
+            if terminal and missing:
+                raise ResponseProtocolError("Unconfirmed checkpoints: " + json.dumps(missing))
+            if terminal and merged.get("answer") is None:
+                raise ResponseProtocolError("A terminal response must include its complete answer")
+            if not synth and merged.get("ledger") is not None:
+                contribution = _contribution_ledger(merged["ledger"])
+            for call in tool_calls:
+                name = call["name"]
+                args = call.get("arguments", {})
+                if isinstance(args, str):
+                    args = json.loads(args)
+                step.tool_calls.append(ToolCall(name=name, arguments=copy.deepcopy(args)))
+                if name in {"complete", "final_answer"}:
+                    continue
+                if services.cancelled.is_set():
+                    raise TimeoutError("team cancelled before tool dispatch")
+                remaining = services.timeout_seconds - (time.monotonic() - services.started_at)
+                if remaining <= 0:
+                    raise TimeoutError("team execution timeout")
+                if name == "send_message":
+                    recipient = args["recipient"]
+                    message = args.get("content", args.get("message", ""))
+                    event_id = services.event(aid, "peer_message", {"content": message},
+                                              parents=[output_event], recipient=recipient, source="send_message")
+                    if services.ledger is not None:
+                        services.ledger.charge_communication(len(message.encode("utf-8")), stage="execution")
+                    observations.append({"event_id": event_id, "recipient": recipient, "content": message})
+                    continue
+                if services.ledger is not None:
+                    services.ledger.charge_tool(stage="execution", agent_id=aid, tool_name=name)
+                observation = _bounded_call(ctx.execute_tool, min(services.timeout_seconds, remaining), name, args)
+                event_id = services.event(aid, "retrieved", {"tool": name, "arguments": args,
+                                                               "output": observation},
+                                          parents=[output_event], source=name)
+                observations.append({"event_id": event_id, "output": observation})
+            if merged.get("answer") is not None:
+                answer = merged["answer"]
+            if not synth and answer is None and not observations:
+                raise ResponseProtocolError("Contributor must publish an answer or tool request")
+            if answer is not None or contribution != {"requirements": [], "outline": [], "evidence_spans": [], "source_references": []}:
+                artifact_event = services.event(aid, "artifact_published", answer or contribution,
+                                                parents=[output_event])
+                with services.lock:
+                    services.artifacts[aid] = {"agent_id": aid, "answer": answer, "event_id": artifact_event,
+                                           "content_hash": content_hash(answer or contribution),
+                                           "version": len(trajectory) + 1, "complete": terminal,
+                                           "checkpoint_reports": copy.deepcopy(checkpoint_reports),
+                                           "ledger": copy.deepcopy(contribution)}
+            step.action_output = answer
+            step.observations = json.dumps(observations, ensure_ascii=False)
+            messages.append({"role": "assistant", "content": getattr(response, "content", str(response))})
+            if observations:
+                messages.append({"role": "user", "content": "Public observations: " + json.dumps(observations, ensure_ascii=False)})
+                pending_observation_ids.update(item["event_id"] for item in observations)
+            if terminal:
+                reason = "final_answer" if synth else "subtask_complete"
+                step.end_time = time.time()
+                step.duration = step.end_time - step.start_time
+                trajectory.append(step)
+                break
+        except Exception as exc:
+            step.error = exc
+            step.observations = f"{type(exc).__name__}: {exc}"
+            services.event(aid, "execution_error", step.observations, parents=[before])
+            reason = "timeout" if isinstance(exc, TimeoutError) else "error"
+            if isinstance(exc, TimeoutError):
+                services.cancelled.set()
+            step.end_time = time.time()
+            step.duration = step.end_time - step.start_time
+            trajectory.append(step)
+            break
+        step.end_time = time.time()
+        step.duration = step.end_time - step.start_time
+        trajectory.append(step)
+    if reason not in {"final_answer", "subtask_complete"}:
+        answer = None
+        with services.lock:
+            services.artifacts.pop(aid, None)
+    if reason == "final_answer" and answer is not None and synth:
+        services.event(aid, "final_answer", answer, parents=evidence_ids)
+    return RunResult(answer=answer, trajectory=trajectory, terminated_reason=reason,
+                     metadata={"agent_id": aid, "role": agent["role"], "capability": agent["capability"],
+                               "coordination": "iterative_shared_ledger", "model_calls": len(trajectory),
+                               "scheduling": {"strategy": "dependency_dag_once",
+                                              "reactivate_completed_agents": False},
+                               "checkpoint_reports": checkpoint_reports,
+                               "observed_evidence_ids": sorted(observed_ids),
+                               "pool_agent_id": agent.get("pool_agent_id"),
+                               "pool_agent_version": agent.get("pool_agent_version"),
+                               "event_ids": [e["event_id"] for e in services.events if e["agent_id"] == aid]})
+
+
+def _run_agent(agent, team, ctx, services):
+    if services.execution_mode == "iterative_shared_ledger":
+        return _run_agent_iterative(agent, team, ctx, services)
+    aid = agent["agent_id"]
+    persistent = _persistent_role(agent, services)
     synth = aid == team["synthesizer_id"]
     before = services.event(aid, "agent_started", {"role": agent["role"]})
     shared_ledger = _shared_ledger(agent, team, services)
@@ -417,7 +727,9 @@ def _run_agent(agent, team, ctx, services):
         "completion_example": completion_example,
         "output_budget": {"max_tokens_per_response": output_limit, "max_model_calls": 1},
     }
-    system = str(ctx.prompt_templates.get("agent_prompt", "")) + (
+    if persistent is not None:
+        instruction["persistent_agent"] = persistent
+    system = _role_prompt(agent, ctx, persistent) + (
         "\nYou have an independent conversation. Follow only your assigned responsibilities. "
         "The role-specific completion_example is the authoritative output shape for your role; "
         "replace its example values with your own contribution, retaining the JSON field structure. "
@@ -506,7 +818,8 @@ def _run_agent(agent, team, ctx, services):
     absent = allowed - set(catalog)
     if absent:
         raise ValueError(f"tools not installed: {sorted(absent)}")
-    model._native_tool_registry = {name: catalog[name] for name in allowed}
+    role_tools = _role_tools(allowed, catalog, persistent)
+    model._native_tool_registry = role_tools
     trajectory = []
     answer = None
     reason = "error"
@@ -516,8 +829,8 @@ def _run_agent(agent, team, ctx, services):
     # One response, optionally one external-tool batch, then publish. No feedback loop.
     if not services.cancelled.is_set():
         messages = memory.build_context().messages
-        tool_schemas = ctx.get_tool_schemas({name: catalog[name] for name in allowed}) if allowed else "[]"
-        tools_left = (None if services.ledger is None else
+        tool_schemas = ctx.get_tool_schemas(role_tools) if allowed else "[]"
+        tools_left = (None if services.ledger is None or services.ledger.max_tool_calls is None else
                       max(0, services.ledger.max_tool_calls - services.ledger.snapshot()["tool_calls"]))
         messages.append({"role": "user", "content": "Allowed tool schemas: " + tool_schemas
                          + "\nThis is your only model call for this task. "
@@ -637,15 +950,17 @@ def _run_agent(agent, team, ctx, services):
                                "coordination": "single_pass_shared_ledger", "ledger_hash": ledger_hash,
                                "observed_evidence_ids": sorted(observed_ids),
                                "experience_selection": experience_selection,
+                               "pool_agent_id": agent.get("pool_agent_id"),
+                               "pool_agent_version": agent.get("pool_agent_version"),
                                "event_ids": [e["event_id"] for e in services.events if e["agent_id"] == aid]})
 
 
 def run_team(task, ctx, team, services):
-    """Schedule each contributor once, then expose one completed ledger to the writer."""
+    """Schedule a validated team with either legacy or iterative ledger coordination."""
     team = validate_team(team, services.public_task)
     with services.lock:
         if services.started:
-            raise RuntimeError("A task's single-pass team cannot be restarted")
+            raise RuntimeError("A task team cannot be restarted")
         services.started = True
     ctx.planning.bind_team(team)
     plan = ctx.planning.init_plan(task, ctx.memory.build_context(), "", ctx.model)
@@ -655,7 +970,9 @@ def run_team(task, ctx, team, services):
     while pending and not services.cancelled.is_set():
         # Propagate a failed producer through every dependent before dispatching work.
         while True:
-            failed = {aid for aid, result in results.items() if result.answer is None}
+            failed = {aid for aid, result in results.items() if result.answer is None or
+                      (services.execution_mode == "iterative_shared_ledger" and
+                       result.terminated_reason not in {"subtask_complete", "final_answer"})}
             blocked = [aid for aid, agent in pending.items() if failed.intersection(agent.get("depends_on", []))]
             if not blocked:
                 break
@@ -684,16 +1001,27 @@ def run_team(task, ctx, team, services):
     for aid in pending:
         services.event(aid, "cancelled", "team timeout")
         results[aid] = RunResult(terminated_reason="cancelled", metadata={"agent_id": aid})
+    if services.execution_mode == "iterative_shared_ledger":
+        services.shared_ledger = _iterative_public_ledger(services)
     final = results[team["synthesizer_id"]]
-    return RunResult(answer=final.answer, terminated_reason="final_answer" if final.answer is not None else "error",
+    submitted = final.answer is not None and (services.execution_mode != "iterative_shared_ledger"
+                                             or final.terminated_reason == "final_answer")
+    return RunResult(answer=final.answer if submitted else None,
+                     terminated_reason="final_answer" if submitted else "error",
                      sub_runs=[results[a["agent_id"]] for a in team["agents"]],
                      metadata={"run_id": services.run_id, "events": copy.deepcopy(services.events),
                                "artifacts": copy.deepcopy(services.artifacts),
-                               "coordination": "single_pass_shared_ledger",
+                               "coordination": ("single_pass_shared_ledger"
+                                                if services.execution_mode == "single_pass"
+                                                else services.execution_mode),
+                               **({"scheduling": {"strategy": "dependency_dag_once",
+                                                  "reactivate_completed_agents": False}}
+                                  if services.execution_mode == "iterative_shared_ledger" else {}),
                                "shared_ledger": copy.deepcopy(services.shared_ledger),
                                "shared_ledger_hash": content_hash(services.shared_ledger),
                                "team_hash": content_hash(team), "model_calls_used": services.calls,
-                               "timeout_seconds": services.timeout_seconds})
+                               "timeout_seconds": services.timeout_seconds,
+                               "call_counts": copy.deepcopy(services.call_counts)})
 
 
 class TeamAction(BaseAction):
@@ -724,9 +1052,9 @@ class _SinglePassModel:
 
     def __call__(self, messages, **kwargs):
         aid = self.agent["agent_id"]
-        self.services.reserve_call(self.team["total_max_calls"], aid)
+        self.services.reserve_call(self.team["total_max_calls"], aid, self.agent.get("max_calls"))
         self.services.event(aid, "agent_call", {
-            "role": self.agent["role"], "call_index": 1,
+            "role": self.agent["role"], "call_index": self.services.call_counts.get(aid, 0),
             "execution_role": "writer" if aid == self.team["synthesizer_id"] else "contributor"})
         return self.model(messages, **kwargs)
 
@@ -767,6 +1095,13 @@ class TeamExecutor:
             raise RuntimeError("native_jit requires a trusted sandbox; none is configured. "
                                "Explicit unsafe-local is required for local generated code.")
         artifact.verify_integrity()
+        pool_data = artifact.sidecar.get("agent_pool")
+        agent_pool = AgentPoolSnapshot.model_validate(pool_data) if pool_data is not None else None
+        if agent_pool is not None:
+            from .agent_pool import validate_bindings
+            validate_bindings(agent_pool, team)
+        elif any(agent.pool_agent_id is not None for agent in team.agents):
+            raise ValueError("Bound Agent Pool members require a frozen pool sidecar")
         if rubrics is None:
             rubrics = RubricGraph.model_validate(artifact.sidecar["rubrics"])
         elif content_hash(_data(rubrics)) != content_hash(artifact.sidecar["rubrics"]):
@@ -783,7 +1118,9 @@ class TeamExecutor:
         if not callable(getattr(loaded["action"], "bind_team", None)):
             raise TypeError("generated Action must implement bind_team(team, services)")
         services = TeamServices(self.model_factory, task, rubrics, list(experiences),
-                                self.ledger, self.timeout_seconds)
+                                self.ledger, self.timeout_seconds,
+                                execution_mode=team_data.get("execution_mode", "single_pass"),
+                                agent_pool=agent_pool)
         agents_by_id = {agent["agent_id"]: agent for agent in team_data["agents"]}
 
         def single_pass_model(agent_id):
@@ -821,10 +1158,11 @@ class TeamExecutor:
             if not result.sub_runs or {r.metadata.get("agent_id") for r in result.sub_runs} != set(agents_by_id):
                 raise RuntimeError("generated harness did not execute every bound role with local traces")
             if result.terminated_reason == "final_answer":
-                if any(len(run.trajectory) != 1 or any(step.model_input_messages is None or
+                if any((services.execution_mode == "single_pass" and len(run.trajectory) != 1) or
+                        not run.trajectory or any(step.model_input_messages is None or
                         step.model_output_messages is None for step in run.trajectory)
                         for run in result.sub_runs):
-                    raise RuntimeError("generated harness omitted full single-pass role traces")
+                    raise RuntimeError("generated harness omitted full role traces")
                 if services.calls != sum(len(run.trajectory) for run in result.sub_runs):
                     raise RuntimeError("generated harness role traces disagree with team call accounting")
         except Exception as exc:
@@ -834,6 +1172,8 @@ class TeamExecutor:
                                 "harness_hash": artifact.code_hash,
                                 "unsafe_local": artifact.backend == "native_jit",
                                 "software_test_only": artifact.backend == "scripted"})
+        if services.agent_pool is not None:
+            result.metadata["agent_pool_hash"] = content_hash(services.agent_pool)
         # Runtime sees a coordinator with no model calls. Sum disjoint leaf traces
         # here; the shared ledger is authoritative and is never charged again.
         result.metadata["input_token_count"] = sum(s.input_token_count for r in result.sub_runs for s in r.trajectory)

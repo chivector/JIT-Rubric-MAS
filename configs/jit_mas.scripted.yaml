@@ -3,3 +3,4 @@ local_planning: true
 local_rounds: 1  # Pre-execution planning; execution roles still have one call each.
 local_attribution: true
 persistent_experience: true
+evolving_agent_pool: true

@@ -46,10 +46,11 @@ def _rubric(rid, text, source="inferred", experience_ids=None):
             "confidence": 0.7, "experience_ids": experience_ids or []}
 
 
-def _agent(aid, rubrics, depends=(), capability="comparison"):
+def _agent(aid, rubrics, depends=(), capability="comparison", execution_mode="single_pass"):
     return {"agent_id": aid, "role": aid, "capability": capability,
             "rubric_ids": rubrics, "responsibilities": ["Develop a concise, task-specific contribution"],
-            "depends_on": list(depends), "max_calls": 1, "max_tokens": 1024}
+            "depends_on": list(depends), "max_calls": None if execution_mode == "iterative_shared_ledger" else 1,
+            "max_tokens": 1024}
 
 
 class FixtureModel:
@@ -105,6 +106,7 @@ class FixtureModel:
     def _phase(self, p):
         phase = p["phase"]
         if phase == "predict":
+            execution_mode = p["limits"].get("execution_mode", "single_pass")
             poem = p["task"]["task_id"] == "test-poem"
             experience = [e for e in p.get("experiences", []) if e["bank"] == "rubric"]
             graph = {"rubrics": [_rubric("r1", "Use the requested form" if poem else "Compare relevant tradeoffs")], "edges": []}
@@ -112,20 +114,29 @@ class FixtureModel:
                 graph["rubrics"].append(_rubric("r3", "State boundary conditions", "experience",
                                                [experience[0]["experience_id"]]))
             ids = [r["rubric_id"] for r in graph["rubrics"]]
-            agents = ([_agent("composer", ids, capability="creative-writing")] if poem else
-                      [_agent("analyst", ids), _agent("evidence", ids, capability="source verification"),
-                       _agent("writer", ids, ["analyst", "evidence"], "synthesis")])
-            limit = min(p["limits"]["max_agents"], p["limits"]["total_max_calls"])
+            agents = ([_agent("composer", ids, capability="creative-writing", execution_mode=execution_mode)] if poem else
+                      [_agent("analyst", ids, execution_mode=execution_mode), _agent("evidence", ids, capability="source verification", execution_mode=execution_mode),
+                       _agent("writer", ids, ["analyst", "evidence"], "synthesis", execution_mode=execution_mode)])
+            calls = p["limits"]["total_max_calls"]
+            limit = p["limits"]["max_agents"] if calls is None else min(p["limits"]["max_agents"], calls)
             if not poem and limit < 3:
                 if limit == 1:
-                    agents = [_agent("writer", ids, capability="comparison and synthesis")]
+                    agents = [_agent("writer", ids, capability="comparison and synthesis", execution_mode=execution_mode)]
                 else:
-                    agents = [_agent("analyst", ids), _agent("writer", ids, ["analyst"], "synthesis")]
+                    agents = [_agent("analyst", ids, execution_mode=execution_mode), _agent("writer", ids, ["analyst"], "synthesis", execution_mode=execution_mode)]
                 agents[0]["responsibilities"].append("Combine analysis and evidence collection in one pass")
             if p.get("offline_no_rubrics"):
                 graph = {"rubrics": [], "edges": []}
                 for a in agents:
                     a["rubric_ids"] = []
+            if p.get("agent_pool_catalogue"):
+                catalogue = {item["pool_agent_id"]: item for item in p["agent_pool_catalogue"]}
+                for agent in agents:
+                    member = {"composer": "writer", "evidence": "searcher"}.get(
+                        agent["agent_id"], agent["agent_id"])
+                    agent["pool_agent_id"] = member
+                    agent["pool_agent_version"] = catalogue[member]["version"]
+                    agent["task_prompt"] = "Perform the assigned contribution for this public task."
             return {"graph": graph, "candidates": agents}
         if phase == "local_plan":
             a = p["candidate"]
@@ -133,12 +144,19 @@ class FixtureModel:
             if (a["agent_id"] == "analyst" and p["prediction"]["graph"]["rubrics"]
                     and not any(r["rubric_id"] == "r2" for r in p["prediction"]["graph"]["rubrics"])):
                 adds = [_rubric("r2", "Discuss failure recovery")]
+            internals = {}
+            if p.get("agent_profile"):
+                profile = p["agent_profile"]
+                internals = {"selected_skills": list(profile["skills"]),
+                             "reasoning_strategy": profile["reasoning_strategy"],
+                             "communication": profile["communication"], "harness": profile["harness"]}
             return {"agent_id": a["agent_id"], "capability": a["capability"],
                     "rubric_ids": a["rubric_ids"], "additions": adds,
                     "depends_on": a["depends_on"],
                     "required_inputs": ["Public task and completed dependency ledger contributions"],
                     "expected_outputs": ["One structured public ledger contribution or final deliverable"],
-                    "challenge": "Include recovery behavior before synthesis", "max_calls": 1}
+                    "challenge": "Include recovery behavior before synthesis", "max_calls": None if p["limits"].get("execution_mode") == "iterative_shared_ledger" else 1,
+                    **internals}
         if phase == "reconcile":
             graph = p["prediction"]["graph"]
             for plan in p["local_plans"]:
@@ -153,9 +171,9 @@ class FixtureModel:
                     if responsibility not in a["responsibilities"]:
                         a["responsibilities"].append(responsibility)
             coverage = {rid: [a["agent_id"] for a in agents if rid in a["rubric_ids"]] for rid in ids}
-            return {"graph": graph, "team": {"agents": agents, "synthesizer_id": agents[-1]["agent_id"],
+            return {"graph": graph, "team": {"execution_mode": p["limits"].get("execution_mode", "single_pass"), "agents": agents, "synthesizer_id": agents[-1]["agent_id"],
                 "coverage": coverage, "primary": {rid: owners[0] for rid, owners in coverage.items()},
-                "total_max_calls": len(agents), "max_parallel": min(2, p["limits"]["max_parallel"]),
+                "total_max_calls": None if p["limits"].get("execution_mode") == "iterative_shared_ledger" else len(agents), "max_parallel": min(2, p["limits"]["max_parallel"]),
                 "selection_rationale": "Synthetic task-conditioned single-pass ledger allocation"},
                 "local_plans": p["local_plans"]}
         if phase == "align":
@@ -173,6 +191,16 @@ class FixtureModel:
             return {"findings": [finding], **({"questions": {}} if phase == "attribute_global" else {})}
         if phase.startswith("attribute_local"):
             return {"findings": []}
+        if phase == "agent_evolve":
+            profile = p["agent_profile"]
+            evidence = [p["valid_evidence_ids"][0]]
+            return {"update_id": p["update_id"], "pool_agent_id": profile["pool_agent_id"],
+                    "base_agent_version": p["base_agent_version"], "source_task_id": p["source_task_id"],
+                    "lessons": [{"lesson_id": p["update_id"] + "-process",
+                                 "instruction": "Check role assumptions and publish explicit unresolved gaps before handing off.",
+                                 "applicability": "Technical comparison tasks", "capability": p["agent"]["capability"],
+                                 "source_task_ids": [p["source_task_id"]], "evidence": evidence}],
+                    "evidence": evidence}
         if phase == "propose":
             task_id, version = p["task"]["task_id"], p["base_version"]
             if p["experiences"]:

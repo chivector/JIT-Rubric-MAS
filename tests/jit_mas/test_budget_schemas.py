@@ -146,7 +146,8 @@ def make_agent(aid, deps=(), calls=2, tokens=128):
 
 def test_execution_cycles_are_rejected_while_rubric_association_cycles_are_allowed():
     with pytest.raises(ValidationError, match="cycle"):
-        TeamSpec(agents=[make_agent("a", ["b"]), make_agent("b", ["a"])], synthesizer_id="b")
+        TeamSpec(agents=[make_agent("a", ["b"], calls=1), make_agent("b", ["a"], calls=1)],
+                 synthesizer_id="b", total_max_calls=2)
     graph = RubricGraph(rubrics=[{"rubric_id": rid, "requirement": rid} for rid in ["r1", "r2"]],
                         edges=[{"source": src, "target": dst, "relation": "support", "rationale": "related"}
                                for src, dst in [("r1", "r2"), ("r2", "r1")]])
@@ -156,12 +157,18 @@ def test_execution_cycles_are_rejected_while_rubric_association_cycles_are_allow
 def test_agent_allocations_are_not_copies_of_total_team_budget():
     with pytest.raises(ValidationError, match="allocations"):
         TeamSpec(agents=[make_agent("a", calls=4), make_agent("b", ["a"], calls=4)],
-                 synthesizer_id="b", total_max_calls=4)
+                 synthesizer_id="b", total_max_calls=4, execution_mode="iterative_shared_ledger")
     spec = TeamSpec(agents=[make_agent("a"), make_agent("b", ["a"])],
-                    synthesizer_id="b", total_max_calls=4)
+                    synthesizer_id="b", total_max_calls=4, execution_mode="iterative_shared_ledger")
     assert sum(agent.max_calls for agent in spec.agents) == 4
     with pytest.raises(ValidationError):
         make_agent("a", tokens=0)
+
+
+@pytest.mark.parametrize("calls", [2, None])
+def test_single_pass_rejects_multiple_or_unlimited_role_calls(calls):
+    with pytest.raises(ValidationError, match="single-pass execution requires AgentSpec.max_calls=1"):
+        TeamSpec(agents=[make_agent("a", calls=calls)], synthesizer_id="a", total_max_calls=2)
 
 
 def test_public_boundary_rejects_hidden_fields_and_importance_is_not_confidence():

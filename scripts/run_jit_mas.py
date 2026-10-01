@@ -137,11 +137,16 @@ def main(argv=None):
                       "evolution_tasks": len(evolved), "held_out_fixture_tasks": len(evaluated),
                       "experience_version": store.snapshot().version,
                       "experience_updates": [u for o in evolved for u in o["experience_updates"]],
+                      "agent_pool_version": store.snapshot().agent_pool.version,
+                      "agent_pool_members": len(store.snapshot().agent_pool.profiles),
+                      "agent_pool_updates": [receipt for outcome in evolved
+                                             for receipt in outcome.get("agent_pool_updates", [])],
                       "output": str(Path(args.output).resolve())}
         else:
             results = pipeline.run(args.mode, args.task_id, limit=args.limit, resume=not args.no_resume)
             report = {"mode": args.mode, "backend": config.backend, "tasks": len(results),
                       "experience_version": store.snapshot().version,
+                      "agent_pool_version": store.snapshot().agent_pool.version,
                       "results": [{"task_id": r["task_id"], "score": r["evaluation"]["score"],
                                    "complete": r["evaluation"]["complete"], "run_dir": r["run_dir"]} for r in results]}
         print(json.dumps(report, ensure_ascii=True, indent=2))

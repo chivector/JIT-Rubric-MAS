@@ -1,5 +1,11 @@
 # Single-pass task execution
 
+This document applies to `execution_mode: single_pass`, the default execution mode.
+The optional `iterative_shared_ledger` mode has a separate repeated-call contract
+described in the [implementation guide](jit_mas.md). Pool reuse and dual evolution
+apply to both modes; the pooled path installs the existing MAS scaffold instead
+of generating new harness Python for each task.
+
 This is an incremental executor contract for JIT-MAS, not a replacement MAS
 framework. Requirements, capabilities, rubrics and generated harnesses remain
 task-conditioned. The native five-file JIT generation, selection and loading path

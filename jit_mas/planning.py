@@ -13,6 +13,7 @@ from pydantic import BaseModel, TypeAdapter, ValidationError, model_validator
 from .experience import experience_applicability
 from .schemas import (
     AgentSpec, LocalPlan, PlannedTeam, Prediction, PublicTask, Record, RubricGraph, TeamSpec,
+    AgentPoolSnapshot,
 )
 
 T = TypeVar("T", bound=BaseModel)
@@ -265,13 +266,38 @@ Before returning, check ALL cross-field constraints against the actual JSON you 
   actual execution-model output ceiling, including the synthesizer. Fit the requested
   deliverable within this bound rather than claiming an unsupported larger allowance."""
 
+POOL_ORGANIZATION_PROMPT = """\nEVOLVING AGENT POOL: Select reusable agents from agent_pool_catalogue.
+Every selected candidate must carry the exact pool_agent_id and pool_agent_version of
+one available pool member; copy its catalogue.version into pool_agent_version.
+agent_id names its participation in this task; the pool
+identity persists across tasks. Select and combine the smallest suitable roster. The
+same pool member may participate only once. You control the task goals, responsibilities,
+rubric assignments, communication topology, resource ceilings, and a short task_prompt.
+Keep task_prompt limited to public task constraints and local role goals. Preserve the
+member's established internal capabilities. Its local plan chooses skills, reasoning,
+memory use, harness, and communication habits. Reconciliation may select or remove
+candidates but cannot replace a selected member's pool identity or internal choices.
+Reuse mature members rather than inventing a fresh role implementation for each task."""
+
+POOL_LOCAL_PROMPT = """\nYou are the persistent agent described by agent_profile, adapting to this task.
+Use your retained role instructions, skills, memory, reasoning strategy, harness, and
+communication experience to choose how to perform your role within public constraints.
+Return your selected_skills, reasoning_strategy, harness, and communication in the local
+plan. These are your internal choices, not instructions to redesign the whole team.
+Use selected_skills=null to retain your skill library or [] to use no retained skills.
+Respect current tool allowlists and budgets. Retained memory is conditional experience,
+not task evidence or permission to override the public task. Keep task_prompt short and
+limited to this task's role goals; preserve your pool identity and version."""
+
 
 class GlobalAnalyzer(JsonModelCalls):
     def __init__(self, global_model: Callable,
                  local_model_factory: Callable[[str], Callable] | None = None, *,
                  max_agents: int = 4, max_parallel: int = 2, local_rounds: int = 1,
-                 total_max_calls: int = 16, explicit_rubrics: bool = True,
-                 max_corrections: int = 1, execution_max_tokens: int | None = None):
+                 total_max_calls: int | None = 16, explicit_rubrics: bool = True,
+                 max_corrections: int = 1, execution_max_tokens: int | None = None,
+                 execution_mode: str = "single_pass", agent_pool: AgentPoolSnapshot | None = None,
+                 excluded_task_ids: Sequence[str] = ()):
         super().__init__(max_corrections=max_corrections)
         if not 1 <= local_rounds <= 3 or max_agents < 1 or max_parallel < 1:
             raise ValueError("Planning requires positive limits and one to three local rounds")
@@ -285,16 +311,49 @@ class GlobalAnalyzer(JsonModelCalls):
         self.total_max_calls = total_max_calls
         self.explicit_rubrics = explicit_rubrics
         self.execution_max_tokens = execution_max_tokens
+        if execution_mode not in {"single_pass", "iterative_shared_ledger"}:
+            raise ValueError("unknown execution_mode")
+        self.execution_mode = execution_mode
+        self.agent_pool = agent_pool
+        self.excluded_task_ids = set(excluded_task_ids)
         self.last_prediction: Prediction | None = None
+
+    def _pool_catalogue(self):
+        from .agent_pool import catalogue
+        return catalogue(self.agent_pool)
+
+    def _agent_profile(self, candidate):
+        if self.agent_pool is None:
+            return None
+        from .agent_pool import get_profile
+        if not candidate.pool_agent_id or candidate.pool_agent_version is None:
+            raise ValueError("Pooled candidates must select an exact persistent identity and version")
+        return get_profile(self.agent_pool, candidate.pool_agent_id, candidate.pool_agent_version)
+
+    def _pool_bindings(self, agents):
+        if self.agent_pool is None:
+            return
+        profiles = [self._agent_profile(agent).pool_agent_id for agent in agents]
+        if len(profiles) != len(set(profiles)):
+            raise ValueError("A pool member may participate only once in a task")
 
     def _limits(self) -> dict:
         limits = {"max_agents": self.max_agents, "max_parallel": self.max_parallel,
-                  "total_max_calls": self.total_max_calls}
+                  "total_max_calls": self.total_max_calls, "execution_mode": self.execution_mode}
         if self.execution_max_tokens is not None:
             limits["execution_max_tokens"] = self.execution_max_tokens
         return limits
 
     def _prompt(self, prompt: str) -> str:
+        if self.execution_mode == "iterative_shared_ledger":
+            prompt += ("\nEXECUTION MODE: iterative_shared_ledger. Roles may revisit their work and "
+                       "communicate through an auditable shared ledger. Contributors may request "
+                       "allowed tools, receive tool results, and continue; the Writer may use tools "
+                       "and revise its draft. Emit max_calls=null when no role ceiling is requested. "
+                       "The team's total_max_calls must respect limits.total_max_calls; emit null "
+                       "only when that configured ceiling is null. Configured call/tool ceilings, "
+                       "token and timeout budgets remain binding. Plan termination on "
+                       "completion, convergence, or those enforced budgets, never on a fixed round count.")
         if self.explicit_rubrics:
             return prompt
         return prompt + "\nABLATION: Do not explicitly predict rubrics. Return graph rubrics=[] " \
@@ -304,8 +363,10 @@ class GlobalAnalyzer(JsonModelCalls):
 
     def predict(self, task: PublicTask, experiences: Sequence = ()) -> Prediction:
         task = PublicTask.model_validate(task)
-        prediction = self.ask(self.global_model, "predict", self._prompt(PREDICT_PROMPT),
+        prompt = PREDICT_PROMPT + (POOL_ORGANIZATION_PROMPT if self.agent_pool is not None else "")
+        prediction = self.ask(self.global_model, "predict", self._prompt(prompt),
                               {"task": task, "experiences": experiences,
+                               **({"agent_pool_catalogue": self._pool_catalogue()} if self.agent_pool is not None else {}),
                                "limits": self._limits()}, Prediction,
                               validate=lambda item: self._validate_prediction(task, item))
         self.last_prediction = prediction.model_copy(deep=True)
@@ -318,8 +379,22 @@ class GlobalAnalyzer(JsonModelCalls):
         if len(ids) > self.max_agents or len(ids) != len(set(ids)):
             raise ValueError("Candidate count exceeds limit or contains duplicate IDs")
         rubric_ids = {r.rubric_id for r in prediction.graph.rubrics}
+        self._pool_bindings(prediction.candidates)
         for agent in prediction.candidates:
             self._check_agent(task, agent, rubric_ids)
+            if self.agent_pool is not None:
+                self._set_internal_policy(agent)
+
+    def _set_internal_policy(self, agent, plan=None):
+        profile = self._agent_profile(agent)
+        for field, fallback in (("selected_skills", list(profile.skills)),
+                                ("reasoning_strategy", profile.reasoning_strategy),
+                                ("harness", profile.harness), ("communication", profile.communication)):
+            value = getattr(plan, field) if plan is not None else None
+            selected = fallback if value is None or (field != "selected_skills" and not value) else value
+            setattr(agent, field, copy.deepcopy(selected))
+        if plan is not None:
+            agent.tools = list(plan.tools)
 
     def _check_agent(self, task: PublicTask, agent: AgentSpec, rubric_ids: set[str]):
         if not set(agent.tools) <= set(task.tools):
@@ -331,7 +406,7 @@ class GlobalAnalyzer(JsonModelCalls):
                              "Reasoning, writing and review are capabilities, not tools.")
         if not set(agent.rubric_ids) <= rubric_ids:
             raise ValueError(f"Agent {agent.agent_id} references unknown rubrics")
-        if agent.max_calls != 1:
+        if self.execution_mode == "single_pass" and agent.max_calls != 1:
             raise ValueError(f"Agent {agent.agent_id}.max_calls={agent.max_calls}; "
                              "single-pass execution requires AgentSpec.max_calls=1 explicitly. "
                              "Do not allocate execution corrections or communication rounds.")
@@ -346,9 +421,18 @@ class GlobalAnalyzer(JsonModelCalls):
         for experience in as_json(experiences):
             if experience_applicability(experience, task, capability=candidate.capability)["matched"]:
                 local_experiences.append(experience)
+        profile = self._agent_profile(candidate)
+        if profile is not None:
+            profile.memory = [lesson for lesson in profile.memory
+                              if not (self.excluded_task_ids | {task.task_id}).intersection(lesson.source_task_ids)
+                              and experience_applicability({**lesson.model_dump(mode="json"), "bank": "execution",
+                                                            "task_signals": lesson.task_signals or [lesson.applicability]},
+                                                           task, capability=candidate.capability)["matched"]]
+        prompt = LOCAL_PLAN_PROMPT + (POOL_LOCAL_PROMPT if profile is not None else "")
         return self.ask(self.local_model_factory(candidate.agent_id), "local_plan",
-                        self._prompt(LOCAL_PLAN_PROMPT),
+                        self._prompt(prompt),
                         {"task": task, "prediction": prediction, "candidate": candidate,
+                         **({"agent_profile": profile} if profile is not None else {}),
                          "immutable_identity": {"agent_id": candidate.agent_id,
                                                 "capability": candidate.capability},
                          "experiences": local_experiences, "limits": self._limits()},
@@ -367,7 +451,10 @@ class GlobalAnalyzer(JsonModelCalls):
                              "candidate.role is not candidate.capability; do not substitute the "
                              "role label or paraphrase the capability.")
         violations = []
-        if plan.max_calls != 1:
+        profile = self._agent_profile(candidate)
+        if profile is not None and not set(plan.selected_skills or []) <= set(profile.skills):
+            violations.append("Local selected_skills must reference retained agent_profile.skills")
+        if self.execution_mode == "single_pass" and plan.max_calls != 1:
             violations.append(f"LocalPlan.max_calls={plan.max_calls}; single-pass execution "
                               "requires LocalPlan.max_calls=1 explicitly. No execution correction "
                               "or communication round is available.")
@@ -405,23 +492,42 @@ class GlobalAnalyzer(JsonModelCalls):
 
     def reconcile(self, task: PublicTask, prediction: Prediction,
                   plans: Sequence[LocalPlan], experiences: Sequence = ()) -> PlannedTeam:
-        response = self.ask(self.global_model, "reconcile", self._prompt(RECONCILE_PROMPT),
+        prompt = RECONCILE_PROMPT + (POOL_ORGANIZATION_PROMPT if self.agent_pool is not None else "")
+        response = self.ask(self.global_model, "reconcile", self._prompt(prompt),
                             {"task": task, "prediction": prediction, "local_plans": plans,
+                             **({"agent_pool_catalogue": self._pool_catalogue()} if self.agent_pool is not None else {}),
                              "experiences": experiences, "limits": self._limits()},
                             _ReconciliationResponse,
-                            validate=lambda item: self._validate_reconciliation(task, item))
+                            validate=lambda item: self._validate_reconciled_pool(task, prediction, plans, item))
         # Local testimony belongs to its author, not the reconciler.
         result = PlannedTeam(graph=response.graph, team=response.team,
                              local_plans=[plan.model_copy(deep=True) for plan in plans])
         return result
+
+    def _validate_reconciled_pool(self, task, prediction, plans, result):
+        if self.agent_pool is None:
+            self._validate_reconciliation(task, result)
+            return
+        self._pool_bindings(result.team.agents)
+        candidates = {agent.agent_id: agent for agent in prediction.candidates}
+        by_id = {plan.agent_id: plan for plan in plans}
+        for agent in result.team.agents:
+            candidate = candidates.get(agent.agent_id)
+            if candidate is None or (agent.pool_agent_id, agent.pool_agent_version) != (
+                    candidate.pool_agent_id, candidate.pool_agent_version):
+                raise ValueError("Reconciliation cannot invent or replace a candidate's pool identity")
+            self._set_internal_policy(agent, by_id.get(agent.agent_id))
+        self._validate_reconciliation(task, result)
 
     def _validate_reconciliation(self, task: PublicTask, result: _ReconciliationResponse) -> None:
         team = result.team
         if not self.explicit_rubrics and (result.graph.rubrics or result.graph.edges
                                          or team.coverage or team.primary or team.reviewers):
             raise ValueError("Explicit rubrics are disabled for this ablation")
-        if (len(team.agents) > self.max_agents or team.max_parallel > self.max_parallel
-                or team.total_max_calls > self.total_max_calls):
+        if (team.execution_mode != self.execution_mode or len(team.agents) > self.max_agents
+                or team.max_parallel > self.max_parallel
+                or (self.total_max_calls is not None
+                    and (team.total_max_calls is None or team.total_max_calls > self.total_max_calls))):
             raise ValueError("Reconciled team exceeds configured resource limits: "
                              f"agents={len(team.agents)} <= {self.max_agents}, "
                              f"max_parallel={team.max_parallel} <= {self.max_parallel}, "
@@ -435,7 +541,7 @@ class GlobalAnalyzer(JsonModelCalls):
                 self._check_agent(task, agent, known)
             except ValueError as exc:
                 violations.append(str(exc))
-            if agent.agent_id == team.synthesizer_id and agent.tools:
+            if self.execution_mode == "single_pass" and agent.agent_id == team.synthesizer_id and agent.tools:
                 violations.append(f"Final Writer {agent.agent_id} must have tools=[]; "
                                   "move any external tool batch to an upstream contributor.")
             assigned = {rid for rid, owners in team.coverage.items() if agent.agent_id in owners}

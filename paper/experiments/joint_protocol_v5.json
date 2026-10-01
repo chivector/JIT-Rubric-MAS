@@ -1,0 +1,183 @@
+{
+  "version": "jit-compose-joint-protocol-v5",
+  "status": "SUBSET_PROTOCOL_FROZEN_NOT_RUN",
+  "parent_protocol": "joint_protocol_v4.json (immutable; v5 only subsamples within parent partitions)",
+  "split_manifest": "joint_task_splits_v5.json",
+  "split_manifest_sha256": "e4c2c6735b3625b01335f3942bc1ac256b34ea564eb777950157a347dc4261cd",
+  "readable_task_numbers": "task_assignments_v5.md",
+  "counts": {
+    "researchrubrics": {
+      "evolution": 20,
+      "validation": 10,
+      "test": 33,
+      "unused": 38
+    },
+    "deepsearchqa": {
+      "evolution": 20,
+      "validation": 10,
+      "test": 50,
+      "unused": 820
+    },
+    "writingbench": {
+      "evolution": 20,
+      "validation": 10,
+      "test": 50,
+      "unused": 920
+    },
+    "deepresearch_bench_ii": {
+      "evolution": 0,
+      "validation": 0,
+      "test": 40,
+      "unused": 92
+    },
+    "ifeval": {
+      "evolution": 0,
+      "validation": 0,
+      "test": 50,
+      "unused": 491
+    },
+    "ifbench": {
+      "evolution": 0,
+      "validation": 0,
+      "test": 50,
+      "unused": 250
+    }
+  },
+  "totals": {
+    "evolution": 60,
+    "validation": 30,
+    "test": 273,
+    "unused": 2611
+  },
+  "workload": {
+    "unique_selected_tasks": 363,
+    "unused_tasks": 2611,
+    "evolution_slots": 180,
+    "validation_slots": 450,
+    "selected_test_slots": 819,
+    "static_test_slots": 1092,
+    "test_slots": 1911,
+    "total_task_slots": 2541,
+    "v4_same_five_methods_task_slots": 61134,
+    "task_slot_reduction_percent": 95.84355677691629,
+    "unit": "Nominal task-artifact slots before identical-state reuse, NOT model calls or token/cost ceilings",
+    "excluded": "Shared evidence preparation, scorer setup, attribution details and optional extra studies are accounted separately"
+  },
+  "scope": "One benchmark-agnostic, task-conditioned MAS generator per joint replicate; same frozen selected version on all six benchmarks",
+  "development_partition": "None; unused tasks are not a development or replacement set",
+  "evolution": {
+    "source_benchmarks": [
+      "researchrubrics",
+      "deepsearchqa",
+      "writingbench"
+    ],
+    "stores": "One shared mutable experience store per replicate",
+    "order_seeds": [
+      20261001,
+      20261002,
+      20261003
+    ],
+    "passes": 1,
+    "stages": 4,
+    "tasks_per_stage": {
+      "researchrubrics": 5,
+      "deepsearchqa": 5,
+      "writingbench": 5
+    },
+    "order": "Filter each frozen parent run order to selected sources; interleave RR, DSQA, WritingBench one each, five times per stage",
+    "checkpoint_positions": [
+      0,
+      15,
+      30,
+      45,
+      60
+    ],
+    "updates": "Direct per-source writes after structural/evidence checks; no accept/hold/reject gate",
+    "failure_policy": "Consume each source position once; no replacement or quality resampling",
+    "continuation": "Latest trajectory, no VAL rollback or early stopping",
+    "retrieval": "Only the 60 global EVO task IDs may source shared experience; exclude VAL, TEST and unused"
+  },
+  "validation": {
+    "scope": "All fixed 30 VAL tasks at each of all five checkpoints, never a recent batch",
+    "artifacts_per_task": 1,
+    "slots_per_checkpoint": 30,
+    "minimum_complete_by_benchmark": {
+      "researchrubrics": 9,
+      "deepsearchqa": 9,
+      "writingbench": 9
+    },
+    "native_score_normalization": {
+      "researchrubrics": "(score-L_t)/(U_t-L_t), theoretical per-task bounds fixed before responses; degenerate range maps to zero",
+      "deepsearchqa": "Native F1 [0,1]",
+      "writingbench": "(native checklist mean - 1)/9"
+    },
+    "aggregation": "Within-benchmark normalized task mean, then equal 1/3 benchmark weights",
+    "missing": "Observed score remains null; conservative normalized selector substitutes zero",
+    "selection": "All five checkpoints including C0; max utility (1e-12 tolerance), more completed slots, earlier position, lexical state hash",
+    "isolation": "Read-only snapshots, no experience writes or feedback to source actors or mid-run human tuning",
+    "cache": "Reuse identical state and execution identity observations, never resample for better VAL"
+  },
+  "universal_generator_release": {
+    "default_run_id": 0,
+    "default_order_seed": 20261001,
+    "checkpoint": "Run 0 joint-VAL winner; no eligible state means no release",
+    "replicates": "Report all three selected states; never select run or state using TEST",
+    "components": [
+      "code and prompt hashes",
+      "configuration and retrieval/tool policy",
+      "model and serving identity",
+      "joint ExperienceSnapshot",
+      "JIT archive/dependencies",
+      "data/split/protocol/journal hashes"
+    ],
+    "test_binding": "Same selected state and generator/config hash across all six benchmarks within each run; only input/scoring adapters differ",
+    "not_claimed": "Not new model weights, not a fixed team, not a completed evolved deployment"
+  },
+  "test": {
+    "read_only": true,
+    "attribution": false,
+    "artifacts_per_task_per_selected_state": 1,
+    "static_baseline_artifacts_per_task_total": 1,
+    "static_sharing": "Each static baseline is generated once per task and shared across the three paired trajectory comparisons, not three independent observations",
+    "release_boundary": "Seal all mandatory submissions across six benchmarks before any TEST scoring/feedback release",
+    "adaptation": "No updates, target tuning, source switching, checker-guided repair or extra negotiation",
+    "instruction_track": "Single-turn IFEval and IFBench",
+    "unused": "Never score or use for extra checkpoint selection without a versioned amendment"
+  },
+  "comparison": {
+    "core_methods": [
+      "ours_initial",
+      "ours_selected",
+      "direct",
+      "jit_matched",
+      "rubric_fixed"
+    ],
+    "static_methods": [
+      "ours_initial",
+      "direct",
+      "jit_matched",
+      "rubric_fixed"
+    ],
+    "optional_not_in_default_workload": [
+      "ours_terminal",
+      "mechanism ablations",
+      "G/GO guidance"
+    ],
+    "matching": "Same backbone, task evidence and resource ceilings; actual cost reported separately"
+  },
+  "evaluation": {
+    "researchrubrics": "Pinned signed-weight native score on all 33 inherited clean TEST tasks",
+    "deepsearchqa": "Native task F1; precision, recall and fully-correct rate auxiliary",
+    "writingbench": "Native mean checklist score 1-10 per task, then task macro mean",
+    "deepresearch_bench_ii": "Native fraction of labels equal to 1; blocked-source rate separate; 20 en and 20 zh",
+    "ifeval": "Author prompt-level strict accuracy; loose/instruction-level auxiliary",
+    "ifbench": "Author prompt-level loose accuracy; strict/instruction-level auxiliary",
+    "aggregate_policy": "Report native benchmark metrics separately, never VAL utility as a leaderboard score",
+    "uncertainty": "Whole-task paired bootstrap 10000 and sign-flip 100000, seed 20261001; Holm within research/writing and instruction diagnostic families; report trajectory variation separately",
+    "scope_limit": "Small fixed subset study, not a full-benchmark or SOTA claim; no outcome-driven task replacement"
+  },
+  "runtime_status": "Metadata preparation and selector are executable; legacy v3 per-benchmark runner is not a v5 joint runner",
+  "execution_profile": "Retain configs/benchmark_suite_v3.yaml resource limits; scorer/model identities must be fixed in any real run bundle",
+  "results": [],
+  "protocol_sha256": "f0565005ec45996b6d7e07df77527d7513aa2b4481e3ed85ca278835fc23b584"
+}
