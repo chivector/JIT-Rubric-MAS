@@ -1,0 +1,66 @@
+{
+  "artifact_version": "JIT-Compose v3",
+  "validation_kind": "Local clean-source LaTeX/BibTeX build, not a model experiment",
+  "environment": "pdfTeX 3.141592653-2.6-1.40.26 (TeX Live 2025/dev/Debian)",
+  "bibtex_environment_note": "This container exposes BibTeX as /usr/bin/bibtex.original. A local PATH alias named bibtex points to that unchanged executable for these tests. The upload project uses ordinary latexmk/BibTeX and does not depend on this alias.",
+  "tests": [
+    {
+      "jobname": "main",
+      "command": "latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error main.tex",
+      "returncode": 0,
+      "pdf_pages": 17,
+      "main_text_ends_on_page": 8,
+      "bibliography_entries": 18,
+      "blocking_or_overfull_or_reference_messages": [],
+      "underfull_hbox_messages": 17,
+      "bibtex_errors": false,
+      "pdf_metadata": {
+        "format": "PDF 1.7",
+        "title": "JIT-Compose: Evolving Multi-Agent Workflow Synthesis for Open-Ended Generation",
+        "author": "Anonymous",
+        "subject": "Working manuscript v3; task-specific workflow synthesis and experience evolution; empirical results not supplied",
+        "keywords": "",
+        "creator": "LaTeX with hyperref",
+        "producer": "pdfTeX-1.40.26",
+        "creationDate": "D:20260930105224Z",
+        "modDate": "D:20260930105224Z",
+        "trapped": "",
+        "encryption": null
+      }
+    },
+    {
+      "jobname": "output",
+      "command": "latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error -jobname=output main.tex",
+      "returncode": 0,
+      "pdf_pages": 17,
+      "main_text_ends_on_page": 8,
+      "bibliography_entries": 18,
+      "blocking_or_overfull_or_reference_messages": [],
+      "underfull_hbox_messages": 17,
+      "bibtex_errors": false,
+      "pdf_metadata": {
+        "format": "PDF 1.7",
+        "title": "JIT-Compose: Evolving Multi-Agent Workflow Synthesis for Open-Ended Generation",
+        "author": "Anonymous",
+        "subject": "Working manuscript v3; task-specific workflow synthesis and experience evolution; empirical results not supplied",
+        "keywords": "",
+        "creator": "LaTeX with hyperref",
+        "producer": "pdfTeX-1.40.26",
+        "creationDate": "D:20260930105229Z",
+        "modDate": "D:20260930105229Z",
+        "trapped": "",
+        "encryption": null
+      }
+    }
+  ],
+  "layout_review": {
+    "renderer": "PyMuPDF",
+    "all_pages_rendered": true,
+    "contact_sheets_visually_reviewed": true,
+    "no_clipped_text_or_overlapping_labels_observed": true
+  },
+  "overleaf_account_tested": false,
+  "empirical_results_added": false,
+  "bibliography_data_changed": false,
+  "style_files_changed": false
+}

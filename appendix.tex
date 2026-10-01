@@ -1,0 +1,243 @@
+\section{Operational Contracts and Reproducibility}
+\label{app:reporting}
+
+\subsection{Implementation Boundary}
+
+\method\ extends the JIT runtime. The generation bridge must invoke its five-file parser, selector, loader, and protocol execution path. A scripted model can test that path but cannot reproduce a trained JIT-Agent checkpoint. Identify all generator, analyzer, executor, and evaluator models, including substitutions. Reusing a model across roles does not imply shared conversational state.
+
+The implementation keeps the documented \texttt{jit\_mas/} package and \texttt{scripts.run\_jit\_mas} entry point; the paper rename does not modify code. These paths remain unaudited. Reconcile interfaces, fields, limits, dependencies, and containment with the actual checkout and run manifest.
+
+\subsection{What ``Workflow Synthesis'' Denotes}
+
+A workflow combines the team specification with its executable harness: requirements, responsibilities, inputs, tools, recipients, and budgets are realized through memory, planning, capability selection, and control. It is not merely an output outline or prose style. Each request conditions a fresh construction; committed experience does not mandate reuse of the last workflow, although similar requests may yield similar designs.
+
+Trace relevant TeamSpec fields into generated modules, runtime configuration, and events. Listed roles, declared handoffs, and differing code hashes do not prove execution or useful adaptation. Task-level comparisons are still required.
+
+\subsection{Records That Must Be Preserved}
+
+The \emph{public task} contains the request, permitted attachments, and explicit constraints. The \emph{private evaluation record} contains hidden criteria, weights, reference material, and evaluator configuration. Restricting these through typed inputs is useful but does not establish confidentiality if generated code can read the original dataset on the filesystem.
+
+A \emph{predicted requirement} has a stable identifier, operational text, importance, confidence, evidence expectations, polarity, provenance, and applicability. The initial and negotiated sets are separate records. A \emph{local plan} adds accepted and declined responsibilities, proposed additions, expected inputs and outputs, dependencies, tool requirements, and resource needs. A \emph{team specification} records the mapping from requirements to responsibilities, with the final synthesizer included as an accountable role.
+
+A \emph{team event} records an event identifier, producing agent, event type, source, artifact version, relevant requirement identifiers, and parent-event or provenance references where observable. A sender's successful call does not by itself show that a recipient read its message. Similarly, an artifact's presence in storage does not show that it entered the final response. Access and consumption events therefore need distinct meanings.
+
+An \emph{attribution finding} records supporting evidence, counterevidence, competing explanations, affected requirements and components, and uncertainty. A \emph{change proposal} additionally records the base state, a concrete edit, and applicability conditions. Direct persistence records an update receipt linking the proposal to a versioned snapshot. Experience used at inference must retain this provenance; no separate quality-decision record is required.
+
+\subsection{Information-Flow and Temporal Checks}
+
+The experiment manifest should identify which process and directory can access each record. Canary strings placed in evaluator-private fields can detect some accidental prompt or workspace leakage; passing a canary test is not proof that arbitrary generated code lacks a side channel. Containment, restricted capabilities, and data minimization must be checked separately.
+
+Frozen evaluation prohibits both writes to committed state and hidden cross-task adaptation through caches, global variables, shared conversations, or a mutable reference archive. Team design is frozen before execution; each role is called once and the writer reads the shared ledger once without inter-agent follow-up. In streaming evaluation, committed-state versions are ordered by completed submissions and direct update receipts. A future task cannot contribute experience to a previous task's construction.
+
+Cache and resume keys include the task and attachment hashes, model configuration, prompt versions, harness code, committed state, evaluator, and relevant environment artifacts. A resumed task should not reuse an answer from another state or count the same applied update twice. Rollback restores the entire committed snapshot and its retrieval index rather than only a visible version label.
+
+\subsection{Required Run Manifest}
+\label{app:manifest}
+
+Table~\ref{tab:manifest} lists the run-specific evidence needed to connect the method description to reproducible measurements. Missing entries remain explicit rather than being inferred from software tests.
+
+\begin{table*}[t]
+\centering\small
+\begin{tabularx}{\textwidth}{p{3.0cm}XX}
+\toprule
+Field & Required contents & Status in this draft\\
+\midrule
+Code identity & Commit or content manifest; local modifications; JIT upstream revision & Not supplied\\
+Model roles & Generator, global/local analyzer, executor, judge IDs; serving versions & Not supplied\\
+Sampling & Temperatures, output limits, seeds where supported; stochasticity caveats & Not supplied\\
+Data & Release hashes; task IDs; split manifests; overlap and contamination audits & Not supplied\\
+Tools and isolation & Search provider; retrieval snapshot policy; sandbox/capability permissions & Not supplied\\
+Coordination limits & Agent cap, concurrency, local rounds, context budgets, repair limits & Not supplied\\
+Retrieval and state & Store schema, relevance policy, memory caps, state snapshots, excluded records & Not supplied\\
+Experience updates & First-proposal policy, structural guards, versioned receipts, rollback and frozen-test checks & Direct writes; no quality gate\\
+Measurements & Per-task outputs and scores; criterion records; stage-wise usage and failures & Not supplied\\
+Independent audit & Sample selection, annotators, guidelines, blinding, compensation/consent & Not supplied\\
+\bottomrule
+\end{tabularx}
+\caption{Run-specific facts required before empirical submission. ``Not supplied'' means absent from the material available for drafting; it does not assert that the implementation lacks the feature or that the experiment has not been run.}
+\label{tab:manifest}
+\end{table*}
+
+\section{Prospective Requirement Diagnostics}
+\label{app:prospective}
+
+\subsection{What Can Be Anticipated?}
+
+Anticipation is a prediction about the kind of work that will be necessary, not a claim to know the unseen solution. An evaluator criterion can combine an anticipatable obligation and an answer-bearing detail. For example, ``report the measured throughput under the stated load'' is an obligation; a criterion that additionally includes the correct numeric throughput contains solution information. It is legitimate to anticipate the need for a measurement and illegitimate to credit an ordinary planner for reading that private number.
+
+We propose three evaluator-side labels. \emph{Task-inferable} means that the public task supports a specific quality obligation without knowing the answer. \emph{Research-contingent} means that its relevance becomes apparent only after acquiring evidence or selecting a defensible analytical route. \emph{Ambiguous} records insufficient agreement about this distinction. These are annotation categories for the proposed diagnostic, not claims about the composition of an existing dataset.
+
+An answer-free abstraction should preserve the substantive obligation while removing the resolution. A criterion requiring an exception should become ``identify boundary conditions and relevant exceptions,'' provided that the public task supports this obligation. It should not become ``be comprehensive,'' which is too broad to test anticipation. An abstraction that still reveals a private entity, causal conclusion, or numeric answer is invalid. Some criteria cannot be abstracted faithfully and must remain outside this particular diagnostic, with the exclusion and reason reported.
+
+Importantly, no such exclusion changes official task quality. Every valid original criterion remains in the benchmark score. The annotation policy, eligible denominator, and ambiguity handling are fixed before viewing condition-specific predictions or outputs. Annotators should not be asked to manufacture an abstraction merely because the method predicted a related phrase.
+
+\subsection{Semantic Coverage and Specificity}
+
+Coverage is assessed against the union of a system's predicted obligations. One criterion may require both source attribution and consistency across sources; matching only one is partial coverage. Conversely, two redundant requirements should not receive double credit. A coverage judgment records the relevant requirement IDs, entailed and missing facets, polarity compatibility, and uncertainty.
+
+The comparison must test specificity rather than lexical overlap. ``Verify the information'' is not automatically equivalent to ``check that experimental conditions are comparable across methods.'' Likewise, a requirement to avoid unsupported causal language is not matched by a prediction to make a causal claim. A small blinded human-labeled alignment set should calibrate and audit any model-based matcher; it should not be optimized to favor the proposed method.
+
+Use a fixed rubric-description token budget and a declared item cap when comparing prediction variants. Report the number and absolute-weight fraction of eligible criteria, including reasons for exclusions. A high coverage score on a small hindsight-selected subset is not evidence of broad anticipation.
+
+For binary accepted matches, report weighted coverage and a specificity or supported-applicability audit of the predictions. For partial or uncertain matches, report lower and upper coverage using prespecified interpretations. Self-reported prediction confidence $q_i$ is retained as metadata. Calling it calibrated requires an additional prospective labeling protocol, not a reliability diagram constructed from a changing or hindsight-selected target.
+
+\subsection{Representational Gaps Are Not Causes}
+
+For diagnostically eligible criteria, define $p_j\in\{0,1\}$ as an accepted anticipation match. Let $o_j\in\{0,1\}$ indicate a corresponding organizational witness: an explicitly responsible role or joint commitment with compatible tools, inputs, and a feasible route to the final response. A witness is defined only for an anticipated requirement, so $o_j\leq p_j$. This is a \emph{planned coverage witness}; it does not certify the arrangement as optimal or effective.
+
+Let $u_j\in[0,1]$ be an oriented satisfaction score: higher always means better, including for negative criteria. The following identity partitions unmet mass:
+\begin{align}
+1-u_j={}&(1-u_j)(1-p_j)\nonumber\\
+&+(1-u_j)p_j(1-o_j)\nonumber\\
+&+(1-u_j)p_jo_j.\label{eq:partition}
+\end{align}
+The terms represent unmet criteria that were unanticipated, anticipated but not mapped, and mapped but still unmet. This is an accounting identity, \emph{not} a causal theorem. In the final term, a bad allocation, unreliable handoff, or ineffective review may still be organizational. In the first term, execution might have failed even if the requirement had been anticipated. A successful criterion without anticipation, measured by $u_j(1-p_j)$, is also important: it falsifies the assumption that an explicit prediction is necessary for success.
+
+The identity follows by factoring $(1-u_j)$ and observing that $(1-p_j)+p_j(1-o_j)+p_jo_j=1$. Weighted sums preserve it. No independence of criteria or probability interpretation is needed. Global--local evidence and controlled interventions are needed to go beyond these descriptive gaps.
+
+\subsection{Signed Scores and Diagnostic Loss}
+
+For a scored task with $W_+=\sum_{w_j>0}w_j>0$, let $W_-=\sum_{w_j<0}|w_j|$ and $W=W_++W_-$. Assuming the pinned criterion score is on $[0,1]$, define
+\begin{equation}
+u_j=\begin{cases}s_j,&w_j>0,\\1-s_j,&w_j<0,\end{cases}
+\end{equation}
+ignoring zero-weight criteria in this algebra. Then
+\begin{equation}
+Q=\frac{W}{W_+}\sum_j\frac{|w_j|}{W}u_j-\frac{W_-}{W_+}.
+\label{eq:signed}
+\end{equation}
+Thus a negative-weight criterion can be handled as an avoided violation in the diagnostic without changing the official score. The relation is exact: positive terms contribute $w_js_j$, while a negative term contributes $|w_j|(1-s_j)-|w_j|=w_js_j$.
+
+The normalized diagnostic loss $\sum_j|w_j|(1-u_j)/W$ is not itself the official benchmark metric. Its scale changes relative to $Q$ with the positive/negative weight ratio. The pinned official zero-denominator behavior and incomplete-score handling must be preserved and flagged; Equation~\ref{eq:signed} is not used when $W_+=0$. If an evaluator uses a different range, any diagnostic transformation must be explicit and must not silently alter its official aggregation.
+
+\section{Intervention and Ablation Protocols}
+\label{app:interventions}
+
+\subsection{Guidance Versus Organization}
+\label{app:ggo}
+
+\paragraph{What the contrast estimates.}
+The intervention estimates the effect of explicit rubric availability during organization, conditional on a shared quality-only snapshot and on structurally frozen execution. It is not the total effect of the full pipeline, a mediation estimate, or a test of whether the baseline can infer requirements from the public task. Let $R^{\star}=\operatorname{Predict}(x,\state)$ be generated before any team-dependent local planning. For $z\in\{0,1\}$, construct
+\begin{align}
+\team^{(z)}&=\operatorname{Build}(x,\state,B;R^{\star}\text{ visible iff }z=1),\nonumber\\
+h^{(z)}&=\operatorname{JIT}(x,\team^{(z)},\mathcal U;R^{\star}\text{ visible iff }z=1).
+\end{align}
+After freezing $h^{(z)}$ and $\team^{(z)}$, both execute with the same actor-only guidance $R^{\star}$. Across the designated tasks, the target contrast is
+\begin{equation}
+\Delta_{\rm org}=\mathbb E_x\!\left[Q(x,y^{(1)})-Q(x,y^{(0)})\right].
+\end{equation}
+In practice use paired task differences and prespecified uncertainty estimates. Finite stochastic runs do not guarantee identical internal decisions even with the same seed.
+
+\paragraph{Avoid a team-contaminated rubric snapshot.}
+Do not use the full method's already reconciled $R^p$ as the primary shared input: it can encode insights generated by one particular team's local plans. Prepare a pre-negotiation quality-only view containing obligations, importance, confidence, evidence expectations, and permitted requirement relations, but no role identifiers, allocations, communication schedule, or copied TeamSpec. A fixed sanitization contract and an input audit should establish this boundary. Both branches use the same committed-state snapshot, authorized background records, and retrieval policy; only access to the explicit task rubric is manipulated. Ordinary background knowledge may support similar inferences in G and is not removed to weaken that condition. When global prediction and role proposal share one call, expose only the quality fields; verify that their natural-language text does not already contain role prescriptions. Otherwise use a separate predictor for this controlled experiment and report that deviation from the native method.
+
+\paragraph{Prevent organization from re-entering through JIT.}
+Withholding $R^{\star}$ from a planner is insufficient if the code generator later sees it. In G, both the team-construction prompts and the entire JIT generation, selection, review, and repair path must be rubric-blind. Compile and hash the organization first. Inject $R^{\star}$ only into the task-executing model contexts through a host-controlled input interface; the generator cannot inspect that input while building the harness. In GO the construction path may see the same snapshot. Neither branch may refine or replace that snapshot. An artifact audit checks all constructor inputs, not merely the high-level planner call.
+
+\paragraph{Structural freezing and shared guidance.}
+Both branches use the same host-level limits on recruitment, role permissions, declared inter-role dependencies, and post-compilation structural modification. Executors can reason and use their assigned tools, but cannot silently rebuild the team from the late-injected rubric. This restriction is specific to the contrast and may require a small evaluation adapter; it is not assumed to exist in the supplied implementation. Any unsupported isolation capability must be documented before running the experiment. Both branches receive identical final-answer guidance, answer constraints, tools, and model identities. Relevant views must not be chosen in one branch by an extra rubric-based organizer hidden outside the reported construction stage.
+
+\paragraph{Resources and admissible conclusions.}
+Charge the shared predictor equally to both branches and give G matched construction-call opportunities rather than no planning. Compare equal total caps and report actual stage-wise costs. An additional equal-budget deliberation control allows G to spend the relevant extra resources without changing the organization. Failure, repair, and rejection policies must be identical. A difference concerns the tested organizational-use intervention; it does not establish that all benefit of the full method is mediated by organization. A null or uncertain result limits evidence for this mechanism at the tested scale rather than proving that organization can never matter.
+
+\paragraph{Optional mapping intervention.}
+Hold rubric text fixed while changing a reasonable responsibility allocation, handoff, or review condition. Preserve permissions and executability and report any added resource requirement. Do not create invalid graphs, assign them artificially poor quality, and count that as evidence. Observe the target criterion and collateral outcomes. Tool-return snapshots can reduce environment variation, while a separate live-web replication checks that the frozen setting has not created an artificial advantage.
+
+\subsection{Global and Local Contributions}
+
+Planning ablations compare global-only construction to global--local construction. The global-only variant receives the same public capabilities and a comparable total deliberation budget. Report whether local proposals are accepted, rejected, or modified, and which resulting commitments influence the executed artifact graph. A count of messages or agents is not a measure of useful cooperation.
+
+Attribution ablations keep the upstream execution fixed whenever the question concerns diagnosis rather than task solving. All variants receive the same frozen final response, external feedback, and legitimate trace access. A global-only analyzer may retrieve local evidence; otherwise a comparison primarily measures an imposed information bottleneck. A distributed variant without final reconciliation can test the value of reconciling conflicting local accounts. Any external analysis calls must be matched and reported; they do not control which lessons are written.
+
+\subsection{Explicit Links Versus Reconstructed Links}
+\label{app:links}
+
+On a fixed diagnosis corpus, expose the same public task, frozen rubric texts, committed answer, evaluator feedback, local records, and retrieval budget. The linked condition additionally has a supplied index joining requirement IDs, responsibilities, and evidence references. The unlinked condition receives the underlying records without the precomputed cross-record index and may reconstruct equivalent connections itself. Do not falsify event contents, delete counterevidence, rename an agent inconsistently, or grant unequal source access. Both receive the same proposal budget and external analysis opportunity; analysis results do not gate updates.
+
+This is a secondary efficiency-and-update-utility test of explicit indexing, not an assertion that semantic linkage is unavailable to a competent baseline. Its outcomes are measured repair utility, unsupported-change rate, downstream quality, and retrieval cost. If the baseline reconstructs the links and performs equally well, the evidence favors the shared information over a particular indexing implementation. Whether the supplied schema cleanly separates content and index must be audited; otherwise report the intervention as unsupported instead of presenting a misleading comparison.
+
+\subsection{Known-Fault Cases and Repair Utility}
+
+Construct a small diagnostic suite from otherwise valid saved executions or controlled fixtures. Example interventions are a missing responsibility assignment, a withheld evidence handoff, a tool observation that contradicts an agent's recorded conclusion, or an external tool failure. State the injected intervention and preserve the pre-intervention reference. Some failures may have several acceptable diagnoses or repairs; score those as a set rather than forcing a unique blamed agent.
+
+A proposed repair is tested by replaying the affected process under a controlled environment and comparing its target and collateral outcomes. Successful repair supports the usefulness of the change, not necessarily the uniqueness of the narrative cause. Report false accusations, harmful changes, abstention, and the cost of diagnosis and replay. A confident but unsupported attribution should not receive credit for matching a high-level failure label.
+
+These cases supplement, rather than replace, naturally occurring errors. Controlled fixtures are software or mechanism tests and must not be merged into held-out task-quality scores. The main empirical claim remains grounded in the original benchmark tasks.
+
+\subsection{Crossing Experience Stores}
+\label{app:cross}
+
+For initial/evolved requirement and organization stores, define four crossed states with execution experience fixed. Freeze retrieval logic, budgets, and prompt versions that are not the intended factors. Record all experience IDs retrieved by each state. Referential integrity must be checked because an organization rule may name a requirement schema introduced only in the evolved store.
+
+If compatibility requires rewriting content, define the transformation without examining evaluation outputs and apply it equally across relevant conditions. Otherwise describe the crossed state as invalid and use a smaller, well-defined intervention. A broken hybrid does not quantify a meaningful interaction. Repeat the analysis with execution experience as a separate factor only if cost and data support the additional comparisons.
+
+The resulting contrasts concern the manipulated system states. They do not identify which natural-language concept the model internally learned, and they do not imply a statistical mediation analysis. Qualitative evidence should trace an committed lesson to changed anticipation, changed responsibilities, and changed execution, while presenting counterexamples where the lesson was irrelevant or harmful.
+
+\section{Statistical and Frozen-Evaluation Protocol}
+
+\paragraph{Units and estimands.}
+The primary frozen-evaluation estimand is the mean paired difference in official task quality across the designated held-out tasks. Repeated model calls estimate execution variability within a task, not additional independent tasks. Report the number of tasks, the number of executions, and the number of independent evolution runs separately. Bootstrap tasks with all their paired repetitions or use a prespecified equivalent task-level analysis. With several independently evolved states, distinguish within-state uncertainty from variation across evolution runs.
+
+\paragraph{Diagnostics are not additional independent tasks.}
+Semantic matches, criterion scores, applied edits, and message-level events are nested within task and state. They can describe a process but must not inflate the effective sample size of a task-quality comparison. Prediction metrics also depend on an annotation policy; report agreement and ambiguous cases rather than interpreting analyzer confidence as calibrated probability.
+
+\paragraph{Repeated selection.}
+Direct updates are not quality-certified. Freeze the evolution task schedule and first-proposal policy before execution, record every applied update and contract error, and evaluate the terminal state rather than choosing a checkpoint by test score. Optional validation analyses must remain outside the online write path. If researchers use those analyses to tune the implementation, record that exposure as development and retain untouched final evaluation tasks.
+
+\paragraph{Streams.}
+In a feedback-enabled stream, later outputs depend on earlier outcomes. Confidence intervals that resample individual tasks while retaining the learned state ignore this dependence. Use independently repeated complete streams or fixed frozen checkpoints evaluated on separate tasks, and describe precisely which quantity is estimated. Do not inspect a final evaluation curve to select the best checkpoint and then report that curve as untouched performance.
+
+\paragraph{Multiplicity and selection.}
+Prespecify the primary comparison and report all tested conditions, including failed or inconclusive runs. Secondary interaction and subset analyses are exploratory unless registered otherwise. Report effect sizes and uncertainty, not just a significance threshold. A small development sample is useful for debugging and cost estimation, not evidence of broad language-task generalization.
+
+\paragraph{Failure accounting.}
+Record protocol-invalid harnesses, runtime failures, budget exhaustion, unavailable tools, and incomplete judge responses separately. Define retry and missing-outcome policies consistently across methods. A task that fails infrastructure checks must not disappear from the denominator without its exclusion being explicit. A response with lower quality but no infrastructure fault is a legitimate result, not a reason to regenerate until successful.
+
+\paragraph{Resource accounting.}
+Track calls by stage: anticipation, local planning, reconciliation, JIT generation/selection/repair, execution, synthesis, external evaluation, attribution, and direct experience persistence. The online path has no paired-validation calls; separately requested analyses have their own reported costs. The team shares a total budget; a new agent does not receive a new full-system budget. Unique call identifiers prevent double counting when sub-runs are also serialized in the parent trace. Quote monetary cost only with a dated price configuration; otherwise report tokens and calls with currency cost unavailable. Report one-time evolution cost, per-task deployment cost, and clearly defined amortization scenarios separately.
+
+\section{Analysis Figures and Case Selection}
+
+Figure~\ref{fig:overview} and Table~\ref{tab:example} are non-empirical explanations of workflow synthesis and feedback-driven revision. Neither contains measured outcomes. The final empirical version should prioritize three additional visual arguments rather than decorative architecture variants.
+
+\paragraph{Guidance/organization comparison.}
+Plot paired task-quality differences between G and GO, with uncertainty and actual resource consumption. Annotate whether differences arise under equal caps or a quality--cost frontier. A distribution of per-task effects is more informative than a single selected favorable case. Until measurements are available, no illustrative curve should masquerade as this plot.
+
+\paragraph{Anticipation-to-outcome accounting.}
+For initial global predictions, negotiated predictions, and evolved frozen states, display weighted anticipation coverage, organizational witnesses, unmet mass, and unanticipated successes using the fixed diagnostic set. Keep coverage and satisfaction on separate axes or clearly labeled panels. Changes in descriptive gap categories are not causal effects.
+
+\paragraph{Verified cross-task trajectory.}
+Choose cases by a prespecified rule, such as the first applied nontrivial change with a held-out applicable task, together with the first harmful or inapplicable update. Show the earlier public requirement prediction, generated workflow, external feedback, evidence-supported proposal, direct update receipt, and the later task's independently generated roles, dependencies, and checks. Redact hidden answer details from any ``before execution'' region. The figure should explain both evidence supporting the change and the limits of the inference.
+
+\section{Prompt Semantics to Audit Against Code}
+
+The following contracts describe what the implemented prompts should enforce. They are not a claim that these exact strings occur in the codebase, and should be replaced by the actual versioned prompt templates in the final supplementary material.
+
+\paragraph{Global anticipation.}
+Identify operational quality obligations supported by the public task and committed experience. Distinguish explicit instructions, inferred obligations, and uncertain historical analogies. Keep importance and confidence separate. State what evidence is needed without inventing its contents. Propose candidate capabilities and identify unresolved trade-offs.
+
+\paragraph{Local planning.}
+Evaluate the proposed responsibilities from the local capability perspective. Accept only responsibilities with plausible inputs, tools, and budget. State missing inputs, needed collaborators, expected outputs, and quality checks. Challenge omissions and redundant assignments. Do not begin final-answer drafting or access external evaluation records.
+
+\paragraph{Global reconciliation.}
+Integrate local proposals into a feasible team and workflow specification. Record accepted and rejected changes, unresolved obligations, and the reasons for resource choices. Preserve the initial prediction separately. Ensure the final synthesis role can access evidence needed to resolve cross-agent conflicts.
+
+\paragraph{Local diagnosis.}
+Read the relevant criterion feedback and actual local trajectory. Cite specific observed events and relevant handoffs. Distinguish what was known, what was requested, what was received, and what was acted upon. Provide alternative explanations and abstain when evidence is insufficient. Propose a reusable change with applicability conditions, not a memorized task answer.
+
+\paragraph{Global change reconciliation.}
+Compare local accounts against shared records. Separate requirement, organization, and execution changes; do not default to blaming the final writer. Include counterevidence and risks. Return a scoped proposal for direct versioned persistence through the controlled update interface. Preserve uncertainty and counterevidence; confidence is not a claim that the change improves quality.
+
+
+\section{Evidence Required for Each Scientific Claim}
+\label{app:claims}
+
+End-to-end comparisons establish performance under specified conditions; stage-isolated G/GO tests organizational use beyond identical guidance; frozen-state evaluation on untouched tasks tests cross-task improvement. External analyses and live demonstrations cannot substitute for these comparisons.
+
+Each claim requires run manifests, paired outputs, evaluator records, and uncertainty estimates. Mechanism claims additionally require intervention-input audits. Generalization must name the tested shift: tasks, topics, judges, datasets, or models. Neither software tests nor high scores establish that TeamSpec controlled execution.
+
+\paragraph{Prespecified moderation.}
+The running example suggests that cross-contribution obligations may moderate the benefit. Label them before inspecting outcomes, retain task-level sampling, and report every eligible subgroup with uncertainty. Small or post-hoc analyses remain exploratory.
+
+\paragraph{Possible interpretations.}
+Overall gains without an informative G/GO contrast leave guidance as an alternative explanation. GO gains without held-out transfer do not establish cross-task improvement. Gains confined to the selection judge remain compatible with evaluator-specific adaptation.

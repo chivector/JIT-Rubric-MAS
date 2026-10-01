@@ -1,5 +1,10 @@
 # Implementation verification
 
+Historical report for the original 2026-09-30 implementation. Its paired-validation
+and accepted-state results predate the 2026-10-01 direct-update change and are not
+verification of the current pipeline. Counts and observed outcomes below are
+preserved rather than rewritten.
+
 Environment: Windows PowerShell, repository-local `.venv`, Python 3.12.
 The checkout has no `.git`, so local branch, commit and pre-existing Git diffs cannot be reported.
 No repository or ancestor `AGENTS.md` was found. No reset, commit or push was performed.

@@ -1,0 +1,32 @@
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,>=Latex,
+  box/.style={draw=black!65,rounded corners=2pt,align=center,inner sep=4pt,font=\fontsize{9}{11}\selectfont,minimum height=1.50cm,text width=3.1cm},
+  flow/.style={->,line width=.7pt,draw=black!75},
+  smallnote/.style={font=\fontsize{9}{11}\selectfont,align=center}]
+\definecolor{coordblue}{RGB}{31,76,101}
+\definecolor{evolveteal}{RGB}{36,102,93}
+\node[anchor=west,font=\small\bfseries,text=coordblue] at (0,1.16) {WITHIN EACH TASK: synthesize the team and writing workflow on demand};
+\node[box,fill=coordblue!5] (g) at (1.7,0) {\mbox{\textbf{Global prediction}}\\\mbox{Task rubrics + roles}\\\mbox{Priorities + relations}};
+\node[box,fill=coordblue!5] (l) at (5.45,0) {\mbox{\textbf{Local planning}}\\\mbox{Commitments + inputs}\\\mbox{Dependencies + dissent}};
+\node[box,fill=coordblue!5] (c) at (9.2,0) {\mbox{\textbf{Workflow design}}\\\mbox{Roles + links + checks}\\\mbox{Freeze requirements}};
+\node[box,fill=coordblue!5] (e) at (12.95,0) {\mbox{\textbf{JIT synthesis + run}}\\\mbox{Team + workflow code}\\\mbox{Private agent contexts}};
+\draw[flow] (g)--(l); \draw[flow] (l)--(c); \draw[flow] (c)--(e);
+\node[draw=black!35,fill=black!2,rounded corners=2pt,text width=14.6cm,align=center,font=\fontsize{9}{11}\selectfont,inner sep=5pt] (link) at (7.32,-1.52) {\textbf{Shared task-linked records:} requirement $\longrightarrow$ responsibility $\longrightarrow$ observed evidence\\Pre-execution predictions stay fixed; later feedback is aligned to the same record.};
+\draw[densely dotted,draw=black!55] (c.south) -- (c.south |- link.north);
+\draw[densely dotted,draw=black!55] (e.south) -- (e.south |- link.north);
+\node[anchor=west,font=\small\bfseries,text=evolveteal] at (0,-2.42) {ACROSS TASKS: evolve the versioned experience that guides future synthesis};
+\node[box,fill=evolveteal!5] (v) at (1.7,-3.64) {\mbox{\textbf{Direct update}}\\\mbox{Structural checks}\\\mbox{Versioned experience}};
+\node[box,fill=evolveteal!5] (d) at (5.45,-3.64) {\mbox{\textbf{Joint diagnosis}}\\\mbox{Global-local evidence}\\\mbox{Scoped change}};
+\node[box,fill=evolveteal!5] (j) at (9.2,-3.64) {\mbox{\textbf{Evaluation}}\\\mbox{Independent feedback}\\\mbox{Align frozen rubrics}};
+\node[box,fill=evolveteal!5] (a) at (12.95,-3.64) {\mbox{\textbf{Submission}}\\\mbox{Commit answer + trace}\\\mbox{Then release feedback}};
+\draw[flow] (a)--(j); \draw[flow] (j)--(d); \draw[flow] (d)--(v);
+\draw[flow] (e.east)--++(.30,0)|-(a.east);
+\draw[flow,dashed] (v.west)--++(-.27,0)|-(g.west);
+\draw[densely dotted,draw=black!55] (d.north) -- (d.north |- link.south);
+\draw[densely dotted,draw=black!55] (j.north) -- (j.north |- link.south);
+\node[smallnote,text width=14.7cm] at (7.32,-4.91) {\textbf{Persistent:} committed rubric, organization, and execution experience.\\\textbf{Regenerated per task:} roles, collaboration protocol, and executable writing workflow.};
+\end{tikzpicture}
+\caption{\method\ operates on two timescales. For the current task, anticipated quality requirements and local plans condition an executable team and writing workflow. After submission, the frozen expectations and execution evidence support scoped lessons, directly persisted after structural and provenance checks without a quality-promotion gate. The dashed return carries versioned experience to later requests, not a fixed team. Model weights and the evaluator remain frozen. Arrows indicate process or record linkage, not causal effects.}
+\label{fig:overview}
+\end{figure*}

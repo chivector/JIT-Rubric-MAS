@@ -1,0 +1,14 @@
+# Preserve exact bytes for the checksummed paper releases on every platform.
+paper/** -text
+MANIFEST_SHA256.json -text
+README_Overleaf_ZH.md -text
+acl.sty -text
+acl_natbib.bst -text
+appendix.tex -text
+author_notes/** -text
+compile.ps1 -text
+compile.sh -text
+main.tex -text
+overview.tex -text
+references.bib -text
+revision_notes/** -text

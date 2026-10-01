@@ -140,7 +140,7 @@ cost stays `null` without a trustworthy price table.
   no such sandbox.
 - The downloaded dataset has a single Hugging Face `train` split. This is not
   an authorized evolution/test protocol. JIT-MAS requires its own saved whole-task
-  evolution/validation/test manifest, and must never split criteria from one
+  evolution/test manifest (with optional external-analysis validation IDs), and must never split criteria from one
   task across partitions. Current-task feedback is released only after final
   submission. Frozen held-out runs must not feed preceding test feedback into
   later tasks.

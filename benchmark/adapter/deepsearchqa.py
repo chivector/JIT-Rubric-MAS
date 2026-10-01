@@ -126,7 +126,6 @@ class DeepSearchQAAdapter(BenchmarkAdapter):
     def format_task(self, item: dict) -> str:
         """Format a DeepSearchQA problem as an agent task."""
         problem = item.get("problem", item.get("question", ""))
-        answer_type = item.get("answer_type", "Single Answer")
 
         question_id = str(item.get("question_id", "")).strip()
         if not question_id:
@@ -146,13 +145,6 @@ class DeepSearchQAAdapter(BenchmarkAdapter):
             "Use relative paths when reading/writing files, such as `notes.txt`.\n"
             "Do not assume paths are relative to the repository root."
         )
-
-        # Add hints about expected answer format
-        if answer_type == "Set Answer":
-            task += (
-                "\n\nNote: This question may require listing multiple items. "
-                "Please provide a comprehensive answer including all relevant items."
-            )
 
         return task
 

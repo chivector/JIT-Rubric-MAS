@@ -91,7 +91,7 @@ class AgentSpec(Record):
     responsibilities: list[str] = Field(default_factory=list)
     tools: list[str] = Field(default_factory=list)
     depends_on: list[str] = Field(default_factory=list)
-    max_calls: int = Field(default=3, ge=1)
+    max_calls: int = Field(default=1, ge=1)
     max_tokens: int = Field(default=4096, ge=1)
     checkpoints: list[str] = Field(default_factory=list)
 
@@ -158,7 +158,7 @@ class LocalPlan(Record):
     expected_outputs: list[str] = Field(default_factory=list)
     depends_on: list[str] = Field(default_factory=list)
     tools: list[str] = Field(default_factory=list)
-    max_calls: int = Field(default=3, ge=1)
+    max_calls: int = Field(default=1, ge=1)
     uncovered: list[str] = Field(default_factory=list)
     risks: list[str] = Field(default_factory=list)
     challenge: str = ""
@@ -256,9 +256,18 @@ class Experience(Record):
     source_task_ids: list[str] = Field(min_length=1)
     evidence: list[str] = Field(min_length=1)
     counterevidence: list[str] = Field(default_factory=list)
-    validation_status: Literal["staged", "accepted"] = "staged"
     version: int = Field(default=1, ge=1)
     created_at: str = Field(default_factory=utc_now)
+
+    @model_validator(mode="before")
+    @classmethod
+    def read_legacy_status(cls, value):
+        if isinstance(value, dict) and "validation_status" in value:
+            value = dict(value)
+            status = value.pop("validation_status")
+            if not isinstance(status, str) or status not in {"staged", "accepted"}:
+                raise ValueError("Unknown historical experience status")
+        return value
 
 
 class ChangeProposal(Record):
@@ -272,29 +281,42 @@ class ChangeProposal(Record):
     evidence: list[str] = Field(min_length=1)
     expected_benefit: str
     risks: list[str] = Field(default_factory=list)
-    validation_plan: str
-    validation_result: dict[str, Any] = Field(default_factory=dict)
+    @model_validator(mode="before")
+    @classmethod
+    def read_legacy_metadata(cls, value):
+        if isinstance(value, dict):
+            value = dict(value)
+            if "validation_plan" in value and not isinstance(value.pop("validation_plan"), str):
+                raise ValueError("Invalid historical validation plan")
+            if "validation_result" in value and not isinstance(value.pop("validation_result"), dict):
+                raise ValueError("Invalid historical validation result")
+        return value
 
 
 class ExperienceSnapshot(Record):
     version: int = 0
     experiences: list[Experience] = Field(default_factory=list)
-    policy_versions: dict[str, str] = Field(default_factory=lambda: {"jit_mas": "1.0"})
-    accepted_proposals: list[str] = Field(default_factory=list)
+    policy_versions: dict[str, str] = Field(default_factory=lambda: {
+        "jit_mas": "1.0", "experience_update": "direct-v1"})
+    applied_proposals: list[str] = Field(default_factory=list)
 
-
-class ValidationResult(Record):
-    proposal_id: str
-    base_version: int
-    status: Literal["accepted", "rejected", "pending"]
-    reason: str
-    pairs: list[dict[str, Any]] = Field(default_factory=list)
-    config_hash: str
-    proposal_hash: str
-    baseline_hash: str
-    candidate_hash: str
-    validation_id: str
-    created_at: str = Field(default_factory=utc_now)
+    @model_validator(mode="before")
+    @classmethod
+    def read_legacy_snapshot(cls, value):
+        if not isinstance(value, dict):
+            return value
+        value = dict(value)
+        if "accepted_proposals" in value:
+            old = value.pop("accepted_proposals")
+            if "applied_proposals" in value and value["applied_proposals"] != old:
+                raise ValueError("Conflicting historical proposal IDs")
+            value["applied_proposals"] = old
+        if isinstance(value.get("experiences"), list):
+            # Historical drafts were not bank members and must not become active.
+            value["experiences"] = [entry for entry in value["experiences"]
+                                    if not (isinstance(entry, dict)
+                                            and entry.get("validation_status") == "staged")]
+        return value
 
 
 class SplitManifest(Record):

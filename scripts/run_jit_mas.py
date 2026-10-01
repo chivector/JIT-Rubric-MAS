@@ -16,11 +16,12 @@ from jit_mas.pipeline import MASPipeline
 from jit_mas.schemas import PublicTask, SplitManifest
 
 
-def make_pipeline(config, store, output, *, data=None, splits=None, fixture_models=None):
+def make_pipeline(config, store, output, *, data=None, splits=None, fixture_models=None,
+                  benchmark="researchrubrics", evidence_dir=None):
     from benchmark.adapter.researchrubrics import ResearchRubricsAdapter
     from jit_mas.bridge import JITHarnessSynthesizer
 
-    tools = {}
+    tools, dataset = {}, None
     if config.backend == "scripted":
         from jit_mas.offline import FixtureModels, fixture_dataset
         if data or splits:
@@ -32,13 +33,19 @@ def make_pipeline(config, store, output, *, data=None, splits=None, fixture_mode
         provider = NativeModels(config)
         if not data or not splits:
             raise ValueError("native_jit requires --data and --splits")
-        dataset = ResearchRubricsAdapter()
-        rows = dataset.load_dataset(data)
-        tasks = {r["task_id"]: PublicTask(task_id=r["task_id"], question=r["question"],
-                  attachments=r.get("attachments", []), constraints=r.get("explicit_constraints", []),
-                  tools=r.get("available_tools", config.available_tools)) for r in rows}
-        private = {tid: dataset.private_record(tid) for tid in tasks}
-        manifest = SplitManifest.model_validate_json(Path(splits).read_text(encoding="utf-8"))
+        from jit_mas.benchmarks import load_benchmark
+        dataset = load_benchmark(benchmark, data, available_tools=config.available_tools)
+        tasks, private = dataset.tasks, dataset.private_records
+        split_document = json.loads(Path(splits).read_text(encoding="utf-8"))
+        if split_document.get("version") == "jit-compose-benchmark-split-v3":
+            from jit_mas.experiment_splits import validate_split
+            manifest = validate_split(split_document, dataset)
+        else:
+            manifest = SplitManifest.model_validate(split_document.get("runtime_split_manifest", split_document))
+        if evidence_dir:
+            from jit_mas.evidence import load_evidence_tasks
+            tasks = load_evidence_tasks(tasks, evidence_dir, expected_count=len(tasks))
+            config = config.model_copy(update={"available_tools": []})
         from scripts.tools.registry import ToolRegistry
         registry = ToolRegistry()
         names = sorted({tool for task in tasks.values() for tool in task.tools})
@@ -57,6 +64,8 @@ def make_pipeline(config, store, output, *, data=None, splits=None, fixture_mode
             spec = config.models["judge"]
             kwargs = {"judge_api_base": spec.endpoint, "judge_max_tokens": spec.max_tokens,
                       "judge_timeout": spec.timeout}
+        if dataset is not None:
+            return dataset.evaluator(judge, judge_id=judge_id, **kwargs)
         return ResearchRubricsAdapter(judge=judge, judge_id=judge_id, **kwargs)
 
     def synthesizer_factory(meta):
@@ -69,8 +78,10 @@ def make_pipeline(config, store, output, *, data=None, splits=None, fixture_mode
             meta_config=meta_config, candidates=config.candidates, max_repairs=config.max_repairs,
             selector_model=meta, tools=tools)
 
-    return MASPipeline(config, provider, evaluator_factory, synthesizer_factory, tasks, private,
-                       manifest, store, output, tools=tools)
+    pipeline = MASPipeline(config, provider, evaluator_factory, synthesizer_factory, tasks, private,
+                           manifest, store, output, tools=tools)
+    pipeline.benchmark_dataset = dataset
+    return pipeline
 
 
 def main(argv=None):
@@ -78,12 +89,15 @@ def main(argv=None):
     parser.add_argument("--mode", required=True, choices=["smoke", "evolve", "evaluate", "stream", "freeze", "rollback"])
     parser.add_argument("--config", help="YAML MASConfig; environment references are expanded")
     parser.add_argument("--data", help="Local official ResearchRubrics processed_data.jsonl")
+    parser.add_argument("--benchmark", default="researchrubrics",
+                        choices=["researchrubrics", "deepsearchqa", "deepresearch_bench_ii"])
+    parser.add_argument("--evidence-dir", help="Verified immutable shared public evidence packs")
     parser.add_argument("--splits", help="Explicit task-level SplitManifest JSON")
     parser.add_argument("--state", default="outputs/jit_mas/experience.sqlite")
     parser.add_argument("--output", default="outputs/jit_mas/runs")
     parser.add_argument("--limit", type=int, default=1)
     parser.add_argument("--task-id", action="append")
-    parser.add_argument("--version", type=int, help="Accepted snapshot version for rollback")
+    parser.add_argument("--version", type=int, help="Stored snapshot version for rollback")
     parser.add_argument("--unsafe-local", action="store_true", help="Permit native generated Python with host access")
     parser.add_argument("--no-resume", action="store_true")
     args = parser.parse_args(argv)
@@ -114,14 +128,15 @@ def main(argv=None):
                 raise ValueError("rollback requires --version")
             print(json.dumps({"restored_version": store.rollback(args.version).version}))
             return 0
-        pipeline = make_pipeline(config, store, args.output, data=args.data, splits=args.splits)
+        pipeline = make_pipeline(config, store, args.output, data=args.data, splits=args.splits,
+                                 benchmark=args.benchmark, evidence_dir=args.evidence_dir)
         if args.mode == "smoke":
             evolved = pipeline.run("evolve")
             evaluated = pipeline.run("evaluate", limit=2)
             report = {"software_test_only": True, "paid_requests": 0,
                       "evolution_tasks": len(evolved), "held_out_fixture_tasks": len(evaluated),
-                      "accepted_experience_version": store.snapshot().version,
-                      "validation_statuses": [v["status"] for o in evolved for v in o["validations"]],
+                      "experience_version": store.snapshot().version,
+                      "experience_updates": [u for o in evolved for u in o["experience_updates"]],
                       "output": str(Path(args.output).resolve())}
         else:
             results = pipeline.run(args.mode, args.task_id, limit=args.limit, resume=not args.no_resume)

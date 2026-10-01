@@ -15,7 +15,7 @@ def test_capability_matching_is_scoped_not_role_id_or_exact_prose():
     assert capability_matches("", "article synthesis")
     assert not capability_matches("technical verification", "creative storytelling")
     assert not capability_matches("analysis of results", "writing of poems")
-    assert capability_matches("comparison_article_writing", "Technical article writing")
+    assert not capability_matches("comparison_article_writing", "Technical article writing")
     assert not capability_matches("comparison_article_writing", "Numerical verification")
 
 
@@ -23,7 +23,7 @@ def advice():
     return Experience(experience_id="check-assumptions", bank="execution",
         instruction="State assumptions before applying a formula.", applicability="Technical explanations",
         capability="technical verification", source_task_ids=["earlier-task"],
-        evidence=["earlier-run:e1"], validation_status="accepted")
+        evidence=["earlier-run:e1"])
 
 
 def test_retrieve_uses_capability_overlap_and_keeps_task_exclusions():

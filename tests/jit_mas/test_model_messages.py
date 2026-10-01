@@ -62,7 +62,9 @@ def test_team_executes_through_real_client_preflight_without_network(monkeypatch
         assert len(kwargs["messages"]) == 2
         return ChatCompletion(id="offline-response", created=0, model="offline", object="chat.completion",
             choices=[{"index": 0, "finish_reason": "stop", "message": {"role": "assistant",
-                      "content": json.dumps({"answer": "Checked response", "checkpoints": {"Done": True}})}}],
+                          "content": json.dumps({"answer": "Checked response", "checkpoints": {"Done": True},
+                            "ledger": {"requirements": ["Compare the choices"], "outline": ["Tradeoffs"],
+                                       "evidence_spans": [], "source_references": []}})}}],
             usage={"prompt_tokens": 5, "completion_tokens": 3, "total_tokens": 8})
 
     monkeypatch.setattr("openai.OpenAI", lambda **kwargs: SimpleNamespace(

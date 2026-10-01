@@ -1,4 +1,4 @@
-"""Bounded, reviewed native JIT loop on four pinned ResearchRubrics tasks.
+"""Bounded, reviewed native JIT evolution and held-out ResearchRubrics smoke.
 
 Credentials arrive through stdin JSON, never command arguments or config files.
 This is a closed-book smoke experiment, not a full benchmark reproduction.
@@ -19,7 +19,7 @@ from jit_mas.bridge import JITHarnessSynthesizer
 from jit_mas.budget import BudgetLedger, MeteredModel
 from jit_mas.config import MASConfig, ModelConfig
 from jit_mas.experience import ExperienceStore
-from jit_mas.pipeline import MASPipeline, code_fingerprint, write_json
+from jit_mas.pipeline import MASPipeline, write_json
 from jit_mas.review import FileReviewGate
 from jit_mas.schemas import PublicTask, SplitManifest, digest, utc_now
 from scripts.models.openai_server import OpenAIServerModel
@@ -110,9 +110,8 @@ def load_inputs(data, splits):
     if hashlib.sha256(content).hexdigest() != OFFICIAL_DATA_SHA256:
         raise ValueError("This smoke requires the unmodified pinned official dataset")
     manifest = SplitManifest.model_validate_json(Path(splits).read_text(encoding="utf-8"))
-    if (len(manifest.evolution) != 1 or len(manifest.validation) != 2
-            or len(manifest.test) != 1 or manifest.stream):
-        raise ValueError("Smoke split must contain 1 evolution, 2 validation and 1 held-out task")
+    if len(manifest.evolution) != 1 or len(manifest.test) != 1 or manifest.stream:
+        raise ValueError("Smoke split must contain 1 evolution and 1 held-out task")
     selected = set(manifest.evolution + manifest.validation + manifest.test)
     dataset = ResearchRubricsAdapter()
     rows = dataset.load_dataset(str(data))
@@ -125,55 +124,31 @@ def load_inputs(data, splits):
     return tasks, private, manifest
 
 
-def _fully_scored_pair(pair):
-    if pair.get("error"):
-        return False
-    sides = [pair.get(side, {}) for side in ("baseline", "candidate")]
-    evaluations = [side.get("evaluation", {}) for side in sides]
-    if any(not item.get("complete") or item.get("score") is None for item in evaluations):
-        return False
-    for item in evaluations:
-        rubrics = item.get("rubrics", [])
-        if (not rubrics or len({row["rubric_id"] for row in rubrics}) != len(rubrics)
-                or any(row.get("status") != "ok" or row.get("score") is None for row in rubrics)):
-            return False
-    return bool(sides[0].get("comparison_fingerprint")) and (
-        sides[0]["comparison_fingerprint"] == sides[1].get("comparison_fingerprint")
-        and evaluations[0].get("evaluator_version") == evaluations[1].get("evaluator_version")
-        and {row["rubric_id"]: row["weight"] for row in evaluations[0]["rubrics"]}
-        == {row["rubric_id"]: row["weight"] for row in evaluations[1]["rubrics"]})
-
-
-def _validation_progress(outcomes, task_ids, repeats):
-    validations = [validation for outcome in outcomes for validation in outcome["validations"]]
-    pairs = [pair for validation in validations for pair in validation["pairs"]]
-    expected = {(task_id, repeat) for task_id in task_ids for repeat in range(repeats)}
-    complete = any(
-        validation["status"] in {"accepted", "rejected"}
-        and expected
-        and {(pair["task_id"], pair["repeat"]) for pair in validation["pairs"]} == expected
-        and all(_fully_scored_pair(pair) for pair in validation["pairs"])
-        for validation in validations)
-    return {"paired_validation_attempted": bool(pairs),
-            "paired_validation_attempted_pairs": len(pairs),
-            "paired_validation_fully_scored_pairs": sum(_fully_scored_pair(pair) for pair in pairs),
-            "paired_validation_executed": bool(complete),
-            "paired_validation_complete": bool(complete)}
-
-
 def _confirm_closed_loop(report, snapshot):
-    accepted_ids = {entry.experience_id for entry in snapshot.experiences
-                    if entry.validation_status == "accepted"}
-    retrieved = accepted_ids.intersection(report.get("held_out_retrieved_experience_ids", []))
-    report["held_out_retrieved_accepted_experience_ids"] = sorted(retrieved)
+    receipts = [item for row in report.get("evolution", [])
+                for item in row.get("experience_updates", [])]
+    applied_ids = set(snapshot.applied_proposals)
+    applied = {item["proposal_id"] for item in receipts
+                   if item.get("update_rule") == "direct_after_attribution"
+                   and item.get("proposal_id") in applied_ids
+                   and item.get("source_task_id") in {
+                       row["task_id"] for row in report.get("evolution", [])}}
+    updated_ids = {item["experience_id"] for row in report.get("evolution", [])
+                   for item in row.get("proposal_experiences", [])
+                   if item["proposal_id"] in applied}
+    current_ids = {entry.experience_id for entry in snapshot.experiences}
+    retrieved = updated_ids.intersection(
+        current_ids, report.get("held_out_retrieved_experience_ids", []))
+    report["held_out_retrieved_updated_experience_ids"] = sorted(retrieved)
+    report["experience_update_complete"] = bool(applied)
     report["full_mechanism_exercised"] = bool(
         report["stages"] == {"evolution": "completed", "held_out": "completed"}
-        and report.get("paired_validation_complete")
+        and report["experience_update_complete"]
         and report.get("evolution") and report.get("held_out")
         and all(row["evaluation_complete"] for row in report["evolution"] + report["held_out"]))
-    report["accepted_experience_reuse_demonstrated"] = bool(
-        report["full_mechanism_exercised"] and report.get("new_experience_accepted") and retrieved)
-    report["closed_loop_confirmed"] = report["accepted_experience_reuse_demonstrated"]
+    report["updated_experience_reuse_demonstrated"] = bool(
+        report["full_mechanism_exercised"] and retrieved)
+    report["closed_loop_confirmed"] = report["updated_experience_reuse_demonstrated"]
 
 
 def _usage_accounting(budget):
@@ -193,139 +168,6 @@ def _usage_accounting(budget):
     }
 
 
-def _heldout_evidence_files(directory):
-    root = Path(directory).resolve()
-    required = [root / name for name in ("report.json", "config.json", "session_budget.json", "experience.sqlite")]
-    if any(not path.is_file() for path in required):
-        raise ValueError("Held-out continuation requires the complete prior report and store")
-    if any(path.stat().st_size for path in root.glob("experience.sqlite-*") if path.is_file()):
-        raise ValueError("Held-out continuation requires a settled SQLite store without side journals")
-    files = set(required) | set(root.rglob("*.json"))
-    if any(path.is_symlink() or not path.resolve().is_relative_to(root) for path in files):
-        raise ValueError("Held-out evidence must remain inside its source directory")
-    return {path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in sorted(files)}
-
-
-def heldout_continuation_digest(directory):
-    """Caller-pinned immutable report, store, and all saved JSON evidence."""
-    return digest(_heldout_evidence_files(directory))
-
-
-def _load_heldout_continuation(directory, anchor, config, tasks, private, manifest):
-    root = Path(directory).resolve()
-    files = _heldout_evidence_files(root)
-    if digest(files) != anchor:
-        raise ValueError("Held-out continuation evidence hash mismatch")
-    read = lambda path: json.loads(path.read_text(encoding="utf-8"))
-    old = read(root / "report.json")
-    if (old.get("status") != "failed"
-            or old.get("stages") != {"evolution": "completed", "held_out": "failed"}
-            or old.get("held_out") or not old.get("paired_validation_complete")
-            or old.get("accepted_experience_count") != 0 or old.get("accepted_experience_version") != 0
-            or old.get("dataset_sha256") != OFFICIAL_DATA_SHA256
-            or old.get("dataset_revision") != DATASET_REVISION
-            or old.get("manifest") != manifest.model_dump(mode="json")
-            or read(root / "config.json") != config.model_dump(mode="json")):
-        raise ValueError("Held-out continuation requires identical config/splits and completed rejected pairs")
-    budget = read(root / "session_budget.json")
-    usage = _usage_accounting(budget)
-    if (any(old.get("budget", {}).get(key) != value for key, value in budget.items() if key != "wall_seconds")
-            or usage["pending_model_attempts"] or usage["pending_reserved_tokens"]):
-        raise ValueError("Prior session budget must be complete and settled")
-    current_code = code_fingerprint()
-
-    def run_dir(value):
-        path = Path(value).resolve()
-        if not path.is_relative_to(root) or not path.is_dir():
-            raise ValueError("Prior run reference escaped its evidence directory")
-        return path
-
-    def check_run(outcome, task_id, *, paired):
-        path = run_dir(outcome["run_dir"])
-        complete = read(path / "complete.json")
-        evaluation = read(path / "evaluation.json")
-        submission = read(path / "submission.json")
-        execution = read(path / "execution.json")
-        comparison = read(path / "run_manifest.json")["comparison"]
-        official = private[task_id]["rubrics"]
-        rows = evaluation["rubrics"]
-        if (complete["task_id"] != task_id or evaluation["task_id"] != task_id
-                or not evaluation["complete"] or complete["evaluation"] != evaluation
-                or len(rows) != len(official)
-                or any(any(row[key] != target[key] for key in ("rubric_id", "criterion", "weight"))
-                       or row["status"] != "ok" or row["score"] is None
-                       for row, target in zip(rows, official))
-                or comparison["task"] != tasks[task_id].model_dump(mode="json")
-                or comparison["private_hash"] != digest(private[task_id])
-                or comparison["config"] != config.model_dump(mode="json")
-                or comparison["manifest"] != digest(manifest)
-                or submission["answer_hash"] != digest(submission["answer"])
-                or submission["answer"] != execution["answer"]
-                or complete["answer_hash"] != submission["answer_hash"]):
-            raise ValueError("Prior scored task evidence is inconsistent")
-        denominator = sum(row["weight"] for row in rows if row["weight"] > 0)
-        numerator = sum(row["weight"] * row["score"] for row in rows)
-        expected_score = numerator / denominator if denominator else 0.0
-        if evaluation["score"] != expected_score:
-            raise ValueError("Prior official score does not match its unchanged criteria")
-        binding = evaluation["raw"].get("submission_answer_hash")
-        if binding != submission["answer_hash"] and (paired or "submission_answer_hash" in evaluation["raw"]):
-            raise ValueError("Prior evaluation submission hash mismatch")
-        if paired and (complete != outcome or comparison["code"] != current_code
-                       or outcome["comparison_fingerprint"] != digest(comparison)):
-            raise ValueError("Paired evidence must use the identical current runtime fingerprint")
-        if not paired and (outcome["score"] != evaluation["score"] or not outcome["evaluation_complete"]):
-            raise ValueError("Source report differs from its immutable evaluation")
-
-    store = ExperienceStore(root / "experience.sqlite", read_only=True)
-    try:
-        snapshot = store.snapshot()
-        validations = [json.loads(row[0]) for row in store.db.execute("SELECT body FROM validations")]
-        if (snapshot.version != 0 or snapshot.experiences or snapshot.accepted_proposals
-                or store.db.execute("SELECT count(*) FROM commits").fetchone()[0]
-                or len(validations) != 1 or validations[0]["status"] != "rejected"
-                or validations[0]["config_hash"] != digest(config.validation)
-                or validations[0]["baseline_hash"] != digest(snapshot)):
-            raise ValueError("Held-out continuation only supports an unchanged empty uncommitted bank")
-        progress = _validation_progress([{"validations": validations}], manifest.validation, config.validation.repeats)
-        if not progress["paired_validation_complete"] or any(old.get(k) != v for k, v in progress.items()):
-            raise ValueError("Prior paired validation must be complete and unchanged")
-        for pair in validations[0]["pairs"]:
-            for side in ("baseline", "candidate"):
-                outcome = pair[side]
-                if outcome["experience_hash"] != validations[0][side + "_hash"]:
-                    raise ValueError("Prior pair used a different experience snapshot")
-                check_run(outcome, pair["task_id"], paired=True)
-        if len(old.get("evolution", [])) != 1 or old["evolution"][0]["task_id"] != manifest.evolution[0]:
-            raise ValueError("Prior source report does not match the evolution split")
-        expected_validations = [{"status": item["status"], "reason": item["reason"], "pairs": len(item["pairs"])}
-                                for item in validations]
-        if old["evolution"][0]["validations"] != expected_validations:
-            raise ValueError("Prior report validation summary differs from its stored decision")
-        check_run(old["evolution"][0], manifest.evolution[0], paired=False)
-        failures = list((root / "held_out").glob("*/failure.json"))
-        if (len(failures) != 1 or any((root / "held_out").rglob("submission.json"))
-                or any((root / "held_out").rglob("evaluation.json"))
-                or any((root / "held_out").rglob("complete.json"))):
-            raise ValueError("Held-out continuation requires exactly one failed unsubmitted task")
-        failure = read(failures[0])
-        comparison = read(failures[0].with_name("run_manifest.json"))["comparison"]
-        if (failure["task_id"] != manifest.test[0] or failure["experience_hash"] != digest(snapshot)
-                or comparison["code"] != current_code or comparison["config"] != config.model_dump(mode="json")
-                or comparison["task"] != tasks[manifest.test[0]].model_dump(mode="json")
-                or comparison["private_hash"] != digest(private[manifest.test[0]])
-                or comparison["manifest"] != digest(manifest)):
-            raise ValueError("Failed held-out task differs from the frozen continuation inputs")
-    finally:
-        store.close()
-    if _heldout_evidence_files(root) != files:
-        raise ValueError("Prior evidence changed during continuation verification")
-    return old, {"source_dir": str(root), "evidence_hash": anchor,
-                 "report_sha256": files["report.json"], "file_sha256": files,
-                 "runtime_fingerprint": current_code, "prior_session_usage": usage,
-                 "source_regenerated": False, "attribution_regenerated": False,
-                 "paired_validation_rerun": False, "held_out_previous_submission": False}
 
 
 def run_benchmark(credentials, data, splits, output_dir, *, unsafe_local=False,
@@ -343,15 +185,11 @@ def run_benchmark(credentials, data, splits, output_dir, *, unsafe_local=False,
     if ((resume_attribution is None) != (resume_attribution_hash is None)
             or resume_attribution is not None and resume_source is None):
         raise ValueError("--resume-attribution requires --resume-source and an explicit --resume-attribution-hash")
-    if ((resume_heldout is None) != (resume_heldout_hash is None)
-            or resume_heldout is not None and (resume_source is not None or resume_attribution is not None)):
-        raise ValueError("--resume-heldout requires its explicit hash and cannot combine with source/attribution resume")
-    if resume_heldout is not None and (max_calls > 39 or max_tokens > 521_350):
-        raise ValueError("Held-out continuation is limited to 39 attempts and 521350 tokens")
+    if resume_heldout is not None or resume_heldout_hash is not None:
+        raise ValueError("Held-out continuation from the historical paired-validation protocol is unsupported; "
+                         "start a fresh direct-update smoke. No prior accept/hold/reject result is reused.")
     tasks, private, manifest = load_inputs(data, splits)
     output = Path(output_dir)
-    if resume_heldout is not None and output.resolve().is_relative_to(Path(resume_heldout).resolve()):
-        raise ValueError("Held-out continuation output must be outside the immutable prior run")
     output.mkdir(parents=True, exist_ok=True)
     if any(output.iterdir()):
         raise ValueError("Use an empty output directory and a fresh experience store")
@@ -364,11 +202,7 @@ def run_benchmark(credentials, data, splits, output_dir, *, unsafe_local=False,
             for role, limit in ROLE_TOKENS.items()},
         max_agents=3, max_parallel=1, team_max_calls=6, max_model_calls=90,
         max_total_tokens=600_000, max_tool_calls=0, max_repairs=2, candidates=1,
-        execution_timeout=max(240, request_timeout * 6 + 30), max_validation_tasks=2)
-    prior = None
-    if resume_heldout is not None:
-        prior, provenance = _load_heldout_continuation(
-            resume_heldout, resume_heldout_hash, config, tasks, private, manifest)
+        execution_timeout=max(240, request_timeout * 6 + 30))
     models = LiveModels(credentials, session, request_timeout, non_thinking)
     gate = FileReviewGate(output / "reviews", timeout_seconds=900)
     report = {"started_at": utc_now(), "status": "running", "scope": "closed-book official-task smoke",
@@ -382,14 +216,14 @@ def run_benchmark(credentials, data, splits, output_dir, *, unsafe_local=False,
         "resume_attribution": str(Path(resume_attribution).resolve()) if resume_attribution is not None else None,
         "resume_attribution_hash": resume_attribution_hash,
         "security_note": "Manual hash-bound review is not isolation; host access is authorized.",
-        "completion_note": "status=completed means the runner finished. full_mechanism_exercised allows a legitimate validation rejection; closed_loop_confirmed additionally requires an accepted experience retrieved by the held-out planner.",
+        "completion_note": "status=completed means the runner finished. full_mechanism_exercised requires a direct experience update and completed source/held-out evaluations; closed_loop_confirmed additionally requires that updated experience to be retrieved by the held-out planner. This is not evidence of quality improvement.",
         "closed_loop_confirmed": False,
-        "full_mechanism_exercised": False, "accepted_experience_reuse_demonstrated": False,
-        "paired_validation_attempted": False, "paired_validation_attempted_pairs": 0,
-        "paired_validation_fully_scored_pairs": 0, "paired_validation_executed": False,
-        "paired_validation_complete": False,
-        "new_experience_accepted": False, "cross_task_accepted_experience_available": False,
-        "held_out_retrieved_experience_ids": [], "held_out_retrieved_accepted_experience_ids": [],
+        "update_rule": "direct_after_attribution",
+        "unused_validation_task_ids": list(manifest.validation),
+        "full_mechanism_exercised": False, "updated_experience_reuse_demonstrated": False,
+        "experience_update_complete": False,
+        "new_experience_applied": False, "cross_task_experience_available": False,
+        "held_out_retrieved_experience_ids": [], "held_out_retrieved_updated_experience_ids": [],
         "limits": {"session_model_calls": max_calls, "session_tokens": max_tokens,
                    "max_agents": config.max_agents, "team_max_calls": config.team_max_calls,
                    "tool_calls": 0, "automatic_transport_retries": 0,
@@ -397,11 +231,6 @@ def run_benchmark(credentials, data, splits, output_dir, *, unsafe_local=False,
                    "max_harness_repairs_per_candidate": config.max_repairs,
                    "role_output_limits": ROLE_TOKENS},
         "stages": {"evolution": "not_started", "held_out": "not_started"}}
-    if prior is not None:
-        report["held_out_continuation"] = provenance
-        report["evolution"] = prior["evolution"]
-        report.update({key: value for key, value in prior.items() if key.startswith("paired_validation_")})
-        report["stages"]["evolution"] = "completed"
 
     def save():
         report["budget"] = session.snapshot()
@@ -426,20 +255,20 @@ def run_benchmark(credentials, data, splits, output_dir, *, unsafe_local=False,
     logging.disable(logging.CRITICAL)
     try:
         write_json(output / "config.json", config)
-        store_path = (Path(resume_heldout).resolve() / "experience.sqlite" if prior is not None
-                      else output / "experience.sqlite")
-        store = ExperienceStore(store_path, read_only=prior is not None)
-        if prior is None:
-            report["stages"]["evolution"] = "running"
-            save()
-            continuation = ({"resume_source": resume_source, "resume_source_hash": resume_source_hash,
+        store_path = output / "experience.sqlite"
+        store = ExperienceStore(store_path)
+        report["stages"]["evolution"] = "running"
+        save()
+        continuation = ({"resume_source": resume_source, "resume_source_hash": resume_source_hash,
                          "resume_attribution": resume_attribution, "resume_attribution_hash": resume_attribution_hash}
                         if resume_source is not None else {})
-            evolved = make_pipeline(store, output / "evolution").run("evolve", limit=1, resume=False, **continuation)
-            if any(not r["evaluation"]["complete"] for r in evolved):
-                raise RuntimeError("Source evaluation was incomplete; held-out execution was not started")
-            report["evolution"] = [{"task_id": r["task_id"], "score": r["evaluation"]["score"],
+        evolved = make_pipeline(store, output / "evolution").run("evolve", limit=1, resume=False, **continuation)
+        if any(not r["evaluation"]["complete"] for r in evolved):
+            raise RuntimeError("Source evaluation was incomplete; held-out execution was not started")
+        report["evolution"] = [{"task_id": r["task_id"], "score": r["evaluation"]["score"],
             "evaluation_complete": r["evaluation"]["complete"], "proposals": len(r["proposals"]),
+            "proposal_experiences": [{"proposal_id": p["proposal_id"],
+                                      "experience_id": p["experience"]["experience_id"]} for p in r["proposals"]],
             "source_submission_reused": r.get("source_submission_reused", False),
             "source_attribution_reused": r.get("source_attribution_reused", False),
             "resume_provenance": r.get("resume_provenance"),
@@ -447,15 +276,14 @@ def run_benchmark(credentials, data, splits, output_dir, *, unsafe_local=False,
                                         if "historical_source_budget" in r else None),
             "historical_attribution_usage": (_usage_accounting(r["historical_attribution_budget"])
                                              if "historical_attribution_budget" in r else None),
-            "validations": [{"status": v["status"], "reason": v["reason"], "pairs": len(v["pairs"])}
-                            for v in r["validations"]], "run_dir": r["run_dir"]} for r in evolved]
-            report["stages"]["evolution"] = "completed"
-            report.update(_validation_progress(evolved, manifest.validation, config.validation.repeats))
+            "experience_updates": r["experience_updates"], "run_dir": r["run_dir"]} for r in evolved]
+        report["stages"]["evolution"] = "completed"
         snapshot = store.snapshot()
-        report["accepted_experience_version"] = snapshot.version
-        report["accepted_experience_count"] = len(snapshot.experiences)
-        report["new_experience_accepted"] = snapshot.version > 0
-        report["cross_task_accepted_experience_available"] = bool(snapshot.experiences)
+        report["experience_version"] = snapshot.version
+        report["experience_count"] = len(snapshot.experiences)
+        report["new_experience_applied"] = snapshot.version > 0
+        report["cross_task_experience_available"] = bool(snapshot.experiences)
+        _confirm_closed_loop(report, snapshot)
         store.close()
         store = ExperienceStore(store_path, read_only=True)
         report["stages"]["held_out"] = "running"
@@ -476,8 +304,6 @@ def run_benchmark(credentials, data, splits, output_dir, *, unsafe_local=False,
                     payload = json.loads(call["messages"][-1]["content"])
                     used_ids.extend(item["experience_id"] for item in payload["experiences"])
         report["held_out_retrieved_experience_ids"] = sorted(set(used_ids))
-        if prior is not None and heldout_continuation_digest(resume_heldout) != resume_heldout_hash:
-            raise RuntimeError("Immutable prior evidence changed during held-out continuation")
         _confirm_closed_loop(report, snapshot)
     except BaseException as exc:
         report.update(status="failed", error_type=type(exc).__name__, error=redact(str(exc), credentials.api_key))
@@ -513,8 +339,8 @@ def main(argv=None):
     parser.add_argument("--resume-source-hash", help="Explicit submitted_source_digest anchor; never inferred automatically")
     parser.add_argument("--resume-attribution", help="Reuse complete frozen attribution from this source; no new attribution calls")
     parser.add_argument("--resume-attribution-hash", help="Explicit attribution_source_digest anchor; requires --resume-source")
-    parser.add_argument("--resume-heldout", help="Continue only a failed, unsubmitted held-out task; preserve complete prior pairs")
-    parser.add_argument("--resume-heldout-hash", help="Explicit heldout_continuation_digest anchor for all prior saved evidence")
+    parser.add_argument("--resume-heldout", help="Removed historical paired-validation continuation; fails before model calls")
+    parser.add_argument("--resume-heldout-hash", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     try:
         import sys

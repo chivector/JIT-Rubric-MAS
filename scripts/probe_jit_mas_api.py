@@ -240,14 +240,14 @@ def run_probe(credentials, output_dir, stages=DEFAULT_STAGES, *, model_factory=N
                     save("attribution.json", {"findings": findings, "proposals": proposals,
                                                "alignments": attributor.last_alignments})
                     if credentials.api_key in json.dumps(as_json(proposals)):
-                        raise ValueError("Provider output contains credential text; staging refused")
-                    store = ExperienceStore(output_dir / "staged_experience.sqlite")
+                        raise ValueError("Provider output contains credential text; experience write refused")
+                    store = ExperienceStore(output_dir / "experience.sqlite")
                     try:
-                        for proposal in proposals:
-                            store.stage(proposal)
-                        row.update(staged_proposals=len(proposals),
+                        for proposal in proposals[:1]:
+                            store.commit(proposal)
+                        row.update(applied_proposals=len(proposals[:1]),
                                    experience_version=store.snapshot().version,
-                                   validation_status="not_run")
+                                   update_rule="direct_after_attribution")
                     finally:
                         store.close()
                 row["status"] = "passed"

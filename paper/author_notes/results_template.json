@@ -1,0 +1,186 @@
+{
+  "status": "UNFILLED_TEMPLATE_NOT_EMPIRICAL_RESULTS",
+  "formal_protocol": {
+    "specification": "experiments/benchmark_suite_v3.json",
+    "checkpoint_rule_provenance": "experiments/protocol_v2.json",
+    "inherited_researchrubrics_split": "experiments/splits_v2.json",
+    "status": "REGISTERED_NOT_RUN",
+    "pilot_scores_allowed_in_main_table": false,
+    "launch_allowed": false,
+    "archived_protocol": "experiments/protocol_v1.json",
+    "planned_counts": {
+      "researchrubrics": {"development": 18, "evolution": 30, "validation": 20, "test": 33},
+      "deepsearchqa": {"development": 50, "evolution": 150, "validation": 100, "test": 600},
+      "deepresearch_bench_ii": {"development": 0, "evolution": 0, "validation": 0, "test": 132}
+    },
+    "track": "Controlled shared-evidence evaluation, custom task split; not unrestricted leaderboard results",
+    "nominal_mandatory_task_attempts": 31617,
+    "nominal_task_slots_by_benchmark": {"researchrubrics": 6195, "deepsearchqa": 22650, "deepresearch_bench_ii": 2772},
+    "formal_results_executed": false
+  },
+  "code_identity": {
+    "commit": null,
+    "source_manifest_sha256": null,
+    "jit_upstream_revision": null
+  },
+  "models": {
+    "harness_generator": {
+      "model_id": null,
+      "revision": null,
+      "temperature": null,
+      "max_output_tokens": null
+    },
+    "global_analyzer": {
+      "model_id": null,
+      "revision": null,
+      "temperature": null,
+      "max_output_tokens": null
+    },
+    "local_analyzer": {
+      "model_id": null,
+      "revision": null,
+      "temperature": null,
+      "max_output_tokens": null
+    },
+    "executor": {
+      "model_id": null,
+      "revision": null,
+      "temperature": null,
+      "max_output_tokens": null
+    },
+    "judge": {
+      "model_id": null,
+      "revision": null,
+      "temperature": null,
+      "max_output_tokens": null
+    }
+  },
+  "dataset": {
+    "name": null,
+    "revision": null,
+    "split_manifest_sha256": null,
+    "development_task_ids": [],
+    "evolution_task_ids": [],
+    "validation_task_ids": [],
+    "test_task_ids": []
+  },
+  "execution": {
+    "sandbox_backend": null,
+    "tool_snapshot_policy": null,
+    "budget": null,
+    "num_repeats_per_task": null,
+    "num_independent_evolution_runs": null
+  },
+  "results": [],
+  "result_record_schema": {
+    "benchmark": "string",
+    "source_benchmark": "string|null; ResearchRubrics for DR Bench II selected-state transfer",
+    "task_id": "string",
+    "method": "string",
+    "condition": "string",
+    "state_id": "string",
+    "evolution_run_id": "integer|null",
+    "source_position": "integer|null",
+    "replicate": "integer",
+    "benchmark_score": "number|null; observed registered-adapter metric, not an imputed value",
+    "official_score": "number|null; RR only unless official evaluator equivalence is separately established",
+    "metric": "string",
+    "judge_and_prompt_provenance": "object",
+    "official_leaderboard_equivalent": "boolean; false for adapted DSQA/DR Bench II judges",
+    "evaluation_complete": "boolean",
+    "criterion_records": "list",
+    "inference_usage": "object",
+    "evaluation_usage": "object",
+    "attribution_usage": "object",
+    "selection_usage": "object",
+    "final_answer_sha256": "string",
+    "artifact_directory": "string",
+    "failure_kind": "string|null",
+    "experience_update_receipts": "list",
+    "reused_from": "string|null",
+    "is_imputed_for_selection": "boolean",
+    "selection_value": "number|null",
+    "feasible_score_interval": "list|null"
+  },
+  "diagnostics": {
+    "guidance_vs_organization": null,
+    "anticipation_annotations": null,
+    "attribution_repair_utility": null,
+    "crossed_experience_states": null,
+    "stage_isolated_guidance_control": {
+      "status": "REGISTERED_NOT_RUN",
+      "shared_pre_negotiation_rubric_hash": null,
+      "shared_background_hash": null,
+      "rubric_free_constructor_input_audit": null,
+      "post_compile_guidance_injection_audit": null,
+      "structural_freeze_verified": null,
+      "paired_task_results": []
+    },
+    "content_matched_link_index_control": null,
+    "cross_contribution_moderation": null
+  },
+  "notes": "Populate exclusively from actual sealed runs under benchmark_suite_v3. RR and DSQA evolve from independent empty stores; DR Bench II uses the three frozen RR winners without target selection. Whole-checkpoint validation does not gate individual updates. Keep incomplete observed scores null; lower bounds are selection surrogates or reporting intervals, never measured scores. Report benchmark metrics separately, prompt/judge adaptations and unsafe-local execution honestly. Historical gated-update, debugging pilots and offline fixtures cannot populate the main table; no guessed measurements.",
+  "schema_version": "3.1",
+  "paper_identity": {
+    "method_name": "JIT-Compose",
+    "title": "JIT-Compose: Evolving Multi-Agent Workflow Synthesis for Open-Ended Generation",
+    "implementation_package": "jit_mas",
+    "editorial_version": "v3"
+  },
+  "checkpoint_selection_plan": {
+    "independent_evolution_runs": 3,
+    "order_seeds": [20261001, 20261002, 20261003],
+    "per_benchmark": {
+      "researchrubrics": {
+        "source_positions": [0, 5, 10, 15, 20, 25, 30],
+        "source_task_attempts_per_run": 30,
+        "validation_tasks_at_every_checkpoint": 20,
+        "minimum_complete_validation_evaluations": 36,
+        "validation_denominator": 40
+      },
+      "deepsearchqa": {
+        "source_positions": [0, 25, 50, 75, 100, 125, 150],
+        "source_task_attempts_per_run": 150,
+        "validation_tasks_at_every_checkpoint": 100,
+        "minimum_complete_validation_evaluations": 180,
+        "validation_denominator": 200
+      },
+      "deepresearch_bench_ii": {
+        "source_benchmark": "researchrubrics",
+        "target_evolution": false,
+        "target_validation": false,
+        "target_test_tasks": 132
+      }
+    },
+    "validation_artifact_repeats": 2,
+    "selection": "Maximum conservative utility; form ties relative to maximum within1e-12, then more complete evaluations, earlier source position, lexical state hash",
+    "continue_from": "latest trajectory state, not validation winner",
+    "early_stopping": false,
+    "test_repeats_per_evolved_state": 3,
+    "static_test_repeats_per_task_total": 3,
+    "test_static_controls_shared_across_runs": true,
+    "actual_selection_records": []
+  },
+  "statistical_families": {
+    "primary": "Holm across three benchmark selected-minus-initial contrasts for suite-wide claims",
+    "secondary_baselines": "Holm across six selected-minus-JIT/fixed contrasts",
+    "researchrubrics_mechanisms": "Holm across three ablations and G/GO",
+    "units": {"researchrubrics": 33, "deepsearchqa": 600, "deepresearch_bench_ii": 132},
+    "bootstrap_repeats": 10000,
+    "sign_flip_draws": 100000,
+    "seed": 20261001
+  },
+  "experience_update_policy": {
+    "mode": "direct_after_attribution",
+    "proposal_order": "first_reconciled_proposal",
+    "quality_promotion_gate": false,
+    "contract_checks": [
+      "schema",
+      "source_provenance",
+      "supported_target",
+      "base_version",
+      "duplicate_identity"
+    ],
+    "frozen_test_writes": false
+  }
+}

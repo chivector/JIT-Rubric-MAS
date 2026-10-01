@@ -49,7 +49,7 @@ def _rubric(rid, text, source="inferred", experience_ids=None):
 def _agent(aid, rubrics, depends=(), capability="comparison"):
     return {"agent_id": aid, "role": aid, "capability": capability,
             "rubric_ids": rubrics, "responsibilities": ["Develop a concise, task-specific contribution"],
-            "depends_on": list(depends), "max_calls": 2, "max_tokens": 1024}
+            "depends_on": list(depends), "max_calls": 1, "max_tokens": 1024}
 
 
 class FixtureModel:
@@ -75,11 +75,27 @@ class FixtureModel:
         elif self.role == "exec":
             payload = json.loads(messages[1]["content"])
             has_boundary = any(r["rubric_id"] == "r3" for r in payload["predicted_requirements"])
-            inherited = payload.get("upstream_artifacts", [])
-            has_boundary = has_boundary or "Boundary conditions:" in json.dumps(inherited)
-            response = {"answer": "A concise comparison of reliability and operating cost."
-                        + (" Boundary conditions: validate workload and recovery assumptions." if has_boundary else ""),
-                        "evidence_ids": [row["event_id"] for row in inherited], "checkpoints": {}}
+            shared = payload["shared_ledger"]
+            inherited = shared["contributions"]
+            has_boundary = has_boundary or "Boundary conditions:" in json.dumps(shared)
+            public = payload["public_task"]
+            source_id = "public-task:" + public["task_id"]
+            answer = "A concise comparison of reliability and operating cost."
+            if has_boundary:
+                answer += " Boundary conditions: validate workload and recovery assumptions."
+            if public["task_id"] == "test-poem":
+                answer = "The clock keeps time.\nIts hands move slow.\nThe room is still.\nThe hours go."
+            response = {"answer": answer,
+                        "evidence_ids": [row["event_id"] for row in inherited], "checkpoints": {},
+                        "ledger": {"requirements": [r["requirement"] for r in payload["predicted_requirements"]],
+                                   "outline": ["Compare reliability", "Compare operating cost"]
+                                              if public["task_id"] != "test-poem" else ["Four plain-language lines"],
+                                   "evidence_spans": [{"text": public["question"], "source_ref": source_id}],
+                                   "source_references": [{"source_id": source_id,
+                                                          "locator": "public_task.question"}]}}
+            if has_boundary:
+                response["ledger"]["requirements"].append(
+                    "Boundary conditions: validate workload and recovery assumptions.")
         else:
             payload = json.loads(messages[-1]["content"])
             payload["offline_no_rubrics"] = "ABLATION:" in messages[0]["content"]
@@ -97,7 +113,15 @@ class FixtureModel:
                                                [experience[0]["experience_id"]]))
             ids = [r["rubric_id"] for r in graph["rubrics"]]
             agents = ([_agent("composer", ids, capability="creative-writing")] if poem else
-                      [_agent("analyst", ids), _agent("integrator", ids, ["analyst"], "synthesis")])
+                      [_agent("analyst", ids), _agent("evidence", ids, capability="source verification"),
+                       _agent("writer", ids, ["analyst", "evidence"], "synthesis")])
+            limit = min(p["limits"]["max_agents"], p["limits"]["total_max_calls"])
+            if not poem and limit < 3:
+                if limit == 1:
+                    agents = [_agent("writer", ids, capability="comparison and synthesis")]
+                else:
+                    agents = [_agent("analyst", ids), _agent("writer", ids, ["analyst"], "synthesis")]
+                agents[0]["responsibilities"].append("Combine analysis and evidence collection in one pass")
             if p.get("offline_no_rubrics"):
                 graph = {"rubrics": [], "edges": []}
                 for a in agents:
@@ -106,11 +130,15 @@ class FixtureModel:
         if phase == "local_plan":
             a = p["candidate"]
             adds = []
-            if a["agent_id"] == "analyst" and p["prediction"]["graph"]["rubrics"]:
+            if (a["agent_id"] == "analyst" and p["prediction"]["graph"]["rubrics"]
+                    and not any(r["rubric_id"] == "r2" for r in p["prediction"]["graph"]["rubrics"])):
                 adds = [_rubric("r2", "Discuss failure recovery")]
             return {"agent_id": a["agent_id"], "capability": a["capability"],
                     "rubric_ids": a["rubric_ids"], "additions": adds,
-                    "challenge": "Include recovery behavior before synthesis", "max_calls": 2}
+                    "depends_on": a["depends_on"],
+                    "required_inputs": ["Public task and completed dependency ledger contributions"],
+                    "expected_outputs": ["One structured public ledger contribution or final deliverable"],
+                    "challenge": "Include recovery behavior before synthesis", "max_calls": 1}
         if phase == "reconcile":
             graph = p["prediction"]["graph"]
             for plan in p["local_plans"]:
@@ -120,12 +148,15 @@ class FixtureModel:
             for a in agents:
                 a["rubric_ids"] = ids
             if "r3" in ids and len(agents) > 1:
-                agents.insert(1, _agent("boundary-check", ["r3"], ["analyst"], "verification"))
-                agents[-1]["depends_on"] = ["boundary-check"]
+                responsibility = "State workload and recovery boundary conditions in the shared ledger"
+                for a in agents:
+                    if responsibility not in a["responsibilities"]:
+                        a["responsibilities"].append(responsibility)
             coverage = {rid: [a["agent_id"] for a in agents if rid in a["rubric_ids"]] for rid in ids}
             return {"graph": graph, "team": {"agents": agents, "synthesizer_id": agents[-1]["agent_id"],
                 "coverage": coverage, "primary": {rid: owners[0] for rid, owners in coverage.items()},
-                "total_max_calls": 16, "max_parallel": 2, "selection_rationale": "Explicit synthetic fixture allocation"},
+                "total_max_calls": len(agents), "max_parallel": min(2, p["limits"]["max_parallel"]),
+                "selection_rationale": "Synthetic task-conditioned single-pass ledger allocation"},
                 "local_plans": p["local_plans"]}
         if phase == "align":
             matches = []
@@ -154,8 +185,7 @@ class FixtureModel:
             return {"proposals": [{"proposal_id": f"{task_id}-boundary-v{version}", "source_task_id": task_id,
                 "base_version": version, "experience": experience, "diff": "Add conditional boundary prediction advice",
                 "rationale": "Observed omission in a synthetic source task", "evidence": evidence,
-                "expected_benefit": "More explicit assumptions", "risks": ["Overgeneralization"],
-                "validation_plan": "Rebuild old/new states on two independent validation tasks"}]}
+                "expected_benefit": "More explicit assumptions", "risks": ["Overgeneralization"]}]}
         raise ValueError(f"Unsupported synthetic phase {phase}")
 
 

@@ -7,9 +7,10 @@ client, tool registry, Action protocol and RunResult. It does not introduce anot
 ## Closed loop
 
 `PublicTask -> predict -> independent local plans -> reconcile -> frozen plans -> JIT generation
--> native harness execution -> frozen submission -> independent ResearchRubrics evaluation
--> semantic alignment -> global/local/global attribution -> staged proposal -> paired validation
--> atomic accepted snapshot -> newly built team on the next task`.
+-> single-pass contributions -> deterministic shared ledger -> one Writer read/call
+-> frozen submission -> independent ResearchRubrics evaluation
+-> semantic alignment -> global/local/global attribution -> scoped proposal
+-> structural/provenance checks -> atomic versioned update -> newly built team on the next task`.
 
 - `schemas.py` validates public/evaluation, rubric, team, evidence, feedback and proposal contracts.
 - `planning.py` obtains task-specific requirements, responsibilities, dependencies and budgets
@@ -17,14 +18,18 @@ client, tool registry, Action protocol and RunResult. It does not introduce anot
   No task-ID or keyword roster rules exist in the native planner.
 - `bridge.py` invokes `MetaReActAgent.run(generate_only=True)`, parses the original four Python
   blocks plus YAML, checks the contract, selects a candidate using the original selector, and
-  supports bounded exception-only repair. A typed, hashed `team.json` sidecar is separate from
+  supports bounded pre-execution interface repair. A typed, hashed `team.json` sidecar is separate from
   the five generated blocks. A single valid candidate uses the existing deterministic `_pick`;
   multiple candidates use the existing public-task `_judge_case` selector, not the task evaluator.
 - `execution.py` binds the sidecar to the generated Action instance, loads it with `load_harness`,
   and calls `AgentRuntime.run`. Each selected role has its own messages, model instance and full
-  trajectory. The actual roster, tool permissions, DAG, checkpoints and per-role call allocation
-  come from TeamSpec. A one-agent task is valid. Synthesis is a model call with incoming artifacts,
-  conflict/gap instructions and evidence references, not string concatenation.
+  observable trace, with at most one execution-model call. Task-conditioned Analyst and Evidence
+  functions are independent and may run in parallel; their requirements, outline, evidence spans,
+  source references, contributions and raw tool evidence are merged into a structured ledger.
+  The Writer reads the complete snapshot once and produces the final artifact without external
+  tools or inter-agent requests. Contributors may request one permitted external-tool batch;
+  results enter the ledger without recalling the contributor. Genuine forward dependencies and
+  small combined-role tasks remain supported. Missing information becomes an explicit limitation.
 - `attribution.py` retains the initial and reconciled predictions separately. Global analysis
   sees an event index and shared artifacts; each local analysis sees its own complete observed
   inputs/outputs and connected evidence, with one bounded indexed evidence request. Findings
@@ -33,11 +38,21 @@ client, tool registry, Action protocol and RunResult. It does not introduce anot
   organization advice enters reconciliation; execution advice enters matching capability
   contexts. Retrieval excludes the current task and validation/test origins. Each task builds
   a new team; the store never substitutes a permanent roster.
-- `validation.py` rebuilds baseline and candidate from independent validation questions.
-  It compares full tasks, requires complete identical-version evaluation, checks task quality
-  and signed criterion direction, and records accepted/rejected/pending. Costs cannot compensate
-  for quality regressions. The default two-task threshold is an engineering rule, not statistical
-  evidence of generalization. Repeated use of validation can overfit; untouched test stays separate.
+- `experience.py` writes the first reconciled proposal directly after attribution, preserving
+  schema/target/provenance checks, base-version consistency, duplicate protection and rollback.
+  There is no paired rebuild or accept/hold/reject quality decision. The snapshot records
+  `applied_proposals`; `experience_updates` contain write receipts, not quality verdicts.
+  A valid write is not evidence of improved task quality. Optional validation datasets are
+  reserved for external analysis and cannot gate the online update path.
+
+See the [single-pass executor contract](jit_mas_single_pass.md) for the unidirectional
+architecture diagram and migration boundaries. `local_rounds`/`local_planning` refer only
+to pre-execution planning; bounded attribution follow-ups remain separate. Experience
+updates are direct and do not create extra execution or validation calls. Existing call limits are resource ceilings, not permission to recall an
+execution role. Native JIT interface repair is allowed before role execution begins, but
+an error after any role model call starts cannot repair and replay the whole team.
+Earlier smoke and live reports are historical evidence for their recorded implementations;
+old paired-validation counts are not measurements of the direct-update path.
 
 ## Install and offline verification
 
@@ -54,8 +69,8 @@ python -m venv .venv
 
 Smoke makes no paid requests. `offline.py` is an explicitly labelled synthetic model fixture;
 the fixture's preset answers and task branches never enter the native provider. Smoke runs one
-source task, four paired validation builds and two following tasks through real JIT generation,
-parsing, selection, loading and execution. It exercises acceptance and cross-task reuse, not
+source evolution task and one frozen held-out fixture task through real JIT generation, parsing, selection, loading and
+execution. It exercises a direct versioned update and cross-task reuse, not
 scientific performance. `software_test_only: true` is persisted throughout. Tests also inject
 scripted responses into the native bridge, including a broken Action followed by real JIT repair.
 This verifies software wiring, not a JIT checkpoint's ability to write useful code.
@@ -69,7 +84,7 @@ task-level split; it does not run evaluation or training. A local file can repla
 with `--input path/to/processed_data.jsonl`.
 
 ```powershell
-.\.venv\Scripts\python.exe -m scripts.prepare_researchrubrics --download --output-dir dataset/researchrubrics-local --seed 0 --evolution-size 5 --validation-size 4
+.\.venv\Scripts\python.exe -m scripts.prepare_researchrubrics --download --output-dir dataset/researchrubrics-local --seed 0 --evolution-size 5 --validation-size 0
 ```
 
 IDs and normalized question text must be unique across splits. Rubrics of one task are never
@@ -89,16 +104,16 @@ fails closed by default. The commands below deliberately require `--unsafe-local
 Python then has host access, including files and environment, and hidden data is NOT securely
 isolated. Use an isolated disposable environment without sensitive credentials or documents
 for such runs. Static protocol checks and a separate working directory are not security sandboxes.
-No native calls were executed during implementation.
+Historical native pilots are documented separately and do not establish current method quality.
 
 ```powershell
 .\.venv\Scripts\python.exe -m scripts.run_jit_mas --mode evolve --config configs/jit_mas.native.example.yaml --data dataset/researchrubrics-local/processed_data.jsonl --splits dataset/researchrubrics-local/splits.json --state outputs/native/experience.sqlite --output outputs/native/runs --limit 1 --unsafe-local
 .\.venv\Scripts\python.exe -m scripts.run_jit_mas --mode evaluate --config configs/jit_mas.native.example.yaml --data dataset/researchrubrics-local/processed_data.jsonl --splits dataset/researchrubrics-local/splits.json --state outputs/native/experience.sqlite --output outputs/native/test --limit 1 --unsafe-local
 ```
 
-The first command can run at most one source task and two validation tasks under each of two
-states by default. Each has its own whole-pipeline budget; validation costs are recorded
-separately. It does not automatically run the full benchmark. `stream` takes the same arguments
+The first command runs at most one evolution source task, then directly persists its first
+reconciled proposal if present. It does not execute validation tasks or automatically run the
+full benchmark. `stream` takes the same arguments
 with a stream manifest, preserves manifest order and records the state before each submission.
 
 The native CLI currently exposes registered `web_search`, `crawl_page`, `wiki_search` and
@@ -114,7 +129,7 @@ in unsafe-local. Existing JIT entry points and their tools remain available.
 .\.venv\Scripts\python.exe -m scripts.run_jit_mas --mode rollback --state outputs/native/experience.sqlite --version 0
 ```
 
-Freeze exports the accepted snapshot; evaluate opens the store read-only and fixes the same
+Freeze exports the current committed snapshot; evaluate opens the store read-only and fixes the same
 snapshot for all test tasks. Rollback selects a preserved version and writes an audit event.
 Evaluation feedback never becomes the next test task's memory. Repeating a submitted evolve or
 stream task resumes its persistent journal without submitting or committing again. Changed
@@ -123,21 +138,22 @@ not for silently overwriting an already journaled submission.
 
 Run directories contain frozen plan hashes, planning calls, generated harness identity,
 full execution/sub-run traces, immutable submission hash/time, raw per-criterion evaluation,
-alignment and attribution calls, staged proposals, complete result and budget records.
+alignment and attribution calls, proposals, direct update receipts, complete result and budget records.
 Failure paths retain budget and error records; bridge failures also attach attempted code/trace
-metadata. Pair records retain both rebuilds and can be consumed as future preference data;
-there is no parameter-training job in this implementation.
+metadata. Historical pair records remain auditable but are not produced by the active update
+path; there is no parameter-training job in this implementation.
 
 Cache identity includes public task, local attachment contents, model and policy config,
 prompt/code/tool/description hashes, whole experience snapshot, evaluator version, private
 record hash and split manifest. Unsnapshotted live-tool or remote-attachment native executions
 do not reuse the task-result cache. Persisted submissions still resume as immutable submissions.
 Provider sampling and live search results cannot be made identical by a seed; these differences
-are explicitly recorded. Validation should use controlled evidence snapshots for research claims.
+are explicitly recorded. External comparative analyses should use controlled evidence snapshots
+for research claims; such analyses are not online update gates.
 
 Token reservations and call/tool counters share a lock across agents. Parents never re-charge
-serialized child trajectories. Reports separate inference, external evaluation, update and
-validation usage. Monetary cost is `null` (unknown), not zero. Network timeouts bound waiting;
+serialized child trajectories. Reports separate inference, external evaluation and update
+usage; removed paired-validation calls are not charged. Monetary cost is `null` (unknown), not zero. Network timeouts bound waiting;
 Python cannot kill a running local thread, so a timed-out operation can finish later. New agent
 dispatch stops, pending reservations stay visible, and this limitation is recorded in the runtime
 audit. Hard process termination requires an external sandbox/proxy.
@@ -154,9 +170,13 @@ None of these configurations implies a performance ordering.
 Frozen official criteria are required by this version's ResearchRubrics CLI. It does not add a
 model-generated-criteria deployment evaluator or an evaluator-learning loop. It does not implement
 Shapley causal attribution, model parameter training, a learned semantic memory retriever, or a
-production sandbox. The small accepted bank is scope-tagged and capped at retrieval; model prompts
-decide applicability, while execution advice is filtered by capability. Large-scale memory
+production sandbox. The small versioned bank is scope-tagged and capped at retrieval; public
+task operations and role capability filter applicable advice before model prompting. This
+lexical gate is not a learned semantic retriever. Large-scale memory
 consolidation remains outside this first vertical implementation.
+
+See the [quality-focused update](jit_mas_quality.md) for the latest implementation changes,
+offline verification and the distinction between execution success and answer quality.
 
 See [codebase audit](jit_mas_codebase_audit.md), [runtime audit](jit_mas_runtime_audit.md), and
 [related work](jit_mas_related_work.md) for the verified source mechanisms and implementation choices.

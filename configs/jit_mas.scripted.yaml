@@ -1,8 +1,5 @@
 backend: scripted
 local_planning: true
+local_rounds: 1  # Pre-execution planning; execution roles still have one call each.
 local_attribution: true
 persistent_experience: true
-max_validation_tasks: 2
-validation:
-  min_tasks: 2
-  repeats: 1

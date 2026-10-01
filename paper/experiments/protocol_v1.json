@@ -1,0 +1,166 @@
+{
+  "schema_version": "jit-compose-paper-protocol-v1",
+  "status": "DRAFT_NOT_RUN",
+  "launch_allowed": false,
+  "method": "JIT-Compose",
+  "learning_object": "Accepted rubric, organization and execution experience; no parameter training or evaluator evolution.",
+  "split_file": "splits_v1.json",
+  "planned_counts": {
+    "development_quarantine": 18,
+    "evolution": 30,
+    "validation": 20,
+    "test": 33
+  },
+  "primary_estimand": "Task-level mean official-score difference between evolved and initial frozen experience states on identical test tasks.",
+  "state_policy": {
+    "initial": "Empty accepted experience store, identical fixed code/prompts/models/tools/retrieval policy.",
+    "independent_evolution_runs": 3,
+    "run_ids": [
+      0,
+      1,
+      2
+    ],
+    "evolution_order": "Ascending SHA256('jit-compose-evolution-v1\n' + run_id + '\n' + task_id). All 30 evolution tasks once per run.",
+    "proposal_selection": "At most the first schema-valid reconciled proposal per evolution task, in returned order, with at most 8 validation attempts per run. No best-of selection using validation scores.",
+    "terminal_state": "After all 30 tasks and the fixed proposal budget; do not choose a checkpoint by test results.",
+    "test_writes": false,
+    "validation_feedback_to_proposal_generator": false,
+    "validation_feedback_to_accepted_memory": false
+  },
+  "validation_policy": {
+    "blocks": "Four consecutive blocks of five IDs in the frozen validation ordering.",
+    "schedule": "Validation attempt k uses block (k modulo 4); at most 8 attempts. Pending/rejected attempts consume the schedule position and budget.",
+    "min_tasks": 5,
+    "repeats": 2,
+    "quality_tolerance": 0,
+    "criterion_tolerance": 0,
+    "min_mean_improvement": 0,
+    "acceptance": "Every pair complete and comparable; no per-repeat task regression or signed-direction criterion regression; average paired task improvement strictly greater than zero. Otherwise reject, or pending for incomplete/incomparable evidence.",
+    "rebuild": "Both states independently predict requirements, plan, generate native JIT code, execute and evaluate; no plan/answer sharing or rewriting the source answer.",
+    "max_uses_per_validation_task_per_run": 2,
+    "max_executions_per_validation_task_per_run": 8,
+    "selection_bias": "Repeated validation is adaptive selection, not a final generalization estimate or a fresh independent promotion audit. Log all exposure and rejected/pending proposals."
+  },
+  "test_policy": {
+    "repeats_per_task_per_state_per_evolution_run": 3,
+    "initial_and_evolved_states_evaluated": true,
+    "state_selection_from_test": false,
+    "test_feedback_used_for_later_tasks": false,
+    "new_process_or_verified_context_reset_per_attempt": true,
+    "readonly_state_and_frozen_reference_archive": true,
+    "release_feedback": "After all prespecified test submissions and immutable state/config checks; no task-to-task test feedback.",
+    "task_level_bootstrap_replicates": 10000,
+    "bootstrap_seed": 20260930,
+    "confidence_level": 0.95,
+    "unit": "Resample whole tasks retaining paired methods, execution repeats and evolved-state labels; separately report variation across the three independent evolution runs."
+  },
+  "comparison_systems": [
+    {
+      "id": "jit_compose_initial",
+      "role": "primary control",
+      "status": "formal driver not run"
+    },
+    {
+      "id": "jit_compose_evolved",
+      "role": "primary treatment",
+      "status": "formal evolution not run"
+    },
+    {
+      "id": "direct",
+      "role": "supporting one-call cost baseline",
+      "status": "pilot implementation only"
+    },
+    {
+      "id": "fixed_team_jit",
+      "role": "supporting fixed-roster native-JIT baseline",
+      "status": "pilot implementation only; not rubric-guided and not fixed-harness"
+    },
+    {
+      "id": "unmodified_jit",
+      "role": "paper external baseline",
+      "status": "adapter and parity audit required"
+    },
+    {
+      "id": "skill_mas",
+      "role": "paper external baseline",
+      "status": "author-code/adaptation and parity audit required"
+    },
+    {
+      "id": "meta_team",
+      "role": "paper external baseline",
+      "status": "author-code/adaptation and parity audit required"
+    },
+    {
+      "id": "rubric_guided_fixed",
+      "role": "paper mechanism baseline",
+      "status": "not equivalent to current fixed_team_jit pilot; implementation required"
+    },
+    {
+      "id": "dynamic_no_explicit_rubrics",
+      "role": "paper mechanism baseline",
+      "status": "matched construction-budget audit required"
+    }
+  ],
+  "proposed_model_configuration": {
+    "generator_global_local_executor": "deepseek-v4-flash-vision",
+    "selection_and_primary_judge": "claude-sonnet-4-5-20250929",
+    "temperature": 0,
+    "parameter_updates": false,
+    "evaluator_updates": false,
+    "provider_revision": "UNVERIFIED; freeze serving identity and disclose proxy limitations before formal execution",
+    "model_seed_support": "UNVERIFIED; split/order seeds do not imply deterministic API sampling",
+    "independent_judge_robustness": "Additional model/configuration and blinded human-audit sample require preregistration before formal test feedback; not performed."
+  },
+  "proposed_limits": {
+    "max_agents": 3,
+    "max_parallel": 2,
+    "team_max_calls": 3,
+    "calls_per_execution_role": 1,
+    "local_planning_rounds_before_execution": 1,
+    "task_execution_negotiation_rounds": 0,
+    "jit_candidates": 1,
+    "pre_role_interface_repairs": 2,
+    "output_tokens": {
+      "meta": 16000,
+      "global": 16000,
+      "local": 16000,
+      "exec": 8192,
+      "judge": 4096
+    },
+    "per_task_model_attempt_cap_including_evaluation": 200,
+    "per_task_token_cap_including_evaluation": 2000000,
+    "per_task_tool_calls": 24,
+    "request_timeout_seconds": 180,
+    "execution_timeout_seconds": 600,
+    "api_attempts_per_call": 1,
+    "notes": "Common ceilings, not equal actual compute. Report stage-level actual usage and quality/cost. These are proposed formal limits, not a claim that the current pilot uses retrieval or these caps."
+  },
+  "evidence_environment": {
+    "primary_track": "Source-enabled research generation with the same audited retrieval interface and pinned source-return policy for all methods.",
+    "status": "BLOCKED: retrieval/snapshot adapter and capability/containment audit not complete",
+    "closed_book_pilot": "Separate engineering diagnostic; do not substitute it for the source-enabled primary track or silently discard source-dependent tasks.",
+    "time_sensitive_tasks": "Document the task's requested time cutoff and snapshot policy before formal freeze; no post-score task removal."
+  },
+  "failure_policy": {
+    "rerun_low_score": false,
+    "drop_failed_task": false,
+    "incomplete_judge": "Keep missing criterion and mark task incomplete; no available-criterion renormalization.",
+    "primary_mean": "Only claim a complete paired official comparison if all prespecified paired evaluations are complete. Otherwise report incompleteness, completion rates and prespecified task-level score bounds; no favorable complete-case-only headline.",
+    "score_bounds": "For binary criterion satisfaction use each task's official feasible lower bound sum(negative weights)/sum(positive weights) and upper bound 1; zero-positive-denominator tasks follow upstream handling and are flagged. Bounds are not fabricated official scores.",
+    "retry": "No automatic whole-task retry. A documented infrastructure rerun requires a new run version for all affected paired methods; retain original failures and do not select best outcomes."
+  },
+  "required_before_launch": [
+    "Public topic/semantic-source overlap audit and time-cutoff review; candidate split is task-disjoint, not yet certified topic/source-disjoint.",
+    "Formal driver enforcing validation block rotation, proposal cap, independent repetitions, delayed test feedback and immutable snapshots; current pipeline defaults are insufficient.",
+    "Real retrieved-evidence adapter, deterministic snapshot semantics and generated-code isolation/capability boundary.",
+    "Pinned common code/prompts/config/reference archive and model/judge serving identity; no credentials in paper artifacts.",
+    "Complete baseline/control implementations and matching audit; unsupported controls remain unreported.",
+    "Independent judge/human audit policy plus multiplicity rules frozen before results.",
+    "Explicit launch request after preregistration; do not auto-start full benchmark or training from this draft."
+  ],
+  "results": [],
+  "notes": "No formal experiment has been executed under this protocol. Pilot outputs and software tests must not populate the paper's main empirical table.",
+  "adoption_status": "OBSOLETE_ON_HOLD_METHOD_CHANGE",
+  "superseded_on": "2026-10-01",
+  "supersession_reason": "Online paired-validation accept/hold/reject promotion was removed. This unrun draft and its task allocations are historical audit records only, not an active protocol. No replacement allocation is adopted."
+}

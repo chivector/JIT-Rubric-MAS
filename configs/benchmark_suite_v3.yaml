@@ -1,0 +1,53 @@
+backend: native_jit
+unsafe_local: false
+max_agents: 3
+max_parallel: 2
+team_max_calls: 3
+local_rounds: 1
+candidates: 1
+max_repairs: 2
+max_model_calls: 200
+max_total_tokens: 2000000
+max_tool_calls: 0
+execution_timeout: 600
+local_planning: true
+local_attribution: true
+persistent_experience: true
+explicit_rubrics: true
+available_tools: []
+models:
+  meta:
+    model: deepseek-v4-flash-vision
+    endpoint: ${JIT_MAS_API_BASE}
+    key_env: JIT_MAS_API_KEY
+    max_tokens: 16000
+    timeout: 180
+    temperature: 0
+  global:
+    model: deepseek-v4-flash-vision
+    endpoint: ${JIT_MAS_API_BASE}
+    key_env: JIT_MAS_API_KEY
+    max_tokens: 16000
+    timeout: 180
+    temperature: 0
+  local:
+    model: deepseek-v4-flash-vision
+    endpoint: ${JIT_MAS_API_BASE}
+    key_env: JIT_MAS_API_KEY
+    max_tokens: 16000
+    timeout: 180
+    temperature: 0
+  exec:
+    model: deepseek-v4-flash-vision
+    endpoint: ${JIT_MAS_API_BASE}
+    key_env: JIT_MAS_API_KEY
+    max_tokens: 8192
+    timeout: 180
+    temperature: 0
+  judge:
+    model: claude-sonnet-4-5-20250929
+    endpoint: ${JIT_MAS_JUDGE_API_BASE}
+    key_env: JIT_MAS_JUDGE_API_KEY
+    max_tokens: 16000
+    timeout: 180
+    temperature: 0

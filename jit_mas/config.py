@@ -10,7 +10,6 @@ from pydantic import Field, model_validator
 
 from .budget import MeteredModel
 from .schemas import Record, TeamSpec
-from .validation import ValidationConfig
 
 
 class ModelConfig(Record):
@@ -47,15 +46,22 @@ class MASConfig(Record):
     candidates: int = Field(default=1, ge=1, le=4)
     execution_timeout: float = Field(default=120, gt=0)
     local_planning: bool = True
+    # These rounds reconcile plans before execution, never rerun task contributors.
     local_rounds: int = Field(default=1, ge=1, le=3)
     local_attribution: bool = True
     persistent_experience: bool = True
     explicit_rubrics: bool = True
     fixed_team: TeamSpec | None = None
-    validation: ValidationConfig = Field(default_factory=ValidationConfig)
-    max_validation_tasks: int = Field(default=2, ge=1)
     seed: int = 0
     available_tools: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def removed_promotion_settings(cls, value):
+        if isinstance(value, dict) and {"validation", "max_validation_tasks"}.intersection(value):
+            raise ValueError("Experience updates are direct after attribution; remove obsolete "
+                             "validation and max_validation_tasks settings")
+        return value
 
     @model_validator(mode="after")
     def fixed_team_limits(self):

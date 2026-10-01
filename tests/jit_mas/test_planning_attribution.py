@@ -22,7 +22,7 @@ def rubric(rid="r1", requirement="Compare alternatives with reproducible evidenc
 def agent(aid="a1", rubrics=None, **kwargs):
     return {"agent_id": aid, "role": "Analyst", "capability": "evidence comparison",
             "rubric_ids": ["r1"] if rubrics is None else rubrics,
-            "responsibilities": ["Check the source evidence"], "max_calls": 2, **kwargs}
+            "responsibilities": ["Check the source evidence"], "max_calls": 1, **kwargs}
 
 
 def team(agents=None, coverage=None):
@@ -173,7 +173,7 @@ def test_reconcile_prompt_explains_cross_field_checks_and_allows_optional_review
     (lambda t: t["coverage"].update(unknown=["author"]), "unknown rubrics"),
     (lambda t: t["agents"][0].update(rubric_ids=[]), "assignments disagree"),
     (lambda t: t["agents"][0].update(tools=["unavailable"]), "unavailable tools"),
-    (lambda t: t.update(total_max_calls=5), "allocations exceed team call budget"),
+    (lambda t: t.update(total_max_calls=2), "allocations exceed team call budget"),
     (lambda t: t.update(total_max_calls=7), "configured resource limits"),
     (lambda t: t.update(max_parallel=3), "configured resource limits"),
     (lambda t: t["agents"][2].update(depends_on=[]), "synthesizer must depend on every"),
@@ -194,9 +194,9 @@ def test_reconcile_still_rejects_cross_field_violations_without_rewriting(change
 
 
 @pytest.mark.parametrize("final_tokens", [1024, 8192])
-def test_planning_prompts_budget_complete_final_output_and_shared_corrections(final_tokens):
-    agents = [dict(agent("research"), max_calls=2, max_tokens=4096),
-              dict(agent("final", depends_on=["research"]), max_calls=2, max_tokens=final_tokens)]
+def test_planning_prompts_budget_complete_final_output_in_one_call(final_tokens):
+    agents = [dict(agent("research"), max_calls=1, max_tokens=4096),
+              dict(agent("final", depends_on=["research"]), max_calls=1, max_tokens=final_tokens)]
     graph = {"rubrics": [rubric()]}
     final_team = team(agents, {"r1": ["research", "final"]})
     final_team.update(total_max_calls=6, max_parallel=1)
@@ -209,24 +209,26 @@ def test_planning_prompts_budget_complete_final_output_and_shared_corrections(fi
         assert payload["limits"]["total_max_calls"] == 6
         if payload["phase"] == "predict":
             assert "complete expected output, including JSON encoding and checkpoint overhead" in prompt
-            assert "retries or final rewrites are free" in prompt
+            assert "Set every AgentSpec.max_calls=1 explicitly" in prompt
+            assert "no execution-time JSON correction" in prompt
             return json.dumps({"graph": graph, "candidates": agents})
         if payload["phase"] == "local_plan":
             assert "In expected_outputs and risks" in prompt
             assert "entire requested deliverable, not merely editorial feedback" in prompt
-            assert "same team call budget" in prompt
+            assert "Set LocalPlan.max_calls=1" in prompt
+            assert "without a return call" in prompt
             candidate = payload["candidate"]
             return json.dumps({"agent_id": candidate["agent_id"], "capability": candidate["capability"],
-                "rubric_ids": ["r1"], "max_calls": 2,
+                "rubric_ids": ["r1"], "max_calls": 1,
                 "expected_outputs": ["Complete final artifact within the response budget"],
                 "risks": ["JSON closure and checkpoints need output space"]})
         assert "independently emit the complete final deliverable" in prompt
         assert "JSON escaping, evidence IDs, checkpoints and a margin for valid closure" in prompt
         assert "max_tokens is a per-response output ceiling" in prompt
         assert "genuinely short requested summary may need fewer tokens than its sources" in prompt
-        assert "one additional execution call" in prompt
-        assert "synthesizer's max_calls" in prompt
-        assert "counts in sum(agent.max_calls) and team.total_max_calls" in prompt
+        assert "exactly one model call per selected role" in prompt
+        assert "synthesizer_id identifies that final Writer" in prompt
+        assert "Unused team.total_max_calls is a ceiling" in prompt
         assert "without duplicating drafts, review narration or preambles" in prompt
         return json.dumps({"graph": graph, "team": final_team})
 
@@ -235,9 +237,9 @@ def test_planning_prompts_budget_complete_final_output_and_shared_corrections(fi
     result = analyzer.build(PublicTask(task_id="budget", question=question))
     assert phases == ["predict", "local_plan", "local_plan", "reconcile"]
     assert result.team.agents[-1].max_tokens == final_tokens
-    assert result.team.agents[-1].max_calls == 2
-    assert sum(a.max_calls for a in result.team.agents) == 4 <= result.team.total_max_calls == 6
-    assert all(plan.max_calls == 2 and plan.risks for plan in result.local_plans)
+    assert result.team.agents[-1].max_calls == 1
+    assert sum(a.max_calls for a in result.team.agents) == 2 <= result.team.total_max_calls == 6
+    assert all(plan.max_calls == 1 and plan.risks for plan in result.local_plans)
 
 
 def test_planning_does_not_impose_extra_calls_when_single_call_limit_is_explicit():
@@ -364,7 +366,7 @@ def test_pipeline_propagates_configured_execution_output_limit(tmp_path, monkeyp
     store = ExperienceStore(tmp_path / "state.sqlite")
     try:
         pipeline = make_pipeline(config, store, tmp_path / "runs", fixture_models=provider)
-        pipeline.run_task(pipeline.manifest.evolution[0], store.snapshot(), resume=False)
+        pipeline.run_task(pipeline.manifest.evolution[0], store.snapshot(), mode="evolve", resume=False)
     finally:
         store.close()
     payloads = [json.loads(call["messages"][-1]["content"]) for call in provider.calls
@@ -828,7 +830,7 @@ def test_collaborative_attribution_preserves_full_local_context_and_abstains():
     assert global_calls[0]["shared_artifacts"][0]["event_id"] == "sent"
 
 
-def test_success_proposal_is_staged_and_requires_the_observed_evidence_chain():
+def test_success_update_requires_the_observed_evidence_chain_without_promotion_metadata():
     finding = AttributionFinding(finding_id="s", rubric_ids=["r1"], categories=["execution"],
                                  success=True, hypothesis="Cross-check supported the answer",
                                  supporting_evidence=["checked"], opposing_evidence=["cost"])
@@ -838,12 +840,13 @@ def test_success_proposal_is_staged_and_requires_the_observed_evidence_chain():
                     "capability": "evidence comparison", "source_task_ids": ["t"],
                     "evidence": ["checked"], "counterevidence": ["cost"]},
                 "diff": "+ cross-check before synthesis", "rationale": "Observed source consistency",
-                "evidence": ["checked"], "expected_benefit": "Fewer unsupported comparisons",
-                "validation_plan": "Rebuild old and candidate teams on independent validation tasks"}
+                "evidence": ["checked"], "expected_benefit": "Fewer unsupported comparisons"}
     model = Scripted(lambda data: {"proposals": [proposal]})
     analyzer = RubricAttributor(model)
     task = PublicTask(task_id="t", question="Compare")
-    assert analyzer.propose(task, [finding], 0)[0].experience.validation_status == "staged"
+    proposed = analyzer.propose(task, [finding], 0)[0]
+    assert "validation_status" not in proposed.experience.model_dump()
+    assert "validation_plan" not in proposed.model_dump()
     proposal["evidence"] = ["invented"]
     with pytest.raises(ValueError, match="not supported"):
         analyzer.propose(task, [finding], 0)
@@ -852,14 +855,14 @@ def test_success_proposal_is_staged_and_requires_the_observed_evidence_chain():
     valid = copy.deepcopy(proposal)
     valid["evidence"] = ["checked"]
     invalid = copy.deepcopy(valid)
-    invalid["experience"]["validation_status"] = "accepted"
+    invalid["experience"]["quality_decision"] = "approved"
     correcting = RubricAttributor(Scripted(lambda data: {
         "proposals": [valid if "response_correction" in data else invalid]}))
     repaired = correcting.propose(task, [finding], 0)
-    assert repaired[0].experience.validation_status == "staged"
-    assert repaired[0].validation_result == {}
+    assert "quality_decision" not in repaired[0].experience.model_dump()
+    assert "validation_result" not in repaired[0].model_dump()
     assert len(correcting.call_records) == 2
-    assert "cannot self-validate" in correcting.call_records[0]["validation_errors"][0]["message"]
+    assert "Extra inputs" in correcting.call_records[0]["validation_errors"][0]["message"]
 
     for invalid_field in ("evidence", "counterevidence"):
         invalid_reference = copy.deepcopy(valid)
@@ -889,7 +892,7 @@ def test_success_proposal_is_staged_and_requires_the_observed_evidence_chain():
         result = checked.propose(task, [finding], 0)
         assert result[0].evidence == ["checked"]
         assert result[0].experience.evidence == ["checked"]
-        assert result[0].experience.validation_status == "staged"
+        assert "validation_status" not in result[0].experience.model_dump()
         assert len(checked.call_records) == 2
         instructions = checked.call_records[0]["messages"][0]["content"]
         assert "refer to finding IDs only in rationale" in instructions

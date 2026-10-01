@@ -1,0 +1,111 @@
+{
+  "status": "UNFILLED_TEMPLATE_NOT_EMPIRICAL_RESULTS",
+  "code_identity": {
+    "commit": null,
+    "source_manifest_sha256": null,
+    "jit_upstream_revision": null
+  },
+  "models": {
+    "harness_generator": {
+      "model_id": null,
+      "revision": null,
+      "temperature": null,
+      "max_output_tokens": null
+    },
+    "global_analyzer": {
+      "model_id": null,
+      "revision": null,
+      "temperature": null,
+      "max_output_tokens": null
+    },
+    "local_analyzer": {
+      "model_id": null,
+      "revision": null,
+      "temperature": null,
+      "max_output_tokens": null
+    },
+    "executor": {
+      "model_id": null,
+      "revision": null,
+      "temperature": null,
+      "max_output_tokens": null
+    },
+    "judge": {
+      "model_id": null,
+      "revision": null,
+      "temperature": null,
+      "max_output_tokens": null
+    }
+  },
+  "dataset": {
+    "name": null,
+    "revision": null,
+    "split_manifest_sha256": null,
+    "evolution_task_ids": [],
+    "validation_task_ids": [],
+    "test_task_ids": []
+  },
+  "execution": {
+    "sandbox_backend": null,
+    "tool_snapshot_policy": null,
+    "budget": null,
+    "num_repeats_per_task": null,
+    "num_independent_evolution_runs": null
+  },
+  "results": [],
+  "result_record_schema": {
+    "task_id": "string",
+    "method": "string",
+    "condition": "string",
+    "state_id": "string",
+    "replicate": "integer",
+    "official_score": "number|null",
+    "evaluation_complete": "boolean",
+    "criterion_records": "list",
+    "inference_usage": "object",
+    "evaluation_usage": "object",
+    "attribution_usage": "object",
+    "final_answer_sha256": "string",
+    "artifact_directory": "string",
+    "failure_kind": "string|null",
+    "experience_update_receipts": "list"
+  },
+  "diagnostics": {
+    "guidance_vs_organization": null,
+    "anticipation_annotations": null,
+    "attribution_repair_utility": null,
+    "crossed_experience_states": null,
+    "stage_isolated_guidance_control": {
+      "status": "PROPOSED_NOT_REPORTED_RUN",
+      "shared_pre_negotiation_rubric_hash": null,
+      "shared_background_hash": null,
+      "rubric_free_constructor_input_audit": null,
+      "post_compile_guidance_injection_audit": null,
+      "structural_freeze_verified": null,
+      "paired_task_results": []
+    },
+    "content_matched_link_index_control": null,
+    "cross_contribution_moderation": null
+  },
+  "notes": "Populate exclusively from actual saved runs under a new preregistered direct-update protocol. Historical gated-update or debugging pilot results must not populate the main table; no guessed measurements.",
+  "schema_version": "3.0",
+  "paper_identity": {
+    "method_name": "JIT-Compose",
+    "title": "JIT-Compose: Evolving Multi-Agent Workflow Synthesis for Open-Ended Generation",
+    "implementation_package": "jit_mas",
+    "editorial_version": "v3"
+  },
+  "experience_update_policy": {
+    "mode": "direct_after_attribution",
+    "proposal_order": "first_reconciled_proposal",
+    "quality_promotion_gate": false,
+    "contract_checks": [
+      "schema",
+      "source_provenance",
+      "supported_target",
+      "base_version",
+      "duplicate_identity"
+    ],
+    "frozen_test_writes": false
+  }
+}

@@ -1,4 +1,4 @@
-"""Bounded team primitives executed by an ordinary JIT Action module."""
+"""Single-pass shared-ledger team primitives for an ordinary JIT Action module."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from scripts.kernel.types import (
     SummaryState, TaskInput, ToolCall, ToolSelection,
 )
 from scripts.tools.registry import ToolRegistry
-from jit_mas.experience import capability_matches
+from jit_mas.experience import experience_applicability
 from jit_mas.schemas import PublicTask, RubricGraph, TeamSpec, utc_now
 
 
@@ -149,9 +149,10 @@ class TeamServices:
     lock: Any = field(default_factory=threading.Lock)
     calls: int = 0
     cancelled: Any = field(default_factory=threading.Event)
-    messages: dict = field(default_factory=dict)
     artifacts: dict = field(default_factory=dict)
-    event_by_id: dict = field(default_factory=dict)
+    called_agents: set = field(default_factory=set)
+    started: bool = False
+    shared_ledger: dict = field(default_factory=dict)
 
     def event(self, agent_id, kind, content, *, parents=(), recipient="", source=""):
         with self.lock:
@@ -164,15 +165,17 @@ class TeamServices:
                 "recipient": recipient, "locator": f"events/{len(self.events)}",
             }
             self.events.append(event)
-            self.event_by_id[event["event_id"]] = event
             return event["event_id"]
 
-    def reserve_call(self, limit):
+    def reserve_call(self, limit, agent_id):
         with self.lock:
             if self.cancelled.is_set():
                 raise TimeoutError("team cancelled after timeout")
+            if agent_id in self.called_agents:
+                raise RuntimeError("Single-pass execution permits only one model call per role")
             if self.calls >= limit:
                 raise RuntimeError("TeamSpec.total_max_calls exhausted")
+            self.called_agents.add(agent_id)
             self.calls += 1
 
 
@@ -219,7 +222,7 @@ def validate_team(team, public_task=None):
 
 
 class ResponseProtocolError(ValueError):
-    """An invalid completion may be corrected only within allocated agent calls."""
+    """Invalid output fails this task attempt without recalling a role."""
 
 
 def _validate_completion_fields(parsed):
@@ -228,6 +231,18 @@ def _validate_completion_fields(parsed):
         raise ResponseProtocolError("answer must be a nonempty string")
     if not isinstance(parsed.get("checkpoints", {}), dict):
         raise ResponseProtocolError("checkpoints must be an object")
+    for check in parsed.get("checkpoints", {}).values():
+        if isinstance(check, bool):
+            continue
+        if (not isinstance(check, dict)
+                or not isinstance(check.get("status"), str)
+                or check.get("status") not in {"completed", "passed", "failed", "unverified", "not_applicable"}
+                or not isinstance(check.get("reason"), str) or not check["reason"].strip()
+                or not isinstance(check.get("evidence_ids", []), list)
+                or any(not isinstance(item, str) for item in check.get("evidence_ids", []))):
+            raise ResponseProtocolError(
+                "A checkpoint must be a boolean or {status, reason, evidence_ids}; "
+                "status is completed, passed, failed, unverified, or not_applicable, with a nonempty reason")
     evidence = parsed.get("evidence_ids", [])
     if not isinstance(evidence, list) or any(not isinstance(item, str) for item in evidence):
         raise ResponseProtocolError("evidence_ids must be a list of exact event ID strings")
@@ -263,24 +278,107 @@ def _parse_response(response):
         if not isinstance(arguments, dict):
             raise ResponseProtocolError("Tool arguments must be an object")
         if call["name"] in {"final_answer", "complete"}:
+            if "tools" in arguments:
+                raise ResponseProtocolError("Nested tool requests in a completion are not supported")
             _validate_completion_fields(arguments)
     return parsed
+
+
+def _upstream_agents(agent, team):
+    by_id = {item["agent_id"]: item for item in team["agents"]}
+    pending = list(agent.get("depends_on", []))
+    ancestors = set()
+    while pending:
+        aid = pending.pop()
+        if aid not in ancestors:
+            ancestors.add(aid)
+            pending.extend(by_id[aid].get("depends_on", []))
+    return [item["agent_id"] for item in team["agents"] if item["agent_id"] in ancestors]
+
+
+def _checkpoint_reports(agent, parsed, observed_ids):
+    reports, missing = {}, []
+    for name in agent.get("checkpoints", []):
+        value = parsed.get("checkpoints", {}).get(name)
+        if value is True:
+            report = {"status": "passed", "reason": "", "evidence_ids": []}
+        elif isinstance(value, dict):
+            report = {"status": value["status"], "reason": value["reason"],
+                      "evidence_ids": value.get("evidence_ids", [])}
+            if not set(report["evidence_ids"]) <= observed_ids:
+                raise ResponseProtocolError("Checkpoint cites evidence not observed by this agent")
+        else:
+            missing.append(name)
+            continue
+        reports[name] = {**report, "basis": "self_reported", "independently_verified": False}
+    return reports, missing
+
+
+def _contribution_ledger(value):
+    if not isinstance(value, dict):
+        raise ResponseProtocolError("Contributors must publish a structured ledger object")
+    for key in ("requirements", "outline"):
+        if not isinstance(value.get(key), list) or any(
+                not isinstance(item, str) or not item.strip() for item in value[key]):
+            raise ResponseProtocolError(f"ledger.{key} must be a list of nonempty strings")
+    sources = value.get("source_references")
+    spans = value.get("evidence_spans")
+    if not isinstance(sources, list) or not isinstance(spans, list):
+        raise ResponseProtocolError("ledger needs evidence_spans and source_references lists")
+    source_ids = set()
+    for source in sources:
+        if not isinstance(source, dict) or any(
+                not isinstance(source.get(key), str) or not source[key].strip()
+                for key in ("source_id", "locator")):
+            raise ResponseProtocolError("Each source reference needs source_id and locator")
+        if source["source_id"] in source_ids:
+            raise ResponseProtocolError("Source IDs must be unique within a contribution")
+        source_ids.add(source["source_id"])
+    for span in spans:
+        if (not isinstance(span, dict) or not isinstance(span.get("text"), str)
+                or not span["text"].strip() or not isinstance(span.get("source_ref"), str)
+                or span["source_ref"] not in source_ids):
+            raise ResponseProtocolError("Each evidence span needs text and a declared source_ref")
+    return copy.deepcopy({key: value[key] for key in
+                          ("requirements", "outline", "evidence_spans", "source_references")})
+
+
+def _shared_ledger(agent, team, services):
+    upstream = _upstream_agents(agent, team)
+    result = {"requirements": [], "outline": [], "evidence_spans": [],
+              "source_references": [], "contributions": [], "tool_evidence": []}
+    for aid in upstream:
+        artifact = copy.deepcopy(services.artifacts[aid])
+        contribution = artifact.pop("ledger")
+        artifact["dependency_kind"] = "direct" if aid in agent.get("depends_on", []) else "transitive"
+        result["contributions"].append(artifact)
+        for key in ("requirements", "outline"):
+            result[key].extend({"agent_id": aid, "text": item} for item in contribution[key])
+        for key in ("evidence_spans", "source_references"):
+            result[key].extend({**item, "agent_id": aid} for item in contribution[key])
+        # Only published source observations, never another role's model history.
+        result["tool_evidence"].extend(copy.deepcopy(event) for event in services.events
+                                       if event["agent_id"] == aid and event["kind"] == "retrieved")
+    return result
 
 
 def _run_agent(agent, team, ctx, services):
     aid = agent["agent_id"]
     synth = aid == team["synthesizer_id"]
     before = services.event(aid, "agent_started", {"role": agent["role"]})
-    dependencies = []
-    for upstream in agent.get("depends_on", []):
-        artifact = services.artifacts[upstream]
-        sent = services.event(upstream, "message_sent", artifact, recipient=aid,
-                              parents=[artifact["event_id"]])
-        consumed = services.event(aid, "message_consumed", artifact, recipient=aid,
-                                  parents=[sent])
-        dependencies.append({**artifact, "consumed_event_id": consumed})
+    shared_ledger = _shared_ledger(agent, team, services)
+    observed_ids = {item["event_id"] for item in
+                    shared_ledger["contributions"] + shared_ledger["tool_evidence"]}
+    ledger_hash = content_hash(shared_ledger)
+    if synth:
+        services.shared_ledger = copy.deepcopy(shared_ledger)
+        services.event(aid, "shared_ledger_ready", shared_ledger, parents=sorted(observed_ids))
+    if synth or shared_ledger["contributions"]:
+        read_event = services.event(aid, "shared_ledger_read", {"ledger_hash": ledger_hash},
+                                    parents=sorted(observed_ids))
+        observed_ids.add(read_event)
         if services.ledger is not None:
-            services.ledger.charge_communication(len(json.dumps(artifact)))
+            services.ledger.charge_communication(len(json.dumps(shared_ledger, ensure_ascii=False).encode("utf-8")))
     rubric_data = _data(services.rubrics) or {"rubrics": []}
     primary_rubrics = [rid for rid, owner in team.get("primary", {}).items() if owner == aid]
     review_rubrics = [rid for rid, reviewers in team.get("reviewers", {}).items() if aid in reviewers]
@@ -288,35 +386,65 @@ def _run_agent(agent, team, ctx, services):
     relevant = [r for r in rubric_data.get("rubrics", [])
                 if r["rubric_id"] in assigned_rubrics]
     experiences = [_data(e) for e in services.experiences]
-    local_experiences = [e for e in experiences
-                         if e.get("kind", e.get("bank", "")) == "execution"
-                         and capability_matches(e.get("capability", ""), agent["capability"])]
+    execution_experiences = [e for e in experiences if e.get("kind", e.get("bank", "")) == "execution"]
+    experience_selection = [{"experience_id": e.get("experience_id"),
+                             **experience_applicability(e, services.public_task,
+                                                        capability=agent["capability"])}
+                            for e in execution_experiences]
+    local_experiences = [e for e, selection in zip(execution_experiences, experience_selection)
+                         if selection["matched"]]
     model = services.model_factory(aid)
     output_limit = agent.get("max_tokens", 4096)
     model_limit = getattr(model, "max_tokens", None)
     if isinstance(model_limit, int) and model_limit > 0:
         output_limit = min(output_limit, model_limit)
-    call_limit = min(agent.get("max_calls", 3), ctx.max_steps)
+    completion_example = {"answer": "The final requested artifact." if synth else "Brief contribution summary."}
+    if not synth:
+        completion_example["ledger"] = {"requirements": [], "outline": [],
+                                         "evidence_spans": [], "source_references": []}
+    completion_example.update(evidence_ids=[], checkpoints={name: {
+        "status": "unverified", "reason": "Replace with the actual check result or limitation.",
+        "evidence_ids": []} for name in agent.get("checkpoints", [])})
     instruction = {
         "public_task": _data(services.public_task), "agent": agent,
-        "predicted_requirements": relevant, "upstream_artifacts": dependencies,
+        "predicted_requirements": relevant, "shared_ledger": shared_ledger,
         "primary_rubrics": primary_rubrics, "review_rubrics": review_rubrics,
         "review_owners": {rid: team.get("primary", {}).get(rid) for rid in review_rubrics},
         "execution_experiences": local_experiences,
+        "experience_selection": experience_selection,
+        "coordination": "single_pass_shared_ledger",
         "submission": "final_answer" if synth else "subtask_complete",
-        "output_budget": {"max_tokens_per_response": output_limit, "max_model_calls": call_limit},
+        "completion_example": completion_example,
+        "output_budget": {"max_tokens_per_response": output_limit, "max_model_calls": 1},
     }
     system = str(ctx.prompt_templates.get("agent_prompt", "")) + (
         "\nYou have an independent conversation. Follow only your assigned responsibilities. "
-        "Use tools via {\"tools\":[{\"name\":\"...\",\"arguments\":{...}}]}. "
-        "Complete with {\"answer\":\"...\",\"evidence_ids\":[],\"checkpoints\":{}}. "
-        "Return one JSON object, not a prose or Markdown envelope. Put the requested final prose "
-        "inside the answer string. In checkpoints, use every exact name from agent.checkpoints "
-        "as a key and boolean true only after actually checking it. Missing or false checkpoints "
-        "prevent completion; self-reported checks do not replace external evaluation. "
-        "You may send_message(recipient,content), "
-        "read_evidence(event_id), or raise_issue(content) to request missing input or dispute evidence. "
+        "The role-specific completion_example is the authoritative output shape for your role; "
+        "replace its example values with your own contribution, retaining the JSON field structure. "
+        "Return one JSON object, not a prose or Markdown envelope. Escape newlines, quotes and "
+        "backslashes inside JSON strings. Do not put JSON fields or a Markdown ledger inside answer. "
+        "In checkpoints, use every exact name from agent.checkpoints "
+        "as a key. Use true only for an actually completed self-check, or report an object such as "
+        "{\"status\":\"unverified\",\"reason\":\"...\",\"evidence_ids\":[]}. "
+        "Allowed statuses are completed, passed, failed, unverified, and not_applicable. "
+        "Every object needs a nonempty reason. completed records that a self-check was performed; "
+        "it is not a passing finding or independent verification. Report honest limitations, "
+        "and do not claim success to satisfy a checkpoint. "
+        "Missing checks or unexplained false values prevent completion; an explained failed "
+        "or unverified check is a reported limitation, not verified success. Self-reported "
+        "checks do not replace external evaluation. Address material limitations in your answer. "
+        "You receive exactly one model call. There are no agent messaging or shared-memory lookup tools. "
+        "Express missing input or disputed evidence in your answer and checkpoint reports. "
         "Never claim unobserved evidence or broadcast private conversations."
+    )
+    system += (
+        "\nTreat predicted requirements, upstream drafts and generated task-specific hints as "
+        "fallible planning hypotheses, not authoritative facts. The public task takes priority. "
+        "Do not reproduce a factual error merely because it appears in a rubric or another agent's "
+        "answer. For technical claims, distinguish definitions, assumptions and conclusions; check "
+        "each inference and a simple numerical or limiting case when relevant. Do not present "
+        "an unsupported step as a simplification. For nontechnical tasks, use domain-appropriate "
+        "checks without imposing formulas or citations."
     )
     system += (
         f"\nEach complete JSON response has a hard ceiling of {output_limit} output tokens, "
@@ -331,20 +459,49 @@ def _run_agent(agent, team, ctx, services):
         system += (
             "\nYou are the assigned reviewer for review_rubrics. Independently examine the primary "
             "owner's upstream artifacts against those requirements. Resolve or explicitly report "
-            "contradictions and missing evidence; use raise_issue or request input when needed. "
-            "Your review must identify what was checked and remaining uncertainty."
+            "contradictions and missing evidence in this one contribution. Do not request peer input. "
+            "Prioritize a few consequential errors over blanket approval. Identify the original "
+            "claim, why it is wrong or uncertain, and a specific supported correction. For a proof "
+            "or calculation, independently check its assumptions and the questionable step, not "
+            "just whether the requested formula appears. Your review must identify what was "
+            "checked and remaining uncertainty; do not declare all checks passed without support."
         )
     if synth:
         system += (
+            "\nRead the structured shared ledger once, synthesize the final response from the "
+            "analyst requirements and evidence spans, and do not initiate additional inter-agent "
+            "communication. You cannot call external tools or request another role invocation. "
             "\nSynthesize a coherent final response: resolve contradictory artifacts, state unresolved "
             "gaps and uncertainty, and preserve relevant sources. Do not merely concatenate outputs. "
             "Cite evidence_ids only for artifacts actually incorporated; citations are optional for creative tasks. "
             "The answer must be the final deliverable itself, not an editing report, review preface, "
             "or draft followed by a second revised copy. Integrate relevant review corrections concisely."
+            " Inspect the original ancestor artifacts as well as their reviews. A review can also "
+            "be wrong: reconcile disputed claims using their evidence and stated assumptions, "
+            "rather than following the most recent or most confident speaker. Preserve sound "
+            "substantive content while fixing errors; do not substitute a thin summary for the "
+            "requested deliverable or expose internal rubric IDs in it."
+        )
+    else:
+        system += (
+            "\nYou are a contributor, not the final Writer. Publish a brief summary in answer and "
+            "a separate top-level ledger object; ledger is a sibling of answer, never text inside it. "
+            "Keep substantive requirements, reasoning steps and evidence in their corresponding "
+            "ledger fields, without repeating them in a competing full answer or repetitive lists. "
+            "Publish exactly these structured ledger fields: "
+            "requirements (list of strings), outline (list of strings), evidence_spans "
+            "(list of {text, source_ref}), source_references (list of {source_id, locator}). "
+            "Analytical responsibilities populate requirements and outline; evidence responsibilities "
+            "populate source spans and provenance. Use empty lists when inapplicable, never invent "
+            "sources. A source_ref must match a source_id in your own contribution; these are "
+            "self-reported source claims, not verified citations. You may request a single batch "
+            "of allowed external tools. Their raw results are published directly to the shared ledger "
+            "for the writer; you will not receive a second model call to read them. Do not cite "
+            "those future results as evidence you already observed."
         )
     memory = type(ctx.memory)(prompts=ctx.prompt_templates)
     memory.initialize(system, TaskInput(task=json.dumps(instruction, ensure_ascii=False)))
-    allowed = set(agent.get("tools", []))
+    allowed = set() if synth else set(agent.get("tools", []))
     catalog = ctx.tool_policy.select_tools("", 0, memory.build_context()).tools
     absent = allowed - set(catalog)
     if absent:
@@ -352,26 +509,29 @@ def _run_agent(agent, team, ctx, services):
     model._native_tool_registry = {name: catalog[name] for name in allowed}
     trajectory = []
     answer = None
-    reason = "max_calls"
+    reason = "error"
     evidence_ids = []
-    for step_index in range(call_limit):
+    checkpoint_reports = {}
+    contribution = {"requirements": [], "outline": [], "evidence_spans": [], "source_references": []}
+    # One response, optionally one external-tool batch, then publish. No feedback loop.
+    if not services.cancelled.is_set():
         messages = memory.build_context().messages
-        with services.lock:
-            incoming = services.messages.pop(aid, [])
-        for message in incoming:
-            consumed = services.event(aid, "message_consumed", message["content"],
-                                      parents=[message["event_id"]])
-            messages.append({"role": "user", "content": json.dumps(
-                {"directed_message": message, "consumed_event_id": consumed})})
         tool_schemas = ctx.get_tool_schemas({name: catalog[name] for name in allowed}) if allowed else "[]"
+        tools_left = (None if services.ledger is None else
+                      max(0, services.ledger.max_tool_calls - services.ledger.snapshot()["tool_calls"]))
         messages.append({"role": "user", "content": "Allowed tool schemas: " + tool_schemas
-                         + f"\nRemaining allocated calls (including this one): {call_limit - step_index}. "
-                         + f"Return a complete JSON object within {output_limit} output tokens."})
-        step = StepRecord(step_number=step_index + 1, model_input_messages=copy.deepcopy(messages),
+                         + "\nThis is your only model call for this task. "
+                         + (f"Remaining shared tool calls: {tools_left}. " if tools_left is not None else "")
+                         + f"Return a complete JSON object within {output_limit} output tokens."
+                         + "\nCompletion shape (replace example values, keep fields): "
+                         + json.dumps(completion_example, ensure_ascii=False)
+                         + ("\nAlternatively, an allowed contributor tool batch may use "
+                            '{"tools":[{"name":"...","arguments":{}}]}; outputs go directly to the Writer.'
+                            if allowed and tools_left != 0 else "\nNo external tool requests are available.")})
+        step = StepRecord(step_number=1, model_input_messages=copy.deepcopy(messages),
                           start_time=time.time())
         observations = []
         try:
-            services.reserve_call(team.get("total_max_calls", 16))
             response = _bounded_call(model, services.timeout_seconds, messages,
                                      max_tokens=output_limit)
             step.model_output_messages = response
@@ -382,6 +542,38 @@ def _run_agent(agent, team, ctx, services):
             output_event = services.event(aid, "model_output", step.full_dict()["model_output_messages"],
                                           parents=[before])
             parsed = _parse_response(response)
+            completions = [parsed]
+            merged_completion = dict(parsed)
+            for call in parsed.get("tools", []):
+                if call["name"] == "final_answer" and not synth:
+                    raise ResponseProtocolError("only the synthesizer may submit final_answer")
+                if call["name"] in {"complete", "final_answer"}:
+                    args = call.get("arguments", {})
+                    merged_completion.update(json.loads(args) if isinstance(args, str) else args)
+                    completions.append(dict(merged_completion))
+            for completion in completions:
+                if completion.get("answer") is not None:
+                    if not set(completion.get("evidence_ids", [])) <= observed_ids:
+                        raise ResponseProtocolError("Completion cites evidence not observed by this agent")
+                    _checkpoint_reports(agent, completion, observed_ids)
+            parsed = merged_completion
+            tool_requests = [call for call in parsed.get("tools", [])
+                             if call["name"] not in {"complete", "final_answer"}]
+            for call in tool_requests:
+                if call["name"] in {"send_message", "read_evidence", "raise_issue"}:
+                    raise ResponseProtocolError("Inter-agent communication tools are unavailable in single-pass execution")
+                if synth:
+                    raise ResponseProtocolError("The writer only reads its completed ledger and submits once")
+                if call["name"] not in allowed:
+                    raise PermissionError(f"tool '{call['name']}' is not allowed for agent '{aid}'")
+            if not synth:
+                if parsed.get("ledger") is not None:
+                    contribution = _contribution_ledger(parsed["ledger"])
+                elif parsed.get("answer") is not None or not tool_requests:
+                    raise ResponseProtocolError("Contributors must publish a structured ledger object")
+            checkpoint_reports, missing = _checkpoint_reports(agent, parsed, observed_ids)
+            if missing:
+                raise ResponseProtocolError("Unconfirmed checkpoints: " + json.dumps(missing))
             for call in parsed.get("tools", []):
                 name = call["name"]
                 args = call.get("arguments", {})
@@ -389,61 +581,32 @@ def _run_agent(agent, team, ctx, services):
                     args = json.loads(args)
                 step.tool_calls.append(ToolCall(name=name, arguments=copy.deepcopy(args)))
                 if name in {"final_answer", "complete"}:
-                    if name == "final_answer" and not synth:
-                        raise PermissionError("only the synthesizer may submit final_answer")
                     parsed.update(args)
                     continue
+                if services.cancelled.is_set():
+                    raise TimeoutError("team cancelled before external tool dispatch")
                 if services.ledger is not None:
                     services.ledger.charge_tool(stage="execution", agent_id=aid, tool_name=name)
-                if name == "send_message":
-                    recipient = args["recipient"]
-                    if recipient not in {a["agent_id"] for a in team["agents"]}:
-                        raise ValueError("unknown message recipient")
-                    event_id = services.event(aid, "message_sent", args["content"],
-                                              parents=[output_event], recipient=recipient)
-                    with services.lock:
-                        services.messages.setdefault(recipient, []).append({
-                            "event_id": event_id, "sender": aid, "content": args["content"]})
-                    if services.ledger is not None:
-                        services.ledger.charge_communication(len(str(args["content"])))
-                    observation = {"sent_event_id": event_id}
-                elif name == "read_evidence":
-                    event = services.event_by_id.get(args["event_id"])
-                    if event is None or event["kind"] not in {"retrieved", "artifact_published", "issue"}:
-                        raise PermissionError("only shared evidence and artifacts may be read")
-                    services.event(aid, "evidence_read", event["content"],
-                                   parents=[event["event_id"]])
-                    observation = event
-                elif name == "raise_issue":
-                    observation = {"event_id": services.event(aid, "issue", args["content"],
-                                                               parents=[output_event])}
-                else:
-                    if name not in allowed:
-                        raise PermissionError(f"tool '{name}' is not allowed for agent '{aid}'")
-                    observation = _bounded_call(ctx.execute_tool, services.timeout_seconds, name, args)
-                    event_id = services.event(aid, "retrieved", {"tool": name, "arguments": args,
-                                                               "output": observation},
-                                              parents=[output_event], source=name)
-                    observation = {"event_id": event_id, "output": observation}
+                observation = _bounded_call(ctx.execute_tool, services.timeout_seconds, name, args)
+                event_id = services.event(aid, "retrieved", {"tool": name, "arguments": args,
+                                                           "output": observation},
+                                          parents=[output_event], source=name)
+                observation = {"event_id": event_id, "output": observation}
                 observations.append(json.dumps(observation, ensure_ascii=False))
             if parsed.get("answer") is not None:
-                missing = [name for name in agent.get("checkpoints", [])
-                           if parsed.get("checkpoints", {}).get(name) is not True]
-                if missing:
-                    observations.append("Unconfirmed checkpoints: " + json.dumps(missing))
-                else:
-                    evidence_ids = parsed.get("evidence_ids", [])
-                    if any(e not in services.event_by_id for e in evidence_ids):
-                        raise ValueError("completion cites unknown evidence event")
-                    answer = parsed["answer"]
-                    step.action_output = answer
-                    reason = "final_answer" if synth else "subtask_complete"
-            if not parsed:
-                observations.append("Empty response; complete your assignment or request a tool.")
+                evidence_ids = parsed.get("evidence_ids", [])
+                answer = parsed["answer"]
+            elif tool_requests and not synth:
+                # Raw observations are public data, not an invented analyst answer.
+                answer = json.dumps({"source_event_ids": [json.loads(item)["event_id"]
+                                                          for item in observations]})
+            else:
+                raise ResponseProtocolError("A single-pass response must complete its assignment")
+            step.action_output = answer
+            reason = "final_answer" if synth else "subtask_complete"
         except ResponseProtocolError as exc:
             step.error = exc
-            observations.append(f"ResponseProtocolError: {exc}. Rewrite a shorter, complete JSON object; "
-                                "do not continue the prior fragment. Preserve the required checkpoints.")
+            observations.append(f"ResponseProtocolError: {exc}. Task attempt failed; no role recall.")
             services.event(aid, "execution_error", observations[-1], parents=[before])
         except Exception as exc:
             step.error = exc
@@ -458,41 +621,53 @@ def _run_agent(agent, team, ctx, services):
             step.duration = step.end_time - step.start_time
             trajectory.append(step)
             memory.update(step)
-        if answer is not None or reason == "error":
-            break
     if answer is not None:
         artifact_id = services.event(aid, "artifact_published", answer, parents=evidence_ids)
         services.artifacts[aid] = {"agent_id": aid, "answer": answer, "event_id": artifact_id,
-                                   "content_hash": content_hash(answer), "version": 1}
+                                   "content_hash": content_hash(answer), "version": 1,
+                                   "checkpoint_reports": copy.deepcopy(checkpoint_reports),
+                                   "ledger": contribution}
         if synth:
             services.event(aid, "final_answer", answer, parents=evidence_ids)
     return RunResult(answer=answer, trajectory=trajectory, terminated_reason=reason,
                      metadata={"agent_id": aid, "capability": agent["capability"],
                                "role": agent["role"], "rubric_ids": sorted(assigned_rubrics),
                                "primary_rubrics": primary_rubrics, "review_rubrics": review_rubrics,
+                               "checkpoint_reports": checkpoint_reports,
+                               "coordination": "single_pass_shared_ledger", "ledger_hash": ledger_hash,
+                               "observed_evidence_ids": sorted(observed_ids),
+                               "experience_selection": experience_selection,
                                "event_ids": [e["event_id"] for e in services.events if e["agent_id"] == aid]})
 
 
 def run_team(task, ctx, team, services):
-    """Action-owned run loop: dependency scheduling followed by final synthesis."""
+    """Schedule each contributor once, then expose one completed ledger to the writer."""
     team = validate_team(team, services.public_task)
+    with services.lock:
+        if services.started:
+            raise RuntimeError("A task's single-pass team cannot be restarted")
+        services.started = True
     ctx.planning.bind_team(team)
     plan = ctx.planning.init_plan(task, ctx.memory.build_context(), "", ctx.model)
     ctx.memory.update_plan(plan)
     pending = {a["agent_id"]: a for a in team["agents"]}
     results = {}
     while pending and not services.cancelled.is_set():
-        failed = {aid for aid, result in results.items() if result.answer is None}
-        blocked = [aid for aid, agent in pending.items() if failed.intersection(agent.get("depends_on", []))]
-        for aid in blocked:
-            services.event(aid, "dependency_failed", {"failed": sorted(failed)})
-            results[aid] = RunResult(terminated_reason="dependency_failed", metadata={"agent_id": aid})
-            del pending[aid]
+        # Propagate a failed producer through every dependent before dispatching work.
+        while True:
+            failed = {aid for aid, result in results.items() if result.answer is None}
+            blocked = [aid for aid, agent in pending.items() if failed.intersection(agent.get("depends_on", []))]
+            if not blocked:
+                break
+            for aid in blocked:
+                services.event(aid, "dependency_failed", {"failed": sorted(failed)})
+                results[aid] = RunResult(terminated_reason="dependency_failed", metadata={"agent_id": aid})
+                del pending[aid]
         ready = [agent for agent in pending.values()
                  if set(agent.get("depends_on", [])).issubset(results)]
         if not ready:
             if pending:
-                continue  # Failed dependency propagation may span several layers.
+                raise RuntimeError("No ready role in a validated single-pass dependency graph")
             break
         with ThreadPoolExecutor(max_workers=team.get("max_parallel", 2)) as pool:
             futures = {pool.submit(_run_agent, a, team, ctx, services): a for a in ready}
@@ -514,6 +689,9 @@ def run_team(task, ctx, team, services):
                      sub_runs=[results[a["agent_id"]] for a in team["agents"]],
                      metadata={"run_id": services.run_id, "events": copy.deepcopy(services.events),
                                "artifacts": copy.deepcopy(services.artifacts),
+                               "coordination": "single_pass_shared_ledger",
+                               "shared_ledger": copy.deepcopy(services.shared_ledger),
+                               "shared_ledger_hash": content_hash(services.shared_ledger),
                                "team_hash": content_hash(team), "model_calls_used": services.calls,
                                "timeout_seconds": services.timeout_seconds})
 
@@ -536,6 +714,32 @@ class TeamAction(BaseAction):
 class _CoordinatorModel:
     def __call__(self, *args, **kwargs):
         raise RuntimeError("generated harness must use independently metered role models")
+
+
+class _SinglePassModel:
+    """Enforce the call cap even if generated Action code re-enters a role."""
+
+    def __init__(self, model, services, agent, team):
+        self.model, self.services, self.agent, self.team = model, services, agent, team
+
+    def __call__(self, messages, **kwargs):
+        aid = self.agent["agent_id"]
+        self.services.reserve_call(self.team["total_max_calls"], aid)
+        self.services.event(aid, "agent_call", {
+            "role": self.agent["role"], "call_index": 1,
+            "execution_role": "writer" if aid == self.team["synthesizer_id"] else "contributor"})
+        return self.model(messages, **kwargs)
+
+    @property
+    def _native_tool_registry(self):
+        return getattr(self.model, "_native_tool_registry", {})
+
+    @_native_tool_registry.setter
+    def _native_tool_registry(self, value):
+        self.model._native_tool_registry = value
+
+    def __getattr__(self, name):
+        return getattr(self.model, name)
 
 
 class TeamExecutor:
@@ -580,6 +784,22 @@ class TeamExecutor:
             raise TypeError("generated Action must implement bind_team(team, services)")
         services = TeamServices(self.model_factory, task, rubrics, list(experiences),
                                 self.ledger, self.timeout_seconds)
+        agents_by_id = {agent["agent_id"]: agent for agent in team_data["agents"]}
+
+        def single_pass_model(agent_id):
+            if agent_id not in agents_by_id:
+                raise ValueError("Unknown role model")
+            return _SinglePassModel(self.model_factory(agent_id), services,
+                                    agents_by_id[agent_id], team_data)
+
+        services.model_factory = single_pass_model
+        try:
+            return self._execute_bound(task, team_data, artifact, loaded, services, agents_by_id)
+        except Exception as exc:
+            exc.jit_mas_execution_started = services.calls > 0
+            raise
+
+    def _execute_bound(self, task, team_data, artifact, loaded, services, agents_by_id):
         loaded["action"].bind_team(team_data, services)
         # AgentRuntime.__init__ only adds a network client and default tools. Inject
         # existing clients here, then use its real lifecycle and Action dispatch.
@@ -594,19 +814,22 @@ class TeamExecutor:
         runtime.harness_prompts = loaded["prompts"]
         runtime.tool_policy.initialize(runtime.tool_registry.get_all())
         runtime.logger = AgentLogger(level=LogLevel.OFF)
-        runtime.max_steps = max(a.get("max_calls", 3) for a in team_data["agents"])
+        runtime.max_steps = 1
         runtime.trace_dir, runtime._run_counter = "", 0
-        result = runtime.run(_data(task)["question"])
-        if not result.sub_runs or {r.metadata.get("agent_id") for r in result.sub_runs} != {
-                a["agent_id"] for a in team_data["agents"]}:
-            raise RuntimeError("generated harness did not execute every bound role with local traces")
-        if result.terminated_reason == "final_answer":
-            if any(not run.trajectory or any(step.model_input_messages is None or
-                    step.model_output_messages is None for step in run.trajectory)
-                    for run in result.sub_runs):
-                raise RuntimeError("generated harness omitted full observed role traces")
-            if services.calls != sum(len(run.trajectory) for run in result.sub_runs):
-                raise RuntimeError("generated harness role traces disagree with team call accounting")
+        try:
+            result = runtime.run(_data(task)["question"])
+            if not result.sub_runs or {r.metadata.get("agent_id") for r in result.sub_runs} != set(agents_by_id):
+                raise RuntimeError("generated harness did not execute every bound role with local traces")
+            if result.terminated_reason == "final_answer":
+                if any(len(run.trajectory) != 1 or any(step.model_input_messages is None or
+                        step.model_output_messages is None for step in run.trajectory)
+                        for run in result.sub_runs):
+                    raise RuntimeError("generated harness omitted full single-pass role traces")
+                if services.calls != sum(len(run.trajectory) for run in result.sub_runs):
+                    raise RuntimeError("generated harness role traces disagree with team call accounting")
+        except Exception as exc:
+            exc.jit_mas_execution_started = services.calls > 0
+            raise
         result.metadata.update({"backend": artifact.backend, "harness": artifact.name,
                                 "harness_hash": artifact.code_hash,
                                 "unsafe_local": artifact.backend == "native_jit",

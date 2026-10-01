@@ -1,0 +1,119 @@
+{
+  "version": "jit-compose-benchmark-suite-v3",
+  "status": "REGISTERED_NOT_RUN",
+  "primary_protocol": "protocol_v2.json",
+  "scope": "Three controlled shared-evidence benchmarks; custom task partitions, not official leaderboard replication",
+  "split_seed_policy": "Freeze membership once; order seeds only permute evolution tasks, never re-split validation/test",
+  "order_seeds": [20261001, 20261002, 20261003],
+  "release_hashes": {
+    "researchrubrics": "ea2023d03953b70ba4a2f7f1fe490b434f18cec26c4fdb48acc0e3edf3d8edfb",
+    "deepsearchqa": "25d48dcf7efa872e5467032e8b8eedf38d301f59a252d0da95cda584baa78396",
+    "deepresearch_bench_ii": "263aaabb8c279fb16cbe7c9499afe82d657a8ab3ccfb07ace084387e367d921a"
+  },
+  "release_audit": {
+    "deepresearch_bench_ii": {"raw_rubric_entries": 9415, "unique_dimension_item_keys": 9409,
+      "aggregation": "Upstream dictionary keeps the last occurrence of an identical dimension/item key"},
+    "exact_question_cross_benchmark_overlap_groups": 0,
+    "scope": "Public normalized-question check across all three pinned releases; not a semantic/source-disjoint claim"
+  },
+  "benchmarks": {
+    "researchrubrics": {
+      "role": "Primary open-ended quality, evolution and mechanism experiments",
+      "expected_tasks": 101,
+      "counts": {"development": 18, "evolution": 30, "validation": 20, "test": 33},
+      "batch_size": 5,
+      "split_seed": "jit-compose-paper-splits-v1",
+      "inherited_split": "splits_v2.json",
+      "official_split_policy": "Custom task partition preserving all inherited quarantine and memberships; not an author train/val/test split",
+      "dataset_revision": "85de3115053d1453ed612caacf4a405edc1ad756",
+      "data_url": "https://huggingface.co/datasets/ScaleAI/researchrubrics/tree/85de3115053d1453ed612caacf4a405edc1ad756",
+      "scorer_url": "https://github.com/scaleapi/researchrubrics/tree/2dc80e2d4c38ddd80439517c259d93c6954b193f",
+      "metric": "Pinned weighted ResearchRubrics task score, including negative weights; task-level macro mean",
+      "license": "MIT",
+      "methods": ["ours_initial", "ours_selected", "ours_terminal", "direct", "jit_matched", "rubric_fixed", "no_explicit_rubrics", "global_only_planning", "global_only_attribution", "G", "GO"]
+    },
+    "deepsearchqa": {
+      "role": "Independent in-domain evolution for factual answer-set completeness",
+      "expected_tasks": 900,
+      "counts": {"development": 50, "evolution": 150, "validation": 100, "test": 600},
+      "batch_size": 25,
+      "split_seed": "jit-compose-deepsearchqa-v3",
+      "official_split_policy": "Custom subdivision of the author's single eval split; public problem_category stratification, no private answer_type stratification or inference hint",
+      "dataset_revision": "b2623f8653065c2672de6d941fc5434cd652376c",
+      "data_url": "https://huggingface.co/datasets/google/deepsearchqa/resolve/b2623f8653065c2672de6d941fc5434cd652376c/DSQA-full.csv",
+      "scorer_url": "https://www.kaggle.com/code/andrewmingwang/deepsearchqa-starter-code",
+      "scorer_notebook_sha256": "aa1ace0a1e0023a5cad5e662968bcf18c6b4f5c0666cbad78a46ba5f813559b2",
+      "metric": "Task macro F1 from gold-item correctness and excessive answers; also report precision, recall and strict fully-correct rate",
+      "judge_scope": "Metered adaptation of author matching schema/aggregation; shared configured judge is not the author Gemini leaderboard setting",
+      "license": "Apache-2.0",
+      "methods": ["ours_initial", "ours_selected", "ours_terminal", "direct", "jit_matched", "rubric_fixed"]
+    },
+    "deepresearch_bench_ii": {
+      "role": "Frozen external transfer of the three ResearchRubrics-selected states, no target evolution or selection",
+      "expected_tasks": 132,
+      "counts": {"development": 0, "evolution": 0, "validation": 0, "test": 132},
+      "batch_size": 0,
+      "split_seed": "jit-compose-deepresearch-bench-ii-v3",
+      "official_split_policy": "Use the complete author evaluation pool only as held-out target tasks; do not invent a train/val split",
+      "dataset_revision": "b38f360603db9531b102aef8c166cedb8509b6f6",
+      "data_url": "https://github.com/imlrz/DeepResearch-Bench-II/tree/b38f360603db9531b102aef8c166cedb8509b6f6",
+      "scorer_url": "https://github.com/imlrz/DeepResearch-Bench-II/blob/b38f360603db9531b102aef8c166cedb8509b6f6/run_evaluation.py",
+      "metric": "Per-task fraction of rubric scores equal to 1; blocked-source -1 rate separate, never a signed mean; macro average tasks",
+      "reported_slices": {"language": {"English": 66, "Chinese": 66}, "themes": 22, "release_rubric_count": 9415},
+      "release_note": "Pinned JSONL has 9415 rubric items, distinct from paper headline 9430; bilingual rows are not assumed translated pairs",
+      "license": "Code Apache-2.0; data 129 CC BY 4.0, two CC BY-NC 4.0 (idx 26,110), one CC0 (idx119); retain per-row license and attribution, do not redistribute reports",
+      "source_state": "ResearchRubrics run-specific VAL winner, sealed before any target score",
+      "methods": ["ours_initial", "ours_selected", "direct", "jit_matched", "rubric_fixed"]
+    }
+  },
+  "checkpoint_selection": {
+    "positions": "C0 plus six evenly spaced source batches on each evolving benchmark",
+    "validation_scope": "Entire fixed validation set on every checkpoint, two independent artifacts per task",
+    "minimum_complete_fraction": 0.9,
+    "selection": "Mean complete score or task feasible lower bound over all registered task-repeat slots; missing official score remains null",
+    "candidate_scope": "All seven whole-state checkpoints per run including C0; identical states reuse outcomes",
+    "continuation": "Latest trajectory state, no rollback to VAL winner, no early stop, direct per-source writes",
+    "test_repeats": 3,
+    "test_states": "Report all three run-specific winners and preregistered terminal states, not the best run",
+    "test_feedback": "Seal the entire registered submission inventory before scoring/releasing TEST, including external target submissions"
+  },
+  "execution_profile": {
+    "max_agents": 3, "max_parallel": 2, "team_max_calls": 3,
+    "local_rounds": 1, "candidates": 1, "max_repairs": 2,
+    "max_model_calls": 200, "max_total_tokens": 2000000, "max_tool_calls": 0,
+    "execution_timeout": 600,
+    "model": "deepseek-v4-flash-vision", "judge_model": "claude-sonnet-4-5-20250929",
+    "temperature": 0, "request_timeout": 180,
+    "output_tokens": {"meta": 16000, "global": 16000, "local": 16000, "exec": 8192, "judge": 16000},
+    "judge_cap_note": "v3 overrides v2's4096-token judge cap: DRBII scores batches of50 and DSQA may contain large answer sets. All methods on every benchmark use the same16000 output cap.",
+    "retry_policy": "No automatic whole-task, generation, execution, or judge retry. One attempted response per criterion/batch; malformed/failed judgments stay missing. This v3 policy supersedes v2's optional transport retry."
+  },
+  "cross_benchmark_policy": {
+    "independent_stores": "RR and DSQA evolution start from separate empty stores; no pooling experiences or cross-validation",
+    "target_transfer": "Only RR-selected snapshots transfer to DRBII; target results never choose source benchmark, run or checkpoint",
+    "duplicate_audit": "Reject exact normalized-question cross-benchmark overlap before running; manually review public source/semantic overlap before freeze, without hidden answers or scores",
+    "exposure_policy": "Explicit prior-exposure IDs and their duplicate groups must be in development; held-out exposure requires a versioned amendment, never silent removal",
+    "score_reporting": "Separate benchmark metrics, do not average incompatible weighted RR, F1 and rubric-compliance raw scores",
+    "statistical_unit": "Whole held-out task; preserve paired method/run/repeat records, report language/theme breakdown descriptively"
+  },
+  "statistical_families": {
+    "primary": "Three benchmark-specific selected-minus-initial paired task contrasts, Holm correction over three p-values for suite-wide efficacy claims",
+    "secondary": "Selected-minus-JIT and selected-minus-rubric-fixed on each of three benchmarks, Holm correction over six comparisons",
+    "mechanism": "RR no-rubric/global-only-planning/global-only-attribution/G-versus-GO, Holm correction over four comparisons",
+    "bootstrap": {"unit": "whole task", "replicates": 10000, "confidence": 0.95, "seed": 20261001},
+    "sign_flip": {"draws": 100000, "seed": 20261001, "tail": "two-sided", "p_value": "(1+extreme)/(100001)"},
+    "reporting": "Separate benchmark effects and intervals, independent source-run variation, complete failures; no pooled raw-score league table"
+  },
+  "cost": {
+    "unit": "Nominal artifact/task slots, not API requests; exact-state reuse reduces actual calls",
+    "researchrubrics_all": 6195,
+    "deepsearchqa_evolution": 450,
+    "deepsearchqa_validation": 4200,
+    "deepsearchqa_core_test": 18000,
+    "deepsearchqa_total": 22650,
+    "deepresearch_bench_ii_total": 2772,
+    "mandatory_total": 31617,
+    "separate_costs": "Common evidence preparation, shared G/GO rubrics, transport retries, and human audit"
+  },
+  "results": []
+}

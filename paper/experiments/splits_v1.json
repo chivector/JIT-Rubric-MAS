@@ -1,0 +1,965 @@
+{
+  "version": "jit-compose-paper-splits-v1",
+  "status": "DRAFT_NOT_RUN",
+  "launch_allowed": false,
+  "selection": {
+    "seed": "jit-compose-paper-splits-v1\n",
+    "ranking": "Ascending SHA256(seed + task_id)",
+    "unit": "whole task",
+    "stratified": false,
+    "filters": "Quarantine only; no closed-book, topic, difficulty, score or private-rubric filter."
+  },
+  "counts": {
+    "total": 101,
+    "development_quarantine": 18,
+    "evolution": 30,
+    "validation": 20,
+    "test": 33
+  },
+  "development_quarantine": [
+    "683a58c9a7e7fe4e76958499",
+    "684397d188c1deceb49af31a",
+    "684397d188c1deceb49af335",
+    "6847465956a0f6376a605351",
+    "6847465956a0f6376a605383",
+    "6847465956a0f6376a6053bb",
+    "6847465956a0f6376a6053ca",
+    "6847465956a0f6376a605414",
+    "6847465956a0f6376a60542f",
+    "6847465956a0f6376a605434",
+    "6847465956a0f6376a60543d",
+    "6847465956a0f6376a605440",
+    "6847465956a0f6376a605457",
+    "6847465956a0f6376a60545c",
+    "6847465956a0f6376a60548a",
+    "6847465956a0f6376a605494",
+    "6847465956a0f6376a6054a2",
+    "6847465956a0f6376a6054aa"
+  ],
+  "runtime_split_manifest": {
+    "schema_version": "1.0",
+    "seed": 0,
+    "evolution": [
+      "6847465956a0f6376a6053aa",
+      "6847465956a0f6376a605371",
+      "684397d188c1deceb49af31b",
+      "6847465956a0f6376a6053b9",
+      "6847465956a0f6376a6054c2",
+      "6847465956a0f6376a60547e",
+      "6847465956a0f6376a6054a7",
+      "6847465956a0f6376a605478",
+      "6847465956a0f6376a6053f5",
+      "6847465956a0f6376a605433",
+      "683a58c9a7e7fe4e7695848e",
+      "6847465956a0f6376a6053a7",
+      "6847465956a0f6376a6053f3",
+      "6847465956a0f6376a6053ac",
+      "6847465956a0f6376a6054ad",
+      "6847465956a0f6376a605343",
+      "683a58c9a7e7fe4e76958478",
+      "684397d188c1deceb49af332",
+      "6847465956a0f6376a60547f",
+      "684397d188c1deceb49af30b",
+      "6847465956a0f6376a60547c",
+      "6847465956a0f6376a60543e",
+      "6847465956a0f6376a6053f2",
+      "6847465956a0f6376a6054be",
+      "684397d188c1deceb49af315",
+      "6847465956a0f6376a605451",
+      "6847465956a0f6376a6054a5",
+      "6847465956a0f6376a6054a9",
+      "6847465956a0f6376a605491",
+      "6847465956a0f6376a605363"
+    ],
+    "validation": [
+      "684397d188c1deceb49af329",
+      "684397d188c1deceb49af325",
+      "684397d188c1deceb49af308",
+      "6847465956a0f6376a60535d",
+      "6847465956a0f6376a6053e0",
+      "6847465956a0f6376a605378",
+      "684397d188c1deceb49af31d",
+      "6847465956a0f6376a60542d",
+      "683a58c9a7e7fe4e7695849b",
+      "6847465956a0f6376a605427",
+      "683a58c9a7e7fe4e76958483",
+      "6847465956a0f6376a6053fb",
+      "6847465956a0f6376a605367",
+      "6847465956a0f6376a605391",
+      "6847465956a0f6376a6053b5",
+      "6847465956a0f6376a605425",
+      "6847465956a0f6376a605404",
+      "6847465956a0f6376a605441",
+      "6847465956a0f6376a6053e8",
+      "684397d188c1deceb49af311"
+    ],
+    "test": [
+      "684397d188c1deceb49af31c",
+      "684397d188c1deceb49af321",
+      "6847465956a0f6376a605492",
+      "6847465956a0f6376a605360",
+      "6847465956a0f6376a6053d0",
+      "6847465956a0f6376a605348",
+      "6847465956a0f6376a6054d0",
+      "6847465956a0f6376a605443",
+      "684397d188c1deceb49af32d",
+      "684397d188c1deceb49af316",
+      "683a58c9a7e7fe4e76958492",
+      "6847465956a0f6376a605469",
+      "683a58c9a7e7fe4e76958488",
+      "6847465956a0f6376a6053d8",
+      "6847465956a0f6376a605476",
+      "6847465956a0f6376a6053a0",
+      "683a58c9a7e7fe4e7695846f",
+      "684397d188c1deceb49af334",
+      "6847465956a0f6376a6053ce",
+      "6847465956a0f6376a6054cd",
+      "683a58c9a7e7fe4e76958498",
+      "6847465956a0f6376a605387",
+      "6847465956a0f6376a6053c9",
+      "6847465956a0f6376a605493",
+      "6847465956a0f6376a605424",
+      "6847465956a0f6376a60542a",
+      "6847465956a0f6376a605401",
+      "6847465956a0f6376a605362",
+      "6847465956a0f6376a605411",
+      "683a58c9a7e7fe4e7695848b",
+      "6847465956a0f6376a605355",
+      "6847465956a0f6376a605407",
+      "6847465956a0f6376a605366"
+    ],
+    "stream": [],
+    "deduplication": "task_id and normalized public question SHA256"
+  },
+  "task_index": [
+    {
+      "task_id": "683a58c9a7e7fe4e7695846f",
+      "partition": "test",
+      "public_task_sha256": "8426ff2b3487035d221b0654e80e5fd00daec461533c6207b4c9d9a237606de1",
+      "public_prompt_excerpt": "Write a blog post contrasting Euclidean geometry used in high school math competitions such as the AMC, AIME, or Olympiads to geometry taught in the standard American high school m",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958478",
+      "partition": "evolution",
+      "public_task_sha256": "16b8e43ccf8124d18d265d8b08def386622b1f8dca237da7d20f75c99dc6113d",
+      "public_prompt_excerpt": "Consider the Korean company KCTech. The company is looking to enter the American market with its materials-selling business, as its equipment-selling business is not mature enough ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958483",
+      "partition": "validation",
+      "public_task_sha256": "25f31e77a345a1b9c883aec3fa45991726fd209eda7b9a5aeeb106847fb6682c",
+      "public_prompt_excerpt": "Look at this public Github repository \"clever-rockies\" by user suzytamang. <https://github.com/suzytamang/clever-rockies>\n\nThe folders include \"res\", \"src\", and \"tests\". Go to the ",
+      "public_urls": [
+        "https://github.com/suzytamang/clever-rockies"
+      ],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958488",
+      "partition": "test",
+      "public_task_sha256": "b5b91e910d80317c2eaeefac52f02e0b0a5d470f909de0021e47a21a011db2db",
+      "public_prompt_excerpt": "Propose a biologically plausible model that integrates the neuroscience concepts of engrams and predictive coding into one network capable of performing classification tasks.",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e7695848b",
+      "partition": "test",
+      "public_task_sha256": "50d09f550fc539a693c90db82452959ab48d467c384f53ca906e2c31ec15d9ee",
+      "public_prompt_excerpt": "I'm currently working on a project. The professor wasn't clear, she just said that I will use NLP techniques on some data, de-identified Electronic Health Records, to extract Asian",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e7695848e",
+      "partition": "evolution",
+      "public_task_sha256": "e925d36980c8345105195d8bbc15f6e49d6d71d79fca81bc34c8d793425b6a3d",
+      "public_prompt_excerpt": "Please help me do a literature review. I'm looking for papers that use NLP techniques to turn unstructured EHR data into structured data, or extract information from the unstructur",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958492",
+      "partition": "test",
+      "public_task_sha256": "44ae087b10725bb7d6b2e6f5d19ec4f65254d4064ddb6e80b2b5a2e3d55c4e35",
+      "public_prompt_excerpt": "I am an 18 year old that currently has ten thousand dollars. Write an investment plan to guide me through investing for the future. Specifically, the timespan of this investment pl",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958498",
+      "partition": "test",
+      "public_task_sha256": "ee375b342a842ca1432aee283da18ebac4500bb3da8844fa3082ba67ea7be5a7",
+      "public_prompt_excerpt": "Write a series of blog posts discussing ways people can invest their money for retirement and large purchases. The posts should be understandable and applicable for all adults, reg",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958499",
+      "partition": "development_quarantine",
+      "public_task_sha256": "e3b8d2dbe24fcb1924429fbf94116c3450baac854a4812e4e17976da94c34529",
+      "public_prompt_excerpt": "Write a series of blog posts evaluating the development of the new Silicon-Valley based military-industrial complex, and companies such as Palantir, Mach Industries or Anduril. Sta",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e7695849b",
+      "partition": "validation",
+      "public_task_sha256": "cfe3d62c45ce04c6d73bce3b51d241c6c6142d7816205dedf6b56bb4d44d9551",
+      "public_prompt_excerpt": "Write a technical report describing how to implement a high-performance double-precision General Matrix-Matrix Multiplication (GEMM) tuned for AVX2, Fused Multiply-Add (FMA), and m",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af308",
+      "partition": "validation",
+      "public_task_sha256": "272fcc4663be20afd088aa138345aa47d826c4a6952ec4f0367e13cab1f0e8ec",
+      "public_prompt_excerpt": "Find a series of olympiad math problems, which build progressively in difficulty and lead up towards Ramsey's theorem.  At each step, add intuition for how one might reach the solu",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af30b",
+      "partition": "evolution",
+      "public_task_sha256": "177b3225d9b2bf6b22779a53fbd5dfb2f4325e8611a4d7517bc9d27787dbeceb",
+      "public_prompt_excerpt": "I want to create my own restaurant empire, but I have zero idea where to begin. I know I want to serve indian food in with three different settings - food truck, elevated fine dini",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af311",
+      "partition": "validation",
+      "public_task_sha256": "7fea62c599ea3b9c609e3bc64f7aa70bb5581e26dd3ba4332f51b69c948e37be",
+      "public_prompt_excerpt": "Write a detailed report on Langchain and how it became one of the most used python libraries in 2025 for AI application development using Large language models. Also explain evolut",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af315",
+      "partition": "evolution",
+      "public_task_sha256": "bb7d361bf726846627fd1329fdf1fda72d8350d86d54cd9b4f649a42ea080e9a",
+      "public_prompt_excerpt": "Write a novel about a boy who can switch between two types of themes, the medieval past and cyberpunk future but every time he switches lands in completely different worlds (from e",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af316",
+      "partition": "test",
+      "public_task_sha256": "dc2f5dfd09744c09ccfd56b228d6f245736c291ab693de246c42f90e2b090311",
+      "public_prompt_excerpt": "Give me a detailed report on the recent Air India crash in India of AI171 heading from Ahmedabad to London. Include the most up-to-date information from news channels. Also provide",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af31a",
+      "partition": "development_quarantine",
+      "public_task_sha256": "03149fd769e013cc5f57272cdf64bcbaa2eaa063bd9e9f74f64f7dc30ffd0d02",
+      "public_prompt_excerpt": "Write a blog post on the distinguishing difference between research in human interaction via Network Physicalization vs. Haptic Feedback in AR/VR. Do a thorough analysis on what th",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af31b",
+      "partition": "evolution",
+      "public_task_sha256": "e51b2f0a903f5ac748ab1bad80c8d0d7193e0782877c2bfd789a8b912cae2c9e",
+      "public_prompt_excerpt": "The 1956 Suez Crisis marked a pivotal moment in the reshaping of global power after World War II. In what ways did the crisis reveal the limits of European imperial influence and a",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af31c",
+      "partition": "test",
+      "public_task_sha256": "087c902281ede4eb9346152358414ee06f295612044fd10081354ed291c73455",
+      "public_prompt_excerpt": "Imagine you're launching a Gen Z focused startup in 2025 that offers short-form video therapy and mental wellness content developed through a TikTok-style mobile app. Write a detai",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af31d",
+      "partition": "validation",
+      "public_task_sha256": "674b49f239f8b94a31ffc894cdb20ec22da16592e0a4ecbe3d740cf6a1d36287",
+      "public_prompt_excerpt": "Write an analysis of the institution of Roman slavery as it is depicted in Plautus' comedy *Pseudolus.* Using the play as a primary source, the analysis must situate its portrayal ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af321",
+      "partition": "test",
+      "public_task_sha256": "e0f5a1e068888a0f0438cfed1d93288fd508db2536ae93574f145fd11f92a80a",
+      "public_prompt_excerpt": "Write a series of fanfictions that details a war between the Italian Brainrot characters. Structured off of the Marvel Comics Universe's Captain America Civil War, this will be a c",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af325",
+      "partition": "validation",
+      "public_task_sha256": "8ba15f12f18ba400ae0b3d64c40a0db7f5b091339428713195d9ecfad9cfd38d",
+      "public_prompt_excerpt": "Write me a complete overview of the case of the Baudelaire orphans, including a summary of their travels, situation, and circumstances. Include any and all references to external a",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af329",
+      "partition": "validation",
+      "public_task_sha256": "d5b800d92a0d5d2dc819a1095af40cf26d0da239c171cb046a8b4f65c43c6b29",
+      "public_prompt_excerpt": "Help me compile a list of apartments in San Francisco (looking for at least 2 bedroom, 1 living room, 1 bathroom, 1 kitchen). For context, I am moving to SF for just the summer (ab",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af32d",
+      "partition": "test",
+      "public_task_sha256": "e6da685705531a60e926ebbe41a33e6f0c806e0b735ef51552826cff6cf00389",
+      "public_prompt_excerpt": "I am a pre-school teacher for ages 3-4. Please provide me a detailed report on a strategy for the following situation: One student doesn't want to share and always gets into tantru",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af332",
+      "partition": "evolution",
+      "public_task_sha256": "ddd85db49175500d9a21643e7931e00712978bedf30caa47947cffc9804bd447",
+      "public_prompt_excerpt": "Write an outline of a potential new episode for the Netflix show Black Mirror. This outline should be robust: for example, it should include descriptions of where the episode shoul",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af334",
+      "partition": "test",
+      "public_task_sha256": "0eb1cd0b6b626c8619e41241c245de7b9c110501a2b40c0eb0a13008083c78d9",
+      "public_prompt_excerpt": "Produce an essay analyzing the multifaceted and multidimensional nature of Roman marriage in the late Republic and early Empire using primary sources as the base of evidence and an",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "684397d188c1deceb49af335",
+      "partition": "development_quarantine",
+      "public_task_sha256": "9096e68cff18bac894f42d05ee1ffaa0edb50e828452b6809ce80acbfbfa886d",
+      "public_prompt_excerpt": "Give me an article on the Probably Approximately Correct (PAC) theorem in Machine Learning for an audience completely unfamiliar with Machine Learning or probability. Include formu",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605343",
+      "partition": "evolution",
+      "public_task_sha256": "3c949fb4d43c7cfc4271e5ec8e8eb1d475b22a74d443b4188c7a432fac796609",
+      "public_prompt_excerpt": "Please make a plan for my student group's end of year banquet, including a specific venue and a specific menu from a caterer. We need a nice venue near Berkeley, CA with a projecto",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605348",
+      "partition": "test",
+      "public_task_sha256": "342cf6dc8c69efb680d8a3b40f6fe1cff6f103e18e4ff3efb6653a9b0d4802fd",
+      "public_prompt_excerpt": "I've been assigned to write an article about Palantir's success in 2024-2025. Can you help me create a draft of this article that goes over the background of Palantir and why they ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605351",
+      "partition": "development_quarantine",
+      "public_task_sha256": "61e7fb8355cdc0ce8904368088af9b0a97e6e9a31d115450f41a3e7ba6ac0681",
+      "public_prompt_excerpt": "Write an explanatory article comparing and contrasting Support Vector Machine and Logistic Regression.",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605355",
+      "partition": "test",
+      "public_task_sha256": "83c28fe6a7722970cad4fc281260a50e9eba3cdf5ea0ac55e8abb7d373990e03",
+      "public_prompt_excerpt": "Write a synthesis report on the applications of AI in drug discovery for a technical audience unfamiliar with biology. It should cover the main applications of AI in every stage of",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a60535d",
+      "partition": "validation",
+      "public_task_sha256": "2517771947f755c420920d5d67149a6493258192e28b9c1a4954eecbe9c96bc0",
+      "public_prompt_excerpt": "Design a framework for regulating the training and deployment of autonomous AI agents that interact with the open internet, ensuring alignment with both national laws and ethical A",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605360",
+      "partition": "test",
+      "public_task_sha256": "0dc7912b22989a0ce15b88727840cd8bb5334044f4775a099573cf020218aed2",
+      "public_prompt_excerpt": "i'm trying to outline my final paper for this history of tech seminar and i'm a bit stuck on the scope. it's supposed to be a big 'comprehensive expository analysis' on two key AI ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605362",
+      "partition": "test",
+      "public_task_sha256": "01838171d17478c28bdd7a1b2371b7fe61a14009f4449fd9eaf739a823548f6f",
+      "public_prompt_excerpt": "Suppose I'm a Venture Partner who has been called up to give a detailed presentation about cybersecurity in aviation/airlines to the C-suite of Alaska Airlines in the light of a re",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605363",
+      "partition": "evolution",
+      "public_task_sha256": "9571938428fe3221a7879b8d21dacad44ea2f8d6b13d992339869c2539b4fa03",
+      "public_prompt_excerpt": "Write a brief research report comparing the performance of the car rental companies Turo and Getaround, detailing all major economic events for each company from 2020 to 2025 and h",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605366",
+      "partition": "test",
+      "public_task_sha256": "b6f2f7783fa5e51112ba5ef215db54b88df54568017192a215edffca932ba937",
+      "public_prompt_excerpt": "I am migrating a project built on Spring Boot that uses hibernate version 5.3.22, a Spring Boot version 2.3.2, and Java 17, to a new repository that does not currently use Hibernat",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605367",
+      "partition": "validation",
+      "public_task_sha256": "a74c4184ea431a2ab6681965e3f7c15f044a6707ac1dd05d946dc7ef58c7d71d",
+      "public_prompt_excerpt": "Conduct a comprehensive, evidence-based analysis of the historical monument named \"Taj Mahal.\" Identify and explain at least three key architectural features and detail the materia",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605371",
+      "partition": "evolution",
+      "public_task_sha256": "d795477ba7fb0e590f2fc813c2486b6ceb5e36ef2d7c1066ae093e1b6b9c418b",
+      "public_prompt_excerpt": "i'm a remote software engineer in SF. its getting too expensive. i make $120k. i want to relocate somewhere else in the US. i need you to do the research for me and give me a ranke",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605378",
+      "partition": "validation",
+      "public_task_sha256": "555e4509b3a2f174244a6c01bb596f1a74174af4adbbad8f9facdddd46b7ed74",
+      "public_prompt_excerpt": "Write a blog post that describes which single NBA player has been the most influential on the court and off the court in NBA history up until 2025. It should include intuitive expl",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605383",
+      "partition": "development_quarantine",
+      "public_task_sha256": "d56a4387849c8e9c064b42fcddf5d90321f93e8c6668226107673c809655554e",
+      "public_prompt_excerpt": "Examine the philosophical implications of using AI systems to make decisions about AI safety, focusing on the epistemic circularity problem. Analyze specific cases where AI safety ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605387",
+      "partition": "test",
+      "public_task_sha256": "e0959e7eeef48e82c2369dc03249e9341ac7a698e686bb3618e07726cdbbc74b",
+      "public_prompt_excerpt": "Write a comprehensive analysis for a graduate-level seminar on technology and society, evaluating the principles and practices of responsible AI use in the legal field. The analysi",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605391",
+      "partition": "validation",
+      "public_task_sha256": "aca03f9d4cd2bb17629abdf1b20265d9e6722dd77f4e82afdd35f0e8fc259d58",
+      "public_prompt_excerpt": "Write a strategic business report advising a mid-stage U.S. plant-based meat startup on how to enter and scale in the Southeast Asian market (focusing on countries like Singapore, ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053a0",
+      "partition": "test",
+      "public_task_sha256": "962370d61e30bf370fc5cd235ca0123b48ddfec3feebe7c5b191cf8883fa04a2",
+      "public_prompt_excerpt": "Write a technical proposal for a distributed audio streaming system. The system should include an audio streaming platform and a live chat feature. This application should be built",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053a7",
+      "partition": "evolution",
+      "public_task_sha256": "212a90c0668bbd48c976822bd3e14bee18063107edde1f95a657d5af3104a00f",
+      "public_prompt_excerpt": "Write a detailed history of the town of Mount Gretna, Pennsylvania, USA.  Include its unique founding and subdivisions, its cultural history, its religious history, its military hi",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053aa",
+      "partition": "evolution",
+      "public_task_sha256": "65eed4d0684b1ced4bd68eca467a84382054d3c8491d179d1ef8cf5b425f6cdf",
+      "public_prompt_excerpt": "Investigate the physical and economic constraints that the laws of thermodynamics impose on Artificial General Intelligence (AGI). Contrasting the megawatt-hour energy needs of cur",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053ac",
+      "partition": "evolution",
+      "public_task_sha256": "395f4329954e64a53a9ffcaee61d0124b40b8e4a53b3c14d27cafa58c7e45465",
+      "public_prompt_excerpt": "How much should we (the current generation) have to change our lives to tackle climate change for for future generations?\n\nI want you to\n1. explain and compare at least two ethical",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053b5",
+      "partition": "validation",
+      "public_task_sha256": "691f759c70c1177a44ab5a705c1698520b5fb3b2030d1cbcb302ec163c3e23bc",
+      "public_prompt_excerpt": "Conduct a comprehensive historical analysis of how the world has changed since the onset of the COVID-19 pandemic. Compare and contrast life before COVID and after it, covering key",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053b9",
+      "partition": "evolution",
+      "public_task_sha256": "bc5a8bf3aec93c5eaf7187a20007b6f8f650b161ab3010c42c797b509a1a7dec",
+      "public_prompt_excerpt": "Write a series of technical blog posts on some of the advancements in Large Language Model (LLM) training and fine-tuning in 2023-2025. Each post should at least contain:\n- The int",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053bb",
+      "partition": "development_quarantine",
+      "public_task_sha256": "6ef59fc808c1b11c2bde53494454c635bbe250baf93435ec57ef9407949ea737",
+      "public_prompt_excerpt": "I want a comprehensive research paper on the history of probability problems involving circles and stochastically selecting points or lines across the circle's circumference. As an",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053c9",
+      "partition": "test",
+      "public_task_sha256": "85d97240e370c69c8ad780449ffeacb2ba650bc98d0e6c66dd10e5870fe0c24b",
+      "public_prompt_excerpt": "I am planning to implement a embedded system processor for a thermostat machine. Write me a blog post which goes through everything that I need to consider, including things like R",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053ca",
+      "partition": "development_quarantine",
+      "public_task_sha256": "dcbb2fa0868fe5664a23efb9315dc5ec26e2d0e40108a5707a503517f4652655",
+      "public_prompt_excerpt": "Design a modified U-Net architecture to perform instance segmentation on noisy fluorescence microscopy images with overlapping cells or organelles. Describe the U-Net variant used ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053ce",
+      "partition": "test",
+      "public_task_sha256": "ca4c3f464ecfffa46629b268f36b1d2d2416b12b488f9bffff60c8d93afbe0d0",
+      "public_prompt_excerpt": "Pretend that you are a senior research fellow at a national public health institute and create a comprehensive research report about the health benefits of outdoor exposure and Vit",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053d0",
+      "partition": "test",
+      "public_task_sha256": "9e9abbb046e4944ff08fa38a1c61ed39f7055c04aec60e5bc6f816528d41940e",
+      "public_prompt_excerpt": "Write about the politics of Star Wars prequels and what led to the fall of the Jedi (leading up to Order 66) and Palpatine taking over the whole galaxy for an audience that has an ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053d8",
+      "partition": "test",
+      "public_task_sha256": "f5229432d491996c8757a61dbd297b6d9dcc5e74a3916e09efd11632908ab372",
+      "public_prompt_excerpt": "You are a junior analyst at the U.S. Department of State's Bureau of Western Hemisphere Affairs. Write a concise internal strategic report on the current crisis in Haiti. The repor",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053e0",
+      "partition": "validation",
+      "public_task_sha256": "c5990cf8df52dffb4a1752e429ffc06af9693f655292a29cbbe5a4bef35b6f35",
+      "public_prompt_excerpt": "I am trying to recreate \"Around the world in 80 days\", I want to avoid planes but travel to as many countries and Islands as possible, I want to do it in a very low budget and want",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053e8",
+      "partition": "validation",
+      "public_task_sha256": "54f396c97b20ea4b1cdf4576abda26d2da96734c291cd324100d7a3d587a31a2",
+      "public_prompt_excerpt": "Was the Western Roman Empire's fall an inevitable system-wide collapse or a preventable accident of history? Pinpoint a single, realistic post-395 CE turning point and justify how ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053f2",
+      "partition": "evolution",
+      "public_task_sha256": "0c6b436d2ac21d9d214e968277ff2ab78272d6f7f45e06e32b7230076e571765",
+      "public_prompt_excerpt": "Provide an analysis of the 2025 NBA finals, focusing on what tactical changes were made and how they affected the outcome of the games. Talk about rotations, defensive and offensiv",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053f3",
+      "partition": "evolution",
+      "public_task_sha256": "4f3356348479162e91728496bcd0ce9aa5f01e9f7f62644ec696185224d017e3",
+      "public_prompt_excerpt": "How do you evaluate modern (up to 2025) Text-to-speech (TTS) models, including advancements in prosody, emotion, and multilingual capabilities. Explore emerging tasks such as voice",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053f5",
+      "partition": "evolution",
+      "public_task_sha256": "4314edc6d04568f34a3034eae58c206312acd9ef6252abe00a3cfc35d0de7bd9",
+      "public_prompt_excerpt": "Design a cross-platform anti-cheat system for a competitive first-person shooter video game that could potentially handle up to 1 million concurrent users across multiple game sess",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6053fb",
+      "partition": "validation",
+      "public_task_sha256": "a0ff3a64d082b2f66ff47d5116e35137eecc2c682185c26a5f2edde7fec3b51b",
+      "public_prompt_excerpt": "Conduct an analysis to determine whether social media's overall impact on society has been more beneficial or detrimental. Argument should be structured by examining social media's",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605401",
+      "partition": "test",
+      "public_task_sha256": "39a5c3c7268f4d99fe5e3b8853177d25ba415ba9e85f5f18b128a75c07fbe6d6",
+      "public_prompt_excerpt": "Conduct a literature-based analysis comparing the business models of Instacart (CART) and DoorDash (DASH), evaluating which company has the stronger model and why. In your review, ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605404",
+      "partition": "validation",
+      "public_task_sha256": "80eed07e8d0702f5266f702ba8876012d8e834657da70c55a151598cbca5ae69",
+      "public_prompt_excerpt": "You are writing a feature essay for a publication on gaming history and culture. Your task is to analyze the key factors behind the long-term success of Counter-Strike: Global Offe",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605407",
+      "partition": "test",
+      "public_task_sha256": "a64f07998a0a310e72940ef5a7645aa33fb2a7303643c13207336953d3ea2436",
+      "public_prompt_excerpt": "Imagine that a future technology can erase specific memories without side effects. Craft a detailed policy brief that takes a stance on whether courts can mandate the procedure for",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605411",
+      "partition": "test",
+      "public_task_sha256": "6ab59b93ee9d5f781dc3e05516433d7db5ded08353ad9f0d08e0e1e25f9dfd34",
+      "public_prompt_excerpt": "What are some of the top computational social science labs in the US, in terms of undergrad research output and impact? Even if there are no readily available metrics on undergrad ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605414",
+      "partition": "development_quarantine",
+      "public_task_sha256": "d8e1f646e328e14120a252f7b7ee5d9a231ee16e33cccf09b78e5cf5c02ddb5b",
+      "public_prompt_excerpt": "Write a comprehensive technical report for beginners to machine learning that explains how neural networks learn from data, including core concepts like forward propagation, loss f",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605424",
+      "partition": "test",
+      "public_task_sha256": "92bc4b1eaac9eb0fa94cddcece9ee34cea2914e39ca28464751a90e006017f65",
+      "public_prompt_excerpt": "I am a high schooler in Cupertino. It is AP season and I'm trying to study for my tests. Can you give me 10 recommendations for places that open until at least 10pm that are good f",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605425",
+      "partition": "validation",
+      "public_task_sha256": "3f6aa44d71802a63c51916f427688a57ec2219a9868e030a911b420b43796a38",
+      "public_prompt_excerpt": "I’m a free-to-play Clash Royale player sitting at 5200 trophies (King Level 40). I’d like to climb to at least 6500 trophies within the next three months without spending real mone",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605427",
+      "partition": "validation",
+      "public_task_sha256": "5793ae66c1aad5ec7c4bda5798819c7f3a638cc1b7bf64bcde5f294b21470c99",
+      "public_prompt_excerpt": "I want to create a plan for July 4, 2025, i.e., Independence Day in Washington DC. I would like an itinerary of all the things to do and all the activities that are planned for Ind",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a60542a",
+      "partition": "test",
+      "public_task_sha256": "97243e4c501ef74e2b6149b3fc86c95a76dd517dbdff7a10370b394434e4fef8",
+      "public_prompt_excerpt": "I am a software engineer at a small startup, trying to scale our product to around 1M users / day from around the world. The service is a social media app similar to twitter, where",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a60542d",
+      "partition": "validation",
+      "public_task_sha256": "35729e052574a18c606c1d3f3cb166c6444ef9b1ad4cca03b69438c017f7b8ef",
+      "public_prompt_excerpt": "Write about the politics of the Mahabharat and what led up to the Kurukshetra war for an audience that knows the basics. Talk less about the religious aspect and more about the pol",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a60542f",
+      "partition": "development_quarantine",
+      "public_task_sha256": "4aacd37e15972d2d91d148b2888cad3f5d8a599bd2bd698f498d430d39a44965",
+      "public_prompt_excerpt": "You are a policy analyst at an independent financial-political think tank. Produce a 10000-12000-word policy white paper that answers: \"How has the rise of quantitative hedge funds",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605433",
+      "partition": "evolution",
+      "public_task_sha256": "9114b28c860dc4ce5ef6b1c13b8e912a8f9b6641e52167c7a4262419fe167764",
+      "public_prompt_excerpt": "Act as a creative technical founder and brainstorm an innovative AI startup idea that meets these criteria:\n1. Leverages AI in a meaningful, technically interesting way, not just a",
+      "public_urls": [
+        "http://boardy.ai",
+        "http://cal.ai"
+      ],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605434",
+      "partition": "development_quarantine",
+      "public_task_sha256": "0893f4d51b8e89363dcfc07b32688c2a80438274b43311071fd7c3b3d5e1028d",
+      "public_prompt_excerpt": "Write a concise technical report exploring why some autonomous vehicle systems prioritize LiDAR while others rely on neural networks and cameras.",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a60543d",
+      "partition": "development_quarantine",
+      "public_task_sha256": "0fb2da609b2e7cd1f7e37b0d0f2902af0bd8d7f16d57b73a31a03b492b196716",
+      "public_prompt_excerpt": "Help create a detailed outline for a potential YouTube short for a growing Physics explainer channel. The channel is run solely by a high-schooler, who is looking to create origina",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a60543e",
+      "partition": "evolution",
+      "public_task_sha256": "e26d5ad53d9efefeaed567ccc8caf5abbd574a7faffbe539e415bf15b956a0bc",
+      "public_prompt_excerpt": "Using a data-driven approach, compare the environmental sustainability, supply chain ethics, and transparency practices of three major global clothing brands: Patagonia, Uniqlo (Fa",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605440",
+      "partition": "development_quarantine",
+      "public_task_sha256": "b93f95ff894d167c3ca403770f2774fffedfaeddadbc8cd423029bc814272b26",
+      "public_prompt_excerpt": "Prove definitely whether a self-improving artificial intelligence system can be mathematically guaranteed to maintain alignment with human values indefinitely through recursive sel",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605441",
+      "partition": "validation",
+      "public_task_sha256": "ae591dd357bb3909c47914c44ef9646e4c53cad9d5505bbd5a147a7b194fa027",
+      "public_prompt_excerpt": "Generate a short investor report on the main geopolitical and market factors affecting global uranium prices in the 2025 fiscal year.",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605443",
+      "partition": "test",
+      "public_task_sha256": "7e175bf4f03a7fe7668bfd3b4331aee91faa55182b9d880e5a7884b067dc04ed",
+      "public_prompt_excerpt": "Debate whether there should be age limits - minimum or maximum - for voting. Consider democratic principles, cognitive development and decline, intergenerational equity, and the ba",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605451",
+      "partition": "evolution",
+      "public_task_sha256": "c76230ec5e1dde5c94abb43a1af553f7427ff670afdbcec876cfc79713a56e40",
+      "public_prompt_excerpt": "Write an accurate historical depiction of a realistic timeline that would lead the Germans and the Axis powers to winning World War II. What would need to happen for the Germans to",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605457",
+      "partition": "development_quarantine",
+      "public_task_sha256": "fdb61638ba40cd8901273019d196b4fa12b8f779facfb017c988b79449d9408f",
+      "public_prompt_excerpt": "Write a blog post describing the pros and cons of using a gradient boosting model over a support vector machine for a health dataset. Some thing to consider when writing this post ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a60545c",
+      "partition": "development_quarantine",
+      "public_task_sha256": "5c9e94d20c0009cab7ab4a97a1000d4c6d0b2ae340682d21e13a689feb32e292",
+      "public_prompt_excerpt": "Conduct a comprehensive comparative analysis of the causes, processes, and outcomes of the French Revolution (1789), Russian Revolution (1917), and Iranian Revolution (1979). Your ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605469",
+      "partition": "test",
+      "public_task_sha256": "c84536b7740e54b1c6e8e4103d96a0bdc392d9e9be9f7dcf1fc192593433b12e",
+      "public_prompt_excerpt": "In the future, if everything is automated and there are high-level, advanced technologies available, it means that there is no need for human labour for most of the things. How wil",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605476",
+      "partition": "test",
+      "public_task_sha256": "c715f01e47cfcc9f9edb3c7a201986fbe348d5c0af72e4b73c95cfc86064ad6e",
+      "public_prompt_excerpt": "Imagine the following alternate history timeline: \n1. Operation Barbarossa was anticipated by Joseph Stalin, causing the Soviet army to be well-prepared for the German invasion in ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605478",
+      "partition": "evolution",
+      "public_task_sha256": "c929c9ac72e9bf5bfa1d218ca760112779b422d4ad58b876937ee984b67bc72a",
+      "public_prompt_excerpt": "I want to make an ai system with a few bots that work together to make personalized learning paths for students\n\ni'm thinking we need two bots. a 'Content bot' that finds lessons b",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a60547c",
+      "partition": "evolution",
+      "public_task_sha256": "c433a97c6162224603b0617ef8f2d066a5bdc85308bd80b0e3120ff18a3e5c20",
+      "public_prompt_excerpt": "Write a detailed historical analysis of the economic rationale and ethical implications of the Allied strategic bombing campaigns in World War II, focusing on the bombing of indust",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a60547e",
+      "partition": "evolution",
+      "public_task_sha256": "99e63f4106fc1cc0a48893ace7eca89b220914b15fd598561c58fc4f10766856",
+      "public_prompt_excerpt": "I'm trying to scope out my research proposal. It's focused on decentralized control for a heterogeneous swarm (UAVs and UGVs) doing search and rescue in unstructured, GPS-denied en",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a60547f",
+      "partition": "evolution",
+      "public_task_sha256": "f2f0ef819f2ea6c99cddc66e9c592d4b0ccc02d8fcdabae12f77b9881217ec1d",
+      "public_prompt_excerpt": "i'm trying to block out my paper for a phil of mind seminar. I need to discuss our ethical responsibility to future conscious digital minds, eg uploaded human consciousness and AIs",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a60548a",
+      "partition": "development_quarantine",
+      "public_task_sha256": "c9ffba0aa9e76fe02d8c15ddda39cf4cb7023117c075b08621e66192c781c0e1",
+      "public_prompt_excerpt": "Write a beginner-friendly technical guide explaining how Convolutional Neural Networks (CNNs) process visual data. Cover key ideas like convolution, kernels, feature maps, pooling,",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605491",
+      "partition": "evolution",
+      "public_task_sha256": "0de09d919682cf2244fee0f84a117a676d26d9c66e39519a0b868b2a5d026582",
+      "public_prompt_excerpt": "I am trying to learn more about merge conflicts in git and how to resolve them. It would be really helpful if you could help me understand different commands like rebase and stash ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605492",
+      "partition": "test",
+      "public_task_sha256": "23c734766bc3d7b4908de82d0a835ffcfe1ff0cc466e9e5091497f04ee88f679",
+      "public_prompt_excerpt": "Compose a concise technical report sketching an experimental plan for deciding whether a modern vision-language model could stand in for human specialists when labeling medical ima",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605493",
+      "partition": "test",
+      "public_task_sha256": "407997a3b7060dec86f13032a52a2a5d0cad04accd8cad4fcecf3fcaaf720977",
+      "public_prompt_excerpt": "Write an introduction on Markov chains in the field of statistics/combinatorics and the reason behind their genesis. Then, write a literature review on Markov chains in contemporar",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a605494",
+      "partition": "development_quarantine",
+      "public_task_sha256": "b67126e1ce9b692f698ffa266d6aa57ce42fd67b01bf349ea0246f0a1c2ee927",
+      "public_prompt_excerpt": "Suppose Indira Gandhi had not declared the National Emergency in 1975. Write a critical essay analyzing how India’s democratic institutions such as the judiciary, press, and politi",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6054a2",
+      "partition": "development_quarantine",
+      "public_task_sha256": "ddf38ecf89ebbe6cbdafb1703c393e80694e7f8d98166a58ac67d34ee4685f55",
+      "public_prompt_excerpt": "Generate a holistic, paradigm-shifting manifesto that synergizes next-generation business intelligence with agile methodologies to investigate the AI value-stream actualization gap",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6054a5",
+      "partition": "evolution",
+      "public_task_sha256": "cac5e0d6b2159ae525cc7f7b8119c5a242fb9667834d3397d689ff8e3e72ce9e",
+      "public_prompt_excerpt": "Why are MCP servers for AI agents a buzz in 2025? What makes them so different than just using APIs or Agent tools. If I want to get started building with MCP servers and AI agents",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6054a7",
+      "partition": "evolution",
+      "public_task_sha256": "20b32eebda0a1425cded4f9c11116382fda308238052748f78ebf2d0ad2a6127",
+      "public_prompt_excerpt": "Compare the effectiveness and potential long-term consequences of Universal Basic Income (UBI) programs in developed countries with pilot programs in Finland, Canada, and the U.S.,",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6054a9",
+      "partition": "evolution",
+      "public_task_sha256": "01a58a0bcd582d9a9f4762933a2078a2657e782da3002b5a274179711363fde2",
+      "public_prompt_excerpt": "I am an incoming freshman at UC Berkeley, admitted into CDSS for Statistics. I am trying to graduate in 3 years and double major in CS, but I haven't been admitted to the CS major ",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6054aa",
+      "partition": "development_quarantine",
+      "public_task_sha256": "8f3c4313d32b7975fe508ed40370f30f232727c40160755ec954af21d09b4d0c",
+      "public_prompt_excerpt": "Help me write a 2-page overview of the NELF-E protein's role in hepatocellular carcinoma, and how its ability to form bimolecular condensates might give clues as to its role in tum",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6054ad",
+      "partition": "evolution",
+      "public_task_sha256": "dd5d3845781dae5dc0ac059417f59b65d9e9cbffb15aea7deb474c62a7c865a9",
+      "public_prompt_excerpt": "create a simple agentic ai for personal mental-wellness support. id like to have\n- two agents: one would be a 'Mood Agent' that reads your check-ins (text or voice) to see what you",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6054be",
+      "partition": "evolution",
+      "public_task_sha256": "46f87dfd2cff0d98e28f062812db121aa3a099a2daa69873904c192e3844e638",
+      "public_prompt_excerpt": "write a series of blog posts on important combinatorics topics in math olympiads. Include intuitive and detailed explanations, as well as example problems from top olympiads such a",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6054c2",
+      "partition": "evolution",
+      "public_task_sha256": "597a42cb7e306b9e433449bde18572bf2da071c60e110b7457e7c121ba5e0599",
+      "public_prompt_excerpt": "Select several pivotal episodes from the Rāmāyaṇa whose moral tension you consider most acute. For each episode, supply a concise narrative outline, engage at least two variant tel",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6054cd",
+      "partition": "test",
+      "public_task_sha256": "b30bb51e6185120c566704615ca42b9e515a6e51be93ec19a2b82a54d97ef995",
+      "public_prompt_excerpt": "Can you critically evaluate the legal implications of conferring limited personhood on artificial agents under international law? How does this concept differ from traditional corp",
+      "public_urls": [],
+      "attachment_count": 0
+    },
+    {
+      "task_id": "6847465956a0f6376a6054d0",
+      "partition": "test",
+      "public_task_sha256": "291e983cabc909b06ea4b108066d614e443b4fcad1f3e64abb641d7cb77631d9",
+      "public_prompt_excerpt": "Critically analyze how agricultural practices in ancient Egypt shaped the development of their mythology, particularly in relation to deities, rituals, and beliefs about life and t",
+      "public_urls": [],
+      "attachment_count": 0
+    }
+  ],
+  "public_overlap_audit": {
+    "exact_normalized_question_cross_partition": [],
+    "exact_url_cross_partition": [],
+    "topic_and_semantic_source_review": "REQUIRED_BEFORE_FORMAL_FREEZE",
+    "limitations": "Exact public-text/URL checks do not establish source or topic independence; hidden sources are not inspected."
+  },
+  "interpretation": "Within-benchmark task transfer only. Not an official dataset split, topic-disjoint evaluation, or measured result.",
+  "provenance": {
+    "dataset_sha256": "ea2023d03953b70ba4a2f7f1fe490b434f18cec26c4fdb48acc0e3edf3d8edfb",
+    "dataset_revision": "85de3115053d1453ed612caacf4a405edc1ad756",
+    "exposure_record_sha256": "db0a0a1e4b71f3ab41baa9d9d50fcc30c6d47c56518e915d99503347965f0c48",
+    "pilot_registration_sha256": "2613bafb1441f8a8aa89698aa7d513e57ec6e5f9cb9b9d9b877cf5e30473e479"
+  },
+  "adoption_status": "OBSOLETE_ON_HOLD_METHOD_CHANGE",
+  "superseded_on": "2026-10-01",
+  "supersession_reason": "Online paired-validation accept/hold/reject promotion was removed. This unrun draft and its task allocations are historical audit records only, not an active protocol. No replacement allocation is adopted."
+}

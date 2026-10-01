@@ -69,27 +69,26 @@ def execution_case():
                 shutil.rmtree(path)
 
 
-def test_actual_output_cap_and_allocated_correction_are_visible_and_metered(execution_case):
+def test_actual_output_cap_and_single_call_are_visible_and_metered(execution_case):
     truncated = '{"answer":"unfinished'
     result, calls, budget = execution_case([truncated, '{"answer":"A shorter complete guide."}'])
-    assert result.answer == "A shorter complete guide."
-    assert len(calls) == budget["model_calls"] == 2
+    assert result.answer is None
+    assert len(calls) == budget["model_calls"] == 1
     payload = json.loads(calls[0]["messages"][1]["content"])
-    assert payload["output_budget"] == {"max_tokens_per_response": 128, "max_model_calls": 2}
+    assert payload["output_budget"] == {"max_tokens_per_response": 128, "max_model_calls": 1}
     assert all(call["kwargs"]["max_tokens"] == 128 for call in calls)
     assert "hard ceiling of 128" in calls[0]["messages"][0]["content"]
     assert "final deliverable itself" in calls[0]["messages"][0]["content"]
-    assert "including this one): 1" in calls[1]["messages"][-1]["content"]
-    assert truncated in json.dumps(calls[1]["messages"]).replace('\\"', '"')
+    assert "only model call" in calls[0]["messages"][-1]["content"]
     assert "ResponseProtocolError" in result.sub_runs[0].trajectory[0].observations
-    assert "Rewrite a shorter, complete JSON object" in str(calls[1]["messages"])
+    assert "no role recall" in result.sub_runs[0].trajectory[0].observations
 
 
 def test_exhausted_protocol_budget_never_publishes_truncated_answer(execution_case):
     result, calls, budget = execution_case(['{"answer":"unfinished'], max_calls=1)
     assert result.answer is None
     assert len(calls) == budget["model_calls"] == 1
-    assert result.sub_runs[0].terminated_reason == "max_calls"
+    assert result.sub_runs[0].terminated_reason == "error"
     assert not any(event["kind"] == "final_answer" for event in result.metadata["events"])
 
 
@@ -104,8 +103,8 @@ def test_tool_style_terminal_completion_cannot_bypass_answer_validation(executio
     result, calls, budget = execution_case([
         '{"tools":[{"name":"final_answer","arguments":{"answer":123}}]}',
         '{"tools":[{"name":"final_answer","arguments":{"answer":"Valid final answer."}}]}'])
-    assert result.answer == "Valid final answer."
-    assert len(calls) == budget["model_calls"] == 2
+    assert result.answer is None
+    assert len(calls) == budget["model_calls"] == 1
     assert "ResponseProtocolError" in result.sub_runs[0].trajectory[0].observations
 
 
@@ -114,7 +113,7 @@ def test_invalid_terminal_is_checked_before_any_prior_tool_side_effect(execution
         {"name": "raise_issue", "arguments": {"content": "Must not be published"}},
         {"name": "final_answer", "arguments": {"answer": 123}}]}),
         '{"answer":"A valid correction."}'])
-    assert result.answer == "A valid correction."
-    assert len(calls) == budget["model_calls"] == 2
+    assert result.answer is None
+    assert len(calls) == budget["model_calls"] == 1
     assert budget["tool_calls"] == 0
     assert not any(event["kind"] == "issue" for event in result.metadata["events"])

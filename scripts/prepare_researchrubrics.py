@@ -17,7 +17,8 @@ def main(argv=None):
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--evolution-size", type=int, default=5)
-    parser.add_argument("--validation-size", type=int, default=4)
+    parser.add_argument("--validation-size", type=int, default=0,
+                        help="Optional reserved development subset; not used to gate experience updates")
     parser.add_argument("--stream", action="store_true", help="Use evolution subset as an ordered online stream")
     args = parser.parse_args(argv)
     if bool(args.input) == bool(args.download):
@@ -37,8 +38,8 @@ def main(argv=None):
     target.write_bytes(content)
     rows = ResearchRubricsAdapter().load_dataset(str(target))
     ids = [row["task_id"] for row in rows]
-    if args.evolution_size < 1 or args.validation_size < 1 or args.evolution_size + args.validation_size >= len(ids):
-        parser.error("Positive evolution/validation sizes must leave an untouched test split")
+    if args.evolution_size < 1 or args.validation_size < 0 or args.evolution_size + args.validation_size >= len(ids):
+        parser.error("Positive evolution and nonnegative reserved validation sizes must leave an untouched test split")
     random.Random(args.seed).shuffle(ids)
     a, b = args.evolution_size, args.evolution_size + args.validation_size
     manifest = SplitManifest(seed=args.seed, evolution=[] if args.stream else ids[:a],

@@ -62,10 +62,22 @@ def _mas_contract() -> str:
     lines.extend([
         "These are API examples, not a required fixed team or a complete required output. "
         "Design task-appropriate module policies and agent_prompt text. Retain superclass invariants "
-        "when overriding methods. The supplied TeamSpec determines roles, allocation and dependencies.",
+        "when overriding methods. Only call superclass methods actually listed in this installed API; "
+        "generic JIT examples may use different methods. The supplied TeamSpec determines roles, "
+        "allocation and dependencies.",
         "When overriding __init__, forward only parameters accepted by the installed base constructor "
         "shown above. In particular TeamPlanning accepts prompts, not summary_interval; any additional "
         "task-specific setting belongs on the generated subclass after super().__init__(prompts=prompts).",
+        "Installed TeamPlanning implementation (already available, do not redefine this base):",
+        inspect.getsource(TeamPlanning),
+        "The generic JIT planning lifecycle above does not apply to this MAS binding. TeamSpec is "
+        "already planned and frozen before task execution. Planning.init_plan and Planning.update_plan "
+        "receive a blocked coordinator guard in their model parameter, NOT an LLM callable. Never "
+        "invoke that parameter, a renamed parameter, or an alias of it. These methods may only "
+        "deterministically read/serialize the bound TeamSpec and produce PlanState/SummaryState. "
+        "Inherit TeamPlanning or delegate to super().init_plan(task, memory_view, tool_schemas, model); "
+        "passing the guard through to this inherited implementation is valid. Keep should_replan "
+        "false. Do not generate a new plan, run a model-based summary, or request another task pass.",
         "Installed TeamAction implementation (already available, do not redefine this base):",
         inspect.getsource(TeamAction),
         f"Installed helper: run_team{inspect.signature(run_team)} -> RunResult",
@@ -79,9 +91,16 @@ def _mas_contract() -> str:
         f"TeamServices.event{inspect.signature(TeamServices.event)}",
         f"TeamServices.reserve_call{inspect.signature(TeamServices.reserve_call)}",
         "The recommended Action.run is return super().run(task, ctx). It already owns the complete "
-        "bounded loop, gives each role a separate Memory and metered model, enforces tool allowlists, "
-        "schedules dependencies/concurrency, records full I/O and executes the synthesizer exactly once. "
+        "single-pass execution, gives each role a separate Memory and metered model, enforces tool allowlists, "
+        "schedules dependencies/concurrency, records full I/O and calls each role model exactly once. "
         "Custom actions must preserve all these contracts. Do not switch a shared memory's current_role.",
+        "Use a task-conditioned forward-only collaboration topology: independent Analyst/Evidence "
+        "contributors normally run in parallel, publish into a shared ledger, and the Writer "
+        "(TeamSpec.synthesizer_id) reads the frozen ledger and writes the full deliverable once. "
+        "Genuine forward data dependencies are allowed; do not hard-code agent IDs, a fixed domain "
+        "team, or a particular answer. There is no draft-review-rewrite loop, clarification, "
+        "negotiation, peer messaging, or second role-model call, even when max_calls is larger. "
+        "The independent evaluator runs only after submission, outside this team.",
         "ctx.model is a coordinator guard in this MAS runner, not an execution model. Calling "
         "ctx.model(...) fails. Use inherited execution or properly budgeted role models obtained "
         "from services.model_factory. ctx.get_tool_schemas(tools=None) returns a JSON STRING; "
@@ -93,18 +112,58 @@ def _mas_contract() -> str:
         "prompt.yaml must define nonempty system_prompt and agent_prompt, plus planning, summary, "
         "final_answer and step mappings. system_prompt may use only Jinja tools/skills_prompt. "
         "agent_prompt is plain text, appended to each role's independent system message; task, role, "
-        "upstream artifacts and assigned rubric details arrive separately as structured JSON.",
-        'The exact role completion JSON is {"answer":"...","evidence_ids":[],"checkpoints":{}}. '
+        "shared_ledger and assigned rubric details arrive separately as structured JSON. "
+        "Use shared_ledger, never the removed upstream_artifacts field.",
+        "The rubric_mas role completion contract below replaces the generic think/tools ReAct envelope. "
+        "Generated agent_prompt must not require think/tools-only responses, at least one tool call "
+        "per turn, or final_answer from every role. It must permit direct answer/checkpoints JSON "
+        "without any tool call. Do not copy conflicting generic output instructions into any template.",
+        'The Writer completion JSON is {"answer":"...","evidence_ids":[],"checkpoints":{}}. '
+        'A non-Writer contributor completes with {"answer":"brief contribution summary",'
+        '"ledger":{"requirements":[],"outline":[],"evidence_spans":[],"source_references":[]},'
+        '"evidence_ids":[],"checkpoints":{}}. requirements and outline are lists of strings; '
+        'evidence_spans entries are {"text":"...","source_ref":"source-id"}; '
+        'source_references entries are {"source_id":"source-id","locator":"..."}. '
+        "All four ledger fields are required for a contributor completion and may be empty. "
+        "Every span source_ref must match that contribution's source_references source_id. "
+        "Do not invent provenance: state missing sources as a limitation and leave unsupported "
+        "evidence fields empty. Contributors supply analysis and evidence, not competing full drafts. "
         "For each assigned checkpoint, use its EXACT name as a key with boolean true only after "
-        "checking it. Missing or false checkpoint keys prevent completion. Optional reasoning must "
-        "not replace answer/checkpoints. Every role may return answer for local completion; only "
-        "the designated synthesizer submits the team's final answer.",
-        'The tool JSON is {"tools":[{"name":"...","arguments":{}}]}. Built-in collaboration '
-        "operations are send_message(recipient,content), read_evidence(event_id), raise_issue(content). "
-        "Other tools must be in the current agent's allowlist. Preserve relevant sources and "
+        "checking it, or use {status: 'completed'|'passed'|'failed'|'unverified'|'not_applicable', "
+        "reason: '...', evidence_ids: []}. Every structured report requires a nonempty reason and "
+        "an evidence_ids list containing only exact event IDs observed by that role; an empty list "
+        "must not imply external verification. completed means the check was performed, a neutral "
+        "self-report, not passed or independently verified. Report failed, unverified or "
+        "not_applicable honestly when appropriate. These are self-reports, never independent "
+        "verification. Missing checks or unexplained false values prevent completion. Do not require "
+        "unconditional true values in generated prompts. Optional reasoning must "
+        "not replace answer/checkpoints. Non-synthesizer roles finish locally using top-level answer "
+        "or complete with the same answer/evidence_ids/checkpoints arguments, never final_answer. "
+        "The synthesizer may also return top-level answer; only it may use final_answer to submit "
+        "the team's final deliverable. complete/final_answer are terminal operations, not requests "
+        "to bypass checkpoint or evidence validation.",
+        'A contributor may emit one independent external tool batch as '
+        '{"tools":[{"name":"...","arguments":{}}]}. Only a tool producer may omit answer. '
+        "The runtime publishes the raw tool outputs into shared_ledger.tool_evidence without "
+        "calling the contributor again or inventing analysis. These outputs were not observed "
+        "by the producing model and must not be claimed as its already-read evidence. "
+        "Tools must be in the current agent's allowlist and require remaining shared tool budget. "
+        "Writer tool requests other than complete/final_answer are forbidden. send_message, "
+        "read_evidence and raise_issue are removed, even with positive tool budget. With zero "
+        "tool budget or no permitted tools, do not instruct agents to call tools. "
+        "Instead report limitations in answer/checkpoints. Preserve relevant sources and "
         "uncertainty; do not force citations onto unrelated creative tasks.",
+        "shared_ledger contains requirements, outline, evidence_spans, source_references, "
+        "contributions (published artifact fields without duplicated ledger bodies), and tool_evidence. "
+        "Aggregated ledger entries retain agent_id attribution; tool_evidence contains full retrieved events. "
+        "The Writer receives all contributor artifacts, not private role histories; contributors "
+        "see only forward dependencies, not peers' private conversations. The coordinator freezes "
+        "and publishes the ledger with shared_ledger_ready/shared_ledger_read events, not messages. "
+        "The Writer should resolve material disagreements and retain the full requested deliverable. Generated task hints "
+        "and predicted rubrics are fallible; never force an unsupported formula or factual claim "
+        "into the answer. Check assumptions and inferences when relevant to the task.",
         "Do not read team.json at module scope, hard-code current agent IDs or mutate evaluator, "
-        "budget, accepted experience, or task-global state. Generate all FIVE modules/config now.",
+        "budget, stored experience, or task-global state. Generate all FIVE modules/config now.",
     ])
     return "\n\n".join(lines)
 
@@ -177,6 +236,73 @@ def _method_signature(node):
     return inspect.Signature(parameters)
 
 
+def _reference_path(node):
+    if isinstance(node, ast.Name):
+        return (node.id,)
+    if isinstance(node, ast.Attribute):
+        parent = _reference_path(node.value)
+        return parent + (node.attr,) if parent else None
+    if isinstance(node, ast.Subscript) and isinstance(node.slice, ast.Constant):
+        parent = _reference_path(node.value)
+        if parent and isinstance(node.slice.value, (str, int)):
+            return parent + (node.slice.value,)
+    return None
+
+
+def _coordinator_calls(method, parameter_refs=()):
+    """Find common direct/straight-line alias mistakes, not prove code isolation."""
+    aliases = set(parameter_refs)
+    calls = []
+
+    def guarded(value):
+        path = _reference_path(value)
+        return (path is not None and (path in aliases or path == ("ctx", "model"))) or (
+            isinstance(value, ast.Attribute) and value.attr == "__call__" and guarded(value.value))
+
+    class Visitor(ast.NodeVisitor):
+        def visit_FunctionDef(self, node):
+            pass  # Nested scopes have their own arguments and alias bindings.
+
+        visit_AsyncFunctionDef = visit_FunctionDef
+        visit_Lambda = visit_FunctionDef
+
+        def visit_Call(self, node):
+            if guarded(node.func):
+                calls.append(node)
+            self.generic_visit(node)
+
+        def visit_Assign(self, node):
+            self.visit(node.value)
+            source_guarded = guarded(node.value)
+            for target in node.targets:
+                path = _reference_path(target)
+                if path is not None:
+                    aliases.discard(path)
+                    if source_guarded:
+                        aliases.add(path)
+
+        def visit_AnnAssign(self, node):
+            if node.value is not None:
+                self.visit_Assign(ast.Assign(targets=[node.target], value=node.value))
+
+        def visit_If(self, node):
+            self.visit(node.test)
+            before = set(aliases)
+            for statement in node.body:
+                self.visit(statement)
+            after_body = set(aliases)
+            aliases.clear()
+            aliases.update(before)
+            for statement in node.orelse:
+                self.visit(statement)
+            aliases.update(after_body)
+
+    visitor = Visitor()
+    for statement in method.body:
+        visitor.visit(statement)
+    return calls
+
+
 def _module_interface_errors(filename, tree):
     export, installed_base, requirements = _MODULE_CONTRACTS[filename]
     errors, imports, classes, aliases = [], {}, {}, {}
@@ -226,6 +352,7 @@ def _module_interface_errors(filename, tree):
                     return found
         return None
 
+    planning_guards = {}
     for method, (positional, keywords) in {"__init__": (0, {"prompts": {}}), **requirements}.items():
         implementation = lookup(target, method)
         if implementation is None:
@@ -239,6 +366,19 @@ def _module_interface_errors(filename, tree):
             signature = (_method_signature(implementation) if isinstance(implementation, ast.FunctionDef)
                          else inspect.signature(implementation))
             signature.bind(None, *([None] * positional), **keywords)
+            if filename == "planning.py" and method in {"init_plan", "update_plan"} and isinstance(
+                    implementation, ast.FunctionDef):
+                # Both installed methods receive the coordinator as their fourth
+                # positional runtime argument, regardless of the generated name.
+                marker = object()
+                bound = signature.bind(None, None, None, None, marker)
+                refs = []
+                for name, value in bound.arguments.items():
+                    if value is marker:
+                        refs.append((name,))
+                    elif isinstance(value, tuple):
+                        refs.extend((name, index) for index, item in enumerate(value) if item is marker)
+                planning_guards[id(implementation)] = refs
         except (TypeError, ValueError) as exc:
             errors.append(f"{filename}: incompatible {export}.{method}; expected calls compatible with "
                           f"{method}{inspect.signature(getattr(installed_base, method))}: {exc}")
@@ -274,9 +414,19 @@ def _module_interface_errors(filename, tree):
                 errors.append(f"{filename}:{node.lineno}: incompatible {class_node.name} super().__init__; "
                               f"installed {installed_base.__name__}.__init__{signature}: {exc}")
 
+    guarded_call_ids = set()
+    for method in ast.walk(tree):
+        if isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for call in _coordinator_calls(method, planning_guards.get(id(method), ())):
+                guarded_call_ids.add(id(call))
+                errors.append(f"{filename}:{call.lineno}: ctx.model is a coordinator guard, as is the "
+                              "model argument of Planning.init_plan/update_plan; do not invoke it or "
+                              "its aliases. Inherit TeamPlanning or deterministically read the frozen "
+                              "TeamSpec; superclass argument forwarding is valid")
+
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-            if isinstance(node.func.value, ast.Name) and node.func.value.id == "ctx" and node.func.attr == "model":
+            if (_reference_path(node.func) == ("ctx", "model") and id(node) not in guarded_call_ids):
                 errors.append(f"{filename}:{node.lineno}: ctx.model is a coordinator guard; use inherited TeamAction "
                               "or the bound services.model_factory(agent_id) with budget guards")
             receiver = node.func.value
@@ -460,7 +610,9 @@ class JITHarnessSynthesizer:
             "Subclass the installed Team* implementations to reuse actual guards and full traces. "
             "Each action must return "
             "RunResult with each role's full observed I/O in sub_runs and immutable event metadata. "
-            "Runtime errors may be repaired; no evaluator feedback is available. "
+            "Generate single-pass contributor ledger publication followed by one Writer model call; "
+            "no task-internal negotiation or clarification. Only code/interface failures before any "
+            "role-model invocation may be repaired; no evaluator feedback is available. "
             "Keep system_prompt, agent_prompt, planning, summary, final_answer, step in prompt.yaml."
         )
 
@@ -591,6 +743,8 @@ class JITHarnessSynthesizer:
         """Bounded exception-only repair. Task quality or evaluator scores are forbidden."""
         if not isinstance(failure, Exception):
             raise TypeError("repair requires an execution/interface exception, never a score")
+        if _role_execution_started(failed_run, failure):
+            raise RuntimeError("Single-pass execution already started; whole-team repair is forbidden") from failure
         if artifact.repair_count >= self.max_repairs:
             raise RuntimeError("JIT exception repair budget exhausted")
         artifact.verify_integrity()
@@ -624,9 +778,11 @@ class JITHarnessSynthesizer:
                 return result
             except BaseException as exc:
                 failed_attempts.append({"error": str(exc), "run": result.full_dict() if result else None,
-                                        "harness_hash": artifact.code_hash})
+                                        "harness_hash": artifact.code_hash,
+                                        "role_execution_started": _role_execution_started(result, exc)})
                 # Safety gates and exhaustion are not repairable harness defects.
-                if (not isinstance(exc, Exception) or isinstance(exc, (PermissionError, TimeoutError)) or
+                if (_role_execution_started(result, exc) or not isinstance(exc, Exception)
+                        or isinstance(exc, (PermissionError, TimeoutError)) or
                         any(term in str(exc).lower() for term in ("unsafe-local", "sandbox", "budget", "timeout",
                                                                 "exhausted", "sidecar", "changed after"))):
                     self._attach_failure(exc, artifact=artifact, failed_attempts=failed_attempts)
@@ -636,3 +792,13 @@ class JITHarnessSynthesizer:
                 except BaseException as repair_error:
                     self._attach_failure(repair_error, artifact=artifact, failed_attempts=failed_attempts)
                     raise
+
+
+def _role_execution_started(result=None, failure=None):
+    """Conservatively prohibit replay after any role-model reservation or trace."""
+    if getattr(failure, "jit_mas_execution_started", False):
+        return True
+    if result is None:
+        return False
+    return bool(result.metadata.get("model_calls_used", 0) or
+                any(run.trajectory for run in result.sub_runs))

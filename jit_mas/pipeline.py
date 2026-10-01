@@ -14,7 +14,6 @@ from .experience import ExperienceStore, retrieve
 from .planning import GlobalAnalyzer
 from .schemas import (EvaluationFeedback, ExperienceSnapshot, PlannedTeam, Prediction,
                       PublicTask, RubricFeedback, RubricGraph, SplitManifest, digest, utc_now)
-from .validation import PairedValidator
 
 SUBMITTED_SOURCE_FILES = ("run_manifest.json", "frozen_plan.json", "planning_calls.json", "harness.json",
                           "execution.json", "submission.json", "evaluation.json", "budget.json")
@@ -51,11 +50,17 @@ def write_json(path, value):
 def code_fingerprint():
     root = Path(__file__).resolve().parents[1]
     files = []
-    for directory in ("jit_mas", "jit", "scripts/kernel", "scripts/models", "scripts/tools",
-                      "benchmark/adapter", "harness_factory/descriptions", "harness_factory/harnesses/rubric_mas"):
+    for directory in ("jit_mas", "jit", "scripts/kernel", "scripts/models", "scripts/tools", "scripts/eval",
+                      "benchmark/adapter", "harness_factory/descriptions", "harness_factory/harnesses"):
         for path in sorted((root / directory).rglob("*")):
             if path.suffix in (".py", ".yaml", ".txt", ".md"):
                 files.append((path.relative_to(root).as_posix(), digest(path.read_text(encoding="utf-8"))))
+    for filename in ("run_jit_mas.py", "mas_baseline_methods.py", "run_benchmark_experiment.py",
+                     "run_benchmark_test.py", "prepare_benchmark_suite.py", "prepare_benchmark_evidence.py",
+                     "summarize_benchmark_suite.py"):
+        path = root / "scripts" / filename
+        if path.is_file():
+            files.append((path.relative_to(root).as_posix(), digest(path.read_text(encoding="utf-8"))))
     return digest(files)
 
 
@@ -77,7 +82,8 @@ def input_fingerprints(task):
 def convert_feedback(raw):
     return EvaluationFeedback(
         task_id=raw["task_id"], evaluator_version=raw["evaluator_version"],
-        score=raw["score"], complete=raw["complete"],
+        score=raw["score"] if raw["complete"] else None, complete=raw["complete"],
+        aggregation=raw.get("aggregation", "sum(weight*score)/sum(positive weights)"),
         zero_denominator=raw.get("zero_denominator", False),
         source=raw.get("evaluator_source", "benchmark"), raw=raw,
         rubrics=[RubricFeedback(rubric_id=row["rubric_id"], criterion=row["criterion"],
@@ -105,7 +111,16 @@ class MASPipeline:
 
     def run_task(self, task_id, snapshot: ExperienceSnapshot, *, mode="evaluate", repeat=0,
                  attribution=False, resume=True, resume_source=None, resume_source_hash=None,
-                 resume_attribution=None, resume_attribution_hash=None):
+                 resume_attribution=None, resume_attribution_hash=None, defer_evaluation=False):
+        split_name = {"evolve": "evolution", "validate": "validation", "evaluate": "test", "stream": "stream"}.get(mode)
+        if split_name is None or task_id not in getattr(self.manifest, split_name):
+            raise ValueError("Task does not belong to the explicitly selected split")
+        if attribution and mode in ("validate", "evaluate"):
+            raise ValueError("Held-out execution cannot perform attribution")
+        if defer_evaluation and (mode != "evaluate" or attribution or resume_source is not None):
+            raise ValueError("Deferred scoring is only valid for frozen test submissions")
+        if type(repeat) is not int or repeat < 0:
+            raise ValueError("Repeat must be a nonnegative integer")
         ledger = BudgetLedger(self.config.max_model_calls, self.config.max_total_tokens,
                               self.config.max_tool_calls)
         audit = {}
@@ -119,7 +134,7 @@ class MASPipeline:
                 return self._resume_submitted_task(task_id, snapshot, ledger, audit,
                     resume_source, resume_source_hash, resume_attribution, resume_attribution_hash)
             return self._run_task(task_id, snapshot, ledger, audit, mode=mode, repeat=repeat,
-                                  attribution=attribution, resume=resume)
+                                  attribution=attribution, resume=resume, defer_evaluation=defer_evaluation)
         except BaseException as exc:
             run_dir = audit.get("run_dir", self.output_dir / "failures" / uuid.uuid4().hex)
             failure = {"task_id": task_id, "experience_hash": digest(snapshot), "mode": mode,
@@ -246,7 +261,7 @@ class MASPipeline:
         source = Path(source_dir).resolve()
         if not source_hash or submitted_source_digest(source) != source_hash:
             raise ValueError("Submitted-source content hash mismatch")
-        if snapshot.version != 0 or snapshot.experiences or snapshot.accepted_proposals:
+        if snapshot.version != 0 or snapshot.experiences or snapshot.applied_proposals:
             raise ValueError("Submitted-source continuation requires a fresh empty baseline")
         documents = {name: json.loads((source / name).read_text(encoding="utf-8"))
                      for name in SUBMITTED_SOURCE_FILES}
@@ -357,8 +372,8 @@ class MASPipeline:
             "evaluation": feedback.model_dump(mode="json"), "budget": budget,
             "proposals": [p.model_dump(mode="json") for p in proposals], "run_dir": str(run_dir),
             "uncontrolled_variation": ["Source and any explicitly reused attribution retain their recorded historical code"],
-            "costs": {"inference": {}, "external_evaluation": {}, "experience_update": budget["by_stage"].get("update", {}),
-                      "validation": {"model_calls": 0, "tokens": 0, "tool_calls": 0, "cost": None}}}
+            "costs": {"inference": {}, "external_evaluation": {},
+                      "experience_update": budget["by_stage"].get("update", {})}}
         if frozen_attribution is None:
             outcome["attribution_continued_at"] = utc_now()
         else:
@@ -367,7 +382,8 @@ class MASPipeline:
         write_json(run_dir / "complete.json", outcome)
         return outcome
 
-    def _run_task(self, task_id, snapshot, ledger, audit, *, mode, repeat, attribution, resume):
+    def _run_task(self, task_id, snapshot, ledger, audit, *, mode, repeat, attribution, resume,
+                  defer_evaluation=False):
         from .execution import TeamExecutor
 
         task = self.tasks[task_id]
@@ -382,7 +398,8 @@ class MASPipeline:
                       "attachments": input_fingerprints(task)}
         comparison_hash = digest(comparison)
         run_key = digest({"comparison": comparison_hash, "snapshot": digest(snapshot),
-                          "mode": mode, "attribution": attribution})
+                          "mode": mode, "attribution": attribution,
+                          **({"defer_evaluation": True} if defer_evaluation else {})})
         cacheable = (self.config.backend == "scripted" or
                      (not task.tools and not any(a.get("unsnapshotted") for a in comparison["attachments"])))
         if not cacheable or not resume:
@@ -439,19 +456,43 @@ class MASPipeline:
         executor = TeamExecutor(lambda aid: model("exec", aid, "inference"), tools=self.tools,
                                 ledger=ledger, timeout_seconds=self.config.execution_timeout,
                                 unsafe_local=self.config.unsafe_local)
-        # JIT's bounded repair consumes runtime exceptions, never quality feedback.
+        # JIT repair is limited to failures before any role call, never quality feedback.
         result = synth.execute_with_repair(executor, task, planned.team, artifact,
                                            rubrics=planned.graph, experiences=experience)
         write_json(run_dir / "harness.json", artifact.to_dict())
         write_json(run_dir / "execution.json", result.full_dict())
+        call_trace = {"task_id": task_id, "run_key": run_key,
+            "coordination": result.metadata.get("coordination"),
+            "execution_calls": [{**event["content"], "agent_id": event["agent_id"],
+                                 "event_id": event["event_id"], "timestamp": event["timestamp"]}
+                                for event in result.metadata.get("events", [])
+                                if event.get("kind") == "agent_call"],
+            "shared_ledger_hash": result.metadata.get("shared_ledger_hash"), "evaluator_calls": []}
+        write_json(run_dir / "call_trace.json", call_trace)
         if result.terminated_reason != "final_answer" or result.answer is None:
             write_json(run_dir / "budget.json", ledger.snapshot())
             raise RuntimeError("Team did not submit a final answer; official evaluation was not invoked")
         submission = {"answer": result.answer, "answer_hash": digest(result.answer), "submitted_at": utc_now()}
         write_json(run_dir / "submission.json", submission)
+        if defer_evaluation:
+            outcome = {"run_key": run_key, "task_id": task_id, "mode": mode, "repeat": repeat,
+                "status": "submitted_unscored", "backend": self.config.backend,
+                "software_test_only": self.config.backend == "scripted", "resumed": False,
+                "experience_version": snapshot.version, "experience_hash": digest(snapshot),
+                "comparison_fingerprint": comparison_hash, "answer_hash": submission["answer_hash"],
+                "submitted_at": submission["submitted_at"], "budget": ledger.snapshot(),
+                "evaluation": None, "proposals": [], "run_dir": str(run_dir)}
+            write_json(complete_path, outcome)
+            return outcome
         # Sole transition at which the trusted coordinator opens private evaluation data.
-        raw_feedback = evaluator.evaluate(str(result.answer), ground_truth=task_id,
-                                          private_record=self.private_records[task_id])
+        try:
+            raw_feedback = evaluator.evaluate(str(result.answer), ground_truth=task_id,
+                                              private_record=self.private_records[task_id])
+        finally:
+            # One evaluation may make many rubric-level calls; retain the actual settled records.
+            call_trace["evaluator_calls"] = [record for record in ledger.snapshot()["records"]
+                if record.get("stage") == "evaluation" and record.get("kind") == "model"]
+            write_json(run_dir / "call_trace.json", call_trace)
         raw_feedback["submission_answer_hash"] = submission["answer_hash"]
         feedback = convert_feedback(raw_feedback)
         write_json(run_dir / "evaluation.json", feedback)
@@ -471,8 +512,7 @@ class MASPipeline:
         stages = outcome["budget"]["by_stage"]
         outcome["costs"] = {"inference": stages.get("inference", {}),
                             "external_evaluation": stages.get("evaluation", {}),
-                            "experience_update": stages.get("update", {}),
-                            "validation": {"model_calls": 0, "tokens": 0, "tool_calls": 0, "cost": None}}
+                            "experience_update": stages.get("update", {})}
         write_json(complete_path, outcome)
         return outcome
 
@@ -533,29 +573,17 @@ class MASPipeline:
                               if resume_source is not None else {})))
             if update:
                 self.store.save_task_run(mode, task_id, identity, state, "submitted", outcome)
-            outcome["validations"] = []
+            outcome["experience_updates"] = []
             if update:
-                # One independently interpretable proposal is validated per task.
+                # Preserve the one-update-per-source policy without quality selection.
                 for raw in outcome["proposals"][:1]:
                     proposal = ChangeProposal.model_validate(raw)
-                    if proposal.proposal_id in self.store.snapshot().accepted_proposals:
-                        break  # Recovery after atomic commit but before the journal completion.
-                    self.store.stage(proposal)
-                    def rebuild(tid, snapshot, repeat, label):
-                        return self.run_task(tid, snapshot, mode="validation", repeat=repeat,
-                                             attribution=False, resume=resume)
-                    validator = PairedValidator(rebuild, self.manifest, self.config.validation)
-                    validation = validator.validate(proposal, state,
-                        self.manifest.validation[:self.config.max_validation_tasks])
-                    validation = self.store.record_validation(validation)
-                    if validation.status == "accepted":
-                        self.store.commit(proposal, validation)
-                    outcome["validations"].append(validation.model_dump(mode="json"))
-                    for pair in validation.pairs:
-                        for side in ("baseline", "candidate", "failed_run"):
-                            budget = pair.get(side, {}).get("budget", {})
-                            for field in ("model_calls", "tokens", "tool_calls"):
-                                outcome["costs"]["validation"][field] += budget.get(field, 0)
+                    written = self.store.commit(proposal)
+                    outcome["experience_updates"].append({
+                        "proposal_id": proposal.proposal_id, "source_task_id": proposal.source_task_id,
+                        "base_version": proposal.base_version, "version": written.version,
+                        "proposal_hash": digest(proposal), "snapshot_hash": digest(written),
+                        "update_rule": "direct_after_attribution"})
             outcome["next_experience_version"] = self.store.snapshot().version
             if update:
                 self.store.save_task_run(mode, task_id, identity, state, "complete", outcome)

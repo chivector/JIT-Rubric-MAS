@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import time
+from collections import Counter
 from pathlib import Path
 from typing import Any, Callable
 
@@ -21,6 +22,7 @@ UPSTREAM_COMMIT = "2dc80e2d4c38ddd80439517c259d93c6954b193f"
 DATASET_REVISION = "85de3115053d1453ed612caacf4a405edc1ad756"
 PROMPT_DIR = Path(__file__).with_name("researchrubrics_prompts")
 SCHEMA_VERSION = "1.0"
+QUALITY_AUDIT_VERSION = "researchrubrics-risk-only-v1"
 
 
 def _finite_number(value: Any, label: str) -> float:
@@ -89,6 +91,36 @@ def official_compliance_score(rows: list[dict]) -> float:
     return numerator / denominator if denominator > 0 else 0.0
 
 
+def _judgment_hash(row: dict) -> str:
+    fields = ("rubric_id", "criterion", "weight", "verdict", "score", "reasoning",
+              "evidence_quotes", "missing_elements", "status", "success", "evaluator_version")
+    payload = {key: row.get(key) for key in fields}
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False,
+                                    allow_nan=False).encode("utf-8")).hexdigest()
+
+
+def _quality_risks(row: dict, answer_hash: str) -> dict:
+    """Report observable risks, not semantic judgments or score corrections."""
+    count = len(row["evidence_quotes"])
+    verified = sum(location.get("verified") is True for location in row["evidence_locations"])
+    flags = []
+    if row["weight"] < 0:
+        flags.append("negative_weight_polarity_requires_review")
+    if count > verified:
+        flags.append("unverified_evidence_quote")
+    if verified == 0:
+        flags.append("no_verified_evidence_quote")
+    return {
+        "version": QUALITY_AUDIT_VERSION, "mode": "risk_only",
+        "semantic_consistency": "unassessed", "risk_flags": flags,
+        "negative_weight": row["weight"] < 0,
+        "quote_count": count, "verified_quote_count": verified,
+        "unverified_quote_count": count - verified,
+        "answer_sha256": answer_hash, "judgment_sha256": _judgment_hash(row),
+        "model_calls": 0, "score_modified": False,
+    }
+
+
 class ResearchRubricsAdapter(BenchmarkAdapter):
     """Frozen independent binary judge, injectable for offline software tests.
 
@@ -108,7 +140,10 @@ class ResearchRubricsAdapter(BenchmarkAdapter):
         max_document_chars: int = 400000,
         judge: Callable | None = None,
         judge_id: str = "",
+        quality_audit_mode: str = "off",
     ):
+        if quality_audit_mode not in {"off", "risk_only"}:
+            raise ValueError("quality_audit_mode must be off or risk_only")
         if not 1 <= int(max_attempts) <= 3:
             raise ValueError("ResearchRubrics max_attempts must be between 1 and 3")
         if int(judge_max_tokens) <= 0 or float(judge_timeout) <= 0:
@@ -123,6 +158,7 @@ class ResearchRubricsAdapter(BenchmarkAdapter):
         self._max_attempts = int(max_attempts)
         self._max_document_chars = int(max_document_chars)
         self._judge = judge
+        self._quality_audit_mode = quality_audit_mode
         self._private_records: dict[str, dict] = {}
         self._system_prompt = (PROMPT_DIR / "system_prompt.txt").read_text(encoding="utf-8")
         self._user_prompt = (PROMPT_DIR / "user_prompt.txt").read_text(encoding="utf-8")
@@ -341,7 +377,7 @@ class ResearchRubricsAdapter(BenchmarkAdapter):
         numerator = sum(row["weight"] * row["score"] for row in feedback)
         score = official_compliance_score(feedback)
         complete = all(row["success"] for row in feedback)
-        return {
+        result = {
             "schema_version": SCHEMA_VERSION,
             "task_id": sample_id,
             "sample_id": sample_id,
@@ -367,3 +403,23 @@ class ResearchRubricsAdapter(BenchmarkAdapter):
             "usage_known": all(row["usage_known"] for row in feedback),
             "cost": None,
         }
+        if self._quality_audit_mode == "risk_only":
+            answer_hash = hashlib.sha256(prediction.encode("utf-8")).hexdigest()
+            for row in feedback:
+                row["quality_audit"] = _quality_risks(row, answer_hash)
+            audits = [row["quality_audit"] for row in feedback]
+            counts = Counter(flag for audit in audits for flag in audit["risk_flags"])
+            result["quality_audit"] = {
+                "version": QUALITY_AUDIT_VERSION, "mode": "risk_only",
+                "semantic_consistency": "unassessed", "screened_rows": len(audits),
+                "flagged_rows": sum(bool(audit["risk_flags"]) for audit in audits),
+                "risk_counts": dict(sorted(counts.items())),
+                "negative_weight_rows": sum(audit["negative_weight"] for audit in audits),
+                **{key: sum(audit[key] for audit in audits) for key in
+                   ("quote_count", "verified_quote_count", "unverified_quote_count")},
+                "answer_sha256": answer_hash, "official_evaluator_version": self.evaluator_version,
+                "model_calls": 0, "score_modified": False,
+                "note": "Risk flags are not proven contradictions, fabricated evidence, or a new score. "
+                        "Semantic consistency remains unassessed; flags alone must not change validation decisions.",
+            }
+        return result

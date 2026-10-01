@@ -115,7 +115,7 @@ def test_defaults_run_only_connectivity_and_planning(tmp_path, credentials):
     assert report["budget"]["model_calls"] == 5
     assert report["stages"]["synthesis"]["status"] == "not_requested"
     assert not (tmp_path / "default" / "execution.json").exists()
-    assert {c["agent_id"] for c in provider.calls} == {"global", "analyst", "integrator"}
+    assert {c["agent_id"] for c in provider.calls} == {"global", "analyst", "writer"}
 
 
 @pytest.mark.parametrize("structured_max_tokens", [1, 4096, 8192, 16000])
@@ -234,13 +234,15 @@ def test_full_flow_preserves_native_static_and_seed_execution_distinction(
     assert report["stages"]["evaluation"]["submitted_at"] < report["stages"]["evaluation"]["evaluated_at"]
     assert report["budget"]["model_calls"] <= 20
     assert report["budget"]["tool_calls"] == report["budget"]["reserved_tokens"] == 0
-    assert report["stages"]["attribution"]["staged_proposals"] == 1
-    store = ExperienceStore(output / "staged_experience.sqlite", read_only=True)
+    assert report["stages"]["attribution"]["applied_proposals"] == 1
+    assert report["stages"]["attribution"]["update_rule"] == "direct_after_attribution"
+    assert "validation_status" not in report["stages"]["attribution"]
+    store = ExperienceStore(output / "experience.sqlite", read_only=True)
     try:
-        assert store.snapshot().version == 0
-        assert not store.snapshot().experiences
-        assert store.db.execute("SELECT COUNT(*) FROM staging").fetchone()[0] == 1
-        assert store.db.execute("SELECT COUNT(*) FROM commits").fetchone()[0] == 0
+        assert store.snapshot().version == 1
+        assert len(store.snapshot().experiences) == 1
+        assert store.db.execute("SELECT COUNT(*) FROM proposals").fetchone()[0] == 1
+        assert store.db.execute("SELECT COUNT(*) FROM commits").fetchone()[0] == 1
     finally:
         store.close()
 

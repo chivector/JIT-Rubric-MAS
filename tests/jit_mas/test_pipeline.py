@@ -33,8 +33,10 @@ def read_run(outcome, filename):
 def test_complete_vertical_loop_and_reuse(setup):
     pipeline, store, provider = setup
     outcome = pipeline.run("evolve")[0]
-    assert outcome["validations"][0]["status"] == "accepted"
-    assert len(outcome["validations"][0]["pairs"]) == 2
+    receipt = outcome["experience_updates"][0]
+    assert receipt["update_rule"] == "direct_after_attribution"
+    assert receipt["snapshot_hash"] == digest(store.snapshot())
+    assert "validations" not in outcome and "validation" not in outcome["costs"]
     assert store.snapshot().version == 1
     assert outcome["submitted_at"] < outcome["evaluated_at"]
     assert read_run(outcome, "evaluation.json")["raw"]["submission_answer_hash"] == outcome["answer_hash"]
@@ -42,15 +44,20 @@ def test_complete_vertical_loop_and_reuse(setup):
     assert frozen["R_global"] != frozen["R_planned"]
     assert frozen["hashes"]["TeamSpec"] == digest(frozen["TeamSpec"])
     result = read_run(outcome, "execution.json")
-    assert len(result["sub_runs"]) == 2
+    assert len(result["sub_runs"]) == 3
     assert all(r["trajectory"][0]["model_input_messages"] for r in result["sub_runs"])
-    assert {"message_sent", "message_consumed", "final_answer"} <= {e["kind"] for e in result["metadata"]["events"]}
+    kinds = {e["kind"] for e in result["metadata"]["events"]}
+    assert {"artifact_published", "final_answer"} <= kinds
+    assert not {"message_sent", "message_consumed", "evidence_read", "issue"}.intersection(kinds)
     before = digest(store.snapshot())
     following = pipeline.run("evaluate", limit=2)
     assert digest(store.snapshot()) == before
     next_plan = read_run(following[0], "frozen_plan.json")
     poem_plan = read_run(following[1], "frozen_plan.json")
     assert len(next_plan["TeamSpec"]["agents"]) == 3
+    assert [a["agent_id"] for a in next_plan["TeamSpec"]["agents"]] == [
+        a["agent_id"] for a in frozen["TeamSpec"]["agents"]]
+    assert next_plan["TeamSpec"]["agents"][0]["responsibilities"] != frozen["TeamSpec"]["agents"][0]["responsibilities"]
     assert len(poem_plan["TeamSpec"]["agents"]) == 1
     assert any(r["experience_ids"] for r in next_plan["R_global"]["rubrics"])
     assert following[0]["proposals"] == []
@@ -77,6 +84,103 @@ def test_canary_not_in_pre_execution_or_generation_workspaces(setup):
             assert "PRIVATE_CANARY" not in path.read_text(encoding="utf-8")
 
 
+@pytest.mark.parametrize("local_rounds", [1, 3])
+def test_pre_execution_local_rounds_do_not_add_executor_passes(setup, local_rounds):
+    pipeline, store, provider = setup
+    pipeline.config.local_rounds = local_rounds
+    outcome = pipeline.run("evaluate", limit=1)[0]
+    planning = [json.loads(call["messages"][-1]["content"]) for call in provider.calls
+                if call["role"] in {"global", "local"}]
+    assert sum(call["phase"] == "predict" for call in planning) == 1
+    assert sum(call["phase"] == "local_plan" for call in planning) == 3 * local_rounds
+    assert sum(call["phase"] == "reconcile" for call in planning) == local_rounds
+    execution = [call for call in provider.calls if call["role"] == "exec"]
+    assert len(execution) == 3
+    assert {call["agent_id"] for call in execution} == {"analyst", "evidence", "writer"}
+    assert all(not any(message["role"] == "assistant" for message in call["messages"])
+               for call in execution)
+    writer = next(call for call in execution if call["agent_id"] == "writer")
+    payload = json.loads(writer["messages"][1]["content"])
+    assert "upstream_artifacts" not in payload
+    shared = payload["shared_ledger"]
+    assert {row["agent_id"] for row in shared["contributions"]} == {"analyst", "evidence"}
+    assert shared["requirements"] and shared["outline"]
+    assert {row["text"] for row in shared["evidence_spans"]} == {
+        pipeline.tasks[outcome["task_id"]].question}
+    assert all(row["locator"] == "public_task.question" for row in shared["source_references"])
+    result = read_run(outcome, "execution.json")
+    assert all(len(run["trajectory"]) == 1 for run in result["sub_runs"])
+    assert result["metadata"]["model_calls_used"] == 3
+    assert "shared_ledger_ready" in {event["kind"] for event in result["metadata"]["events"]}
+    assert outcome["budget"]["by_stage"]["evaluation"]["model_calls"] == 1
+    trace = read_run(outcome, "call_trace.json")
+    assert trace["task_id"] == outcome["task_id"] and trace["run_key"] == outcome["run_key"]
+    assert trace["coordination"] == "single_pass_shared_ledger"
+    assert trace["shared_ledger_hash"] == result["metadata"]["shared_ledger_hash"]
+    events = [event for event in result["metadata"]["events"] if event["kind"] == "agent_call"]
+    assert len(trace["execution_calls"]) == 3
+    assert {call["role"].casefold() for call in trace["execution_calls"]} == {"analyst", "evidence", "writer"}
+    assert trace["execution_calls"] == [{**event["content"], "agent_id": event["agent_id"],
+        "event_id": event["event_id"], "timestamp": event["timestamp"]} for event in events]
+    evaluation_records = [record for record in outcome["budget"]["records"]
+                          if record["stage"] == "evaluation" and record["kind"] == "model"]
+    assert trace["evaluator_calls"] == evaluation_records
+    assert len(trace["evaluator_calls"]) == 1
+    assert sum(record["input_tokens"] + record["output_tokens"] for record in trace["evaluator_calls"]) == (
+        outcome["budget"]["by_stage"]["evaluation"]["tokens"])
+    assert not any("round" in key for key in trace)
+    assert not any("round" in key for call in trace["execution_calls"] for key in call)
+    assert store.snapshot().version == 0
+
+
+def test_call_trace_preserves_real_evaluator_calls_when_evaluation_raises(setup):
+    pipeline, store, _ = setup
+    evaluator_factory = pipeline.evaluator_factory
+
+    def failing_factory(model):
+        evaluator = evaluator_factory(model)
+        evaluate = evaluator.evaluate
+
+        def fail_after_call(*args, **kwargs):
+            evaluate(*args, **kwargs)
+            raise RuntimeError("Synthetic failure after the evaluator call")
+
+        evaluator.evaluate = fail_after_call
+        return evaluator
+
+    pipeline.evaluator_factory = failing_factory
+    with pytest.raises(RuntimeError, match="Synthetic failure") as caught:
+        pipeline.run("evaluate", limit=1)
+    run_dir = Path(caught.value.jit_mas_run_failure["run_dir"])
+    trace = json.loads((run_dir / "call_trace.json").read_text(encoding="utf-8"))
+    budget = json.loads((run_dir / "budget.json").read_text(encoding="utf-8"))
+    assert len(trace["execution_calls"]) == 3
+    assert trace["evaluator_calls"] == [record for record in budget["records"]
+        if record["kind"] == "model" and record["stage"] == "evaluation"]
+    assert len(trace["evaluator_calls"]) == 1
+    assert not (run_dir / "complete.json").exists()
+    assert store.snapshot().version == 0
+
+
+def test_call_trace_records_each_rubric_evaluation_call(setup):
+    from benchmark.adapter.researchrubrics import split_item
+
+    pipeline, _, provider = setup
+    task_id = pipeline.manifest.test[0]
+    original = pipeline.private_records[task_id]
+    raw = {**original["raw_record"], "rubrics": original["raw_record"]["rubrics"] * 3}
+    _, private = split_item(raw)
+    private["source"] = original["source"]
+    pipeline.private_records[task_id] = private
+    outcome = pipeline.run("evaluate", [task_id])[0]
+    trace = read_run(outcome, "call_trace.json")
+    assert len(trace["evaluator_calls"]) == len(outcome["evaluation"]["rubrics"]) == 3
+    assert len([call for call in provider.calls if call["role"] == "judge"]) == 3
+    assert len({record["call_id"] for record in trace["evaluator_calls"]}) == 3
+    assert trace["evaluator_calls"] == [record for record in outcome["budget"]["records"]
+        if record["kind"] == "model" and record["stage"] == "evaluation"]
+
+
 def test_resume_does_not_resubmit_or_commit_twice(setup):
     pipeline, store, provider = setup
     first = pipeline.run("evolve")[0]
@@ -84,6 +188,35 @@ def test_resume_does_not_resubmit_or_commit_twice(setup):
     again = pipeline.run("evolve")[0]
     assert again["resumed"] and first["run_key"] == again["run_key"]
     assert len(provider.calls) == calls and store.snapshot().version == version
+
+
+def test_restart_after_atomic_update_restores_receipt_without_calls_or_duplicate_write(setup, monkeypatch):
+    pipeline, store, provider = setup
+    save = store.save_task_run
+
+    def crash_before_completion(mode, task_id, identity, baseline, status, outcome=None):
+        if status == "complete":
+            raise RuntimeError("Interrupted after direct update")
+        return save(mode, task_id, identity, baseline, status, outcome)
+
+    monkeypatch.setattr(store, "save_task_run", crash_before_completion)
+    with pytest.raises(RuntimeError, match="Interrupted"):
+        pipeline.run("evolve")
+    calls = len(provider.calls)
+    assert store.snapshot().version == 1
+    assert store.task_run("evolve", pipeline.manifest.evolution[0])["status"] == "submitted"
+    monkeypatch.setattr(store, "save_task_run", save)
+    resumed = pipeline.run("evolve")[0]
+    assert len(provider.calls) == calls
+    assert len(resumed["experience_updates"]) == 1
+    assert resumed["experience_updates"][0]["snapshot_hash"] == digest(store.snapshot())
+    assert resumed["next_experience_version"] == store.snapshot().version == 1
+
+
+@pytest.mark.parametrize("obsolete", [{"validation": {}}, {"max_validation_tasks": 2}])
+def test_removed_promotion_settings_fail_explicitly(obsolete):
+    with pytest.raises(ValueError, match="remove obsolete"):
+        MASConfig.model_validate({"backend": "scripted", **obsolete})
 
 
 def test_stream_past_state_and_restart_order(setup):
@@ -117,7 +250,7 @@ def test_ablation_and_frozen_store(setup, tmp_path):
     frozen = read_run(result, "frozen_plan.json")
     assert not frozen["R_global"]["rubrics"]
     assert not frozen["TeamSpec"]["coverage"]
-    assert len(frozen["TeamSpec"]["agents"]) == 2
+    assert len(frozen["TeamSpec"]["agents"]) == 3
     assert store.snapshot().version == 0
     store.freeze(tmp_path / "frozen.json")
     readonly = ExperienceStore(store.path, read_only=True)
@@ -179,35 +312,28 @@ def test_stage_failure_preserves_budget_and_error(setup, monkeypatch):
     assert store.snapshot().version == 0
 
 
-def test_failed_validation_counts_baseline_and_candidate_attempts_without_committing(setup, monkeypatch):
+def test_direct_update_never_runs_validation_tasks_or_charges_paired_calls(setup, monkeypatch):
     pipeline, store, _ = setup
     original = pipeline._run_task
 
-    def fail_candidate(task_id, snapshot, ledger, audit, **kwargs):
-        if kwargs["mode"] == "validation" and snapshot.experiences:
-            ticket = ledger.reserve("inference", "offline-failed-candidate", 10, 20)
-            ledger.settle(ticket, 3, 2, error="RuntimeError")
-            raise RuntimeError("Offline candidate failure after a charged request")
+    executed = []
+    def forbid_validation(task_id, snapshot, ledger, audit, **kwargs):
+        executed.append(task_id)
+        if kwargs["mode"] == "validation" or task_id in pipeline.manifest.validation:
+            raise AssertionError("Direct update must not execute promotion tasks")
         return original(task_id, snapshot, ledger, audit, **kwargs)
 
-    monkeypatch.setattr(pipeline, "_run_task", fail_candidate)
+    monkeypatch.setattr(pipeline, "_run_task", forbid_validation)
+    pipeline.manifest.validation = []
     outcome = pipeline.run("evolve")[0]
-    validation = outcome["validations"][0]
-    assert validation["status"] == "pending"
-    assert store.snapshot().version == 0
-    expected = {"model_calls": 0, "tokens": 0, "tool_calls": 0}
-    for pair in validation["pairs"]:
-        assert pair["baseline"]["evaluation"]["complete"]
-        assert pair["failed_side"] == "candidate"
-        assert pair["failed_run"]["budget"]["model_calls"] == 1
-        assert (Path(pair["failed_run"]["run_dir"]) / "failure.json").is_file()
-        for side in ("baseline", "failed_run"):
-            for field in expected:
-                expected[field] += pair[side]["budget"][field]
-    assert all(outcome["costs"]["validation"][field] == value for field, value in expected.items())
+    assert executed == [outcome["task_id"]]
+    assert outcome["experience_updates"][0]["version"] == store.snapshot().version == 1
+    assert "validations" not in outcome and "validation" not in outcome["costs"]
+    for field in ("model_calls", "tokens", "tool_calls"):
+        assert sum(stage.get(field, 0) for stage in outcome["costs"].values()) == outcome["budget"][field]
     held_out = pipeline.run("evaluate")[0]
-    assert held_out["experience_version"] == 0
-    assert store.snapshot().version == 0
+    assert held_out["experience_version"] == 1 and held_out["experience_updates"] == []
+    assert store.snapshot().version == 1
 
 
 def test_failed_attribution_persists_received_calls_after_submission(setup, monkeypatch):
@@ -265,7 +391,7 @@ def test_explicit_submitted_resume_reuses_immutable_answer_and_eval_only(setup, 
     try:
         outcome = continued.run_task(task_id, state.snapshot(), mode="evolve", attribution=True,
             resume_source=source_dir, resume_source_hash=anchor)
-        assert provider.calls and all(call["agent_id"] in {"global-post", "analyst", "integrator"}
+        assert provider.calls and all(call["agent_id"] in {"global-post", "analyst", "evidence", "writer"}
                                       for call in provider.calls)
         assert all(call["role"] in {"global", "local"} for call in provider.calls)
         assert set(outcome["budget"]["by_stage"]) == {"update"}
@@ -369,7 +495,7 @@ def test_legacy_submitted_resume_reports_missing_answer_binding_without_fabricat
         state.close()
 
 
-def test_submitted_resume_runs_fresh_paired_validation_then_held_out(setup, tmp_path):
+def test_submitted_resume_updates_directly_then_runs_held_out(setup, tmp_path):
     pipeline, _, _ = setup
     task_id = pipeline.manifest.evolution[0]
     source = pipeline.run_task(task_id, ExperienceSnapshot(), mode="evolve", attribution=False, resume=False)
@@ -380,13 +506,9 @@ def test_submitted_resume_runs_fresh_paired_validation_then_held_out(setup, tmp_
         outcome = continued.run("evolve", resume=False, resume_source=source["run_dir"],
             resume_source_hash=submitted_source_digest(source["run_dir"]))[0]
         assert outcome["source_submission_reused"]
-        validation = outcome["validations"][0]
-        assert validation["status"] == "accepted"
-        for pair in validation["pairs"]:
-            for side in ("baseline", "candidate"):
-                assert not pair[side]["resumed"]
-                assert not pair[side].get("source_submission_reused", False)
-                assert pair[side]["budget"]["by_stage"]["evaluation"]["model_calls"] > 0
+        assert outcome["experience_updates"][0]["update_rule"] == "direct_after_attribution"
+        assert "validation" not in outcome["costs"]
+        assert all(call["role"] not in {"exec", "judge", "meta"} for call in provider.calls)
         assert state.snapshot().version == 1
         held_out = continued.run("evaluate", resume=False)[0]
         assert held_out["experience_version"] == 1
@@ -496,7 +618,7 @@ def test_frozen_attribution_replay_rejects_tampering_before_model_calls(setup, t
         state.close()
 
 
-def test_frozen_first_proposal_gets_fresh_paired_runs_and_held_out(setup, tmp_path):
+def test_frozen_first_proposal_is_applied_without_calls_then_held_out(setup, tmp_path):
     pipeline, _, _ = setup
     source, anchor, attributed = _frozen_attribution_source(setup, tmp_path)
     state = ExperienceStore(tmp_path / "replay-state.sqlite")
@@ -508,14 +630,10 @@ def test_frozen_first_proposal_gets_fresh_paired_runs_and_held_out(setup, tmp_pa
             resume_attribution_hash=attribution_source_digest(attributed["run_dir"]))[0]
         assert outcome["budget"]["model_calls"] == 0
         assert outcome["proposals"] == attributed["proposals"]
-        validation = outcome["validations"][0]
-        assert validation["proposal_id"] == attributed["proposals"][0]["proposal_id"]
-        assert validation["status"] == "accepted"
-        for pair in validation["pairs"]:
-            for side in ("baseline", "candidate"):
-                assert not pair[side]["resumed"]
-                assert not pair[side].get("source_submission_reused", False)
-                assert pair[side]["budget"]["by_stage"]["evaluation"]["model_calls"] > 0
+        update = outcome["experience_updates"][0]
+        assert update["proposal_id"] == attributed["proposals"][0]["proposal_id"]
+        assert update["version"] == 1 and update["update_rule"] == "direct_after_attribution"
+        assert "validations" not in outcome and "validation" not in outcome["costs"]
         held_out = replay.run("evaluate", resume=False)[0]
         assert held_out["experience_version"] == 1
         assert held_out["budget"]["by_stage"]["evaluation"]["model_calls"] > 0
@@ -527,8 +645,8 @@ def test_all_three_banks_reach_their_stage_and_capability(setup):
     pipeline, store, provider = setup
     entries = [Experience(experience_id=bank, bank=bank, instruction=f"Conditional {bank} advice",
                           applicability="comparison", capability="comparison" if bank == "execution" else "",
-                          source_task_ids=["prior-task"], evidence=["prior-evidence"],
-                          validation_status="accepted") for bank in ("rubric", "organization", "execution")]
+                          source_task_ids=["prior-task"], evidence=["prior-evidence"])
+               for bank in ("rubric", "organization", "execution")]
     pipeline.run_task("test-deployment", ExperienceSnapshot(version=4, experiences=entries))
     predict = [json.loads(c["messages"][-1]["content"]) for c in provider.calls
                if c["role"] == "global" and '"phase": "predict"' in c["messages"][-1]["content"]][0]
@@ -539,7 +657,7 @@ def test_all_three_banks_reach_their_stage_and_capability(setup):
     locals_ = {c["agent_id"]: json.loads(c["messages"][1]["content"])
                for c in provider.calls if c["role"] == "exec"}
     assert locals_["analyst"]["execution_experiences"][0]["experience_id"] == "execution"
-    assert not locals_["integrator"]["execution_experiences"]
+    assert not locals_["writer"]["execution_experiences"]
 
 
 def test_fixed_team_honors_same_budget_and_review_requires_primary_artifact():

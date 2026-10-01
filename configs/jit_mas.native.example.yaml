@@ -3,22 +3,19 @@ unsafe_local: false
 max_agents: 4
 max_parallel: 2
 team_max_calls: 16
+# Shared ceiling only: each task-execution role is called at most once.
 max_model_calls: 100
 max_total_tokens: 2000000
 max_tool_calls: 64
 candidates: 1
 max_repairs: 2
+# Repairs apply only before any execution-role model invocation starts.
 local_planning: true
+local_rounds: 1  # Pre-execution planning, not task-execution dialogue.
 local_attribution: true
 persistent_experience: true
 available_tools: [web_search, crawl_page]
-max_validation_tasks: 2
-validation:
-  min_tasks: 2
-  repeats: 1
-  quality_tolerance: 0
-  criterion_tolerance: 0
-  min_mean_improvement: 0
+# Evolution/stream updates are persisted directly after attribution.
 models:
   meta:
     model: ${MAS_META_MODEL}

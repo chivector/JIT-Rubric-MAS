@@ -1,0 +1,379 @@
+--- v2_fixed/main.tex
++++ v3/main.tex
+@@ -14,7 +14,7 @@
+ \usetikzlibrary{arrows.meta,positioning,fit,calc}
+ \usepackage{algorithm}
+ \usepackage{algpseudocode}
+-\newcommand{\method}{\textsc{Rubric-MAS}}
++\newcommand{\method}{\mbox{\textsc{JIT-Compose}}}
+ \newcommand{\state}{\mathcal{S}}
+ \newcommand{\rub}{\widehat{\mathcal{R}}}
+ \newcommand{\crit}{\mathcal{C}}
+@@ -22,16 +22,16 @@
+ \newcommand{\trace}{\mathcal{Z}}
+ \newcommand{\ind}{\mathbf{1}}
+ \newcommand{\na}{\textemdash}
+-\hypersetup{pdftitle={From Hindsight to Foresight: Rubrics as a Coordination Interface for Evolving Agent Teams},pdfauthor={Anonymous},pdfsubject={Working manuscript v2; empirical results not supplied}}
+-
+-\title{From Hindsight to Foresight:\\Rubrics as a Coordination Interface for Evolving Agent Teams}
++\hypersetup{pdftitle={JIT-Compose: Evolving Multi-Agent Workflow Synthesis for Open-Ended Generation},pdfauthor={Anonymous},pdfsubject={Working manuscript v3; task-specific workflow synthesis and experience evolution; empirical results not supplied}}
++
++\title{JIT-Compose: Evolving Multi-Agent Workflow Synthesis\\for Open-Ended Generation}
+ \author{Anonymous Authors}
+ \date{}
+ \begin{document}
+ \maketitle
+ 
+ \begin{abstract}
+-An agent team can complete every assigned subtask yet miss what makes the final response good. Knowing the quality requirements is not the same as organizing to satisfy them: comparability, consistency, and evidence coverage can depend on how separate contributions interact. We introduce \method, which uses predicted task rubrics as a shared interface for team construction and cross-task improvement. Before execution, a global analyzer anticipates requirements, candidate agents negotiate responsibilities and information needs, and a coordinator compiles the reconciled plan into a task-specific JIT harness. After submission, independent criterion-level feedback is aligned with the frozen predictions and examined against distributed execution evidence. The same requirement links support two decisions: how to organize the current task, and what to change for future tasks. Proposed changes to rubric, organization, or execution experience are retained only after paired validation that rebuilds teams on separate tasks. Model parameters and the evaluator remain fixed. We specify controlled tests that hold answer guidance constant while varying rubric access during organization, and that evaluate updates beyond the failures that produced them. This separates the hypothesized value of rubric-mediated coordination from longer prompts, extra deliberation, and task-specific answer repair.
++Open-ended generation requires deciding not only what to write, but how agents should collaborate to produce it. When quality requirements are only partially specified, the central challenge is to anticipate what good work demands and turn those expectations into a suitable writing process. We introduce \method, an experience-driven framework that synthesizes an executable, task-specific multi-agent writing workflow on demand. Predicted rubrics serve both as a specification for workflow construction and as a reference for improving future construction. Before execution, global--local planning refines the requirements and their importance, negotiates agent responsibilities and information dependencies, and instantiates the resulting design as roles, interactions, and verification stages. After submission, independent criterion-level feedback is aligned with the frozen predictions and examined against global coordination records and agent-local trajectories. This supports targeted revisions to requirement prediction, team organization, or execution, rather than an undifferentiated instruction to improve the answer. Revisions enter reusable experience only after paired validation in which incumbent and candidate states independently construct and execute workflows on separate tasks. Model parameters and the evaluator remain fixed, while accepted experience changes how subsequent teams and workflows are generated. \method\ thus couples just-in-time task adaptation with cross-task evolution: it retains knowledge for constructing the next writing process, not a single process that every task must reuse.
+ \end{abstract}
+ 
+ \noindent\textbf{Working draft.} Methods follow the supplied system design; empirical results and implementation artifacts have not been supplied for audit. Unfilled tables and diagnostic protocols below are not reported findings.
+@@ -39,48 +39,52 @@
+ \section{Introduction}
+ \label{sec:intro}
+ 
+-A team can finish all its assignments and still fail the task. Consider a report comparing two document-retrieval methods. One agent summarizes each method and a third combines the summaries. Both summaries may be accurate, yet the report can compare measurements obtained on incompatible corpora or workloads. The missing work lies \emph{between} the assignments: someone must establish comparability, obtain the relevant conditions from both branches, and qualify the final comparison. Another summary does not necessarily repair this omission.
+-
+-This illustrative case exposes a \emph{quality-to-coordination gap}: recognizing what a good response requires does not ensure that the division of labor can produce it. Some requirements concern individual contributions; others concern relationships among evidence, assumptions, and conclusions. A checklist can tell every agent to be consistent without specifying who should detect a disagreement or how the synthesizer should resolve it. For an evolving system, the reverse gap matters too. A critique of the final response does not, by itself, identify whether to change anticipated requirements, responsibility allocation, or local execution.
++A writing system must decide not only what to say, but how the work leading to that response should be organized. Which information should be gathered in parallel? Which conclusions require cross-source checks? Who should reconcile incompatible evidence before drafting? We study how to construct this process for the task at hand, and how feedback from completed tasks should change the construction of the next one.
++
++Consider a report comparing two document-retrieval methods. One agent summarizes each method and a third combines the summaries. Both summaries may be accurate, yet the report can compare measurements obtained on incompatible corpora or workloads. Every agent has completed its assignment, but a critical operation is missing between them: collecting the conditions from both branches and checking whether the comparison is warranted. The remedy is not necessarily another writer or a longer instruction. It may be a different writing workflow.
++
++This illustrative case exposes a \emph{quality-to-coordination gap}: recognizing what good work requires does not ensure that the division of labor can produce it. In open-ended research generation, fine-grained rubrics assess evidence and analytical quality across multiple defensible responses \citep{sharma2025researchrubrics}. In our setting, evaluator-private criteria arrive only after submission. A system must therefore anticipate useful requirements before organizing the work, then interpret the feedback without rewriting its earlier expectations.
+ 
+ \input{overview.tex}
+ 
+-Open-ended research generation makes these distinctions concrete. Multiple responses can be defensible, while fine-grained rubrics assess their evidence and analytical quality \citep{sharma2025researchrubrics}. In the setting studied here, evaluator-private criteria become available only after submission. The system must therefore anticipate useful obligations without reading the hidden evaluation, and later interpret feedback without rewriting what it had anticipated. The problem is not simply to generate more criteria. It is to turn uncertain quality expectations into coordinated work, then use the resulting evidence to revise future decisions.
+-
+-Our central idea is to reuse a task's requirements as the \emph{shared interface between organization and improvement}. Before execution, each requirement is linked to negotiated responsibilities, needed inputs, and expected evidence. During execution, these links extend to produced artifacts and their use by downstream agents. After submission, criterion-level feedback attaches to the frozen record. The system can then ask a more specific question than ``which agent failed?'': \emph{what was expected, how was it assigned, and what actually happened?} The same unmet criterion can suggest different changes under different histories.
+-
+-\method\ realizes this interface with global--local collaboration in both directions. A global analyzer proposes requirements and roles; candidate agents expose missing inputs, conflicting assumptions, and limits of their proposed responsibilities; global reconciliation constructs an executable team. After feedback, global analysis identifies issues spanning the team, local analysis retrieves the relevant execution evidence, and reconciliation proposes a scoped update. Validation compares old and candidate states by rebuilding teams on separate tasks. What persists is experience about requirements and coordination, not one permanent roster.
+-
+-This design builds on task-adaptive harness synthesis in JIT-Agent, evolving orchestration skills in Skill-MAS, collaborative reflection in Meta-Team, and prospective answer guidance in Think-with-Rubrics \citep{zhang2026jit,lin2026skillmas,hao2026metateam,yu2026thinkrubrics}. Our focus is the explicit connection among these decisions, rather than dynamic teams or rubric generation in isolation. In particular, rubric-conditioned organization must add value beyond giving executors the same rubric text; otherwise a simpler guidance-based explanation is sufficient.
+-
+-The paper makes three methodological contributions: a requirement--responsibility--evidence interface that connects team construction to later diagnosis; a global--local, validation-gated procedure for updating that interface across tasks; and controlled tests of organizational use, evidence-linked updates, and frozen-state transfer. The evaluation also separates anticipating an information need from guessing an answer-bearing criterion. Together these make one claim testable: \emph{feedback can improve future generation by changing not just what a team knows to look for, but how it coordinates to deliver it.}
+-
+-\section{Setting and Evolving State}
++We introduce \method, short for \emph{Just-in-Time Composition of Agent Teams and Workflows}. Given a new problem, it predicts task-specific quality requirements, negotiates responsibilities through global--local planning, and synthesizes an executable multi-agent writing workflow. Here, a workflow specifies roles, information dependencies, tool use, verification, and final synthesis---not merely an outline or prose style. The same system can construct a new organization for each task rather than require every task to reuse one fixed process.
++
++The framework operates on two timescales. \emph{Within a task}, predicted rubrics supply a provisional specification for team and workflow synthesis. A global analyzer identifies priorities and candidate roles; local plans expose missing inputs, conflicting assumptions, and capability limits; reconciliation turns these constraints into an executable design. \emph{Across tasks}, criterion-level feedback is aligned with the frozen predictions and distributed execution records. The system distinguishes what it failed to anticipate, what the organization failed to support, and what execution failed to deliver, then proposes changes to the corresponding experience. Only validated changes influence the synthesis of subsequent workflows; model parameters and the evaluator remain fixed.
++
++Predicted requirements connect these timescales. Before execution, they link a quality expectation to accepted responsibilities and expected evidence. After submission, the same links route feedback to the relevant plans, interactions, and local traces. The question is not simply ``which agent failed?'' but \emph{what was expected, how was it assigned, and what happened?} Different histories behind the same low score can warrant different lessons for future synthesis. Validation therefore regenerates both the incumbent and candidate workflows on separate tasks instead of merely rewriting the failed answer.
++
++Task-conditioned harness generation is inherited from JIT-Agent \citep{zhang2026jit}; evolving orchestration skills, collaborative reflection, and prospective rubric guidance have close precedents in Skill-MAS, Meta-Team, and Think-with-Rubrics \citep{lin2026skillmas,hao2026metateam,yu2026thinkrubrics}. Our focus is the quality-linked synthesis-and-update procedure connecting these decisions. Neither on-demand generation nor an evolving builder is claimed in isolation. The central question is whether using predicted requirements to shape executable collaboration, and feedback to revise that shaping process, adds value beyond supplying the same requirements as answer guidance.
++
++The paper develops three methodological contributions: quality-conditioned synthesis of task-specific agent teams and writing workflows; global--local, evidence-linked updates to the experience used for subsequent synthesis; and controlled tests that distinguish organizational use, update utility, and frozen-state transfer. The tests also separate anticipating an information need from guessing an answer-bearing criterion. Together they examine one proposition: \emph{construct the writing process for the current task, and retain validated knowledge for constructing the next.}
++
++\section{Generated Workflows and Evolving State}
+ \label{sec:setting}
+ 
+ A task provides a public request $x_t$, permitted tools $\mathcal U_t$, and a resource envelope $B_t$. The independent evaluator holds criteria $\crit_t=\{(c_j,w_j)\}_{j=1}^{m_t}$ and any private reference material. The team cannot access these records before committing its response $y_t$. Public instructions remain available; \emph{open-ended} denotes multiple possible valid responses, not an absence of evaluable requirements.
+ 
++A generated writing workflow is denoted $\omega_t=(\team_t,h_t)$: $\team_t$ specifies the participating roles and their collaboration, while $h_t$ implements that organization as executable code. It governs evidence gathering, analysis, verification, and final synthesis. This notation combines existing team and harness records; it does not introduce an additional learned module.
++
+ The accepted state is
+ \begin{equation}
+ \state_t=(E_t^R,E_t^O,E_t^X,V_t),
+ \end{equation}
+-where the stores contain rubric, organization, and execution experience, and $V_t$ identifies policy and prompt versions. Retrieval excludes the current task, restricted evaluation records, and future experience. With fixed model parameters $\theta$, one task proceeds as
++where the stores contain rubric, organization, and execution experience, and $V_t$ identifies policy and prompt versions. Retrieval excludes the current task, restricted evaluation records, and future experience. With $\theta$ denoting the fixed parameters of the configured generator, analyzers, and executors, one task proceeds as
+ \begin{align}
+ (\rub_t,\team_t)&=\operatorname{Build}_{\theta}(x_t,\state_t,B_t),\label{eq:build}\\
+ h_t&=\operatorname{JIT}_{\theta}(x_t,\rub_t,\team_t,\mathcal U_t),\label{eq:synth}\\
+ (y_t,\trace_t)&=\operatorname{Run}_{\theta}(h_t,x_t,\mathcal U_t,B_t),\label{eq:run}\\
+ f_t&=\operatorname{Eval}_{\phi}(x_t,y_t,\crit_t).\label{eq:eval}
+ \end{align}
+-Here $\phi$ is a fixed evaluator configuration, not an assumption of unbiased judgment. After an evolution task, a gated update may change $\state_t$; in frozen evaluation it cannot. In both settings, Equation~\ref{eq:build} constructs a new team for each request. Learning refers to validated changes in retrieved experience and policies, not parameter training.
++Here $\phi$ is a fixed evaluator configuration, not an assumption of unbiased judgment. After an evolution task, a gated update may change $\state_t$; in frozen evaluation it cannot. In both settings, Equations~\ref{eq:build}--\ref{eq:synth} construct a task-specific team and executable workflow. What persists across tasks is $\state_t$, not a mandatory shared $\omega_t$. Learning refers to validated changes in retrieved experience and policies, not parameter training. Similar tasks may yield similar workflows; novelty of the generated structure is not itself an objective.
+ 
+ The goal is held-out response quality under an explicit resource constraint. Planning, code generation and repair, communication, and synthesis all count toward inference cost. External evaluation, diagnosis, and validation are additional measured costs. They cannot be omitted when assessing the value of evolution.
+ 
+-\section{Rubrics as a Coordination Interface}
++\section{JIT-Compose: Synthesis and Evolution}
+ \label{sec:method}
+ 
+-The interface is a typed set of linked records: anticipated requirement $\rightarrow$ accepted responsibility $\rightarrow$ observed evidence $\rightarrow$ retrospective feedback. We refer to this as a requirement--responsibility--evidence graph. It is a view of the documented rubric, team, and event records, not a new graph-learning algorithm. Its purpose is to preserve the connection between an intention and the evidence needed to assess it.
+-
+-\subsection{Anticipate What Good Work Requires}
++\method\ uses predicted rubrics in two directions: as a provisional specification for synthesizing the current workflow, and as a reference for interpreting feedback that may change future synthesis. The connecting records form a requirement--responsibility--evidence graph: anticipated obligation $\rightarrow$ accepted responsibility $\rightarrow$ observed evidence $\rightarrow$ retrospective feedback. This is a view of existing rubric, team, and event records, not a graph-learning algorithm. It preserves why a design decision was made and the evidence relevant to revising it.
++
++\subsection{Predict a Task-Specific Quality Specification}
+ \label{sec:anticipate}
+ 
+ The global analyzer uses $x_t$ and accepted experience to produce initial requirements $\rub_t^g$ and candidate roles. Each predicted item records operational text $d_i$, nonnegative importance $a_i$, confidence $q_i$, expected evidence $e_i$, polarity, provenance, and applicability. Importance is distinct from confidence and from the evaluator's private signed weight $w_j$.
+@@ -89,7 +93,7 @@
+ 
+ General quality priors may seed anticipation, but task-specific evidence expectations must make them actionable. ``Be accurate'' does not specify which comparison must be checked. Predicted obligations can also be wrong or inapplicable, so later feedback can revise their scope rather than merely add more requirements.
+ 
+-\subsection{Negotiate How the Team Will Satisfy It}
++\subsection{Co-Design the Team and Its Collaboration}
+ \label{sec:negotiate}
+ 
+ Each candidate agent receives the public task, relevant predicted requirements, and its proposed capabilities. It returns a local plan: responsibilities it can accept, information it needs, outputs it can produce, collaborators it depends on, and work it cannot cover. It may challenge the global decomposition or add a missing requirement. This exchange is not a vote on whether the initial plan sounds reasonable; it supplies constraints on whether that plan can be carried out.
+@@ -104,16 +108,18 @@
+ 
+ The coordinator addresses uncovered obligations, redundant work, incompatible assumptions, and resource feasibility. It need not create one agent per rubric, and simple tasks may use one executor. Decisions are model-mediated; deterministic checks enforce schemas, permissions, budgets, and schedulable dependencies, not semantic optimality. Both $\rub_t^g$ and $\rub_t^p$, together with $\team_t$, are frozen as separate pre-execution records. Later feedback cannot retrospectively improve those snapshots.
+ 
+-\subsection{Compile Commitments into Execution}
++\subsection{Synthesize and Execute the Writing Workflow}
+ \label{sec:execution}
+ 
+-JIT compiles the planned requirements and team into the original five-file harness format: memory, planning, action, tool policy, and prompts. The inherited protocol $h=(M,P,A,F)$ provides executable memory, planning, control, and capability orchestration \citep{zhang2026jit}. In this extension, generated modules use stable MAS primitives to enact the task-specific responsibilities, tools, dependencies, and budgets. TeamSpec is therefore an execution input, not only a record explaining an otherwise fixed workflow.
++Conditioned on the public task, reconciled requirements, and team specification, the JIT synthesizer generates the original five-file harness format: memory, planning, action, tool policy, and prompts. The inherited protocol $h=(M,P,A,F)$ provides the executable substrate \citep{zhang2026jit}. Memory organizes private contexts and shared evidence; planning determines local directives and dependencies; tool policy controls the available capabilities; and action coordinates execution and termination. Together with $\team_t$, these modules instantiate the task's writing workflow $\omega_t$.
++
++Generated modules may call stable MAS primitives, but the participating roles, information handoffs, checks, and synthesis procedure remain conditioned on the current problem. TeamSpec must affect these decisions during actual execution, not merely describe a fixed workflow in its metadata. Protocol and runtime checks establish whether generated code can run; they do not establish that its organization is useful. That distinction is tested in Section~\ref{sec:results}.
+ 
+ Executors maintain private observable histories. Shared storage contains versioned evidence, artifacts, status, and directed messages, rather than every agent's entire conversation. Event references distinguish evidence discovery, transmission, downstream access, and use in synthesis where observable. A delivery acknowledgment proves neither that a recipient understood a message nor that the final claim is supported; those links remain claims to audit against the trace.
+ 
+ The final synthesizer reconciles conflicting contributions and records unresolved limitations. Runtime faults may trigger bounded harness repair; low evaluator scores cannot trigger unreported replacement of the submitted test answer. The final response and its hash are committed before evaluator feedback is released. Candidate selection, generated code, and task tools must respect the same private-data boundary.
+ 
+-\subsection{Diagnose the Gap Between Intended and Realized Work}
++\subsection{Trace Feedback to Design and Execution}
+ \label{sec:diagnosis}
+ 
+ The evaluator returns criterion text, signed weights, scores or verdicts, and available explanations. Its normal input excludes the team's predicted rubrics and self-assessment. Semantic alignment then connects each criterion to both frozen requirement snapshots, allowing partial and many-to-many matches. It preserves uncertain and unmatched items: an overly broad prediction must not count as full anticipation, and an unmatched prediction is not automatically irrelevant.
+@@ -138,24 +144,24 @@
+ \label{tab:example}
+ \end{table}
+ 
+-The output is an \emph{evidence-supported attribution hypothesis}. Trace access does not establish a unique cause, and successful local repair does not establish transfer. The next stage tests the proposed change rather than the fluency of its explanation.
+-
+-\subsection{Retain Lessons, Rebuild Teams}
++The output is an \emph{evidence-supported attribution hypothesis}. Trace access does not establish a unique cause, and successful local repair does not establish transfer. The next stage tests whether the proposed lesson is useful when constructing and running another workflow, rather than rewarding the fluency of its explanation.
++
++\subsection{Evolve the Experience Used for Synthesis}
+ \label{sec:update}
+ 
+-A proposal $\delta$ specifies a target, base version, concrete edit, evidence, applicability, and risk. Rubric experience captures when an obligation matters; organization experience captures how obligations should be jointly covered; execution experience captures how a capability should act under those conditions. Local lessons are indexed by responsibility or capability, not a transient identifier such as \texttt{agent\_3}.
++A proposal $\delta$ specifies a target, base version, concrete edit, evidence, applicability, and risk. Rubric experience changes which requirements a new problem is expected to demand; organization experience changes how those requirements are translated into roles, dependencies, and checks; execution experience changes how a selected capability performs its work. These stores guide future synthesis and execution without prescribing one workflow for all tasks. Local lessons are indexed by responsibility or capability, not a transient identifier such as \texttt{agent\_3}.
+ 
+ The candidate state $\state_t^{\delta}$ is staged outside accepted memory. On validation task $v$, both branches independently repeat Equations~\ref{eq:build}--\ref{eq:eval}. Their paired quality difference is
+ \begin{equation}
+ \Delta_v(\delta)=\overline Q(v;\state_t^{\delta})-\overline Q(v;\state_t),
+ \label{eq:delta}
+ \end{equation}
+-where the bar averages the configured repeated executions. Rebuilding both teams is essential: the object being improved is how a future team is constructed, not a saved team's ability to rewrite one answer.
++where the bar averages the configured repeated executions. Rebuilding both teams and their executable workflows is essential: the object being revised is the experience guiding future synthesis, not a saved workflow's ability to rewrite one answer. Both branches start from the public validation task and cannot reuse one another's plan or output.
+ 
+ A prespecified gate checks evidence sufficiency, task quality, critical dimensions, and resources. Insufficient or conflicting evidence yields \emph{pending}; supported adverse evidence yields rejection. Acceptance commits the change atomically with a rollback snapshot. Exact thresholds and repetition counts are experiment parameters, not implicit guarantees. Rejected and pending proposals are excluded from normal retrieval, and validation feedback is not copied verbatim into task memory. Repeated validation can still overfit, requiring untouched evaluation of the selected state.
+ 
+ \begin{algorithm}[t]
+-\caption{One task of experience-driven evolution}
++\caption{JIT-Compose: synthesize, execute, and retain}
+ \label{alg:cycle}
+ \small
+ \begin{algorithmic}[1]
+@@ -163,15 +169,15 @@
+ \State Predict $\rub_t^g$ and candidate capabilities from public inputs
+ \State Obtain local plans; reconcile $\rub_t^p$ and $\team_t$
+ \State Freeze both predictions, TeamSpec, and state version
+-\State Generate/select JIT harness; execute with bounded runtime repair
++\State Synthesize/select $h_t$; run $\omega_t=(\team_t,h_t)$ with bounded repair
+ \State Commit $y_t$; only then release evaluator feedback $f_t$
+ \State Align feedback with predictions; route global diagnostic questions
+ \State Retrieve local evidence; reconcile scoped proposals $\delta$
+ \For{each proposal within the update budget}
+-\State Rebuild and run old/new states on separate validation tasks
++\State Regenerate and run workflows under both states on validation tasks
+ \State Commit only if the prespecified gate accepts
+ \EndFor
+-\State \Return accepted state for constructing the next task's team
++\State \Return accepted experience for future workflow synthesis
+ \end{algorithmic}
+ \end{algorithm}
+ 
+@@ -195,10 +201,10 @@
+ \paragraph{Selection and uncertainty.}
+ The selected state is frozen before held-out evaluation, including retrieval, prompts, and any JIT reference archive. Test feedback cannot affect later test tasks. Paired analyses use tasks, not individual rubrics, as sampling units \citep{dror2018significance}. Repeated task executions and independent evolution runs estimate distinct sources of variation. Judge robustness uses an independent configuration and a blinded human-audited subset where available; repeated calls to one judge do not remove systematic bias \citep{zheng2023judge}. Streaming experiments, if run, are reported separately because their tasks are dependent through accumulated experience.
+ 
+-\section{Testing the Coordination Account}
++\section{Testing Workflow Synthesis and Evolution}
+ \label{sec:results}
+ 
+-The evaluation is organized around three links in the proposed mechanism: \emph{requirements to organization}, \emph{evidence to updates}, and \emph{updates to new-task behavior}. Table~\ref{tab:main} reserves the end-to-end results. The controls below determine what those results could legitimately explain.
++The evaluation is organized around three links in the proposed mechanism: \emph{requirements to synthesized workflows}, \emph{execution evidence to reusable updates}, and \emph{retained experience to new-task behavior}. Table~\ref{tab:main} reserves the end-to-end results. The controls below determine what those results could legitimately explain.
+ 
+ \begin{table*}[t]
+ \centering\small
+@@ -219,7 +225,7 @@
+ \label{tab:main}
+ \end{table*}
+ 
+-\subsection{Same Rubrics, Different Organizational Use}
++\subsection{Same Rubrics, Different Workflow Construction}
+ \label{sec:guidance}
+ 
+ The primary mechanism test holds answer guidance constant. A quality-only snapshot $R^{\star}$ is prepared from the public task and accepted state \emph{before team-dependent local negotiation}, with no role assignments or private feedback. Both conditions share the public task and authorized background. In G, the builder and code generator do not receive $R^{\star}$; in GO, they do. Both then execute with exactly the same rubric guidance. Thus the treatment is explicit rubric access during construction, not access to a better answer checklist.
+@@ -239,25 +245,25 @@
+ \end{equation}
+ We compare initial and negotiated predictions under a fixed rubric-description budget, reporting eligible mass, specificity, redundancy, and uncertain matches. These controls help distinguish better foresight from a longer list of generic obligations. Anticipation, feasible assignment, and eventual satisfaction remain separate measurements. Explicit prediction is not necessary for every success; unanticipated successes are reported too.
+ 
+-\subsection{Same Failure, More Useful Updates}
++\subsection{Same Failure, Better Lessons for Synthesis}
+ \label{sec:repairtest}
+ 
+ Diagnosis comparisons reuse the same committed outputs, feedback, and legitimate trace access. Global-only analysis receives a useful retrieval interface and a comparable budget; global--local analysis cannot win merely because its baseline was given a truncated summary. We evaluate resulting changes through separate validation and untouched downstream tasks, not by the confidence or length of the diagnoses.
+ 
+ A secondary content-matched control withholds only the explicit cross-record link index while preserving source records and retrieval. It tests the usefulness of supplied requirement links, not whether an analyzer can infer equivalent links itself. Controlled missing-assignment, failed-handoff, and skipped-check cases probe targeted repair utility, collateral harm, and appropriate abstention. They do not establish the cause of every natural failure. Acceptance rate is a process statistic: a stricter, more useful gate may accept fewer changes.
+ 
+-\subsection{New Tasks, New Teams, Retained Experience}
++\subsection{New Workflows from Retained Experience}
+ \label{sec:transfer}
+ 
+-Initial and evolved states are compared on the same untouched tasks, each constructing fresh teams. Qualitative analysis follows accepted experience IDs into changed requirements, commitments, and observed work; retrieval alone is not transfer. Applicable failures and rejected proposals accompany successes. Cross-topic and external evaluation, together with independent judgment, test whether benefits extend beyond familiar tasks and the selection evaluator.
++Initial and evolved states are compared on the same untouched tasks, each generating its own teams and executable workflows. Qualitative analysis follows accepted experience IDs into changed requirements, construction decisions, and observed work; retrieval alone is not transfer. Task adaptation is assessed through enacted responsibilities, dependencies, and verification stages, not variation in agent names or code text. An identical useful design for two similar tasks is not a failure of adaptation. Applicable failures and rejected proposals accompany successes. Cross-topic and external evaluation, together with independent judgment, test whether benefits extend beyond familiar tasks and the selection evaluator.
+ 
+ Optional crossed-store interventions isolate rubric and organization experience while fixing execution experience and unrelated policies. They require compatible records and fixed transformations; otherwise a broken hybrid is not informative. Appendix~\ref{app:cross} defines these secondary contrasts. Evolution cost is reported alongside deployment cost, so a gain cannot be attributed to a practically free update when substantial validation was required.
+ 
+ \section{Related Work}
+ \label{sec:related}
+ 
+-\paragraph{Constructing and evolving teams.}
+-ADAS and AFlow optimize agentic systems and workflows \citep{hu2024adas,zhang2024aflow}; AOrchestra creates task-specific sub-agents \citep{ruan2026aorchestra}; JIT-Agent synthesizes executable harnesses \citep{zhang2026jit}. We use JIT's synthesis and repair substrate. Skill-MAS is especially close: it evolves an orchestration meta-skill, includes evaluable subtask success criteria, and uses module-level diagnosis \citep{lin2026skillmas}. Our distinction is the retained task-level linkage from \emph{pre-execution} requirement hypotheses and negotiated responsibilities to \emph{post-submission} criterion feedback and evidence. Success criteria, evolving builders, and localized edits alone are therefore not differentiating claims.
++\paragraph{Synthesizing and evolving agentic workflows.}
++ADAS and AFlow optimize agentic systems and workflows \citep{hu2024adas,zhang2024aflow}; AOrchestra creates task-specific sub-agents \citep{ruan2026aorchestra}; JIT-Agent synthesizes executable harnesses \citep{zhang2026jit}. We inherit JIT's synthesis, protocol, and repair substrate; the JIT prefix acknowledges that dependency rather than asserting a new harness compiler. Skill-MAS is especially close: it evolves an orchestration meta-skill, includes evaluable subtask success criteria, and uses module-level diagnosis \citep{lin2026skillmas}. Our focus is how predicted task requirements condition executable workflow synthesis, and how their retained links to responsibilities and evidence support subsequent updates. This joins \emph{pre-execution} design decisions to \emph{post-submission} feedback rather than claiming workflow synthesis itself as new. Success criteria, evolving builders, and localized edits alone are therefore not differentiating claims.
+ 
+ \paragraph{Feedback, reflection, and attribution.}
+ Meta-Team preserves agent-local context for collaborative multi-level evolution \citep{hao2026metateam}. GEPA and ACE also distill feedback into reusable prompts or context \citep{agrawal2025gepa,zhang2025ace}. We ask whether shared requirement links make such updates more targeted and transferable, with paired reconstruction as the acceptance test. MAS failure analysis and TraceElephant emphasize coordination failures and the importance of execution observability \citep{cemri2025fail,chen2026elephant}; they motivate evidence-aware diagnosis without making a fluent account a causal proof.
+@@ -266,15 +272,15 @@
+ Think-with-Rubrics uses prospective rubrics as reasoning guidance; GenRubric evolves rubric generation; DR Tulu uses evolving rubrics during reinforcement learning \citep{yu2026thinkrubrics,chen2026genrubric,shao2025drtulu}. Our models and evaluator remain fixed, and Section~\ref{sec:guidance} separates organization from answer guidance. Co-STORM uses multi-perspective conversations and organizes discovered information for report generation \citep{jiang2024costorm}. Here, local language expresses commitments, missing inputs, and dissent that must affect a shared execution plan. The evaluation concerns the usefulness of those semantic commitments, not a claimed superiority of natural language over all structured protocols.
+ 
+ \section{Conclusion}
+-
+-\method\ treats task rubrics as more than criteria for an answer: they connect what a team anticipates, how it divides work, and what its evidence supports changing afterward. Global--local negotiation constructs this connection before execution; global--local diagnosis revisits it after independent feedback; validation determines which lessons may influence another task. The persistent object is reusable experience for constructing teams, while the teams themselves remain task-adaptive. The decisive empirical question is whether this connection improves coordination and transfer beyond identical rubric guidance and matched computation. The proposed controls expose that distinction without equating a completed subtask, a recorded commitment, or an accepted update with better final work.
++\label{sec:conclusion}
++
++\method\ couples just-in-time composition of multi-agent writing workflows with cross-task evolution of the experience used to construct them. Predicted quality requirements guide global--local team design and executable workflow synthesis; later criterion feedback is traced through the frozen expectations, responsibilities, and local evidence to propose targeted revisions. Paired validation determines which lessons may inform the next request. The persistent object is the synthesis experience, not one team or writing process. The decisive tests ask whether quality-conditioned construction adds value beyond identical answer guidance, and whether validated experience transfers to independently generated workflows on new tasks. The framework makes these questions testable without treating code generation, a recorded commitment, or a retained lesson as evidence of improved task quality.
+ \label{mainend}
+ 
+-\clearpage
+ \section*{Limitations}
+ 
+ \paragraph{Evidence and scope.}
+-This is a methods-and-analysis draft grounded in the supplied design. Source code, model configurations, split manifests, and real-run results were not supplied for audit. The result table is unfilled; the stage-isolated guidance control, answer-free diagnostic annotation, link-index intervention, and crossed-store analysis are proposed experiments. They must be reconciled with actual implementation and measured before empirical claims are made. Research-report generation also does not represent all open-ended language tasks, such as fiction, culturally situated judgment, or dialogue.
++This is a methods-and-analysis draft grounded in the supplied design. Source code, model configurations, split manifests, and real-run results were not supplied for audit. The result table is unfilled; the stage-isolated guidance control, answer-free diagnostic annotation, link-index intervention, and crossed-store analysis are proposed experiments. They must be reconciled with actual implementation and measured before empirical claims are made. The writing workflows studied here organize research-report generation; they are not an independently validated prose-style or genre generator. Research reports do not represent all open-ended language tasks, such as fiction, culturally situated judgment, or dialogue.
+ 
+ \paragraph{An explicit plan can still be wrong.}
+ Predicted requirements may miss user priorities or import inapplicable lessons. Local agents can share the same misconception, and negotiated responsibilities can formalize rather than fix it. Richer records and extra communication can consume budget without improving quality. Simple tasks may benefit more from a single competent executor. No monotonic improvement or optimal team construction is guaranteed.
+@@ -286,7 +292,7 @@
+ Observable records do not reveal every cause or internal computation. Receipt, use, and semantic understanding of a message are distinct. Several changes may repair the same failure, and successful repair on an injected fault need not generalize to natural errors. Our linked interface supports inspectable hypotheses, not unique blame assignments or identified mediation effects. The controlled G/GO experiment also restricts post-compilation structural adaptation and therefore estimates a narrower effect than unconstrained interactive team evolution.
+ 
+ \paragraph{Cost and implementation dependence.}
+-Team generation, semantic alignment, and candidate-state validation can be expensive. Effects may depend on generator and executor capability, search availability, context limits, and the containment backend. Generalization to other harnesses or models requires measurement rather than following automatically from protocol compatibility.
++Workflow synthesis, semantic alignment, and candidate-state validation can be expensive. Effects may depend on generator and executor capability, search availability, context limits, and the containment backend. Generalization to other harnesses or models requires measurement rather than following automatically from protocol compatibility.
+ 
+ \section*{Ethical Considerations}
+ 
+--- v2_fixed/appendix.tex
++++ v3/appendix.tex
+@@ -3,9 +3,15 @@
+ 
+ \subsection{Implementation Boundary}
+ 
+-The framework is specified as an extension of the original JIT runtime, not a replacement runtime that borrows its name. The generation bridge should invoke the actual five-file parser, candidate selector, loader, and protocol execution path. A scripted model returning fixed valid source code tests that path but does not reproduce the behavior of a trained JIT-Agent checkpoint. Every reported experiment must name its generator, executor, analyzer, and evaluator models and identify any substitutions. Sharing a model identifier across roles does not imply sharing conversational state.
+-
+-The documented project identifies a \texttt{jit\_mas/} package and a \texttt{scripts.run\_jit\_mas} entry point. These names are supplied implementation context, not independently inspected source in this draft. Exact function names, schema fields, default limits, dependency versions, and the containment backend must be reconciled with the final checkout. The formalization in the main paper introduces notation for documented semantics; it does not imply an unreported optimizer or model-training procedure.
++\method\ extends the JIT runtime. The generation bridge must invoke its five-file parser, selector, loader, and protocol execution path. A scripted model can test that path but cannot reproduce a trained JIT-Agent checkpoint. Identify all generator, analyzer, executor, and evaluator models, including substitutions. Reusing a model across roles does not imply shared conversational state.
++
++The implementation keeps the documented \texttt{jit\_mas/} package and \texttt{scripts.run\_jit\_mas} entry point; the paper rename does not modify code. These paths remain unaudited. Reconcile interfaces, fields, limits, dependencies, and containment with the actual checkout and run manifest.
++
++\subsection{What ``Workflow Synthesis'' Denotes}
++
++A workflow combines the team specification with its executable harness: requirements, responsibilities, inputs, tools, recipients, and budgets are realized through memory, planning, capability selection, and control. It is not merely an output outline or prose style. Each request conditions a fresh construction; accepted experience does not mandate reuse of the last workflow, although similar requests may yield similar designs.
++
++Trace relevant TeamSpec fields into generated modules, runtime configuration, and events. Listed roles, declared handoffs, and differing code hashes do not prove execution or useful adaptation. Task-level comparisons are still required.
+ 
+ \subsection{Records That Must Be Preserved}
+ 
+@@ -27,6 +33,8 @@
+ 
+ \subsection{Required Run Manifest}
+ \label{app:manifest}
++
++Table~\ref{tab:manifest} lists the run-specific evidence needed to connect the method description to reproducible measurements. Missing entries remain explicit rather than being inferred from software tests.
+ 
+ \begin{table*}[t]
+ \centering\small
+@@ -190,7 +198,7 @@
+ 
+ \section{Analysis Figures and Case Selection}
+ 
+-Figure~\ref{fig:overview} and Table~\ref{tab:example} are non-empirical explanations. Neither contains measured outcomes. The final empirical version should prioritize three additional visual arguments rather than decorative architecture variants.
++Figure~\ref{fig:overview} and Table~\ref{tab:example} are non-empirical explanations of workflow synthesis and feedback-driven revision. Neither contains measured outcomes. The final empirical version should prioritize three additional visual arguments rather than decorative architecture variants.
+ 
+ \paragraph{Guidance/organization comparison.}
+ Plot paired task-quality differences between G and GO, with uncertainty and actual resource consumption. Annotate whether differences arise under equal caps or a quality--cost frontier. A distribution of per-task effects is more informative than a single selected favorable case. Until measurements are available, no illustrative curve should masquerade as this plot.
+@@ -199,7 +207,7 @@
+ For initial global predictions, negotiated predictions, and evolved frozen states, display weighted anticipation coverage, organizational witnesses, unmet mass, and unanticipated successes using the fixed diagnostic set. Keep coverage and satisfaction on separate axes or clearly labeled panels. Changes in descriptive gap categories are not causal effects.
+ 
+ \paragraph{Verified cross-task trajectory.}
+-Choose cases by a prespecified rule, such as the first accepted nontrivial change with a held-out applicable task, together with the first rejected or harmful proposal. Show the earlier public requirement prediction, external feedback, evidence-supported proposal, validation decision, and the later task's changed responsibilities. Redact hidden answer details from any ``before execution'' region. The figure should explain both evidence supporting the change and the limits of the inference.
++Choose cases by a prespecified rule, such as the first accepted nontrivial change with a held-out applicable task, together with the first rejected or harmful proposal. Show the earlier public requirement prediction, generated workflow, external feedback, evidence-supported proposal, validation decision, and the later task's independently generated roles, dependencies, and checks. Redact hidden answer details from any ``before execution'' region. The figure should explain both evidence supporting the change and the limits of the inference.
+ 
+ \section{Prompt Semantics to Audit Against Code}
+ 
+@@ -212,7 +220,7 @@
+ Evaluate the proposed responsibilities from the local capability perspective. Accept only responsibilities with plausible inputs, tools, and budget. State missing inputs, needed collaborators, expected outputs, and quality checks. Challenge omissions and redundant assignments. Do not begin final-answer drafting or access external evaluation records.
+ 
+ \paragraph{Global reconciliation.}
+-Integrate local proposals into a feasible responsibility map. Record accepted and rejected changes, unresolved obligations, and the reasons for resource choices. Preserve the initial prediction separately. Ensure the final synthesis role can access evidence needed to resolve cross-agent conflicts.
++Integrate local proposals into a feasible team and workflow specification. Record accepted and rejected changes, unresolved obligations, and the reasons for resource choices. Preserve the initial prediction separately. Ensure the final synthesis role can access evidence needed to resolve cross-agent conflicts.
+ 
+ \paragraph{Local diagnosis.}
+ Read the relevant criterion feedback and actual local trajectory. Cite specific observed events and relevant handoffs. Distinguish what was known, what was requested, what was received, and what was acted upon. Provide alternative explanations and abstain when evidence is insufficient. Propose a reusable change with applicability conditions, not a memorized task answer.
+@@ -224,12 +232,12 @@
+ \section{Evidence Required for Each Scientific Claim}
+ \label{app:claims}
+ 
+-Three contrasts establish different things: end-to-end quality differences establish performance under specified conditions; the stage-isolated G/GO contrast tests organizational use beyond identical guidance; and a selected state's advantage on untouched tasks tests cross-task improvement. A live demonstration does not replace a baseline comparison, and validation is not a final test.
+-
+-Each empirical claim requires a run manifest, paired outputs, evaluator records, and uncertainty analysis. Mechanism claims also require intervention-input audits. Generalization must name the tested shift: task instances, topics, evaluators, datasets, or models. Software tests establish properties within their threat model, not quality effects; high scores do not establish that TeamSpec controlled execution.
++End-to-end comparisons establish performance under specified conditions; stage-isolated G/GO tests organizational use beyond identical guidance; frozen-state evaluation on untouched tasks tests cross-task improvement. Validation and live demonstrations cannot substitute for these comparisons.
++
++Each claim requires run manifests, paired outputs, evaluator records, and uncertainty estimates. Mechanism claims additionally require intervention-input audits. Generalization must name the tested shift: tasks, topics, judges, datasets, or models. Neither software tests nor high scores establish that TeamSpec controlled execution.
+ 
+ \paragraph{Prespecified moderation.}
+-The example suggests a secondary hypothesis: tasks with obligations spanning multiple contributions may benefit more from coordination. Label such obligations before seeing method outcomes, retain the task as the sampling unit, and report all eligible groups with uncertainty. Labels selected from favorable trajectories are circular. Small subgroup analyses remain exploratory.
++The running example suggests that cross-contribution obligations may moderate the benefit. Label them before inspecting outcomes, retain task-level sampling, and report every eligible subgroup with uncertainty. Small or post-hoc analyses remain exploratory.
+ 
+ \paragraph{Possible interpretations.}
+-If overall quality improves but G and GO are indistinguishable with informative uncertainty, better guidance remains a sufficient tested explanation. If GO helps but evolved state has no held-out benefit, coordination is supported without demonstrated cross-task improvement. If gains occur only under the selection judge, evaluator-specific adaptation remains plausible. These are outcomes to distinguish, not predicted findings.
++Overall gains without an informative G/GO contrast leave guidance as an alternative explanation. GO gains without held-out transfer do not establish cross-task improvement. Gains confined to the selection judge remain compatible with evaluator-specific adaptation.
+--- v2_fixed/overview.tex
++++ v3/overview.tex
+@@ -6,17 +6,17 @@
+   smallnote/.style={font=\fontsize{9}{11}\selectfont,align=center}]
+ \definecolor{coordblue}{RGB}{31,76,101}
+ \definecolor{evolveteal}{RGB}{36,102,93}
+-\node[anchor=west,font=\small\bfseries,text=coordblue] at (0,1.16) {BEFORE SUBMISSION: turn quality expectations into coordinated work};
++\node[anchor=west,font=\small\bfseries,text=coordblue] at (0,1.16) {WITHIN EACH TASK: synthesize the team and writing workflow on demand};
+ \node[box,fill=coordblue!5] (g) at (1.7,0) {\mbox{\textbf{Global prediction}}\\\mbox{Task rubrics + roles}\\\mbox{Priorities + relations}};
+ \node[box,fill=coordblue!5] (l) at (5.45,0) {\mbox{\textbf{Local negotiation}}\\\mbox{Commitments + inputs}\\\mbox{Dependencies + dissent}};
+-\node[box,fill=coordblue!5] (c) at (9.2,0) {\mbox{\textbf{Reconciliation}}\\\mbox{Freeze rubrics + team}\\\mbox{Owners + handoffs}};
+-\node[box,fill=coordblue!5] (e) at (12.95,0) {\mbox{\textbf{JIT execution}}\\\mbox{Generated harness}\\\mbox{Private contexts}};
++\node[box,fill=coordblue!5] (c) at (9.2,0) {\mbox{\textbf{Workflow design}}\\\mbox{Roles + links + checks}\\\mbox{Freeze requirements}};
++\node[box,fill=coordblue!5] (e) at (12.95,0) {\mbox{\textbf{JIT synthesis + run}}\\\mbox{Team + workflow code}\\\mbox{Private agent contexts}};
+ \draw[flow] (g)--(l); \draw[flow] (l)--(c); \draw[flow] (c)--(e);
+ \node[draw=black!35,fill=black!2,rounded corners=2pt,text width=14.6cm,align=center,font=\fontsize{9}{11}\selectfont,inner sep=5pt] (link) at (7.32,-1.52) {\textbf{Shared task-linked records:} requirement $\longrightarrow$ responsibility $\longrightarrow$ observed evidence\\Pre-execution predictions stay fixed; later feedback is aligned to the same record.};
+ \draw[densely dotted,draw=black!55] (c.south) -- (c.south |- link.north);
+ \draw[densely dotted,draw=black!55] (e.south) -- (e.south |- link.north);
+-\node[anchor=west,font=\small\bfseries,text=evolveteal] at (0,-2.42) {AFTER SUBMISSION: turn evidence-linked feedback into reusable lessons};
+-\node[box,fill=evolveteal!5] (v) at (1.7,-3.64) {\mbox{\textbf{Validation}}\\\mbox{Rebuild old/new teams}\\\mbox{Accept / reject / defer}};
++\node[anchor=west,font=\small\bfseries,text=evolveteal] at (0,-2.42) {ACROSS TASKS: evolve the accepted experience that guides future synthesis};
++\node[box,fill=evolveteal!5] (v) at (1.7,-3.64) {\mbox{\textbf{Validation}}\\\mbox{Rebuild both workflows}\\\mbox{Accept / reject / defer}};
+ \node[box,fill=evolveteal!5] (d) at (5.45,-3.64) {\mbox{\textbf{Joint diagnosis}}\\\mbox{Global-local evidence}\\\mbox{Scoped change}};
+ \node[box,fill=evolveteal!5] (j) at (9.2,-3.64) {\mbox{\textbf{Evaluation}}\\\mbox{Independent feedback}\\\mbox{Align frozen rubrics}};
+ \node[box,fill=evolveteal!5] (a) at (12.95,-3.64) {\mbox{\textbf{Submission}}\\\mbox{Commit answer + trace}\\\mbox{Then release feedback}};
+@@ -25,8 +25,8 @@
+ \draw[flow,dashed] (v.west)--++(-.27,0)|-(g.west);
+ \draw[densely dotted,draw=black!55] (d.north) -- (d.north |- link.south);
+ \draw[densely dotted,draw=black!55] (j.north) -- (j.north |- link.south);
+-\node[smallnote,text width=14.7cm] at (7.32,-4.91) {\textbf{Persistent:} rubric, organization, and execution experience.\quad\textbf{Regenerated:} a team for every new task.\\Dashed return: accepted experience is retrieved by subsequent tasks only.};
++\node[smallnote,text width=14.7cm] at (7.32,-4.91) {\textbf{Persistent:} accepted rubric, organization, and execution experience.\\\textbf{Regenerated per task:} roles, collaboration protocol, and executable writing workflow.};
+ \end{tikzpicture}
+-\caption{One interface, two uses. Requirements become negotiated responsibilities before execution; afterward, the frozen record and distributed evidence support targeted updates. Only validated experience enters the next task's construction. Model weights and the evaluator stay fixed. Arrows show workflow or record linkage, not established causal effects.}
++\caption{\method\ operates on two timescales. For the current task, anticipated quality requirements and local plans condition an executable team and writing workflow. After submission, the frozen expectations and execution evidence support scoped lessons, validated by regenerating workflows under both states on separate tasks. The dashed return carries accepted experience to later requests, not a fixed team. Model weights and the evaluator remain frozen. Arrows indicate process or record linkage, not causal effects.}
+ \label{fig:overview}
+ \end{figure*}

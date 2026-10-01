@@ -1,9 +1,17 @@
 system_prompt: |
-  Execute the task-specific TeamSpec through independently scoped agent contexts.
+  Execute the task-specific TeamSpec once through independently scoped agent contexts.
 agent_prompt: |
-  Work from the public task, assigned requirements, and explicit upstream artifacts.
-  Inspect evidence relevant to your responsibility; report limitations and disagreements.
-  An upstream agent's claim is an artifact, not an independently verified fact.
+  Work from the public task, your assignment, and the supplied shared_ledger.
+  Contributors publish requirements, outline, evidence_spans, and source_references
+  in ledger, plus a brief answer summary. Each evidence span's source_ref must match
+  a source_id in that contribution. Empty fields are allowed; explain missing sources.
+  The designated Writer reads the frozen ledger and produces the full deliverable once.
+  Each role has one model call. Do not negotiate, clarify, message peers, or request revisions.
+  Contributors may request one allowed external tool batch. Its raw results enter the ledger
+  without another producer call; never claim to have already read those tool results.
+  The Writer makes no external tool calls. Complete with answer, evidence_ids, and checkpoints;
+  a contributor completion also requires ledger. Only tool-only producers may omit answer.
+  Report honest checkpoint states and limitations. Published claims are not independently verified facts.
 planning: {}
 summary: {}
 final_answer: {}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Sequence
 
@@ -33,11 +34,14 @@ def feedback_view(feedback: EvaluationFeedback) -> dict:
     """Keep complete criterion feedback, not duplicated evaluator request/response audits."""
     feedback = EvaluationFeedback.model_validate(feedback)
     view = feedback.model_dump(mode="json", exclude={"raw", "rubrics"})
+    if "quality_audit" in feedback.raw:
+        view["quality_audit"] = copy.deepcopy(feedback.raw["quality_audit"])
     view["rubrics"] = []
     for rubric in feedback.rubrics:
         row = rubric.model_dump(mode="json", exclude={"raw"})
         # Quote verification and other semantic judge findings are not audit duplication.
-        for field in ("axis", "confidence", "evidence_locations", "missing_elements", "error"):
+        for field in ("axis", "confidence", "evidence_locations", "missing_elements", "error",
+                      "quality_audit"):
             if field in rubric.raw:
                 row[field] = copy.deepcopy(rubric.raw[field])
         row["signed_contribution"] = None if rubric.score is None else rubric.weight * rubric.score
@@ -66,6 +70,24 @@ derived diagnostics; they never replace the original criterion, verdict or score
 An unavailable evaluation does not establish success or failure."""
 
 
+EVIDENCE_QUALITY_PROMPT = """Separate the official score from answer quality and judge
+reliability. Compare each criterion, verdict, reason and supplied answer evidence. If they
+appear inconsistent, preserve both sides and classify the unresolved explanation as
+external_or_uncertain; do not silently flip scores or learn advice to satisfy a suspected
+judge error. quality_audit is risk-only: its flags request inspection, and
+semantic_consistency=unassessed is not proof of a contradiction or an incorrect verdict.
+An exact quote establishes where words occurred, not that the claim is factually true.
+A checkpoint or agent statement that something was checked is only a self-report. To
+claim a handoff was incorporated, identify the actual received artifact and resulting
+answer change; a dependency path does not prove direct artifact consumption. In
+particular an earlier writer cannot have incorporated a later review in a single-pass
+DAG. For mathematical verification, cite the observable derivation, assumptions,
+substitution, counterexample or tool output, including the tested claim and result.
+Merely naming a theorem, repeating a conclusion, valid JSON, or a success flag does not
+verify a calculation. Without observable checks retain the uncertainty, rather than
+reporting verification or inventing a missing execution event."""
+
+
 ALIGN_PROMPT = """Semantically align predicted quality requirements with independently
 evaluated criteria. Determine matching by meaning, not equality of predicted and evaluated
 IDs or literal text. Support paraphrases, partial
@@ -82,7 +104,7 @@ Never invent, abbreviate, renumber or substitute criterion text for an ID. Each 
 requires nonempty predicted_ids AND evaluated_ids; use missed_evaluated_ids and
 unmatched_predicted_ids for omissions, never an empty-sided match. Evidence quotes with
 evidence_locations.verified=false are not confirmed verbatim excerpts; confidence is
-the evaluator's reported confidence, not proof of correctness.""" + "\n" + SIGNED_SCORE_PROMPT
+the evaluator's reported confidence, not proof of correctness.""" + "\n" + SIGNED_SCORE_PROMPT + "\n" + EVIDENCE_QUALITY_PROMPT
 
 OUTLINE_PROMPT = """Develop an initial, evidence-supported attribution hypothesis after
 submission and independent evaluation. Inspect both frozen quality predictions, their
@@ -100,7 +122,7 @@ FEEDBACK_IDS_PROMPT = """Copy rubric IDs exactly from the supplied graphs and fe
 copy evidence references exactly from evidence_ids. A feedback:<rubric_id> reference is
 an evidence ID, not a rubric ID. Quote verification flags describe whether the quoted
 text was found verbatim; do not treat unverified quotes as exact observations or change
-the recorded official score based on this diagnostic.""" + "\n" + SIGNED_SCORE_PROMPT
+the recorded official score based on this diagnostic.""" + "\n" + SIGNED_SCORE_PROMPT + "\n" + EVIDENCE_QUALITY_PROMPT
 
 LOCAL_ATTRIBUTION_PROMPT = """Analyze your own execution with your complete observable local
 context, the relevant rubric feedback, global questions and upstream/downstream evidence.
@@ -119,7 +141,7 @@ missing handoffs. Multiple causes may share responsibility. For requirements not
 or assigned, examine prediction/organization before execution; never force blame on an
 agent. Successes need evidence and applicability too. Cite supplied IDs only, including
 counterevidence. Evidence gaps must remain external_or_uncertain. Do not claim experimental
-causal identification from reflection. No experience is accepted during this phase."""
+causal identification from reflection. This phase produces findings, not experience writes."""
 
 PROPOSE_PROMPT = """Propose compact, conditional improvements from evidence-supported
 attribution findings. Each proposal changes one experience in exactly one bank: rubric
@@ -129,13 +151,25 @@ Store transferable instructions, never answers or hidden criterion text specific
 source task. Do not copy a private source criterion's numerical threshold or target
 algorithm names into a cross-task rule. Applicability and task_signals must depend on
 public task features; future agents cannot assume access to private benchmark rubrics.
+task_signals are necessary public conditions, not alternatives: use short observable
+phrases, all applicable to the current public task. Distinguish the requested operation
+(for example comparison or derivation) from generic article/writing format. A future
+task must satisfy these signals before receiving the advice. Applicability states the
+boundary; capability states which role can perform the practice, not a source role ID.
+Describe a procedure and its verification, not a fixed checklist of source-specific
+facts. For any count, derive the required amount from the future public task and needed
+coverage; never turn a private source count of bullets, examples or dimensions into a
+universal minimum. Verify a proposed instruction remains useful with different subjects
+and a different rubric, and abstain if its benefit depends on knowing the source rubric.
 Record applicability, task signals, capability signature for execution advice,
 source task, evidence and counterevidence, concrete diff, old state version, expected benefit,
-risks and a paired independent-task validation plan. Success findings can yield conditional
+risks. Success findings can yield conditional
 positive advice. Only supported findings justify a proposal; abstain when evidence is
-insufficient. Cite evidence IDs from the findings and do not invent new evidence. All proposed
-experience has validation_status=staged and validation_result remains empty. Proposing is
-not accepting; only actual paired reruns may validate a change. Do not edit evaluator,
+insufficient. Cite evidence IDs from the findings and do not invent new evidence. Only the
+first proposal is written directly after attribution and structural/evidence-reference checks;
+additional proposals are recorded but not applied under the one-update-per-source policy.
+there is no acceptance decision, hold state, or independent-task promotion gate. Do not
+claim an update has been experimentally validated. Do not edit evaluator,
 hidden rubrics, split manifests, runtime or budget guards. Return at most three proposals.
 Both proposal.evidence and proposal.experience.evidence must contain exact IDs from
 valid_supporting_evidence_ids. experience.counterevidence must use exact IDs from
@@ -143,7 +177,43 @@ valid_counterevidence_ids. A finding_id identifies an analysis, not an observati
 refer to finding IDs only in rationale, never substitute them for evidence IDs. Follow
 the finding's supporting_evidence references instead. Do not abbreviate or renumber IDs.
 When scoring_context is available, ground any claimed score improvement in its signed
-criterion interpretation rather than assuming every Not Satisfied verdict is a defect.""" + "\n" + SIGNED_SCORE_PROMPT
+criterion interpretation rather than assuming every Not Satisfied verdict is a defect.""" + "\n" + SIGNED_SCORE_PROMPT + "\n" + EVIDENCE_QUALITY_PROMPT
+
+
+_COUNT_WORDS = dict(zip(
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty".split(),
+    range(21)))
+_CONTENT_QUANTITY = (
+    r"(?P<count>\d+|" + "|".join(_COUNT_WORDS) + r")\b"
+    r"(?:[\s-]+\w+){0,5}?\s+(?P<unit>sentences?|bullets?|examples?|dimensions?|steps?|"
+    r"similarities|differences|characteristics|points?|references?|cases?|sections?|tables?|charts?)\b"
+)
+_CONTENT_COUNT = re.compile(
+    r"\b(?:at\s+least|at\s+most|no\s+fewer\s+than|no\s+more\s+than|exactly|"
+    r"minimum(?:\s+of)?|maximum(?:\s+of)?|include|provide|list|enumerate|cover|present|contains?)\s+"
+    + _CONTENT_QUANTITY, re.IGNORECASE)
+_PUBLIC_CONTENT_COUNT = re.compile(r"\b" + _CONTENT_QUANTITY, re.IGNORECASE)
+
+
+def _content_counts(text, *, public=False):
+    pattern = _PUBLIC_CONTENT_COUNT if public else _CONTENT_COUNT
+    counts = set()
+    for match in pattern.finditer(text):
+        value, unit = match.group("count").casefold(), match.group("unit").casefold()
+        count = int(value) if value.isdigit() else _COUNT_WORDS[value]
+        category = "similarity" if unit == "similarities" else unit.removesuffix("s")
+        # Carrier words alone do not identify the required content. Keep an explicit
+        # nearby comparison topic, but never equate unrelated method steps by number.
+        if category in {"sentence", "bullet", "example", "point", "characteristic"}:
+            clause = re.split(r"[.;\n]|\b(?:before|after|whereas)\b",
+                              text[match.start():], maxsplit=1, flags=re.IGNORECASE)[0]
+            words = set(re.findall(r"\w+", " ".join(clause.split()[:24]).casefold()))
+            shared = bool(words.intersection({"similarity", "similarities", "shared", "commonality"}))
+            different = bool(words.intersection({"difference", "differences", "contrasts"}))
+            if shared != different:
+                category = "similarity" if shared else "difference"
+        counts.add((count, category))
+    return counts
 
 
 class RubricAttributor(JsonModelCalls):
@@ -229,9 +299,12 @@ class RubricAttributor(JsonModelCalls):
         submission_id = "submission:" + digest(data.get("answer"))
         evaluation = feedback_view(feedback)
         self._scoring_context = {"task_id": feedback.task_id, "criteria": [
-            {key: row[key] for key in ("rubric_id", "criterion", "weight", "score",
-                                       "signed_contribution", "desired_score", "assessment")}
+            {key: copy.deepcopy(row[key]) for key in ("rubric_id", "criterion", "weight", "score",
+                  "verdict", "reason", "signed_contribution", "desired_score", "assessment",
+                  "quality_audit") if key in row}
             for row in evaluation["rubrics"]]}
+        if "quality_audit" in evaluation:
+            self._scoring_context["quality_audit"] = copy.deepcopy(evaluation["quality_audit"])
         context = {"task": task, "global_graph": global_graph, "planned_graph": planned_graph,
                    "team": team, "feedback": evaluation, "alignments": self.last_alignments,
                    "submission": {"evidence_id": submission_id, "answer": data.get("answer")},
@@ -356,21 +429,25 @@ class RubricAttributor(JsonModelCalls):
                               "valid_counterevidence_ids": sorted(counterevidence),
                               "scoring_context": scoring},
                              Proposals, validate=lambda result: self._validate_proposals(
-                                 result.proposals, task, supported, base_version, experiences)).proposals
+                                 result.proposals, task, supported, base_version, experiences,
+                                 scoring_context=scoring)).proposals
 
     @staticmethod
-    def _validate_proposals(proposals, task, supported, base_version, experiences):
+    def _validate_proposals(proposals, task, supported, base_version, experiences, *, scoring_context=None):
         if len(proposals) > 3:
             raise ValueError("At most three single-experience proposals are allowed")
         evidence = {eid for finding in supported for eid in finding.supporting_evidence}
         counterevidence = {eid for finding in supported for eid in finding.opposing_evidence}
         existing = {entry["experience_id"]: entry for entry in as_json(experiences)}
+        private_counts = set()
+        if scoring_context and scoring_context.get("task_id") == task.task_id:
+            private_counts = set().union(*(_content_counts(row["criterion"])
+                                          for row in scoring_context.get("criteria", [])))
+            private_counts -= _content_counts(" ".join([task.question, *task.constraints]), public=True)
         for proposal in proposals:
             exp = proposal.experience
             if proposal.source_task_id != task.task_id or proposal.base_version != base_version:
                 raise ValueError("Proposal source task or base version changed")
-            if exp.validation_status != "staged" or proposal.validation_result:
-                raise ValueError("Model proposals cannot self-validate")
             if exp.source_task_ids != [task.task_id]:
                 raise ValueError("Proposal must cite the observed source task")
             if not set(proposal.evidence + exp.evidence) <= evidence:
@@ -386,5 +463,13 @@ class RubricAttributor(JsonModelCalls):
                     f"valid_counterevidence_ids={sorted(counterevidence | evidence)}")
             if exp.bank == "execution" and not exp.capability.strip():
                 raise ValueError("Execution experience requires a reusable capability signature")
+            copied_counts = private_counts.intersection(_content_counts(exp.instruction))
+            if copied_counts:
+                raise ValueError("Experience contains a potential source-specific content-count threshold "
+                    f"in a reusable instruction: count_categories={sorted(copied_counts)}. Describe a conditional "
+                    "coverage/checking procedure and derive counts from the future public task; "
+                    "do not copy hidden rubric minima. Matching is a conservative quantity/category "
+                    "heuristic, not proof of leakage. Mathematical formula parameters are not "
+                    "content-count thresholds.")
             if proposal.replaces_id and proposal.replaces_id not in existing:
                 raise ValueError("Proposal replaces an unknown experience")

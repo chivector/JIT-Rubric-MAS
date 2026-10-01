@@ -13,7 +13,7 @@ from jit_mas.bridge import JITHarnessSynthesizer
 from jit_mas.budget import BudgetExceeded, BudgetLedger
 from jit_mas.config import MASConfig, ModelConfig, NativeModels
 from jit_mas.experience import ExperienceStore
-from jit_mas.offline import FixtureModels
+from jit_mas.offline import FixtureModels, fixture_dataset
 from jit_mas.schemas import PublicTask, SplitManifest, digest
 from scripts import benchmark_jit_mas_live as live
 from scripts.models.base import ChatMessage
@@ -339,65 +339,37 @@ def test_failed_planning_persists_observed_response_and_budget(tmp_path):
         store.close()
 
 
-def _scored_pair(task_id):
-    side = {"comparison_fingerprint": "same-configuration",
-            "evaluation": {"complete": True, "score": 0.5, "evaluator_version": "frozen-judge",
-                           "rubrics": [{"rubric_id": "r1", "weight": 1, "status": "ok", "score": 1}]}}
-    return {"task_id": task_id, "repeat": 0, "baseline": side, "candidate": copy.deepcopy(side)}
-
-
-def test_validation_report_distinguishes_error_only_attempt_from_scored_pair():
-    outcome = {"validations": [{"status": "pending", "pairs": [
-        {"task_id": "v1", "repeat": 0, "error": "planning failed"}]}]}
-    progress = live._validation_progress([outcome], ["v1", "v2"], 1)
-    assert progress["paired_validation_attempted"]
-    assert progress["paired_validation_attempted_pairs"] == 1
-    assert progress["paired_validation_fully_scored_pairs"] == 0
-    assert not progress["paired_validation_executed"]
-    assert not progress["paired_validation_complete"]
-
-
-@pytest.mark.parametrize("status", ["accepted", "rejected"])
-def test_validation_report_requires_whole_scored_protocol(status):
-    outcome = {"validations": [{"status": status, "pairs": [_scored_pair("v1"), _scored_pair("v2")]}]}
-    progress = live._validation_progress([outcome], ["v1", "v2"], 1)
-    assert progress["paired_validation_fully_scored_pairs"] == 2
-    assert progress["paired_validation_complete"] and progress["paired_validation_executed"]
-    outcome["validations"][0]["pairs"][1]["candidate"]["evaluation"]["complete"] = False
-    progress = live._validation_progress([outcome], ["v1", "v2"], 1)
-    assert progress["paired_validation_fully_scored_pairs"] == 1
-    assert not progress["paired_validation_complete"]
-
-
-@pytest.mark.parametrize("retrieved,expected", [([], False), (["unaccepted"], False),
-                                               (["different"], False), (["accepted"], True)])
-def test_closed_loop_confirmation_requires_actual_accepted_retrieval(retrieved, expected):
-    snapshot = SimpleNamespace(experiences=[
-        SimpleNamespace(experience_id="accepted", validation_status="accepted"),
-        SimpleNamespace(experience_id="unaccepted", validation_status="pending")])
+@pytest.mark.parametrize("retrieved,expected", [([], False), (["old-experience"], False),
+                                               (["different"], False), (["updated-experience"], True)])
+def test_closed_loop_confirmation_requires_actual_updated_experience_retrieval(retrieved, expected):
+    snapshot = SimpleNamespace(applied_proposals=["proposal-1"], experiences=[
+        SimpleNamespace(experience_id="updated-experience"),
+        SimpleNamespace(experience_id="old-experience")])
+    source = {"task_id": "e", "evaluation_complete": True,
+              "proposal_experiences": [{"proposal_id": "proposal-1", "experience_id": "updated-experience"}],
+              "experience_updates": [{"proposal_id": "proposal-1", "source_task_id": "e",
+                                      "update_rule": "direct_after_attribution"}]}
     report = {"status": "completed", "stages": {"evolution": "completed", "held_out": "completed"},
-              "evolution": [{"evaluation_complete": True}], "held_out": [{"evaluation_complete": True}],
-              "paired_validation_complete": True, "new_experience_accepted": True,
+              "evolution": [source], "held_out": [{"evaluation_complete": True}],
               "held_out_retrieved_experience_ids": retrieved}
     live._confirm_closed_loop(report, snapshot)
-    assert report["full_mechanism_exercised"]
+    assert report["full_mechanism_exercised"] and report["experience_update_complete"]
     assert report["closed_loop_confirmed"] is expected
-    assert report["accepted_experience_reuse_demonstrated"] is expected
-    assert report["held_out_retrieved_accepted_experience_ids"] == (["accepted"] if expected else [])
-    report["paired_validation_complete"] = False
+    assert report["updated_experience_reuse_demonstrated"] is expected
+    assert report["held_out_retrieved_updated_experience_ids"] == (["updated-experience"] if expected else [])
+    snapshot.applied_proposals.clear()
     live._confirm_closed_loop(report, snapshot)
-    assert not report["closed_loop_confirmed"]
-    assert not report["full_mechanism_exercised"]
+    assert not report["closed_loop_confirmed"] and not report["full_mechanism_exercised"]
 
 
-def test_rejected_experience_can_exercise_full_mechanism_without_reuse():
+def test_no_direct_update_cannot_claim_full_loop_or_reuse():
     report = {"stages": {"evolution": "completed", "held_out": "completed"},
-              "evolution": [{"evaluation_complete": True}], "held_out": [{"evaluation_complete": True}],
-              "paired_validation_complete": True, "new_experience_accepted": False,
-              "held_out_retrieved_experience_ids": []}
-    live._confirm_closed_loop(report, SimpleNamespace(experiences=[]))
-    assert report["full_mechanism_exercised"]
-    assert not report["accepted_experience_reuse_demonstrated"]
+              "evolution": [{"task_id": "e", "evaluation_complete": True, "experience_updates": []}],
+              "held_out": [{"evaluation_complete": True}], "held_out_retrieved_experience_ids": []}
+    live._confirm_closed_loop(report, SimpleNamespace(experiences=[], applied_proposals=[]))
+    assert not report["full_mechanism_exercised"]
+    assert not report["experience_update_complete"]
+    assert not report["updated_experience_reuse_demonstrated"]
     assert not report["closed_loop_confirmed"]
 
 
@@ -483,7 +455,7 @@ def test_runner_completion_with_zero_proposals_does_not_confirm_closed_loop(tmp_
                 encoding="utf-8")
             return [{"task_id": "e" if mode == "evolve" else "t",
                      "evaluation": {"complete": True, "score": 0.5},
-                     "proposals": [], "validations": [], "experience_version": 0,
+                     "proposals": [], "experience_updates": [], "experience_version": 0,
                      "run_dir": str(run_dir)}]
 
     monkeypatch.setattr(live, "MASPipeline", Pipeline)
@@ -493,9 +465,11 @@ def test_runner_completion_with_zero_proposals_does_not_confirm_closed_loop(tmp_
     assert report["stages"] == {"evolution": "completed", "held_out": "completed"}
     assert not report["closed_loop_confirmed"]
     assert not report["full_mechanism_exercised"]
-    assert not report["paired_validation_attempted"]
-    assert not report["new_experience_accepted"]
-    assert report["held_out_retrieved_accepted_experience_ids"] == []
+    assert not report["experience_update_complete"]
+    assert not report["new_experience_applied"]
+    assert report["held_out_retrieved_updated_experience_ids"] == []
+    assert report["unused_validation_task_ids"] == ["v1", "v2"]
+    assert not any(key.startswith("paired_validation") for key in report)
     assert report["budget"]["model_calls"] == 0
     assert report["usage_accounting"]["model_attempts"] == 0
     assert report["usage_accounting"]["physical_http_requests"] is None
@@ -504,199 +478,45 @@ def test_runner_completion_with_zero_proposals_does_not_confirm_closed_loop(tmp_
     assert report["limits"]["automatic_transport_retries"] == 0
 
 
-@pytest.fixture
-def heldout_evidence(tmp_path, monkeypatch, credentials):
-    root = tmp_path / "prior"
-    root.mkdir()
-    manifest = SplitManifest(evolution=["e"], validation=["v1", "v2"], test=["t"])
-    tasks = {tid: PublicTask(task_id=tid, question="Public question " + tid)
-             for tid in ["e", "v1", "v2", "t"]}
-    private = {tid: {"rubrics": [{"rubric_id": tid + "-r", "criterion": "Official fixture criterion", "weight": 1}]}
-               for tid in tasks}
-    config = MASConfig(backend="native_jit", unsafe_local=True,
-        models={role: ModelConfig(model=credentials.model, endpoint=credentials.endpoint,
-            key_env="STDIN_ONLY_NOT_EXPORTED", max_tokens=limit, timeout=120)
-            for role, limit in live.ROLE_TOKENS.items()}, max_agents=3, max_parallel=1,
-        team_max_calls=6, max_model_calls=90, max_total_tokens=600_000,
-        max_tool_calls=0, max_repairs=2, candidates=1, execution_timeout=750, max_validation_tasks=2)
-    monkeypatch.setattr(live, "code_fingerprint", lambda: "frozen-runtime")
+def test_direct_update_live_report_with_real_offline_pipeline(tmp_path, monkeypatch, credentials):
+    tasks, private, manifest = fixture_dataset()
     monkeypatch.setattr(live, "load_inputs", lambda *args: (tasks, private, manifest))
-    store = ExperienceStore(root / "experience.sqlite")
-    snapshot = store.snapshot()
-    empty_hash = digest(snapshot)
+    monkeypatch.setattr(live, "LiveModels", lambda *args: SimpleNamespace(close=lambda: None))
+    provider = FixtureModels()
 
-    def comparison(tid):
-        return {"code": "frozen-runtime", "config": config.model_dump(mode="json"),
-                "task": tasks[tid].model_dump(mode="json"), "manifest": digest(manifest),
-                "private_hash": digest(private[tid])}
+    def pipeline(*args):
+        store, output = args[-2:]
+        return make_pipeline(MASConfig(backend="scripted"), store, output, fixture_models=provider)
 
-    def scored(tid, label, experience_hash):
-        directory = root / "evolution" / label
-        answer = "Unchanged submitted answer " + label
-        answer_hash = digest(answer)
-        evaluation = {"task_id": tid, "complete": True, "score": 1.0, "evaluator_version": "frozen-judge",
-            "rubrics": [{**private[tid]["rubrics"][0], "score": 1.0, "status": "ok"}],
-            "raw": {"submission_answer_hash": answer_hash}}
-        outcome = {"task_id": tid, "evaluation": evaluation, "answer_hash": answer_hash,
-            "comparison_fingerprint": digest(comparison(tid)), "experience_hash": experience_hash,
-            "run_dir": str(directory.resolve())}
-        for name, content in {"evaluation": evaluation, "complete": outcome,
-                "submission": {"answer": answer, "answer_hash": answer_hash},
-                "execution": {"answer": answer}, "run_manifest": {"comparison": comparison(tid)}}.items():
-            live.write_json(directory / (name + ".json"), content)
-        return outcome
-
-    source = scored("e", "source", empty_hash)
-    validation = {"status": "rejected", "reason": "No required mean task-quality improvement",
-        "config_hash": digest(config.validation), "baseline_hash": empty_hash, "candidate_hash": "candidate",
-        "pairs": [{"task_id": tid, "repeat": 0, "baseline": scored(tid, tid + "-base", empty_hash),
-                   "candidate": scored(tid, tid + "-candidate", "candidate")} for tid in manifest.validation]}
-    with store.db:
-        store.db.execute("INSERT INTO validations VALUES(?,?,?)", ("validation", "p1", json.dumps(validation)))
-    store.close()
-    failed_dir = root / "held_out" / "failed"
-    live.write_json(failed_dir / "failure.json", {"task_id": "t", "experience_hash": empty_hash})
-    live.write_json(failed_dir / "run_manifest.json", {"comparison": comparison("t")})
-    budget = {"model_calls": 0, "tokens": 0, "reserved_tokens": 0, "records": []}
-    report = {"status": "failed", "stages": {"evolution": "completed", "held_out": "failed"},
-        "accepted_experience_count": 0, "accepted_experience_version": 0,
-        "manifest": manifest.model_dump(mode="json"), "dataset_revision": live.DATASET_REVISION,
-        "dataset_sha256": live.OFFICIAL_DATA_SHA256, "budget": budget,
-        "evolution": [{"task_id": "e", "score": 1.0, "evaluation_complete": True,
-            "run_dir": source["run_dir"], "validations": [{"status": validation["status"],
-                "reason": validation["reason"], "pairs": 2}]}]}
-    report.update(live._validation_progress([{"validations": [validation]}], manifest.validation, 1))
-    live.write_json(root / "report.json", report)
-    live.write_json(root / "config.json", config)
-    live.write_json(root / "session_budget.json", budget)
-    return SimpleNamespace(root=root, config=config, tasks=tasks, private=private, manifest=manifest,
-                           report=report, validation=validation, failed_dir=failed_dir)
+    monkeypatch.setattr(live, "MASPipeline", pipeline)
+    output = tmp_path / "run"
+    report = live.run_benchmark(credentials, "unused", "unused", output, unsafe_local=True)
+    assert report["status"] == "completed", report.get("error")
+    assert report["closed_loop_confirmed"] and report["experience_update_complete"]
+    assert report["experience_version"] == 1
+    assert report["held_out_retrieved_updated_experience_ids"] == ["boundary-assumptions"]
+    assert len(report["evolution"][0]["experience_updates"]) == 1
+    assert not any(key.startswith("paired_validation") for key in report)
+    assert not any(output.rglob("validation.json"))
+    for budget_path in output.rglob("budget.json"):
+        budget = json.loads(budget_path.read_text(encoding="utf-8"))
+        assert "validation" not in budget["by_stage"]
 
 
-def test_heldout_continuation_verifies_unchanged_complete_evidence(heldout_evidence):
-    f = heldout_evidence
-    before = live._heldout_evidence_files(f.root)
-    old, provenance = live._load_heldout_continuation(f.root, live.heldout_continuation_digest(f.root),
-        f.config, f.tasks, f.private, f.manifest)
-    assert old == f.report
-    assert provenance["report_sha256"] == before["report.json"]
-    assert provenance["runtime_fingerprint"] == "frozen-runtime"
-    assert not provenance["source_regenerated"]
-    assert not provenance["attribution_regenerated"]
-    assert not provenance["paired_validation_rerun"]
-    assert live._heldout_evidence_files(f.root) == before
-
-
-@pytest.mark.parametrize("mutation", ["anchor", "runtime", "config", "split", "submission", "pair", "committed", "report"])
-def test_heldout_continuation_fails_closed_on_changed_inputs(heldout_evidence, monkeypatch, mutation):
-    f = heldout_evidence
-    anchor = live.heldout_continuation_digest(f.root)
-    if mutation == "anchor":
-        live.write_json(f.root / "extra.json", {"changed": True})
-    elif mutation == "runtime":
-        monkeypatch.setattr(live, "code_fingerprint", lambda: "changed-runtime")
-    elif mutation == "config":
-        f.config.max_repairs = 1
-    elif mutation == "split":
-        f.manifest.test = ["other"]
-    elif mutation == "submission":
-        live.write_json(f.failed_dir / "submission.json", {"answer": "already submitted"})
-    elif mutation == "pair":
-        path = f.root / "evolution" / "v1-base" / "evaluation.json"
-        changed = json.loads(path.read_text())
-        changed["score"] = 0.0
-        live.write_json(path, changed)
-    elif mutation == "committed":
-        store = ExperienceStore(f.root / "experience.sqlite")
-        with store.db:
-            store.db.execute("INSERT INTO commits VALUES('p1',1,'validation')")
-        store.close()
-    elif mutation == "report":
-        f.report["evolution"][0]["score"] = 0.25
-        live.write_json(f.root / "report.json", f.report)
-    if mutation != "anchor":
-        anchor = live.heldout_continuation_digest(f.root)
-    with pytest.raises(ValueError):
-        live._load_heldout_continuation(f.root, anchor, f.config, f.tasks, f.private, f.manifest)
-
-
-@pytest.mark.parametrize("directory,anchor,calls,tokens", [
-    ("prior", None, 39, 521350), (None, "hash", 39, 521350),
-    ("prior", "hash", 40, 521350), ("prior", "hash", 39, 521351)])
-def test_heldout_flags_and_remaining_budget_rejected_before_loading(
-        monkeypatch, credentials, directory, anchor, calls, tokens):
+@pytest.mark.parametrize("directory,anchor", [
+    ("prior", None), (None, "hash"), ("prior", "hash")])
+def test_historical_heldout_continuation_fails_before_loading_or_api(
+        tmp_path, monkeypatch, credentials, directory, anchor):
     def forbidden(*args, **kwargs):
-        raise AssertionError("Invalid continuation must fail before setup")
+        raise AssertionError("Historical continuation must fail before setup")
 
     monkeypatch.setattr(live, "load_inputs", forbidden)
-    with pytest.raises(ValueError, match="[Hh]eld.?out"):
-        live.run_benchmark(credentials, "unused", "unused", "unused", unsafe_local=True,
-            resume_heldout=directory, resume_heldout_hash=anchor, max_calls=calls, max_tokens=tokens)
-
-
-@pytest.mark.parametrize("changed_at_end", [False, True])
-def test_heldout_only_continuation_never_regenerates_pairs_or_mutates_prior(
-        heldout_evidence, tmp_path, monkeypatch, credentials, changed_at_end):
-    f = heldout_evidence
-    before = live._heldout_evidence_files(f.root)
-    calls = []
-    monkeypatch.setattr(live, "LiveModels", lambda *args: SimpleNamespace(close=lambda: None))
-
-    class Pipeline:
-        def __init__(self, *args):
-            self.store, self.output = args[-2:]
-
-        def run(self, mode, **kwargs):
-            assert mode == "evaluate"
-            assert kwargs == {"limit": 1, "resume": False}
-            assert self.store.read_only
-            assert self.store.path == (f.root / "experience.sqlite").resolve()
-            calls.append(mode)
-            run_dir = self.output / "fresh-heldout"
-            live.write_json(run_dir / "planning_calls.json", [
-                {"phase": "predict", "messages": [{"content": json.dumps({"experiences": []})}]}])
-            return [{"task_id": "t", "evaluation": {"score": 0.5, "complete": True},
-                     "experience_version": 0, "run_dir": str(run_dir)}]
-
-    monkeypatch.setattr(live, "MASPipeline", Pipeline)
-    anchor = live.heldout_continuation_digest(f.root)
-    if changed_at_end:
-        monkeypatch.setattr(live, "heldout_continuation_digest", lambda _: "changed-at-end")
-    report = live.run_benchmark(credentials, "unused", "unused", tmp_path / "continued", unsafe_local=True,
-        resume_heldout=f.root, resume_heldout_hash=anchor,
-        max_calls=39, max_tokens=521350)
-    assert calls == ["evaluate"]
-    assert report["status"] == ("failed" if changed_at_end else "completed")
-    assert report["full_mechanism_exercised"] is not changed_at_end
-    if changed_at_end:
-        assert "Immutable prior evidence changed" in report["error"]
-    assert not report["closed_loop_confirmed"]
-    assert report["evolution"] == f.report["evolution"]
-    assert report["budget"]["model_calls"] == 0
-    assert report["held_out_continuation"]["prior_session_usage"]["model_attempts"] == 0
-    assert live._heldout_evidence_files(f.root) == before
-    assert json.loads((f.root / "report.json").read_text())["status"] == "failed"
-    assert not (tmp_path / "continued" / "evolution").exists()
-    assert not (tmp_path / "continued" / "experience.sqlite").exists()
-
-
-@pytest.mark.parametrize("nested", [False, True])
-def test_heldout_output_cannot_modify_source_before_models(
-        heldout_evidence, monkeypatch, credentials, nested):
-    f = heldout_evidence
-    before = live._heldout_evidence_files(f.root)
-    def forbidden(*args, **kwargs):
-        raise AssertionError("An invalid output must be rejected before model setup")
-
     monkeypatch.setattr(live, "LiveModels", forbidden)
-    output = f.root / "nested-new-output" if nested else f.root
-    with pytest.raises(ValueError, match="outside the immutable prior run"):
+    output = tmp_path / "not-created"
+    with pytest.raises(ValueError, match="historical paired-validation protocol is unsupported"):
         live.run_benchmark(credentials, "unused", "unused", output, unsafe_local=True,
-            resume_heldout=f.root, resume_heldout_hash=live.heldout_continuation_digest(f.root),
-            max_calls=39, max_tokens=521350)
-    assert live._heldout_evidence_files(f.root) == before
-    if nested:
-        assert not output.exists()
+            resume_heldout=directory, resume_heldout_hash=anchor)
+    assert not output.exists()
 
 
 def test_cli_forwards_explicit_heldout_continuation_anchor(monkeypatch, capsys, credentials):

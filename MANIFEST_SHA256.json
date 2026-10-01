@@ -1,0 +1,16 @@
+{
+  "README_Overleaf_ZH.md": "d8d3497b3e65244325bfe9c28611511aeda08466295a60ab2c7c7ba4e7c88a15",
+  "acl.sty": "19dfeddc2c0e448f3926a0bef048a9db3f3611b46265b760caabd7ada4f361de",
+  "acl_natbib.bst": "6fbb306202290f4b68e74ac1460a8b27398500cb6dfeb4492e74c457eae7cd1e",
+  "appendix.tex": "70d73e895c42c1fc0c96e5870b97cc79027c53bac8221d8f4b76b6e3b152da5e",
+  "author_notes/Revision_v3_ZH.md": "be009a9b5788f3cbc9cb52ae5f8035008365e774a02c4843b2cb359c90634df3",
+  "author_notes/results_template.json": "a98da7c78ffc953a2e9b0f811d73e24121a33e185dada5974fc404fc3b3414da",
+  "author_notes/title_abstract.md": "48bb7c78a4a15e40c367712a9f3c894aec19e31e75adc45ab58022cbbd22f633",
+  "compile.ps1": "07cbaeb1f1b5ceafa27ab31e4c0587f312210b19253a87d5c847be8a015bc1d3",
+  "compile.sh": "be12a6e9019eb90d0e01f24a6e5fbb032f7c46dde5693d148d2755eaf6104e51",
+  "main.tex": "092986318ea9fb89571240e7f59044f4ebf9ca2f572a99e7d5218dc3e16e8a7f",
+  "overview.tex": "2f7441855fbb1a371a2f45b1d7bfc3296cef4834fb9c64b647d06206f9f11aad",
+  "references.bib": "4fa253bb6d3c58dafdcbd960fdf1ce3a9decde333ec474631e065a4a8bd7021e",
+  "revision_notes/build_validation.json": "56dae1b99a4d40be8915819c40e537d070bc1281a8c059ed2859b30ddb13deba",
+  "revision_notes/changes_from_v2_fixed.patch": "7ff8fe8a7cedbc37648cba601f71051477a544a8a185240e26a1be9d3d94da4e"
+}

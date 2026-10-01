@@ -48,10 +48,12 @@ the global analyzer receives the index, artifacts and local findings. A local
 analyzer can request up to eight indexed events in one additional exchange.
 Evidence IDs are checked; unsupported findings remain uncertain. The experiences
 target task-conditioned rubric prediction, organization, and reusable capability
-practices. Each new task gets a new TeamSpec and JIT harness. Quality acceptance
-requires actual paired runs on separate validation tasks, beyond schema validity
-or an LLM endorsement. These are project design choices, not claims attributed
-to Meta-Team.
+practices. Each new task gets a new TeamSpec and JIT harness. Since 2026-10-01,
+the first reconciled proposal is applied directly through structural/provenance,
+base-version and duplicate guards, without a paired quality-promotion gate.
+Downstream quality requires separate measurement: neither a valid schema nor an
+LLM endorsement establishes useful experience. These are project design choices,
+not claims attributed to Meta-Team.
 
 ## Co-STORM
 
