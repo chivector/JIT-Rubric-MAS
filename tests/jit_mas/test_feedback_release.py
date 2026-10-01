@@ -78,6 +78,39 @@ def test_deferred_scoring_does_not_reset_budget_and_reuse_is_order_independent()
     assert remaining_task_budget(config, {"budget": {**used, "model_calls": 10}})["max_calls"] == 0
 
 
+def test_deferred_scoring_keeps_uncapped_calls_and_remaining_token_budget():
+    config = MASConfig(backend="scripted", max_model_calls=None, max_total_tokens=1000,
+                       max_tool_calls=None)
+    used = {"model_calls": 8, "tokens": 750, "tool_calls": 3, "reserved_tokens": 0}
+
+    assert remaining_task_budget(config, {"budget": used}) == {
+        "max_calls": None, "max_tokens": 250, "max_tool_calls": None}
+
+    used["tokens"] = 1200
+    assert remaining_task_budget(config, {"budget": used})["max_tokens"] == 0
+
+
+def test_sealed_offline_scoring_runs_with_uncapped_model_and_tool_calls(tmp_path):
+    config = MASConfig(backend="scripted", max_model_calls=None, max_tool_calls=None)
+    store = ExperienceStore(tmp_path / "state.sqlite")
+    try:
+        pipeline = make_pipeline(config, store, tmp_path / "runs")
+        task_id = pipeline.manifest.test[0]
+        outcome = pipeline.run_task(task_id, store.snapshot(), defer_evaluation=True)
+        release = TestRelease(tmp_path / "campaign", [{"slot_id": task_id, "task_id": task_id}])
+        release.record(task_id, outcome)
+        release.seal()
+
+        result = release.evaluate(task_id, lambda record: score_with_pipeline(pipeline, record))
+
+        assert result["complete"]
+        assert result["generation_budget"] == outcome["budget"]
+        assert result["evaluation_budget"]["model_calls"] > 0
+        assert result["generation_budget"]["tokens"] + result["evaluation_budget"]["tokens"] <= config.max_total_tokens
+    finally:
+        store.close()
+
+
 def test_partial_researchrubrics_score_remains_diagnostic_not_official():
     from jit_mas.pipeline import convert_feedback
 

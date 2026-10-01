@@ -1,0 +1,769 @@
+{
+  "version": "rr-wikipedia-evidence-v2",
+  "status": "complete",
+  "task_count": 63,
+  "completed": 63,
+  "rows": [
+    {
+      "task_id": "683a58c9a7e7fe4e7695846f",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "da795ccd54bb21abbc713a85cf559bdd5e37de500b1194a8ab774f9c0957f69f",
+      "query": [
+        "blog post contrasting Euclidean geometry high school math competitions such",
+        "blog post contrasting Euclidean",
+        "Write Euclidean AMC AIME Olympiads"
+      ]
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958478",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "e5db06d8f2833d89731d1549045276a4669ffe460cdb912027eddbb1ea570b39",
+      "query": [
+        "Consider the Korean company KCTech The company enter the American",
+        "Consider the Korean company",
+        "Consider Korean KCTech The American"
+      ]
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958488",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "a69bfff95488c0b57a637076878cf10919a4189abeb3eb760067f430d8f44953",
+      "query": [
+        "Propose biologically plausible model integrates the neuroscience concepts engrams and",
+        "Propose biologically plausible model",
+        "Propose"
+      ]
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e7695848b",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "bdc787ca96c38fd105b1b678545950c048edb59bd11ecdcaec53533d78cb976f",
+      "query": [
+        "I'm working The professor wasn't clear she just said will",
+        "I'm working The professor",
+        "I'm The NLP Electronic Health"
+      ]
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e7695848e",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "dd70c0969ed39b41f75fa0dabc7ce700003893b7311279bea8498ab93e13996c",
+      "query": [
+        "literature review I'm NLP techniques unstructured EHR data structured data",
+        "literature review I'm NLP",
+        "Please I'm NLP EHR"
+      ]
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958492",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "667c4009be2714592b4032c9798e36aa27692bfb0b496c5c83f6428773a50825",
+      "query": [
+        "year old has ten thousand dollars investment guide through investing",
+        "year old has ten",
+        "Write Specifically Furthermore Essentially"
+      ]
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958498",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "dacf71390a2c501af004341c3eb6ba9544514b52cb8a457fe7894766a03f5bda",
+      "query": [
+        "series blog posts discussing can invest money retirement and large",
+        "series blog posts discussing",
+        "Write The"
+      ]
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e7695849b",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "8094382fd28329d8219280168f6756881ce236d8af09ba5952633c7f104bfa73",
+      "query": [
+        "technical describing implement high-performance double-precision General Matrix-Matrix Multiplication GEMM tuned",
+        "technical describing implement high-performance",
+        "Write General Matrix-Matrix Multiplication GEMM"
+      ]
+    },
+    {
+      "task_id": "684397d188c1deceb49af30b",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "4b1bc3632e9131c6d66442a7ded0ab7c4fb51244b074908f227d593a689ab308",
+      "query": [
+        "create own restaurant empire but zero idea begin know serve",
+        "create own restaurant empire",
+        "All The Indian"
+      ]
+    },
+    {
+      "task_id": "684397d188c1deceb49af315",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "e814635721f2f0ba0313c44b9d5bb142a1aa0cc2f87445b3c0d061d28b7b82a0",
+      "query": [
+        "novel boy who can switch between two types themes the",
+        "novel boy who can",
+        "Write Try"
+      ]
+    },
+    {
+      "task_id": "684397d188c1deceb49af316",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "55b34f5761547faca625a2b646b439dd7305b14a8e021bbebea443d9c8748a27",
+      "query": [
+        "Give the recent Air India crash India AI171 heading Ahmedabad",
+        "Give the recent Air",
+        "Give Air India AI171"
+      ]
+    },
+    {
+      "task_id": "684397d188c1deceb49af31b",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "277014ac6dfac913858c6d8faf863827175ea6882e1108d720851ccd699719cb",
+      "query": [
+        "The Suez Crisis marked pivotal moment the reshaping global power",
+        "The Suez Crisis marked",
+        "The Suez Crisis World War"
+      ]
+    },
+    {
+      "task_id": "684397d188c1deceb49af31c",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "253e037975eeef5eb61eab4d02406cf04425d95126e53b8075baded503a6d0ce",
+      "query": [
+        "Imagine you're launching Gen focused startup offers short-form video therapy",
+        "Imagine you're launching Gen",
+        "Imagine Gen TikTok-style Write Headspace"
+      ]
+    },
+    {
+      "task_id": "684397d188c1deceb49af31d",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "832bd80a14656c52c804b955150b1d815f2b920056979117f608aed35e86f6ea",
+      "query": [
+        "analysis the institution Roman slavery depicted Plautus' comedy Pseudolus the",
+        "analysis the institution Roman",
+        "Write Roman Plautus' Pseudolus Using"
+      ]
+    },
+    {
+      "task_id": "684397d188c1deceb49af321",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "369b7a5c9c4b685fd7eee95f894949d5a0d94ad4ac4695c1aa0efde578a0878a",
+      "query": [
+        "series fanfictions details war between the Italian Brainrot characters Structured",
+        "series fanfictions details war",
+        "Write Italian Brainrot Structured Marvel"
+      ]
+    },
+    {
+      "task_id": "684397d188c1deceb49af329",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "b83d9bcb582b08aa2355c8e8703563816cb98885c6b77e67dd49b4f3c94a45a5",
+      "query": [
+        "compile list apartments San Francisco least bedroom living room bathroom",
+        "compile list apartments San",
+        "Help San Francisco For Also"
+      ]
+    },
+    {
+      "task_id": "684397d188c1deceb49af32d",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "fb16264f676a90e0283c4b7827de82f277061d551ab42bf27c6e086426b26e32",
+      "query": [
+        "pre-school teacher ages strategy the following situation One student doesn't",
+        "pre-school teacher ages strategy",
+        "Please One During They"
+      ]
+    },
+    {
+      "task_id": "684397d188c1deceb49af334",
+      "status": "created",
+      "source_count": 1,
+      "retrieval_notice": false,
+      "pack_sha256": "a3684067230364cfbc964b76346c65b2a070b39f3a38616dad57b90153dc8fcd",
+      "query": [
+        "Produce essay analyzing the multifaceted and multidimensional nature Roman marriage",
+        "Produce essay analyzing the",
+        "Produce Roman Republic Empire The"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605343",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "0d50d97e84b7b3e892d8aab365cc464489221e7124f47040088c52ba6083a10c",
+      "query": [
+        "student group's end year banquet venue and menu caterer nice",
+        "student group's end year",
+        "Please Berkeley There The"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605348",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "472ccfeae40d801737e81208bfcac0e9f6950810c0e8d107028d72fdf3955d61",
+      "query": [
+        "I've been assigned article Palantir's success Can you create draft",
+        "I've been assigned article",
+        "I've Palantir's Can Palantir Make"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605355",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "078b097be85a33773065e0bea57d7a6f90351051f0494dca670dc829fb2c0451",
+      "query": [
+        "synthesis the applications drug discovery technical audience unfamiliar biology cover",
+        "synthesis the applications drug",
+        "Write"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a60535d",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "c5516f08d5aef11267809b3d66ded19d2f9ef03826c93f29cb68fcb10a50471f",
+      "query": [
+        "Design framework regulating the training and deployment autonomous agents interact",
+        "Design framework regulating the",
+        "Design Your"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605360",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "f5bfbfe0b6480a672b8c07cf8ddbf35d89ba305f32c581cd5e67d7d88bcffaa2",
+      "query": [
+        "i'm outline final history tech seminar and i'm bit stuck",
+        "i'm outline final history",
+        "LSTMs Hochreiter Schmidhuber RNNs"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605362",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "d60caae5a802f052a8fb1d018484aeea655ffa1aa3a63e5537678f7bb5dcdd54",
+      "query": [
+        "Suppose I'm Venture Partner who has been called give presentation",
+        "Suppose I'm Venture Partner",
+        "Suppose I'm Venture Partner C-suite"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605366",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "2d08538373dc42bfd53b5770a313fe989317303a97a06b5cb2c36cb69c31ec56",
+      "query": [
+        "migrating built Spring Boot uses hibernate version Spring Boot version",
+        "migrating built Spring Boot",
+        "Spring Boot Java"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605371",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "52ec2cb6d2734d4a9a06b9704cd019c073248efc050fefd73e66dafb3df8fb99",
+      "query": [
+        "i'm remote software engineer its getting too expensive relocate somewhere",
+        "i'm remote software engineer",
+        "HAS"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605387",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "13ed1f2fd3a0a74842a3739d8dd4a311a454fcff754e6dc34010bcf8e7e23582",
+      "query": [
+        "comprehensive analysis graduate-level seminar technology and society evaluating the principles",
+        "comprehensive analysis graduate-level seminar",
+        "Write The AI-assisted Your Detail"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605391",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "c5932346b8c8ebe2b1e23fdc02d4833fef4d1f030cb245eec5e9028b56070855",
+      "query": [
+        "strategic business advising mid-stage plant-based meat startup enter and scale",
+        "strategic business advising mid-stage",
+        "Write Southeast Asian Singapore Thailand"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6053a0",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "e51095f5b9d5798229b6684fecd549fc6bb7cac22202aad0407cbb368133f948",
+      "query": [
+        "technical proposal distributed audio streaming system The system include audio",
+        "technical proposal distributed audio",
+        "Write The This Include Assume"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6053a7",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "c3a15258d7a61fa016a8e979c272e791876f20b299af90641a0821bc3a6b9b05",
+      "query": [
+        "history the town Mount Gretna Pennsylvania USA Include its unique",
+        "history the town Mount",
+        "Write Mount Gretna Pennsylvania USA"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6053aa",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "d62e945e83e9282c4e0c1dbea1fd4e58dc30f34ff8eac49dc50945c3555d8ae3",
+      "query": [
+        "Investigate the physical and economic constraints the laws thermodynamics impose",
+        "Investigate the physical and",
+        "Investigate Artificial General Intelligence AGI"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6053b5",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "031d40f6d32c2db5daeb0a8fc35b4eaf56107c47d06c1af634faae5e11500118",
+      "query": [
+        "Conduct comprehensive historical analysis the world has changed since the",
+        "Conduct comprehensive historical analysis",
+        "Conduct COVID-19 Compare COVID Provide"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6053c9",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "b2cf48eaa8efded02c5bbf6f4df6140a9edae04f33a02ccf20efe8494caeae19",
+      "query": [
+        "planning implement embedded system processor thermostat machine blog post goes",
+        "planning implement embedded system",
+        "Write RISC CISC Linux"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6053ce",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "45771fa283b27aee87d75466fa7c075cd66b1478bb370b9605c0c02c27d061cd",
+      "query": [
+        "Pretend you are senior research fellow national public health institute",
+        "Pretend you are senior",
+        "Pretend Vitamin Provide Also"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6053d0",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "8896a3ce4669f5b16cc54a32016498abe1a6f1d40d9913752c6c91f10d7cdda9",
+      "query": [
+        "the politics Star Wars prequels and led the fall the",
+        "the politics Star Wars",
+        "Write Star Wars Jedi Order"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6053d8",
+      "status": "created",
+      "source_count": 2,
+      "retrieval_notice": false,
+      "pack_sha256": "8a448b48f25d975e4a4d7481f2a53b35911ef5cae16243d06d13b1774470429d",
+      "query": [
+        "You are junior analyst the Department State's Bureau Western Hemisphere",
+        "You are junior analyst",
+        "You Department State's Bureau Western"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6053e8",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "cca96b398d0e9f0748dcb67ab1c7d1a1f95796dfbb7528b9eead19acf45b59fd",
+      "query": [
+        "Was the Western Roman Empire's fall inevitable system-wide collapse preventable",
+        "Was the Western Roman",
+        "Was Western Roman Empire's Pinpoint"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6053f3",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "c651264780b95ba91aaf2f0bc9893b53429c80224fa4434efd0a09b829e47f86",
+      "query": [
+        "you evaluate modern Text-to-speech TTS models advancements prosody emotion and",
+        "you evaluate modern Text-to-speech",
+        "How Text-to-speech TTS Explore"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6053f5",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "85af77929011155840de5a1c3f9a1aae6eca949ee403db6fca640ddf2d207d68",
+      "query": [
+        "Design cross-platform anti-cheat system competitive first-person shooter video game potentially",
+        "Design cross-platform anti-cheat system",
+        "Design Requirements Provide July Any"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6053fb",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "960ee612965ae0613a72112c927b600660d0d15d56134a1f59c215fb7bc7309a",
+      "query": [
+        "Conduct analysis determine whether social media's overall impact society has",
+        "Conduct analysis determine whether",
+        "Conduct Argument For After"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605401",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "6d71d186151c57d32de8fea48a796aadc3fd06399b0a177798c52b9381bae76a",
+      "query": [
+        "Conduct literature-based analysis comparing the business models Instacart CART and",
+        "Conduct literature-based analysis comparing",
+        "Conduct Instacart CART DoorDash DASH"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605407",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "5ba687f85c6e8265fe60a2a831838fc97fa741f50c9114c865d67069ee2b27fe",
+      "query": [
+        "Imagine future technology can erase memories without side effects Craft",
+        "Imagine future technology can",
+        "Imagine Craft Justify"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605411",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "426593166fab021d1e161322a858464de98a13d7e00ea8dade110b5606e03eb8",
+      "query": [
+        "are some the top computational social science labs the terms",
+        "are some the top",
+        "What Even How PIs"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605424",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "7470a23a215a59f72c807ac6908ef26173022e69e65e02834f0e2d4165d85401",
+      "query": [
+        "high schooler Cupertino season and I'm study tests Can you",
+        "high schooler Cupertino season",
+        "Cupertino I'm Can"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a60542a",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "7e58fc02323e6c80ee2e48e36600d70041c2a1105424fd71e1efc585e327da67",
+      "query": [
+        "software engineer small startup scale our product around users day",
+        "software engineer small startup",
+        "The Right Please"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a60542d",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "def00e6c9c52fc5a99c7bf6f770c88bbd00c3267a3f9b463d21d6630d61d9f11",
+      "query": [
+        "the politics the Mahabharat and led the Kurukshetra war audience",
+        "the politics the Mahabharat",
+        "Write Mahabharat Kurukshetra Talk Pandavas"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a60543e",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "bb3f94b5582a9efa988c5775ad9113b3f56649287682aef27c6e48eea49c43d2",
+      "query": [
+        "data-driven the environmental sustainability supply chain ethics and transparency practices",
+        "data-driven the environmental sustainability",
+        "Using Patagonia Uniqlo Fast Retailing"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605441",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "9f6d179da4f3894069d9166fad97115df510bda828573e75430731c5a0083e00",
+      "query": [
+        "Generate short investor the main geopolitical and market factors affecting",
+        "Generate short investor the",
+        "Generate"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605443",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "a3d735ae630c9c0b7e437e8d6c288fece53da910a2d4ae584e6fea47799132be",
+      "query": [
+        "Debate whether there age limits minimum maximum voting Consider democratic",
+        "Debate whether there age",
+        "Debate Consider"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605469",
+      "status": "created",
+      "source_count": 1,
+      "retrieval_notice": false,
+      "pack_sha256": "8b54fe081551e4b19c76a2b4f625e7a34a9704aea709c3c613e981ea9a1cfbd3",
+      "query": [
+        "the future everything automated and there are high-level advanced technologies",
+        "the future everything automated",
+        "How Give Explain"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605476",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "5e9e41f4839a35743f9add71e74c0c798e296b0665d520bce2e938f1cfa45723",
+      "query": [
+        "Imagine the following alternate history timeline Operation Barbarossa was anticipated",
+        "Imagine the following alternate",
+        "Imagine Operation Barbarossa Joseph Stalin"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605478",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "b32355c713738b0abbc83013eb78c42c49a996620a6e44269c3bee3c449f283f",
+      "query": [
+        "system few bots work together personalized learning paths students i'm",
+        "system few bots work",
+        "Content Coach For"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a60547e",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "93d2d3b285d67acf0c2ce258bb9e0a1d9d861edbb9fe9daee351c754c0d3ff71",
+      "query": [
+        "I'm scope out research proposal It's focused decentralized control heterogeneous",
+        "I'm scope out research",
+        "I'm It's UAVs UGVs GPS-denied"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a60547f",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "143727a851f49f9fb6131bce6efcd247ba8eeecae5b65d113bf176a4ca4da771",
+      "query": [
+        "i'm block out phil mind seminar discuss our ethical responsibility",
+        "i'm block out phil",
+        "AIs Regarding"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605492",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "6bd8644856e6ffb623ce89ea0ac87f68b876945c6a153936e50c8d4061924d0a",
+      "query": [
+        "Compose concise technical sketching experimental deciding whether modern vision-language model",
+        "Compose concise technical sketching",
+        "Compose"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a605493",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "253298a8a1f079ac23a93ed7135b47c61bb878c34b81b5a12fc52987132d0b7d",
+      "query": [
+        "introduction Markov chains the field statistics combinatorics and the reason",
+        "introduction Markov chains the",
+        "Write Markov Then Include"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6054a7",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "d2e7ff8afa87efdd311e6b0b165c98f16b806021bbd1fcbd15c0b497ea27952f",
+      "query": [
+        "the effectiveness and potential long-term consequences Universal Basic Income UBI",
+        "the effectiveness and potential",
+        "Compare Universal Basic Income UBI"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6054a9",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "5f69c96b83560e8eee8d2ae0fce4684070309ccf8ddca94bfe301e888531fe95",
+      "query": [
+        "incoming freshman Berkeley admitted CDSS Statistics graduate years and double",
+        "incoming freshman Berkeley admitted",
+        "Berkeley CDSS Statistics Can Make"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6054ad",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "5045421ecd15782681e325ff1906c900e812837813796e90b01a1831fcb4793a",
+      "query": [
+        "create simple agentic personal mental-wellness support like two agents one",
+        "create simple agentic personal",
+        "Mood Agent' Intervention NLU"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6054be",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "034166f2412d6eb66bf7baa151de11c917086b3e889bdb9ac8988d71962fec0c",
+      "query": [
+        "series blog posts important combinatorics topics math olympiads Include intuitive",
+        "series blog posts important",
+        "Include USAMO USA TSTST CMO"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6054c2",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "878e7f6f90a5e498c8fc9c93eadb352bd308b0f1a95595dd38a756482eec0a8e",
+      "query": [
+        "Select several pivotal episodes the whose moral tension you consider",
+        "Select several pivotal episodes",
+        "Select For Situate Upani Bhagavad-G"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6054cd",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "0b6d895faaa80b2fb36c9cc512d930774ef6e1cb522bb63e4ba11e3d1d20c3f7",
+      "query": [
+        "Can you critically evaluate the legal implications conferring limited personhood",
+        "Can you critically evaluate",
+        "Can How UAE's"
+      ]
+    },
+    {
+      "task_id": "6847465956a0f6376a6054d0",
+      "status": "created",
+      "source_count": 0,
+      "retrieval_notice": true,
+      "pack_sha256": "79d6e4e8e3a59f106c79789b1f0ac2795b3394cecb33faf0ededf6fcb9cac239",
+      "query": [
+        "Critically analyze agricultural practices ancient Egypt shaped the development mythology",
+        "Critically analyze agricultural practices",
+        "Critically Egypt"
+      ]
+    }
+  ],
+  "manifest_sha256": "10dc929d1493e1f13657f3c220d4fe30220254e1aabb08e42cfaee7af33b7409",
+  "output": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_shared_evidence_wikipedia_20261001_v5",
+  "network": "public_wikipedia_api",
+  "private_records_read": false,
+  "evidence_scope": "Wikipedia-only shared public evidence"
+}

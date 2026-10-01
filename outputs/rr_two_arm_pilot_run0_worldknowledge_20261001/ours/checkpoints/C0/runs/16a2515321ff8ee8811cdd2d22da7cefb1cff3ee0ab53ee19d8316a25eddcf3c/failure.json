@@ -1,0 +1,54 @@
+{
+  "task_id": "6847465956a0f6376a60535d",
+  "experience_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+  "mode": "validate",
+  "error_type": "RuntimeError",
+  "error": "AuthenticationError: Error code: 401 - {'error': {'code': '', 'message': 'Invalid token (request id: 202610011337279164100008268d9d6lRSBmxLF)', 'type': 'new_api_error'}}",
+  "time": "2026-10-01T13:37:31.473877+00:00",
+  "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_two_arm_pilot_run0_worldknowledge_20261001\\ours\\checkpoints\\C0\\runs\\16a2515321ff8ee8811cdd2d22da7cefb1cff3ee0ab53ee19d8316a25eddcf3c",
+  "budget": {
+    "model_calls": 1,
+    "tokens": 31678,
+    "reserved_tokens": 0,
+    "tool_calls": 0,
+    "wall_seconds": 1.4380000000001019,
+    "request_queue_idle_seconds": 0.0,
+    "task_timeout": 900.0,
+    "cost": null,
+    "by_stage": {
+      "inference": {
+        "model_calls": 1,
+        "tokens": 31678,
+        "tool_calls": 0,
+        "communication_bytes": 0,
+        "cost": null
+      }
+    },
+    "records": [
+      {
+        "call_id": "1093f6ebcb1843b4971937319f57b36f",
+        "kind": "model",
+        "stage": "inference",
+        "agent_id": "global",
+        "input_tokens": 15678,
+        "output_tokens": 16000,
+        "estimated": true,
+        "wall_seconds": 1.405999999999949,
+        "error": "AuthenticationError",
+        "context": {
+          "estimator": "cl100k_base_messages_v1",
+          "context_window": 131072,
+          "margin": 2048,
+          "policy": "oldest_turns",
+          "original_input_tokens": 3448,
+          "sent_input_tokens": 3448,
+          "removed_message_hashes": [],
+          "sent_messages_hash": "cbc3248ca28462d76819404838413dc1aa9251bca79e754d74d60252f04f2565"
+        },
+        "request": {
+          "queue_seconds": 0.0
+        }
+      }
+    ]
+  }
+}

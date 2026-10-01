@@ -13,6 +13,7 @@ import json
 import math
 import time
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable
 
@@ -141,6 +142,8 @@ class ResearchRubricsAdapter(BenchmarkAdapter):
         judge: Callable | None = None,
         judge_id: str = "",
         quality_audit_mode: str = "off",
+        judge_factory: Callable[[], Callable] | None = None,
+        max_parallel_judgments: int = 1,
     ):
         if quality_audit_mode not in {"off", "risk_only"}:
             raise ValueError("quality_audit_mode must be off or risk_only")
@@ -150,6 +153,12 @@ class ResearchRubricsAdapter(BenchmarkAdapter):
             raise ValueError("Judge token limit and timeout must be positive")
         if int(max_document_chars) <= 0:
             raise ValueError("max_document_chars must be positive")
+        if isinstance(max_parallel_judgments, bool) or not isinstance(max_parallel_judgments, int) or max_parallel_judgments <= 0:
+            raise ValueError("max_parallel_judgments must be a positive integer")
+        if judge_factory is not None and not callable(judge_factory):
+            raise ValueError("judge_factory must be callable")
+        if max_parallel_judgments > 1 and judge_factory is None:
+            raise ValueError("Parallel ResearchRubrics judgments require a judge_factory")
         self._judge_model = judge_model
         self._judge_api_base = judge_api_base
         self._judge_api_key = judge_api_key
@@ -158,6 +167,8 @@ class ResearchRubricsAdapter(BenchmarkAdapter):
         self._max_attempts = int(max_attempts)
         self._max_document_chars = int(max_document_chars)
         self._judge = judge
+        self._judge_factory = judge_factory
+        self._max_parallel_judgments = max_parallel_judgments
         self._quality_audit_mode = quality_audit_mode
         self._private_records: dict[str, dict] = {}
         self._system_prompt = (PROMPT_DIR / "system_prompt.txt").read_text(encoding="utf-8")
@@ -176,6 +187,17 @@ class ResearchRubricsAdapter(BenchmarkAdapter):
             "max_document_chars": self._max_document_chars,
             "adapter": "jit-researchrubrics-v1",
         }
+        self._judgment_execution = None
+        if judge_factory is not None:
+            factory_type = type(judge_factory)
+            factory_module = getattr(judge_factory, "__module__", factory_type.__module__)
+            factory_name = getattr(judge_factory, "__qualname__", factory_type.__qualname__)
+            self._judgment_execution = {
+                "max_parallel_judgments": max_parallel_judgments,
+                "judge_ownership": "per_rubric",
+                "judge_factory": f"{factory_module}.{factory_name}",
+            }
+            identity["judgment_execution"] = self._judgment_execution
         digest = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
         self.evaluator_version = f"researchrubrics:{UPSTREAM_COMMIT}:{digest}"
 
@@ -264,7 +286,7 @@ class ResearchRubricsAdapter(BenchmarkAdapter):
             if not isinstance(entries, list) or any(not isinstance(x, str) for x in entries):
                 raise ValueError(f"Judge {field} must be a list of strings")
 
-    def _evaluate_rubric(self, prediction: str, rubric: dict, sample_id: str) -> dict:
+    def _evaluate_rubric(self, prediction: str, rubric: dict, sample_id: str, judge: Callable | None = None) -> dict:
         started = time.perf_counter()
         row = {
             "schema_version": SCHEMA_VERSION,
@@ -307,7 +329,7 @@ class ResearchRubricsAdapter(BenchmarkAdapter):
                 rubric_weight=rubric["weight"],
             )},
         ]
-        judge = self._get_judge()
+        judge = self._get_judge() if judge is None else judge
         for attempt in range(self._max_attempts):
             row["attempts"] += 1
             response = None
@@ -371,8 +393,24 @@ class ResearchRubricsAdapter(BenchmarkAdapter):
         if not private.get("rubrics"):
             raise ValueError("Private evaluation record requires nonempty rubrics")
         # Missing credentials are a configuration error, never a fabricated zero result.
-        self._get_judge()
-        feedback = [self._evaluate_rubric(prediction, rubric, sample_id) for rubric in private["rubrics"]]
+        if self._judge_factory is None:
+            self._get_judge()
+            feedback = [self._evaluate_rubric(prediction, rubric, sample_id) for rubric in private["rubrics"]]
+        else:
+            judges = [self._judge_factory() for _ in private["rubrics"]]
+            if any(not callable(judge) for judge in judges):
+                raise ValueError("judge_factory must return callable judges")
+            if len({id(judge) for judge in judges}) != len(judges):
+                raise ValueError("judge_factory must return an independent judge for every rubric")
+
+            def evaluate_rubric(rubric: dict, rubric_judge: Callable) -> dict:
+                return self._evaluate_rubric(prediction, rubric, sample_id, judge=rubric_judge)
+
+            if self._max_parallel_judgments == 1:
+                feedback = [evaluate_rubric(rubric, judge) for rubric, judge in zip(private["rubrics"], judges)]
+            else:
+                with ThreadPoolExecutor(max_workers=self._max_parallel_judgments) as executor:
+                    feedback = list(executor.map(evaluate_rubric, private["rubrics"], judges))
         denominator = sum(row["weight"] for row in feedback if row["weight"] > 0)
         numerator = sum(row["weight"] * row["score"] for row in feedback)
         score = official_compliance_score(feedback)
@@ -403,6 +441,8 @@ class ResearchRubricsAdapter(BenchmarkAdapter):
             "usage_known": all(row["usage_known"] for row in feedback),
             "cost": None,
         }
+        if self._judgment_execution is not None:
+            result["judgment_execution"] = copy.deepcopy(self._judgment_execution)
         if self._quality_audit_mode == "risk_only":
             answer_hash = hashlib.sha256(prediction.encode("utf-8")).hexdigest()
             for row in feedback:

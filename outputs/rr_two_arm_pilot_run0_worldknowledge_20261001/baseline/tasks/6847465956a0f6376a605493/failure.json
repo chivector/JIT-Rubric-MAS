@@ -1,0 +1,7 @@
+{
+  "task_id": "6847465956a0f6376a605493",
+  "method": "direct_single",
+  "stage": "inference",
+  "error_type": "SystemExit",
+  "error": "1"
+}

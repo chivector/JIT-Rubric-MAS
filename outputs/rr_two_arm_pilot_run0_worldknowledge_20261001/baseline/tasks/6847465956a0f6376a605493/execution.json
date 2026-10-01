@@ -1,0 +1,37 @@
+{
+  "answer": null,
+  "trajectory": [
+    {
+      "step_number": 1,
+      "tool_calls": [],
+      "observations": "",
+      "action_output": null,
+      "action_think": "",
+      "action_reasoning": "",
+      "error": "1",
+      "duration": 1.273911476135254,
+      "input_token_count": 0,
+      "output_token_count": 0,
+      "total_token_count": 0,
+      "start_time": 1790861850.572907,
+      "end_time": 1790861851.8468184,
+      "observations_images": [],
+      "model_input_messages": [
+        {
+          "role": "system",
+          "content": "Complete the supplied public task accurately and fully in one response. Respect its format, audience and constraints. Check reasoning, calculations and internal consistency before answering, and state important uncertainty or missing information honestly. No browsing or tools are available: do not pretend to have searched, opened attachments, performed measurements, or verified unavailable sources. Return only the final requested artifact, without planning notes, internal checks, an editing preface, or a request for another turn."
+        },
+        {
+          "role": "user",
+          "content": "{\"task_id\": \"6847465956a0f6376a605493\", \"question\": \"Write an introduction on Markov chains in the field of statistics/combinatorics and the reason behind their genesis. Then, write a literature review on Markov chains in contemporary research. Include one section devoted to their application and intuition in solving problems like \\\"what is the expected value of flips to get N heads in a row\\\". \", \"attachments\": [], \"constraints\": [], \"tools\": [], \"capabilities\": []}"
+        }
+      ],
+      "model_output_messages": null
+    }
+  ],
+  "terminated_reason": "error",
+  "metadata": {
+    "method": "direct_single"
+  },
+  "sub_runs": []
+}

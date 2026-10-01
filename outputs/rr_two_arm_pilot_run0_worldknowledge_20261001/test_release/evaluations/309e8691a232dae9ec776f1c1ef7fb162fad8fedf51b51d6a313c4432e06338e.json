@@ -1,0 +1,14 @@
+{
+  "slot": {
+    "slot_id": "ours:684397d188c1deceb49af316",
+    "task_id": "684397d188c1deceb49af316",
+    "method": "ours",
+    "repeat": 0
+  },
+  "official_score": null,
+  "complete": false,
+  "status": "submission_failed",
+  "generation_budget": {
+    "usage_unknown": true
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "slot": {
+    "slot_id": "baseline:6847465956a0f6376a605492",
+    "task_id": "6847465956a0f6376a605492",
+    "method": "baseline",
+    "repeat": 0
+  },
+  "status": "failed",
+  "error_type": "NoSelectedCheckpoint",
+  "budget": {
+    "usage_unknown": true
+  }
+}

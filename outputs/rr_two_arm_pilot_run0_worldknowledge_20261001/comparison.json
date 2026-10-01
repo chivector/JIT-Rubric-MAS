@@ -1,0 +1,1722 @@
+{
+  "metadata": {
+    "version": "rr-two-arm-pilot-v2",
+    "manifest": {
+      "schema_version": "1.0",
+      "seed": 20261001,
+      "evolution": [
+        "6847465956a0f6376a6054a7",
+        "6847465956a0f6376a60543e",
+        "6847465956a0f6376a6054a9",
+        "6847465956a0f6376a6053f3",
+        "6847465956a0f6376a6053aa",
+        "6847465956a0f6376a605478",
+        "6847465956a0f6376a60547f",
+        "6847465956a0f6376a6053f5",
+        "6847465956a0f6376a60547e",
+        "684397d188c1deceb49af31b",
+        "6847465956a0f6376a6054ad",
+        "6847465956a0f6376a605371",
+        "6847465956a0f6376a6054c2",
+        "6847465956a0f6376a6053a7",
+        "683a58c9a7e7fe4e76958478",
+        "684397d188c1deceb49af315",
+        "683a58c9a7e7fe4e7695848e",
+        "684397d188c1deceb49af30b",
+        "6847465956a0f6376a605343",
+        "6847465956a0f6376a6054be"
+      ],
+      "validation": [
+        "6847465956a0f6376a605391",
+        "6847465956a0f6376a60535d",
+        "684397d188c1deceb49af31d",
+        "6847465956a0f6376a6053e8",
+        "6847465956a0f6376a6053b5",
+        "684397d188c1deceb49af329",
+        "6847465956a0f6376a605441",
+        "6847465956a0f6376a60542d",
+        "683a58c9a7e7fe4e7695849b",
+        "6847465956a0f6376a6053fb"
+      ],
+      "test": [
+        "6847465956a0f6376a605360",
+        "683a58c9a7e7fe4e76958492",
+        "6847465956a0f6376a605493",
+        "6847465956a0f6376a605476",
+        "683a58c9a7e7fe4e7695848b",
+        "6847465956a0f6376a6053ce",
+        "684397d188c1deceb49af316",
+        "684397d188c1deceb49af321",
+        "6847465956a0f6376a605492",
+        "6847465956a0f6376a605366",
+        "6847465956a0f6376a605424",
+        "683a58c9a7e7fe4e7695846f",
+        "6847465956a0f6376a605348",
+        "6847465956a0f6376a6054d0",
+        "684397d188c1deceb49af31c",
+        "6847465956a0f6376a6053a0",
+        "6847465956a0f6376a6053d0",
+        "6847465956a0f6376a605387",
+        "684397d188c1deceb49af32d",
+        "6847465956a0f6376a605355",
+        "6847465956a0f6376a605407",
+        "683a58c9a7e7fe4e76958488",
+        "6847465956a0f6376a605411",
+        "6847465956a0f6376a605362",
+        "684397d188c1deceb49af334",
+        "6847465956a0f6376a605469",
+        "6847465956a0f6376a6053d8",
+        "683a58c9a7e7fe4e76958498",
+        "6847465956a0f6376a60542a",
+        "6847465956a0f6376a6054cd",
+        "6847465956a0f6376a605443",
+        "6847465956a0f6376a605401",
+        "6847465956a0f6376a6053c9"
+      ],
+      "stream": [],
+      "deduplication": "task_id and normalized public question SHA256"
+    },
+    "data": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\researchrubrics_live_20260930\\processed_data.jsonl",
+    "data_sha256": "ea2023d03953b70ba4a2f7f1fe490b434f18cec26c4fdb48acc0e3edf3d8edfb",
+    "joint_manifest_sha256": "2839518b037e81b7f6f8765bda40ce5f7d42ffa3b4fe2b04d76442efe0f15cce",
+    "dataset_sha256": "ea2023d03953b70ba4a2f7f1fe490b434f18cec26c4fdb48acc0e3edf3d8edfb",
+    "task_count": 101,
+    "selected_task_count": 63,
+    "evidence_mode": "closed_book_public_tasks",
+    "evidence_coverage": null,
+    "execution_model": "deepseek-v4-flash-vision",
+    "execution_endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+    "judge_model": "gpt-5.6-sol",
+    "judge_endpoint": "https://hk.xty.app/v1",
+    "judge_parallel": 2,
+    "process_request_cap": 2,
+    "config": {
+      "schema_version": "1.0",
+      "backend": "native_jit",
+      "execution_mode": "iterative_shared_ledger",
+      "unsafe_local": true,
+      "models": {
+        "meta": {
+          "schema_version": "1.0",
+          "model": "deepseek-v4-flash-vision",
+          "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+          "key_env": "RR_EXEC_API_KEY",
+          "max_tokens": 16000,
+          "timeout": 180.0,
+          "temperature": 0.0,
+          "thinking": "disabled",
+          "reasoning_effort": "none",
+          "context_window": 131072,
+          "context_margin": 2048,
+          "context_policy": "oldest_turns",
+          "expected_response_model": null
+        },
+        "global": {
+          "schema_version": "1.0",
+          "model": "deepseek-v4-flash-vision",
+          "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+          "key_env": "RR_EXEC_API_KEY",
+          "max_tokens": 16000,
+          "timeout": 180.0,
+          "temperature": 0.0,
+          "thinking": "disabled",
+          "reasoning_effort": "none",
+          "context_window": 131072,
+          "context_margin": 2048,
+          "context_policy": "oldest_turns",
+          "expected_response_model": null
+        },
+        "local": {
+          "schema_version": "1.0",
+          "model": "deepseek-v4-flash-vision",
+          "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+          "key_env": "RR_EXEC_API_KEY",
+          "max_tokens": 16000,
+          "timeout": 180.0,
+          "temperature": 0.0,
+          "thinking": "disabled",
+          "reasoning_effort": "none",
+          "context_window": 131072,
+          "context_margin": 2048,
+          "context_policy": "oldest_turns",
+          "expected_response_model": null
+        },
+        "exec": {
+          "schema_version": "1.0",
+          "model": "deepseek-v4-flash-vision",
+          "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+          "key_env": "RR_EXEC_API_KEY",
+          "max_tokens": 8192,
+          "timeout": 180.0,
+          "temperature": 0.0,
+          "thinking": "disabled",
+          "reasoning_effort": "none",
+          "context_window": 131072,
+          "context_margin": 2048,
+          "context_policy": "oldest_turns",
+          "expected_response_model": null
+        },
+        "judge": {
+          "schema_version": "1.0",
+          "model": "gpt-5.6-sol",
+          "endpoint": "https://hk.xty.app/v1",
+          "key_env": "RR_JUDGE_API_KEY",
+          "max_tokens": 16000,
+          "timeout": 180.0,
+          "temperature": 0.0,
+          "thinking": "disabled",
+          "reasoning_effort": "none",
+          "context_window": 131072,
+          "context_margin": 2048,
+          "context_policy": "oldest_turns",
+          "expected_response_model": null
+        }
+      },
+      "max_agents": 3,
+      "max_parallel": 2,
+      "team_max_calls": null,
+      "max_model_calls": null,
+      "max_total_tokens": 2000000,
+      "max_tool_calls": null,
+      "max_repairs": 2,
+      "candidates": 1,
+      "execution_timeout": 900.0,
+      "task_timeout": 900.0,
+      "max_inflight_requests": 2,
+      "local_planning": true,
+      "local_rounds": 1,
+      "local_attribution": true,
+      "persistent_experience": true,
+      "evolving_agent_pool": true,
+      "explicit_rubrics": true,
+      "fixed_team": null,
+      "seed": 0,
+      "available_tools": []
+    },
+    "frozen_identity": {
+      "code": "7dba04bc6918ca44ed57a935082f206e15015c8a90be085665b047311b88bcdc",
+      "runner": "f56c5f3a0c9486bfa94fbebed6b1321554570dd832e1ffe96bbbd950543552d6",
+      "config": "30f546a8ce538ca633eaeffc8891e37307d602b8d4bedb7fea78235b8db9ae7d",
+      "judge_parallel": 2,
+      "files": {
+        "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\researchrubrics_live_20260930\\processed_data.jsonl": "ea2023d03953b70ba4a2f7f1fe490b434f18cec26c4fdb48acc0e3edf3d8edfb",
+        "C:\\Users\\chizh\\Desktop\\JIT-main\\paper\\experiments\\joint_task_splits_v5.json": "2839518b037e81b7f6f8765bda40ce5f7d42ffa3b4fe2b04d76442efe0f15cce",
+        "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_two_arm_pilot_run0_worldknowledge_20261001\\rr_split.json": "f0ef73ab584f6a81664ea57459fa4adce296418adc9fb51f97ec3a96e8a5ad60"
+      }
+    },
+    "protocol_scope": "RR-only run0 projection of v5; not the full mixed-benchmark campaign",
+    "parallel_arms": true,
+    "repeats": 1,
+    "test_feedback_updates_experience": false,
+    "knowledge_policy": "model_general_knowledge_allowed",
+    "status": "incomplete",
+    "started_at": "2026-10-01T13:37:28.104445+00:00",
+    "monetary_cost": null,
+    "finished_at": "2026-10-01T13:37:35.438047+00:00"
+  },
+  "reports": {
+    "baseline": {
+      "arm": "single_agent_direct",
+      "status": "failed",
+      "error_type": "SystemExit",
+      "error": "1",
+      "submitted_outcomes": [],
+      "failures": [
+        {
+          "task_id": "6847465956a0f6376a605360",
+          "error_type": "RuntimeError",
+          "error": "AuthenticationError: Error code: 401 - {'error': {'code': '', 'message': 'Invalid token (request id: 202610011337263142980008268d9d6MLDhxiY3)', 'type': 'new_api_error'}}",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 10470,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 1.5470000000000255,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 10470,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "35263634d3dc44838ff0e0ae9cc41129",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 2278,
+                "output_tokens": 8192,
+                "estimated": true,
+                "wall_seconds": 0.8589999999999236,
+                "error": "AuthenticationError",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 446,
+                  "sent_input_tokens": 446,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "a1439a69cbe2fc535faf4c11c843db38b080f3ee35af617be41b3360d7bbb917"
+                },
+                "request": {
+                  "queue_seconds": 0.0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "683a58c9a7e7fe4e76958492",
+          "error_type": "RuntimeError",
+          "error": "AuthenticationError: Error code: 401 - {'error': {'code': '', 'message': 'Invalid token (request id: 202610011337269455190008268d9d6keCeSFe7)', 'type': 'new_api_error'}}",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 9472,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 0.5779999999999745,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 9472,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "56a9eff9ae95472f9f89ef2c70169ec9",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 1280,
+                "output_tokens": 8192,
+                "estimated": true,
+                "wall_seconds": 0.5779999999999745,
+                "error": "AuthenticationError",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 233,
+                  "sent_input_tokens": 233,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "b7bcefa27eeb6c7a5181f86e692452dd8f31cd281bdc13b67eab6d5057625bdf"
+                },
+                "request": {
+                  "queue_seconds": 0.0
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "test_failures": [],
+      "finished_at": "2026-10-01T13:37:35.430427+00:00",
+      "started_at": "2026-10-01T13:37:28.107429+00:00",
+      "manifest": {
+        "schema_version": "1.0",
+        "seed": 20261001,
+        "evolution": [
+          "6847465956a0f6376a6054a7",
+          "6847465956a0f6376a60543e",
+          "6847465956a0f6376a6054a9",
+          "6847465956a0f6376a6053f3",
+          "6847465956a0f6376a6053aa",
+          "6847465956a0f6376a605478",
+          "6847465956a0f6376a60547f",
+          "6847465956a0f6376a6053f5",
+          "6847465956a0f6376a60547e",
+          "684397d188c1deceb49af31b",
+          "6847465956a0f6376a6054ad",
+          "6847465956a0f6376a605371",
+          "6847465956a0f6376a6054c2",
+          "6847465956a0f6376a6053a7",
+          "683a58c9a7e7fe4e76958478",
+          "684397d188c1deceb49af315",
+          "683a58c9a7e7fe4e7695848e",
+          "684397d188c1deceb49af30b",
+          "6847465956a0f6376a605343",
+          "6847465956a0f6376a6054be"
+        ],
+        "validation": [
+          "6847465956a0f6376a605391",
+          "6847465956a0f6376a60535d",
+          "684397d188c1deceb49af31d",
+          "6847465956a0f6376a6053e8",
+          "6847465956a0f6376a6053b5",
+          "684397d188c1deceb49af329",
+          "6847465956a0f6376a605441",
+          "6847465956a0f6376a60542d",
+          "683a58c9a7e7fe4e7695849b",
+          "6847465956a0f6376a6053fb"
+        ],
+        "test": [
+          "6847465956a0f6376a605360",
+          "683a58c9a7e7fe4e76958492",
+          "6847465956a0f6376a605493",
+          "6847465956a0f6376a605476",
+          "683a58c9a7e7fe4e7695848b",
+          "6847465956a0f6376a6053ce",
+          "684397d188c1deceb49af316",
+          "684397d188c1deceb49af321",
+          "6847465956a0f6376a605492",
+          "6847465956a0f6376a605366",
+          "6847465956a0f6376a605424",
+          "683a58c9a7e7fe4e7695846f",
+          "6847465956a0f6376a605348",
+          "6847465956a0f6376a6054d0",
+          "684397d188c1deceb49af31c",
+          "6847465956a0f6376a6053a0",
+          "6847465956a0f6376a6053d0",
+          "6847465956a0f6376a605387",
+          "684397d188c1deceb49af32d",
+          "6847465956a0f6376a605355",
+          "6847465956a0f6376a605407",
+          "683a58c9a7e7fe4e76958488",
+          "6847465956a0f6376a605411",
+          "6847465956a0f6376a605362",
+          "684397d188c1deceb49af334",
+          "6847465956a0f6376a605469",
+          "6847465956a0f6376a6053d8",
+          "683a58c9a7e7fe4e76958498",
+          "6847465956a0f6376a60542a",
+          "6847465956a0f6376a6054cd",
+          "6847465956a0f6376a605443",
+          "6847465956a0f6376a605401",
+          "6847465956a0f6376a6053c9"
+        ],
+        "stream": [],
+        "deduplication": "task_id and normalized public question SHA256"
+      },
+      "experience_updates": false,
+      "results": {
+        "tasks": [
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605360",
+              "task_id": "6847465956a0f6376a605360",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "model_calls": 1,
+              "tokens": 10470,
+              "reserved_tokens": 0,
+              "tool_calls": 0,
+              "wall_seconds": 1.5470000000000255,
+              "request_queue_idle_seconds": 0.0,
+              "task_timeout": null,
+              "cost": null,
+              "by_stage": {
+                "inference": {
+                  "model_calls": 1,
+                  "tokens": 10470,
+                  "tool_calls": 0,
+                  "communication_bytes": 0,
+                  "cost": null
+                }
+              },
+              "records": [
+                {
+                  "call_id": "35263634d3dc44838ff0e0ae9cc41129",
+                  "kind": "model",
+                  "stage": "inference",
+                  "agent_id": "direct",
+                  "input_tokens": 2278,
+                  "output_tokens": 8192,
+                  "estimated": true,
+                  "wall_seconds": 0.8589999999999236,
+                  "error": "AuthenticationError",
+                  "context": {
+                    "estimator": "cl100k_base_messages_v1",
+                    "context_window": 131072,
+                    "margin": 2048,
+                    "policy": "oldest_turns",
+                    "original_input_tokens": 446,
+                    "sent_input_tokens": 446,
+                    "removed_message_hashes": [],
+                    "sent_messages_hash": "a1439a69cbe2fc535faf4c11c843db38b080f3ee35af617be41b3360d7bbb917"
+                  },
+                  "request": {
+                    "queue_seconds": 0.0
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:683a58c9a7e7fe4e76958492",
+              "task_id": "683a58c9a7e7fe4e76958492",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "model_calls": 1,
+              "tokens": 9472,
+              "reserved_tokens": 0,
+              "tool_calls": 0,
+              "wall_seconds": 0.5779999999999745,
+              "request_queue_idle_seconds": 0.0,
+              "task_timeout": null,
+              "cost": null,
+              "by_stage": {
+                "inference": {
+                  "model_calls": 1,
+                  "tokens": 9472,
+                  "tool_calls": 0,
+                  "communication_bytes": 0,
+                  "cost": null
+                }
+              },
+              "records": [
+                {
+                  "call_id": "56a9eff9ae95472f9f89ef2c70169ec9",
+                  "kind": "model",
+                  "stage": "inference",
+                  "agent_id": "direct",
+                  "input_tokens": 1280,
+                  "output_tokens": 8192,
+                  "estimated": true,
+                  "wall_seconds": 0.5779999999999745,
+                  "error": "AuthenticationError",
+                  "context": {
+                    "estimator": "cl100k_base_messages_v1",
+                    "context_window": 131072,
+                    "margin": 2048,
+                    "policy": "oldest_turns",
+                    "original_input_tokens": 233,
+                    "sent_input_tokens": 233,
+                    "removed_message_hashes": [],
+                    "sent_messages_hash": "b7bcefa27eeb6c7a5181f86e692452dd8f31cd281bdc13b67eab6d5057625bdf"
+                  },
+                  "request": {
+                    "queue_seconds": 0.0
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605493",
+              "task_id": "6847465956a0f6376a605493",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605476",
+              "task_id": "6847465956a0f6376a605476",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:683a58c9a7e7fe4e7695848b",
+              "task_id": "683a58c9a7e7fe4e7695848b",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a6053ce",
+              "task_id": "6847465956a0f6376a6053ce",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:684397d188c1deceb49af316",
+              "task_id": "684397d188c1deceb49af316",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:684397d188c1deceb49af321",
+              "task_id": "684397d188c1deceb49af321",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605492",
+              "task_id": "6847465956a0f6376a605492",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605366",
+              "task_id": "6847465956a0f6376a605366",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605424",
+              "task_id": "6847465956a0f6376a605424",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:683a58c9a7e7fe4e7695846f",
+              "task_id": "683a58c9a7e7fe4e7695846f",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605348",
+              "task_id": "6847465956a0f6376a605348",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a6054d0",
+              "task_id": "6847465956a0f6376a6054d0",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:684397d188c1deceb49af31c",
+              "task_id": "684397d188c1deceb49af31c",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a6053a0",
+              "task_id": "6847465956a0f6376a6053a0",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a6053d0",
+              "task_id": "6847465956a0f6376a6053d0",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605387",
+              "task_id": "6847465956a0f6376a605387",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:684397d188c1deceb49af32d",
+              "task_id": "684397d188c1deceb49af32d",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605355",
+              "task_id": "6847465956a0f6376a605355",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605407",
+              "task_id": "6847465956a0f6376a605407",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:683a58c9a7e7fe4e76958488",
+              "task_id": "683a58c9a7e7fe4e76958488",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605411",
+              "task_id": "6847465956a0f6376a605411",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605362",
+              "task_id": "6847465956a0f6376a605362",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:684397d188c1deceb49af334",
+              "task_id": "684397d188c1deceb49af334",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605469",
+              "task_id": "6847465956a0f6376a605469",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a6053d8",
+              "task_id": "6847465956a0f6376a6053d8",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:683a58c9a7e7fe4e76958498",
+              "task_id": "683a58c9a7e7fe4e76958498",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a60542a",
+              "task_id": "6847465956a0f6376a60542a",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a6054cd",
+              "task_id": "6847465956a0f6376a6054cd",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605443",
+              "task_id": "6847465956a0f6376a605443",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a605401",
+              "task_id": "6847465956a0f6376a605401",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "baseline:6847465956a0f6376a6053c9",
+              "task_id": "6847465956a0f6376a6053c9",
+              "method": "baseline",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          }
+        ],
+        "completed": 0,
+        "denominator": 33,
+        "scored_denominator": 0,
+        "mean_score": null,
+        "all_task_mean": null
+      },
+      "experience_store_unchanged_by_test": true,
+      "scoring_seconds": 3.063000000000102,
+      "cost": {
+        "model_calls": 3,
+        "tokens": 29292,
+        "by_stage": {
+          "inference": {
+            "model_calls": 3,
+            "input_tokens": 4716,
+            "output_tokens": 24576,
+            "estimated_calls": 3,
+            "request_seconds": 2.7029999999999745
+          }
+        },
+        "unknown_budgets": 0,
+        "unsettled_calls": 0,
+        "monetary_cost": null
+      }
+    },
+    "ours": {
+      "arm": "ours_evolve_then_test",
+      "status": "failed",
+      "error_type": "SystemExit",
+      "error": "1",
+      "submitted_outcomes": [],
+      "failures": [],
+      "test_failures": [],
+      "finished_at": "2026-10-01T13:37:35.417182+00:00",
+      "started_at": "2026-10-01T13:37:28.107429+00:00",
+      "test": {
+        "tasks": [
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605360",
+              "task_id": "6847465956a0f6376a605360",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:683a58c9a7e7fe4e76958492",
+              "task_id": "683a58c9a7e7fe4e76958492",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605493",
+              "task_id": "6847465956a0f6376a605493",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605476",
+              "task_id": "6847465956a0f6376a605476",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:683a58c9a7e7fe4e7695848b",
+              "task_id": "683a58c9a7e7fe4e7695848b",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a6053ce",
+              "task_id": "6847465956a0f6376a6053ce",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:684397d188c1deceb49af316",
+              "task_id": "684397d188c1deceb49af316",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:684397d188c1deceb49af321",
+              "task_id": "684397d188c1deceb49af321",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605492",
+              "task_id": "6847465956a0f6376a605492",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605366",
+              "task_id": "6847465956a0f6376a605366",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605424",
+              "task_id": "6847465956a0f6376a605424",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:683a58c9a7e7fe4e7695846f",
+              "task_id": "683a58c9a7e7fe4e7695846f",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605348",
+              "task_id": "6847465956a0f6376a605348",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a6054d0",
+              "task_id": "6847465956a0f6376a6054d0",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:684397d188c1deceb49af31c",
+              "task_id": "684397d188c1deceb49af31c",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a6053a0",
+              "task_id": "6847465956a0f6376a6053a0",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a6053d0",
+              "task_id": "6847465956a0f6376a6053d0",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605387",
+              "task_id": "6847465956a0f6376a605387",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:684397d188c1deceb49af32d",
+              "task_id": "684397d188c1deceb49af32d",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605355",
+              "task_id": "6847465956a0f6376a605355",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605407",
+              "task_id": "6847465956a0f6376a605407",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:683a58c9a7e7fe4e76958488",
+              "task_id": "683a58c9a7e7fe4e76958488",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605411",
+              "task_id": "6847465956a0f6376a605411",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605362",
+              "task_id": "6847465956a0f6376a605362",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:684397d188c1deceb49af334",
+              "task_id": "684397d188c1deceb49af334",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605469",
+              "task_id": "6847465956a0f6376a605469",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a6053d8",
+              "task_id": "6847465956a0f6376a6053d8",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:683a58c9a7e7fe4e76958498",
+              "task_id": "683a58c9a7e7fe4e76958498",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a60542a",
+              "task_id": "6847465956a0f6376a60542a",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a6054cd",
+              "task_id": "6847465956a0f6376a6054cd",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605443",
+              "task_id": "6847465956a0f6376a605443",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a605401",
+              "task_id": "6847465956a0f6376a605401",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          },
+          {
+            "slot": {
+              "slot_id": "ours:6847465956a0f6376a6053c9",
+              "task_id": "6847465956a0f6376a6053c9",
+              "method": "ours",
+              "repeat": 0
+            },
+            "official_score": null,
+            "complete": false,
+            "status": "submission_failed",
+            "generation_budget": {
+              "usage_unknown": true
+            }
+          }
+        ],
+        "completed": 0,
+        "denominator": 33,
+        "scored_denominator": 0,
+        "mean_score": null,
+        "all_task_mean": null
+      },
+      "experience_store_unchanged_by_test": true,
+      "scoring_seconds": 3.0470000000000255,
+      "cost": {
+        "model_calls": 3,
+        "tokens": 95909,
+        "by_stage": {
+          "inference": {
+            "model_calls": 3,
+            "input_tokens": 47909,
+            "output_tokens": 48000,
+            "estimated_calls": 3,
+            "request_seconds": 3.030999999999949
+          }
+        },
+        "unknown_budgets": 0,
+        "unsettled_calls": 0,
+        "monetary_cost": null
+      }
+    }
+  },
+  "paired": {
+    "tasks": [
+      {
+        "task_id": "6847465956a0f6376a605360",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "683a58c9a7e7fe4e76958492",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605493",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605476",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "683a58c9a7e7fe4e7695848b",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a6053ce",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "684397d188c1deceb49af316",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "684397d188c1deceb49af321",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605492",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605366",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605424",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "683a58c9a7e7fe4e7695846f",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605348",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a6054d0",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "684397d188c1deceb49af31c",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a6053a0",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a6053d0",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605387",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "684397d188c1deceb49af32d",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605355",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605407",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "683a58c9a7e7fe4e76958488",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605411",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605362",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "684397d188c1deceb49af334",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605469",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a6053d8",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "683a58c9a7e7fe4e76958498",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a60542a",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a6054cd",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605443",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a605401",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      },
+      {
+        "task_id": "6847465956a0f6376a6053c9",
+        "baseline": null,
+        "ours": null,
+        "complete_pair": false,
+        "difference": null
+      }
+    ],
+    "denominator": 33,
+    "complete_pairs": 0,
+    "mean_difference_complete_pairs": null,
+    "all_task_mean_difference": null,
+    "wins": 0,
+    "ties": 0,
+    "losses": 0
+  }
+}

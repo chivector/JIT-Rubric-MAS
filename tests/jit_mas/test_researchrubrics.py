@@ -3,7 +3,9 @@
 import ast
 import copy
 import json
+import re
 from pathlib import Path
+from threading import Barrier, Event
 
 import pytest
 
@@ -233,3 +235,120 @@ def test_telemetry_failure_does_not_discard_criterion_feedback():
     assert result["score"] == 1
     assert result["usage_known"] is False
     assert result["cost"] is None
+
+
+class CriterionJudge:
+    def __init__(self, responses, barrier=None, second_finished=None):
+        self.responses = responses
+        self.barrier = barrier
+        self.second_finished = second_finished
+        self.inputs = []
+        self.counts = {}
+
+    def __call__(self, messages, **kwargs):
+        self.inputs.append((copy.deepcopy(messages), copy.deepcopy(kwargs)))
+        criterion_index = int(re.search(r"PRIVATE_CRITERION_(\d+)", messages[1]["content"]).group(1))
+        if self.barrier is not None:
+            self.barrier.wait(timeout=5)
+            if criterion_index == 0:
+                assert self.second_finished.wait(timeout=5)
+            else:
+                self.second_finished.set()
+        self.counts = {
+            "input_token_count": 17 + criterion_index * 12,
+            "output_token_count": 3 + criterion_index * 2,
+        }
+        response = self.responses[criterion_index]
+        if isinstance(response, Exception):
+            raise response
+        return copy.deepcopy(response)
+
+    def get_token_counts(self):
+        return dict(self.counts)
+
+
+def stable_judgment(result):
+    result = copy.deepcopy(result)
+    result.pop("evaluator_version", None)
+    result.pop("judgment_execution", None)
+    for row in result["feedback"]:
+        row.pop("duration", None)
+        row.pop("evaluator_version", None)
+    return result
+
+
+@pytest.mark.parametrize("responses, expected_score, expected_complete", [
+    ([verdict(0), verdict(1)], -2.5, True),
+    ([RuntimeError("offline failure"), verdict(1)], -2.5, False),
+    (["invalid JSON", verdict(1)], -2.5, False),
+])
+def test_parallel_judgments_preserve_prompt_order_usage_and_signed_scoring(responses, expected_score, expected_complete):
+    _, private = split_item(raw_task((2, -5)))
+    sequential_judge = CriterionJudge(responses)
+    sequential = ResearchRubricsAdapter(
+        judge=sequential_judge, judge_id="offline-criteria-v1", max_attempts=1,
+    ).evaluate("real evidence here", private_record=private)
+    barrier = Barrier(2)
+    second_finished = Event()
+    judges = []
+
+    def judge_factory():
+        judge = CriterionJudge(responses, barrier, second_finished)
+        judges.append(judge)
+        return judge
+
+    adapter = ResearchRubricsAdapter(
+        judge_factory=judge_factory, max_parallel_judgments=2,
+        judge_id="offline-criteria-v1", max_attempts=1,
+    )
+    parallel = adapter.evaluate("real evidence here", private_record=private)
+    assert stable_judgment(parallel) == stable_judgment(sequential)
+    assert parallel["score"] == expected_score
+    assert parallel["complete"] is expected_complete
+    assert parallel["model_calls"] == 2
+    assert [row["rubric_id"] for row in parallel["feedback"]] == [row["rubric_id"] for row in private["rubrics"]]
+    assert parallel["input_token_count"] == (29 if isinstance(responses[0], Exception) else 46)
+    assert parallel["output_token_count"] == (5 if isinstance(responses[0], Exception) else 8)
+    assert len(judges) == 2
+    assert [judge.inputs[0] for judge in judges] == sequential_judge.inputs
+    assert parallel["judgment_execution"]["max_parallel_judgments"] == 2
+    assert parallel["judgment_execution"]["judge_ownership"] == "per_rubric"
+    assert parallel["evaluator_version"] != sequential["evaluator_version"]
+
+
+@pytest.mark.parametrize("workers", [0, -1, True, 1.5, "2"])
+def test_parallel_judgments_require_positive_integer_concurrency(workers):
+    with pytest.raises(ValueError, match="positive integer"):
+        ResearchRubricsAdapter(judge_factory=lambda: Judge([]), max_parallel_judgments=workers)
+
+
+def test_parallel_judgments_require_independent_factory_models():
+    with pytest.raises(ValueError, match="require a judge_factory"):
+        ResearchRubricsAdapter(judge=Judge([]), max_parallel_judgments=2)
+    with pytest.raises(ValueError, match="must be callable"):
+        ResearchRubricsAdapter(judge_factory="invalid")
+    _, private = split_item(raw_task())
+    shared_judge = Judge([])
+    adapter = ResearchRubricsAdapter(judge_factory=lambda: shared_judge, max_parallel_judgments=2)
+    with pytest.raises(ValueError, match="independent judge"):
+        adapter.evaluate("answer", private_record=private)
+    assert not shared_judge.inputs
+    adapter = ResearchRubricsAdapter(judge_factory=lambda: None, max_parallel_judgments=2)
+    with pytest.raises(ValueError, match="return callable"):
+        adapter.evaluate("answer", private_record=private)
+
+
+def test_factory_execution_identity_records_concurrency_and_factory():
+    def factory():
+        return Judge([verdict()])
+
+    def other_factory():
+        return Judge([verdict()])
+
+    versions = {
+        ResearchRubricsAdapter(judge_factory=factory, max_parallel_judgments=workers).evaluator_version
+        for workers in (1, 2, 3)
+    }
+    assert len(versions) == 3
+    assert ResearchRubricsAdapter(judge_factory=other_factory, max_parallel_judgments=2).evaluator_version not in versions
+    assert ResearchRubricsAdapter().evaluator_version == ResearchRubricsAdapter(max_parallel_judgments=1).evaluator_version

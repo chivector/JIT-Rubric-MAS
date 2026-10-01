@@ -1,0 +1,45 @@
+{
+  "model_calls": 1,
+  "tokens": 9472,
+  "reserved_tokens": 0,
+  "tool_calls": 0,
+  "wall_seconds": 0.5779999999999745,
+  "request_queue_idle_seconds": 0.0,
+  "task_timeout": null,
+  "cost": null,
+  "by_stage": {
+    "inference": {
+      "model_calls": 1,
+      "tokens": 9472,
+      "tool_calls": 0,
+      "communication_bytes": 0,
+      "cost": null
+    }
+  },
+  "records": [
+    {
+      "call_id": "56a9eff9ae95472f9f89ef2c70169ec9",
+      "kind": "model",
+      "stage": "inference",
+      "agent_id": "direct",
+      "input_tokens": 1280,
+      "output_tokens": 8192,
+      "estimated": true,
+      "wall_seconds": 0.5779999999999745,
+      "error": "AuthenticationError",
+      "context": {
+        "estimator": "cl100k_base_messages_v1",
+        "context_window": 131072,
+        "margin": 2048,
+        "policy": "oldest_turns",
+        "original_input_tokens": 233,
+        "sent_input_tokens": 233,
+        "removed_message_hashes": [],
+        "sent_messages_hash": "b7bcefa27eeb6c7a5181f86e692452dd8f31cd281bdc13b67eab6d5057625bdf"
+      },
+      "request": {
+        "queue_seconds": 0.0
+      }
+    }
+  ]
+}

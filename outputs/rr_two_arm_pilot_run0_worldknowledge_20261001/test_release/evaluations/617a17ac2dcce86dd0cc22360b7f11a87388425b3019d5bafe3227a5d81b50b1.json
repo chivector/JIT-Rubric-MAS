@@ -1,0 +1,14 @@
+{
+  "slot": {
+    "slot_id": "baseline:6847465956a0f6376a605476",
+    "task_id": "6847465956a0f6376a605476",
+    "method": "baseline",
+    "repeat": 0
+  },
+  "official_score": null,
+  "complete": false,
+  "status": "submission_failed",
+  "generation_budget": {
+    "usage_unknown": true
+  }
+}

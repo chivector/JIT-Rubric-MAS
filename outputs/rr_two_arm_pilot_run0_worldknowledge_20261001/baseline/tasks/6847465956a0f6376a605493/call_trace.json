@@ -1,0 +1,31 @@
+{
+  "task_id": "6847465956a0f6376a605493",
+  "method": "direct_single",
+  "execution_calls": [
+    {
+      "call_id": "a4117f0aabba4154a0e919b2d69676ea",
+      "kind": "model",
+      "stage": "inference",
+      "agent_id": "direct",
+      "input_tokens": 1158,
+      "output_tokens": 8192,
+      "estimated": true,
+      "wall_seconds": 1.2660000000000764,
+      "error": "SystemExit",
+      "context": {
+        "estimator": "cl100k_base_messages_v1",
+        "context_window": 131072,
+        "margin": 2048,
+        "policy": "oldest_turns",
+        "original_input_tokens": 207,
+        "sent_input_tokens": 207,
+        "removed_message_hashes": [],
+        "sent_messages_hash": "192b7afe4765186764dc0ef802a24d3f549595ca758d6a67b9549c7a500c13e4"
+      },
+      "request": {
+        "queue_seconds": 0.0
+      }
+    }
+  ],
+  "evaluator_calls": []
+}

@@ -133,7 +133,7 @@ def remaining_task_budget(config, outcome):
         value = used.get(key)
         if type(value) is not int or value < 0:
             raise CheckpointIntegrityError("Missing or invalid original task-generation accounting")
-        remaining[name] = max(0, limit - value)
+        remaining[name] = None if limit is None else max(0, limit - value)
     return remaining
 
 

@@ -1,0 +1,7 @@
+{
+  "task_id": "683a58c9a7e7fe4e76958492",
+  "method": "direct_single",
+  "stage": "inference",
+  "error_type": "RuntimeError",
+  "error": "AuthenticationError: Error code: 401 - {'error': {'code': '', 'message': 'Invalid token (request id: 202610011337269455190008268d9d6keCeSFe7)', 'type': 'new_api_error'}}"
+}
