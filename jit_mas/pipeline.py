@@ -40,7 +40,16 @@ the evidence does not support a change. Lessons use the current source_task_id a
 valid_evidence_ids. Include every lesson evidence and counterevidence ID in the update's top-level
 evidence array. Cite only supplied process evidence or numerical feedback. Do not invent events or
 claim that successful reflection establishes a causal improvement. If evidence is weak,
-retain the existing policy and record only a cautious, conditional lesson."""
+retain the existing policy and record only a cautious, conditional lesson.
+
+Evidence whitelist (mechanical): valid_evidence_ids is the only allowed set. Before
+returning, set update.evidence to the sorted, deduplicated union of every lesson's
+evidence and counterevidence, then verify every item is in valid_evidence_ids. Never
+use rubric IDs or feedback:<id> labels as evidence unless that exact string appears
+in valid_evidence_ids; otherwise remove the lesson or omit the unsupported reference.
+When no reliable lesson evidence remains, return lessons=[] and preserve the existing
+policy; the required top-level evidence still cites a supplied observation supporting
+that decision, never an invented event."""
 
 
 def submitted_source_digest(source_dir):

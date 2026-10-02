@@ -130,11 +130,11 @@ def test_contributor_schema_caps_answer_and_ledger_without_capping_writer(submis
                                                           "submission": submission})}]
     validator = Draft202012Validator(pilot._execution_response_schema(messages, max_tokens=12288))
     empty_ledger = {"requirements": [], "outline": [], "source_references": [], "evidence_spans": []}
-    validator.validate({"answer": "A" * 1200, "ledger": {**empty_ledger, "outline": ["x" * 160] * 8}})
+    validator.validate({"answer": "A" * 1200, "ledger": {**empty_ledger, "outline": ["x" * 512] * 12}})
     for invalid in ({"answer": "A" * 1201},
-                    {"ledger": {**empty_ledger, "outline": ["x" * 161]}},
-                    {"ledger": {**empty_ledger, "outline": ["x"] * 9}},
-                    {"ledger": {**empty_ledger, "source_references": [{"source_id": "s", "locator": "x" * 161}]}}):
+                    {"ledger": {**empty_ledger, "outline": ["x" * 513]}},
+                    {"ledger": {**empty_ledger, "outline": ["x"] * 13}},
+                    {"ledger": {**empty_ledger, "source_references": [{"source_id": "s", "locator": "x" * 513}]}}):
         with pytest.raises(SchemaValidationError):
             validator.validate(invalid)
     writer_messages = [{"role": "user", "content": json.dumps({"agent": {"checkpoints": []},

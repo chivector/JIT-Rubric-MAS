@@ -28,7 +28,7 @@ from jit_mas.planning import knowledge_policy_prompt, knowledge_policy_role_adap
 from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGraph, TeamSpec, utc_now
 
 
-ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v4"
+ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v5"
 
 
 def _data(value: Any) -> Any:
@@ -732,11 +732,12 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
         system += knowledge_policy_prompt(services.knowledge_policy)
         if services.knowledge_policy == "model_general_knowledge_allowed":
             system += (
-                "\nFor every role, put the substantive body of your assigned contribution in answer; "
-                "a heading or source-status statement is insufficient. Since this run has no external "
-                "source observations, publish evidence_spans=[] and source_references=[], including "
-                "for evidence or research roles. Do not turn remembered knowledge into source entries. "
-                "Keep requirements and outline as lists of nonempty strings, even when empty."
+                "\nContributors publish a compact substantive summary in answer and put supporting facts, "
+                "key derivations and limitations in the structured ledger; the synthesizer publishes "
+                "the complete requested deliverable in answer. This run has no external source "
+                "observations, so publish evidence_spans=[] and source_references=[], including for "
+                "evidence or research roles. Do not turn remembered knowledge into source entries. "
+                "Keep requirements and outline as lists of nonempty strings."
             )
     if not synth:
         system += (
@@ -744,16 +745,22 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
             "You are a contributor, never the final Writer. Do not write the complete public "
             "deliverable even if task_prompt says write or produce it. Keep answer <=1200 "
             "characters as a compact summary; put detailed material only in the structured "
-            "ledger, with at most 8 items per list and <=160 characters per item. A reviewer "
-            "reports at most five findings and concrete corrections, never a rewritten draft. "
-            "Reserve at least 20% of the response budget for JSON closure and checkpoints. "
-            "If content would exceed these limits, compress it and terminate with continue=false."
+            "ledger, with at most 12 items per list and <=512 characters per item; source locators "
+            "may use up to 2048 characters so URLs remain exact. A reviewer should prioritize the "
+            "three to five most consequential findings and concrete corrections, while preserving "
+            "additional omissions needed for correctness, never a rewritten draft. Target the "
+            "serialized contributor response at about half the per-response output-token budget, "
+            "removing repetition while preserving facts and reasoning. This is a soft target: if a "
+            "valid continuation is needed, continue with an incremental ledger update rather than "
+            "repeating a full draft."
         )
     else:
         system += (
-            "\nFINAL WRITER OVERRIDE: Return one terminal complete public deliverable. Do not "
-            "repeat drafts, ledger bodies, review narration or protocol metadata. Reserve at "
-            "least 15% of the response budget for valid JSON closure and checkpoints."
+            "\nFINAL WRITER OVERRIDE: Return one terminal complete public deliverable and cover each "
+            "explicit public-task requirement. For material claims include a specific mechanism, "
+            "example or calculation when applicable, then state a clear conclusion. Use a format "
+            "appropriate to the task; do not repeat drafts, ledger bodies, review narration or "
+            "protocol metadata, and leave enough room for valid JSON closure."
         )
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(instruction, ensure_ascii=False)}]
@@ -1171,16 +1178,22 @@ def _run_agent(agent, team, ctx, services):
             "You are a contributor, never the final Writer. Do not write the complete public "
             "deliverable even if task_prompt says write or produce it. Keep answer <=1200 "
             "characters as a compact summary; put detailed material only in the structured "
-            "ledger, with at most 8 items per list and <=160 characters per item. A reviewer "
-            "reports at most five findings and concrete corrections, never a rewritten draft. "
-            "Reserve at least 20% of the response budget for JSON closure and checkpoints. "
-            "If content would exceed these limits, compress it and terminate with continue=false."
+            "ledger, with at most 12 items per list and <=512 characters per item; source locators "
+            "may use up to 2048 characters so URLs remain exact. A reviewer should prioritize the "
+            "three to five most consequential findings and concrete corrections, while preserving "
+            "additional omissions needed for correctness, never a rewritten draft. Target the "
+            "serialized contributor response at about half the per-response output-token budget, "
+            "removing repetition while preserving facts and reasoning. This is a soft target: if a "
+            "valid continuation is needed, continue with an incremental ledger update rather than "
+            "repeating a full draft."
         )
     else:
         system += (
-            "\nFINAL WRITER OVERRIDE: Return one terminal complete public deliverable. Do not "
-            "repeat drafts, ledger bodies, review narration or protocol metadata. Reserve at "
-            "least 15% of the response budget for valid JSON closure and checkpoints."
+            "\nFINAL WRITER OVERRIDE: Return one terminal complete public deliverable and cover each "
+            "explicit public-task requirement. For material claims include a specific mechanism, "
+            "example or calculation when applicable, then state a clear conclusion. Use a format "
+            "appropriate to the task; do not repeat drafts, ledger bodies, review narration or "
+            "protocol metadata, and leave enough room for valid JSON closure."
         )
     system += (
         "\nTreat predicted requirements, upstream drafts and generated task-specific hints as "
@@ -1191,13 +1204,21 @@ def _run_agent(agent, team, ctx, services):
         "an unsupported step as a simplification. For nontechnical tasks, use domain-appropriate "
         "checks without imposing formulas or citations."
     )
-    system += (
-        f"\nEach complete JSON response has a hard ceiling of {output_limit} output tokens, "
-        "including escaped prose, evidence IDs, checkpoints and closing braces. Plan a concise "
-        f"answer well below this ceiling (roughly {max(1, output_limit // 2)} English words or fewer); "
-        "token-to-word ratios vary, so leave room for structure and all required checks. "
-        "Never start an answer too long to close its JSON object. Shorten wording, not factual accuracy."
-    )
+    if synth:
+        system += (
+            f"\nEach complete JSON response has a hard ceiling of {output_limit} output tokens, "
+            "including escaped prose, evidence IDs, checkpoints and closing braces. Use the "
+            "available budget for the complete deliverable, remove repetition, and leave enough "
+            "room to close the JSON object."
+        )
+    else:
+        system += (
+            f"\nEach complete JSON response has a hard ceiling of {output_limit} output tokens. "
+            "Target the complete serialized contributor response at about half that budget, "
+            "including answer, ledger, evidence IDs, checkpoints and closing braces. Remove "
+            "repetition first while retaining facts, key derivations and honest limitations; "
+            "this is a soft target and valid continuation remains available."
+        )
     system += knowledge_policy_prompt(services.knowledge_policy)
     if primary_rubrics:
         system += "\nYou are the primary owner for primary_rubrics: produce evidence or artifacts addressing each."

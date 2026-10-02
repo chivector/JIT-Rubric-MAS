@@ -160,10 +160,11 @@ def _structured_output_policy(args=None):
     return {"planning_string_max_length": getattr(args, "planning_string_max_length", 2048),
             "planning_communication_max_length": getattr(args, "planning_communication_max_length", 1024),
             "planning_array_max_items": getattr(args, "planning_array_max_items", 64),
-            "execution_schema_version": "rr-execution-v5",
+            "execution_schema_version": "rr-execution-v6",
             "execution_answer_characters_per_token": 2,
             "execution_checkpoint_reason_max_length": 512,
-            "execution_ledger_text_max_length": 2048,
+            "execution_ledger_text_max_length": 512,
+            "execution_ledger_locator_max_length": 2048,
             "reference_schema_version": "rr-reference-v2"}
 
 
@@ -361,10 +362,11 @@ def _execution_response_schema(messages, max_tokens=None):
     # before its JSON envelope closes.
     is_contributor = instruction.get("submission") in {"contribution", "subtask_complete"}
     is_synthesizer = not is_contributor
-    ledger_item_limit = 2048 if is_synthesizer else 160
-    ledger_max_items = 64 if is_synthesizer else 8
+    ledger_item_limit = 2048 if is_synthesizer else 512
+    ledger_locator_limit = 2048
+    ledger_max_items = 64 if is_synthesizer else 12
     ledger_text = {**text, "maxLength": ledger_item_limit}
-    locator = {**text, "maxLength": ledger_item_limit}
+    locator = {**text, "maxLength": ledger_locator_limit}
     ledger = {"type": "object", "properties": {
         "requirements": {"type": "array", "maxItems": ledger_max_items, "items": ledger_text},
         "outline": {"type": "array", "maxItems": ledger_max_items, "items": ledger_text},

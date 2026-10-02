@@ -220,8 +220,8 @@ def test_contributor_repairs_source_shape_only_by_returning_new_ledger(bad_ledge
     assert "publish evidence_spans=[] and source_references=[]" in model.calls[0][0]["content"]
     assert "FINAL ROLE OVERRIDE" in model.calls[0][0]["content"]
     assert "answer <=1200" in model.calls[0][0]["content"]
-    assert "at most 8 items" in model.calls[0][0]["content"]
-    assert "<=160 characters per item" in model.calls[0][0]["content"]
+    assert "at most 12 items" in model.calls[0][0]["content"]
+    assert "<=512 characters per item" in model.calls[0][0]["content"]
 
 
 def test_ledger_protocol_correction_retains_both_metered_calls_and_raw_error():

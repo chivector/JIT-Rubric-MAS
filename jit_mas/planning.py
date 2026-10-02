@@ -232,7 +232,13 @@ merge them into one agent for a simple task and retain real forward data depende
 Execution is single-pass: each selected agent receives one model call and publishes once.
 Contributors publish a short answer and a structured ledger with requirements, outline,
 evidence_spans and source_references; the Writer consumes the shared ledger and submits
-the full deliverable. External tool calls may be batched once by a contributor; their
+the full deliverable. Plan contributors to supply compact, substantive facts, reasoning,
+examples and uncertainty useful for synthesis, not competing full deliverables. A review
+should identify consequential defects and supported corrections rather than rewrite the
+whole answer. The final Writer must cover the public task, check consequential claims and
+inferences, and use citations only when their details are supported or confidently known;
+never guess an author, title, year, quotation or numerical result to appear well sourced.
+External tool calls may be batched once by a contributor; their
 results enter the ledger without another model turn. The Writer has tools=[]. Do not
 plan send_message, read_evidence, raise_issue, debate, role revisits or iterative review.
 One agent may cover several requirements, and several agents may contribute to one.
@@ -276,6 +282,13 @@ distinguishing explicit public instructions from inferred or experience-derived 
 A review requires access to the actual draft or derivation, not just another reviewer's
 verdict. Name the producer dependency and required artifact. State what would falsify a
 suspect claim or reveal an omitted assumption; agreement between agents is not evidence.
+Plan a compact contribution containing the facts, reasoning, examples and uncertainty
+needed downstream, rather than a competing full deliverable or a source-status statement.
+For review, identify consequential defects, explain their effect and give a specific
+supported correction; do not plan a rewritten copy of the whole artifact. If you may
+synthesize, plan to cover the public task and check consequential claims and inferences.
+Use citations only when their details are supported or confidently known; never guess
+an author, title, year, quotation or numerical result to fill an evidence gap.
 Each selected role executes once in DAG order, with exactly one model call. A role cannot claim it will incorporate
 feedback from its downstream reviewer later; propose a downstream synthesis responsibility
 or a merge for reconciliation instead of an implicit second execution or backward edge.
@@ -318,6 +331,14 @@ and a margin for valid closure. max_tokens is a per-response output ceiling, not
 context allowance. Editing a full article still requires enough tokens to return the
 full article; a genuinely short requested summary may need fewer tokens than its sources.
 Budget a concise final response without duplicating drafts, review narration or preambles.
+Give non-synthesizer roles compact, substantive material to produce: relevant facts,
+reasoning, examples, tradeoffs and uncertainty, not competing full deliverables. A reviewer
+should identify consequential defects with supported corrections, not rewrite the whole
+artifact. Make these distinctions explicit in responsibilities and task_prompt. The
+Writer must address all public task requirements and check consequential factual claims
+and inferences against available evidence and assumptions. Do not require guessed citation
+details: unsupported authors, titles, years, quotations and numerical results must not be
+invented to give an appearance of evidence. Preserve useful content and honest uncertainty.
 Set every AgentSpec.max_calls=1 explicitly. Execution provides exactly one model call
 per selected role, with no JSON correction, second draft, debate or communication loop.
 Unused team.total_max_calls is a ceiling, not permission to revisit a completed role.
@@ -355,6 +376,9 @@ Before returning, check ALL cross-field constraints against the actual JSON you 
   reference selected agent IDs. Every rubric has nonempty coverage and a primary owner
   in coverage[rubric_id]. Each agent.rubric_ids is exactly the set of rubric IDs whose
   coverage includes that agent.
+  After finalizing coverage, mechanically derive every agent.rubric_ids as the sorted,
+  deduplicated list of rid values for which agent.agent_id is in coverage[rid]. Recompute
+  it after every merge or reassignment; do not copy an outdated candidate assignment.
 - For each reviewer in reviewers[rubric_id], reviewer != primary[rubric_id], and that
   primary owner must be an ancestor of the reviewer through depends_on, directly or
   transitively. An upstream agent cannot review a downstream owner's future artifact.
@@ -370,7 +394,14 @@ Before returning, check ALL cross-field constraints against the actual JSON you 
   must be in task.tools; the final synthesizer must have tools=[].
 - If limits.execution_max_tokens is present, every agent.max_tokens must be <= that
   actual execution-model output ceiling, including the synthesizer. Fit the requested
-  deliverable within this bound rather than claiming an unsupported larger allowance."""
+  deliverable within this bound rather than claiming an unsupported larger allowance.
+- For each agent's budget estimate, calculate and check the hard arithmetic constraint:
+  expected_output_tokens <= agent.max_tokens * expected_model_calls. expected_output_tokens
+  is the aggregate across the estimated turns, while agent.max_tokens is per response.
+  This constraint still applies when agent.max_calls is null; null removes the optional
+  call ceiling, not the per-response output ceiling. An iterative estimate may legitimately
+  include multiple model calls. Keep expected calls within any finite role/team ceilings
+  and the estimated input/output totals plus reserves within the remaining shared budget."""
 
 POOL_ORGANIZATION_PROMPT = """\nEVOLVING AGENT POOL: Select reusable agents from agent_pool_catalogue.
 Every selected candidate must carry the exact pool_agent_id and pool_agent_version of
@@ -417,7 +448,12 @@ artifacts concise while preserving source provenance and the full final delivera
 For reconciliation, emit team.budget_plan with one estimate per selected agent:
 expected_model_calls, expected_input_tokens and expected_output_tokens are whole-task
 execution estimates, including expected follow-up turns and reread context, not just
-one response. expected_tool_calls counts external tools; expected_communication_bytes
+one response. For every role, calculate expected_output_tokens <= agent.max_tokens *
+expected_model_calls before returning. The left side includes output from all estimated
+turns; the right side is their combined response capacity. A null agent.max_calls does
+not waive this arithmetic and does not force a one-call estimate. Multiple estimated
+iterative calls remain legitimate within shared budgets and any finite call ceilings.
+expected_tool_calls counts external tools; expected_communication_bytes
 accounts for public artifacts and peer traffic. Include each role's cost rationale,
 quality_cost_tradeoff and stopping_policy, and reserve future tokens/model calls for
 remaining harness generation, evaluation and learning. Total estimated execution input
