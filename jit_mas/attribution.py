@@ -60,6 +60,45 @@ def feedback_view(feedback: EvaluationFeedback) -> dict:
     return view
 
 
+def _compact_duplicate_event_content(events: Sequence[dict], local_execution: dict | None) -> list[dict]:
+    """Remove only exact I/O duplicates from attribution payloads.
+
+    ``local_execution`` is the authoritative complete trace.  Execution events
+    repeat model outputs and submitted artifacts so that the event graph can be
+    audited independently; sending both copies to a model wastes context.  Keep
+    every event's identity and replace only content whose digest exactly matches
+    a path in the complete local trace.  Unique content remains untouched, and
+    persisted execution logs are never modified.
+    """
+    if not local_execution:
+        return [copy.deepcopy(event) for event in events]
+    references: dict[str, tuple[Any, str]] = {}
+
+    def register(value, path):
+        if value is not None:
+            references.setdefault(digest(value), (value, path))
+
+    for index, step in enumerate(local_execution.get("trajectory", [])):
+        register(step.get("model_output_messages"),
+                 f"local_execution.trajectory[{index}].model_output_messages")
+        register(step.get("action_output"),
+                 f"local_execution.trajectory[{index}].action_output")
+    register(local_execution.get("answer"), "local_execution.answer")
+
+    compacted = []
+    for event in events:
+        item = copy.deepcopy(event)
+        if "content" in item:
+            content_hash = digest(item["content"])
+            duplicate = references.get(content_hash)
+            if duplicate is not None and item["content"] == duplicate[0]:
+                item.pop("content", None)
+                item["content_ref"] = {"source": "local_execution", "path": duplicate[1],
+                                        "content_hash": content_hash}
+        compacted.append(item)
+    return compacted
+
+
 SIGNED_SCORE_PROMPT = """Interpret scoring by signed_contribution = weight * score, not
 the verdict word alone. Positive-weight criteria reward satisfaction. Negative-weight
 criteria describe behavior to avoid: Satisfied (score=1) applies a penalty, whereas
@@ -139,7 +178,10 @@ Explain successes and failures using event IDs, opposing evidence, alternative e
 and uncertainty. Do not claim access to other agents' private histories. If a specific event
 in the index is needed, return its event_id in evidence_requests; at most one additional
 evidence exchange is allowed. Do not request hidden reasoning or invent missing evidence.
-Suggest only supported hypotheses, not direct writes to experience or evaluator settings."""
+Suggest only supported hypotheses, not direct writes to experience or evaluator settings.
+An event with content_ref repeats content already present at the supplied local_execution
+path with the exact content_hash; inspect that complete value and cite the event_id.
+This is a storage reference, not missing evidence or a summary of the content."""
 
 INTEGRATE_PROMPT = """Integrate the global outline and independent local analyses into
 evidence-supported attribution hypotheses. Preserve disagreements and alternative
@@ -350,7 +392,8 @@ class RubricAttributor(JsonModelCalls):
                            "artifact", "artifact_created", "artifact_published", "handoff", "message_sent"}]
             payload = {"task": task, "agent": agent, "local_execution": local_runs[aid],
                        "feedback": relevant, "questions": outline.questions.get(aid, []),
-                       "global_findings": outline.findings, "related_events": related,
+                       "global_findings": outline.findings,
+                       "related_events": _compact_duplicate_event_content(related, local_runs[aid]),
                        "event_index": event_index, "submission": context["submission"],
                        "evidence_ids": context["evidence_ids"]}
             model = self.local_model_factory(aid)
@@ -371,7 +414,8 @@ class RubricAttributor(JsonModelCalls):
                 findings = self.ask(model, "attribute_local_followup",
                                     LOCAL_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
                                     {**payload, "prior_analysis": findings,
-                                     "requested_evidence": [event_by_id[eid] for eid in requested],
+                                     "requested_evidence": _compact_duplicate_event_content(
+                                         [event_by_id[eid] for eid in requested], local_runs[aid]),
                                      "remaining_exchanges": 0}, Findings, agent_id=aid,
                                     validate=validate_followup)
             return aid, findings

@@ -7,7 +7,7 @@ import hashlib
 import uuid
 from pathlib import Path
 
-from .attribution import RubricAttributor
+from .attribution import RubricAttributor, _compact_duplicate_event_content
 from .budget import BudgetLedger
 from .config import MASConfig
 from .experience import ExperienceStore, retrieve
@@ -23,6 +23,9 @@ ATTRIBUTION_SOURCE_FILES = SUBMITTED_SOURCE_FILES + (
 AGENT_EVOLVE_PROMPT = """You are the persistent agent in agent_profile reflecting on your own
 completed role. Improve how you perform that role using the supplied local trace,
 own_events, numerical evaluation_summary, and evidence-supported attribution findings.
+An own event with content_ref has the exact same content at the supplied local_execution
+path and content_hash; inspect that complete value and cite the event_id. These references
+remove duplicate copies only, not unique process evidence.
 The evaluation_summary measures the submitted team's artifact, not your individual
 contribution or a causal effect of your policy. It is post-submission feedback only.
 You own your skills, memory, prompt, reasoning,
@@ -235,7 +238,7 @@ class MASPipeline:
         for agent in team.agents:
             profile = get_profile(pool, agent.pool_agent_id, agent.pool_agent_version)
             local = by_agent.get(agent.agent_id, {})
-            evidence = self._agent_reflection_evidence(agent.agent_id, event_index, feedback)
+            evidence = self._agent_reflection_evidence(agent.agent_id, event_index, feedback, local)
             valid_ids = set(evidence["valid_evidence_ids"])
             findings = [finding for finding in attributed_findings
                         if agent.agent_id in finding.agent_ids]
@@ -263,7 +266,7 @@ class MASPipeline:
         return updates
 
     @staticmethod
-    def _agent_reflection_evidence(agent_id, events, feedback):
+    def _agent_reflection_evidence(agent_id, events, feedback, local_execution=None):
         own_events = [event for event in events if event.get("agent_id") == agent_id]
         summary = {"evidence_id": "evaluation:summary", "scope": "submission",
                    "score": feedback.score, "complete": feedback.complete,
@@ -281,7 +284,8 @@ class MASPipeline:
         valid_ids = {event["event_id"] for event in own_events if event.get("event_id")}
         valid_ids.update({"planning:team", summary["evidence_id"]})
         valid_ids.update(rubric["evidence_id"] for rubric in summary["rubrics"])
-        return {"own_events": own_events, "evaluation_summary": summary,
+        return {"own_events": _compact_duplicate_event_content(own_events, local_execution),
+                "evaluation_summary": summary,
                 "resource_usage": [event["content"] for event in own_events
                                    if event.get("kind") == "resource_usage"],
                 "valid_evidence_ids": sorted(valid_ids)}

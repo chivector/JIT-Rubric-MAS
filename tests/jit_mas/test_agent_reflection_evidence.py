@@ -1,11 +1,14 @@
 """Submission feedback reaches self-reflection without leaking into held-out execution."""
 
 import json
+import copy
+import re
 from pathlib import Path
 
 import pytest
 
 from jit_mas.budget import MeteredModel
+from jit_mas.attribution import _compact_duplicate_event_content
 from jit_mas.config import MASConfig
 from jit_mas.experience import ExperienceStore
 from jit_mas.offline import FixtureModel, FixtureModels
@@ -60,6 +63,14 @@ def payload_keys(value):
     return set()
 
 
+def resolve_content_ref(payload, reference):
+    value = payload
+    for key, index in re.findall(r"([A-Za-z_]+)|\[(\d+)\]", reference["path"]):
+        value = value[key] if key else value[int(index)]
+    assert digest(value) == reference["content_hash"]
+    return value
+
+
 def test_reflection_without_individual_findings_receives_observable_submission_feedback(reflection_pipeline):
     pipeline, _, models = reflection_pipeline
     outcome = pipeline.run("evolve")[0]
@@ -74,7 +85,14 @@ def test_reflection_without_individual_findings_receives_observable_submission_f
         assert payload["team"] == frozen["TeamSpec"]
         own_events = [event for event in execution["metadata"]["events"]
                       if event.get("agent_id") == payload["agent"]["agent_id"]]
-        assert payload["own_events"] == own_events and own_events
+        assert own_events
+        assert len(payload["own_events"]) == len(own_events)
+        assert any("content_ref" in event for event in payload["own_events"])
+        for supplied, original in zip(payload["own_events"], own_events):
+            restored = copy.deepcopy(supplied)
+            if "content_ref" in restored:
+                restored["content"] = resolve_content_ref(payload, restored.pop("content_ref"))
+            assert restored == original
         summary = payload["evaluation_summary"]
         assert summary["evidence_id"] == "evaluation:summary" and summary["scope"] == "submission"
         for field in ("score", "complete", "evaluator_version", "aggregation"):
