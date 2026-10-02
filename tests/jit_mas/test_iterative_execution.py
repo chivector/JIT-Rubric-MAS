@@ -10,6 +10,7 @@ import pytest
 from jit_mas.agent_pool import seed_pool
 from jit_mas.budget import BudgetLedger
 from jit_mas.execution import (
+    CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
     TeamMemory,
     TeamPlanning,
     TeamServices,
@@ -251,21 +252,62 @@ def test_ledger_protocol_correction_retains_both_metered_calls_and_raw_error():
     assert json.loads(result.trajectory[0].model_output_messages.content) == invalid
 
 
-def test_contributor_answer_cap_is_enforced_for_json_object_fallback():
+def test_json_object_contributor_budget_overruns_preserve_the_complete_contribution():
     team = make_team(contributors=True)
-    model = ScriptedModel([{"answer": "x" * 1201, "ledger": {
-        "requirements": [], "outline": [], "evidence_spans": [], "source_references": []}}])
+    contribution = {"answer": "x" * 1211, "ledger": {
+        "requirements": [f"Requirement {i}" for i in range(19)],
+        "outline": ["f" * 513],
+        "evidence_spans": [{"text": "e" * 513, "source_ref": "task"}],
+        "source_references": [{"source_id": "task", "locator": "l" * 2049}]}}
+    untouched = copy.deepcopy(contribution)
+    model = ScriptedModel([contribution])
     services, context = make_services(team, {"searcher": model})
     result = _run_agent_iterative(team.agents[0].model_dump(mode="json"),
                                  team.model_dump(mode="json"), context, services)
-    assert result.terminated_reason == "error"
-    assert "Contributor answer exceeds" in str(result.trajectory[0].error)
+    assert result.terminated_reason == "subtask_complete" and len(model.calls) == 1
+    assert result.trajectory[0].error is None
+    assert services.artifacts["searcher"]["answer"] == untouched["answer"]
+    assert services.artifacts["searcher"]["ledger"] == untouched["ledger"]
+    assert json.loads(result.trajectory[0].model_output_messages.content) == untouched
+    warnings = [event for event in services.events if event["kind"] == "compactness_warning"]
+    assert len(warnings) == 1
+    assert warnings[0]["content"] == {
+        "policy": CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
+        "content_preserved": True,
+        "measurements": [
+            {"field": "answer.characters", "actual": 1211, "suggested_max": 1200},
+            {"field": "ledger.requirements.items", "actual": 19, "suggested_max": 12},
+            {"field": "ledger.outline[0].characters", "actual": 513, "suggested_max": 512},
+            {"field": "ledger.source_references[0].locator.characters", "actual": 2049,
+             "suggested_max": 2048},
+            {"field": "ledger.evidence_spans[0].text.characters", "actual": 513,
+             "suggested_max": 512},
+        ]}
+    assert not [event for event in services.events if event["kind"] == "protocol_warning"]
 
 
-def test_contributor_length_correction_keeps_summary_compact_and_preserves_fact_rich_handoff():
+def test_oversized_contributor_still_requires_a_declared_evidence_source():
+    team = make_team(contributors=True)
+    invalid = {"answer": "x" * 1211, "ledger": {
+        "requirements": [f"Requirement {i}" for i in range(19)], "outline": [],
+        "evidence_spans": [{"text": "e" * 513, "source_ref": "invented"}],
+        "source_references": []}}
+    model = ScriptedModel([invalid, invalid])
+    services, context = make_services(team, {"searcher": model})
+    result = _run_agent_iterative(team.agents[0].model_dump(mode="json"),
+                                 team.model_dump(mode="json"), context, services)
+    assert result.terminated_reason == "error" and len(model.calls) == 2
+    assert "declared source_ref" in str(result.trajectory[-1].error)
+    assert "searcher" not in services.artifacts
+    assert not [event for event in services.events if event["kind"] == "compactness_warning"]
+    for step in result.trajectory:
+        assert json.loads(step.model_output_messages.content) == invalid
+
+
+def test_contributor_shape_correction_preserves_fact_rich_handoff_guidance():
     team = make_team(contributors=True)
     bad = {"answer": "x" * 1201, "ledger": {
-        "requirements": [], "outline": [], "evidence_spans": [], "source_references": []}}
+        "requirements": [], "outline": [3], "evidence_spans": [], "source_references": []}}
     valid = {"answer": "Compact contribution summary.", "ledger": {
         "requirements": ["Explain the requested result."],
         "outline": ["The result follows after checking the stated assumptions and units."],

@@ -29,6 +29,7 @@ from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGrap
 
 
 ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v5"
+CONTRIBUTOR_COMPACTNESS_POLICY_VERSION = "contributor-budget-advisory-v1"
 CONTRIBUTOR_ANSWER_MAX_CHARS = 1200
 CONTRIBUTOR_LEDGER_MAX_ITEMS = 12
 CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS = 512
@@ -470,26 +471,16 @@ def _contribution_ledger(value):
         if not isinstance(value.get(key), list) or any(
                 not isinstance(item, str) or not item.strip() for item in value[key]):
             raise ResponseProtocolError(f"ledger.{key} must be a list of nonempty strings")
-        if any(len(item) > CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS for item in value[key]):
-            raise ResponseProtocolError(
-                f"ledger.{key} entry exceeds {CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS} characters")
     sources = value.get("source_references")
     spans = value.get("evidence_spans")
     if not isinstance(sources, list) or not isinstance(spans, list):
         raise ResponseProtocolError("ledger needs evidence_spans and source_references lists")
-    for key in ("requirements", "outline", "source_references", "evidence_spans"):
-        if len(value[key]) > CONTRIBUTOR_LEDGER_MAX_ITEMS:
-            raise ResponseProtocolError(
-                f"ledger.{key} may contain at most {CONTRIBUTOR_LEDGER_MAX_ITEMS} items")
     source_ids = set()
     for source in sources:
         if not isinstance(source, dict) or any(
                 not isinstance(source.get(key), str) or not source[key].strip()
                 for key in ("source_id", "locator")):
             raise ResponseProtocolError("Each source reference needs source_id and locator")
-        if len(source["locator"]) > CONTRIBUTOR_LOCATOR_MAX_CHARS:
-            raise ResponseProtocolError(
-                f"ledger source locator exceeds {CONTRIBUTOR_LOCATOR_MAX_CHARS} characters")
         if source["source_id"] in source_ids:
             raise ResponseProtocolError("Source IDs must be unique within a contribution")
         source_ids.add(source["source_id"])
@@ -498,21 +489,40 @@ def _contribution_ledger(value):
                 or not span["text"].strip() or not isinstance(span.get("source_ref"), str)
                 or span["source_ref"] not in source_ids):
             raise ResponseProtocolError("Each evidence span needs text and a declared source_ref")
-        if len(span["text"]) > CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS:
-            raise ResponseProtocolError(
-                f"ledger evidence span exceeds {CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS} characters")
     return copy.deepcopy({key: value[key] for key in
                           ("requirements", "outline", "evidence_spans", "source_references")})
 
 
-def _validate_contributor_compactness(parsed):
-    """Apply contributor caps even when the provider only supports json_object."""
+def _contributor_compactness_warnings(parsed):
+    """Measure budget overruns without editing a shape-validated contribution.
+
+    Guided schemas may enforce compact output while decoding. JSON Object output
+    uses the same limits as advisory targets so useful, legal content is retained.
+    """
+    warnings = []
+
+    def measure(field, actual, suggested_max):
+        if actual > suggested_max:
+            warnings.append({"field": field, "actual": actual, "suggested_max": suggested_max})
+
     answer = parsed.get("answer")
-    if answer is not None and isinstance(answer, str) and len(answer) > CONTRIBUTOR_ANSWER_MAX_CHARS:
-        raise ResponseProtocolError(
-            f"Contributor answer exceeds {CONTRIBUTOR_ANSWER_MAX_CHARS} characters")
-    if parsed.get("ledger") is not None:
-        _contribution_ledger(parsed["ledger"])
+    if isinstance(answer, str):
+        measure("answer.characters", len(answer), CONTRIBUTOR_ANSWER_MAX_CHARS)
+    ledger = parsed.get("ledger")
+    if ledger is not None:
+        for key in ("requirements", "outline", "source_references", "evidence_spans"):
+            measure(f"ledger.{key}.items", len(ledger[key]), CONTRIBUTOR_LEDGER_MAX_ITEMS)
+        for key in ("requirements", "outline"):
+            for index, item in enumerate(ledger[key]):
+                measure(f"ledger.{key}[{index}].characters", len(item),
+                        CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS)
+        for index, source in enumerate(ledger["source_references"]):
+            measure(f"ledger.source_references[{index}].locator.characters", len(source["locator"]),
+                    CONTRIBUTOR_LOCATOR_MAX_CHARS)
+        for index, span in enumerate(ledger["evidence_spans"]):
+            measure(f"ledger.evidence_spans[{index}].text.characters", len(span["text"]),
+                    CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS)
+    return warnings
 
 
 def _correctable_execution_shape_error(error, response, *, observed_ids, allowed_tools,
@@ -528,10 +538,6 @@ def _correctable_execution_shape_error(error, response, *, observed_ids, allowed
         "ledger.outline must be", "ledger needs evidence_spans and source_references lists",
         "Each source reference needs source_id and locator", "Source IDs must be unique",
         "Each evidence span needs text and a declared source_ref",
-        "Contributor answer exceeds", "ledger.requirements may contain at most",
-        "ledger.outline may contain at most", "ledger.source_references may contain at most",
-        "ledger.evidence_spans may contain at most", "ledger source locator exceeds",
-        "ledger evidence span exceeds", "ledger.requirements entry exceeds", "ledger.outline entry exceeds",
     )
     if not str(error).startswith(prefixes):
         return False
@@ -936,8 +942,6 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                 elif name not in allowed:
                     raise PermissionError(f"tool '{name}' is not allowed for agent '{aid}'")
             merged["tools"] = []
-            if not synth:
-                _validate_contributor_compactness(merged)
             _validate_completion_fields(merged)
             evidence_ids = merged.get("evidence_ids", [])
             if not set(evidence_ids) <= observed_ids:
@@ -972,6 +976,13 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                 state["no_progress_correction_given"] = False
             if not synth and merged.get("ledger") is not None:
                 contribution = _contribution_ledger(merged["ledger"])
+                compactness_warnings = _contributor_compactness_warnings(merged)
+                if compactness_warnings:
+                    services.event(aid, "compactness_warning", {
+                        "policy": CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
+                        "measurements": compactness_warnings,
+                        "content_preserved": True,
+                    }, parents=[output_event])
             for call in tool_calls:
                 name = call["name"]
                 args = call.get("arguments", {})
@@ -1410,8 +1421,6 @@ def _run_agent(agent, team, ctx, services):
                         raise ResponseProtocolError("Completion cites evidence not observed by this agent")
                     _checkpoint_reports(agent, completion, observed_ids)
             parsed = merged_completion
-            if not synth:
-                _validate_contributor_compactness(parsed)
             if synth and parsed.get("answer") is not None:
                 quality_error = _completion_quality_error(parsed["answer"], services.public_task)
                 if quality_error:
@@ -1428,6 +1437,13 @@ def _run_agent(agent, team, ctx, services):
             if not synth:
                 if parsed.get("ledger") is not None:
                     contribution = _contribution_ledger(parsed["ledger"])
+                    compactness_warnings = _contributor_compactness_warnings(parsed)
+                    if compactness_warnings:
+                        services.event(aid, "compactness_warning", {
+                            "policy": CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
+                            "measurements": compactness_warnings,
+                            "content_preserved": True,
+                        }, parents=[output_event])
                 elif parsed.get("answer") is not None or not tool_requests:
                     raise ResponseProtocolError("Contributors must publish a structured ledger object")
             checkpoint_reports, missing = _checkpoint_reports(agent, parsed, observed_ids)
@@ -1711,6 +1727,7 @@ def run_team(task, ctx, team, services):
                                                      metadata={"agent_id": a["agent_id"]}))
                                for a in team["agents"]],
                      metadata={"run_id": services.run_id, "events": copy.deepcopy(services.events),
+                               "contributor_compactness_policy": CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
                                "artifacts": copy.deepcopy(services.artifacts),
                                "coordination": ("single_pass_shared_ledger"
                                                 if services.execution_mode == "single_pass"

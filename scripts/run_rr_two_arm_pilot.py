@@ -26,7 +26,8 @@ from jit_mas.checkpoints import CheckpointIntegrityError, CheckpointRunner, snap
 from jit_mas.config import MASConfig, ModelConfig
 from jit_mas.bridge import JITHarnessSynthesizer
 from jit_mas.experience import ExperienceStore
-from jit_mas.execution import ITERATIVE_CONTINUATION_POLICY_VERSION
+from jit_mas.execution import (CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
+                               ITERATIVE_CONTINUATION_POLICY_VERSION)
 from jit_mas.independent_protocol import normalize_score
 from jit_mas.pipeline import code_fingerprint, write_json as _write_json
 from jit_mas.schemas import ExperienceSnapshot, SplitManifest, digest, utc_now
@@ -165,6 +166,9 @@ def _structured_output_policy(args=None):
             "execution_checkpoint_reason_max_length": 512,
             "execution_ledger_text_max_length": 512,
             "execution_ledger_locator_max_length": 2048,
+            "contributor_compactness_policy_version": CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
+            "runtime_contributor_compactness": "advisory",
+            "guided_schema_contributor_compactness": "hard",
             "reference_schema_version": "rr-reference-v2"}
 
 

@@ -10,6 +10,7 @@ import pytest
 from jit_mas.bridge import JITHarnessSynthesizer
 from jit_mas.budget import BudgetLedger, MeteredModel
 from jit_mas.execution import (
+    CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
     ResponseProtocolError, TeamExecutor, TeamServices, _SinglePassModel, _parse_response, content_hash,
 )
 from jit_mas.schemas import AgentSpec, PublicTask, RubricGraph, TeamSpec
@@ -396,6 +397,49 @@ def test_parallel_contributors_publish_one_frozen_ledger_and_writer_reads_once(e
     assert len([e for e in events if e["kind"] == "shared_ledger_read"]) == 1
     assert len([e for e in events if e["kind"] == "shared_ledger_ready"]) == 1
     assert not {"message_sent", "message_consumed", "issue", "evidence_read"}.intersection(e["kind"] for e in events)
+
+
+def test_single_pass_over_budget_contribution_reaches_writer_in_full(execute_team):
+    team = TeamSpec(agents=[
+        AgentSpec(agent_id="analyst", role="Analyst", capability="requirements", max_calls=1),
+        AgentSpec(agent_id="writer", role="Writer", capability="synthesis",
+                  depends_on=["analyst"], max_calls=1),
+    ], synthesizer_id="writer", total_max_calls=2, max_parallel=1)
+    answer = "Detailed summary " * 100
+    contribution = {
+        "requirements": [f"Requirement {i}" for i in range(19)],
+        "outline": ["Mechanism: " + "f" * 513],
+        "evidence_spans": [{"text": "e" * 513, "source_ref": "task"}],
+        "source_references": [{"source_id": "task", "locator": "l" * 2049}],
+    }
+
+    def respond(aid, payload, call, messages):
+        assert call == 1
+        if aid == "analyst":
+            return {"answer": answer, "ledger": contribution}
+        shared = payload["shared_ledger"]
+        assert shared["contributions"][0]["answer"] == answer
+        assert [row["text"] for row in shared["requirements"]] == contribution["requirements"]
+        assert [row["text"] for row in shared["outline"]] == contribution["outline"]
+        assert shared["source_references"][0]["locator"] == contribution["source_references"][0]["locator"]
+        assert shared["evidence_spans"][0]["text"] == contribution["evidence_spans"][0]["text"]
+        return {"answer": "The argument follows only under its stated assumptions."}
+
+    result, inputs, budget = execute_team(team, respond, auto_ledger=False)
+    assert result.terminated_reason == "final_answer"
+    assert {aid: len(rows) for aid, rows in inputs.items()} == {"analyst": 1, "writer": 1}
+    assert budget["model_calls"] == 2
+    assert result.metadata["artifacts"]["analyst"]["ledger"] == contribution
+    events = result.metadata["events"]
+    warnings = [event for event in events if event["kind"] == "compactness_warning"]
+    assert len(warnings) == 1 and warnings[0]["agent_id"] == "analyst"
+    assert warnings[0]["content"]["policy"] == CONTRIBUTOR_COMPACTNESS_POLICY_VERSION
+    assert warnings[0]["content"]["content_preserved"] is True
+    measures = {row["field"]: row for row in warnings[0]["content"]["measurements"]}
+    assert measures["answer.characters"]["actual"] == len(answer)
+    assert measures["ledger.requirements.items"] == {
+        "field": "ledger.requirements.items", "actual": 19, "suggested_max": 12}
+    assert not [event for event in events if event["kind"] in {"execution_error", "protocol_warning"}]
 
 
 @pytest.mark.parametrize("ledger", [None, {},
