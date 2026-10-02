@@ -364,11 +364,12 @@ def _execution_response_schema(messages, max_tokens=None):
     ledger_item_limit = 2048 if is_synthesizer else 160
     ledger_max_items = 64 if is_synthesizer else 8
     ledger_text = {**text, "maxLength": ledger_item_limit}
+    locator = {**text, "maxLength": ledger_item_limit}
     ledger = {"type": "object", "properties": {
         "requirements": {"type": "array", "maxItems": ledger_max_items, "items": ledger_text},
         "outline": {"type": "array", "maxItems": ledger_max_items, "items": ledger_text},
         "source_references": {"type": "array", "maxItems": ledger_max_items, "items": {"type": "object", "properties": {
-            "source_id": source_ref, "locator": text}, "required": ["source_id", "locator"], "additionalProperties": True}},
+            "source_id": source_ref, "locator": locator}, "required": ["source_id", "locator"], "additionalProperties": True}},
         "evidence_spans": {"type": "array", "maxItems": ledger_max_items, "items": {"type": "object", "properties": {
             "text": {"type": "string", "maxLength": ledger_item_limit}, "source_ref": source_ref}, "required": ["text", "source_ref"], "additionalProperties": True}}},
         "required": ["requirements", "outline", "source_references", "evidence_spans"], "additionalProperties": False}

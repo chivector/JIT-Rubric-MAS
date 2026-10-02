@@ -133,7 +133,8 @@ def test_contributor_schema_caps_answer_and_ledger_without_capping_writer(submis
     validator.validate({"answer": "A" * 1200, "ledger": {**empty_ledger, "outline": ["x" * 160] * 8}})
     for invalid in ({"answer": "A" * 1201},
                     {"ledger": {**empty_ledger, "outline": ["x" * 161]}},
-                    {"ledger": {**empty_ledger, "outline": ["x"] * 9}}):
+                    {"ledger": {**empty_ledger, "outline": ["x"] * 9}},
+                    {"ledger": {**empty_ledger, "source_references": [{"source_id": "s", "locator": "x" * 161}]}}):
         with pytest.raises(SchemaValidationError):
             validator.validate(invalid)
     writer_messages = [{"role": "user", "content": json.dumps({"agent": {"checkpoints": []},
