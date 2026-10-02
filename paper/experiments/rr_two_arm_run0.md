@@ -70,3 +70,11 @@ v25 已于北京时间 2026-10-02 17:01 退出（原报告 `failed/SystemExit=1`
 DeepSeek v26/v27/v28/v29 工程预检分别遇到 unsupported `uniqueItems`、连接错误、连接错误和标题终稿拒绝；所有历史独立保存。v30 改用 `json_object` 后无评分预检通过，从空经验正式启动。C0/C5 均为 8/10，不满足 9/10；前 11 EVO 全部失败，经验仍 v0，错误包括 ledger 形状、JSON 截断、归因 agent ID 与进化证据引用。北京时间约 18:59 停止 v30，另写 `interruption.json`，原 journal/report 保留；没有 TEST 或有效配对差值。
 
 新 v31 冻结于 `.runtime/rr_deepseek_judge_20261002_v31`，使用 `--structured-output json_schema_planning`：规划/归因保持 JSON Schema，执行使用 JSON Object。执行角色可自主进行一次 JSON/checkpoint/ledger 形状纠正；原始错误、模型输出和预算均保留，非法工具、peer 与未观察证据仍立即拒绝。相关回归 `142 passed`。v31 无评分预检通过后从空经验启动原 20 EVO、五次 10 VAL、选版后 33 TEST；输出目录为 `outputs/rr_jit_mas_run0_deepseekjudge_20261002_v31`。终态为 `failed/SystemExit=1`：C0 完成 10/10 且合格，但 EVO 仅处理 5/20（2 完成、3 失败），在 C5 的 Judge 评分阶段连续 5 次 APIConnectionError 触发模型客户端熔断，未完成全部 EVO，因而没有最终 checkpoint，也没有真实 TEST 生成或评分；33 个 TEST 槽位仅登记 `submission_failed`，方法均值和配对差值均为 `null`。该故障是网关连接中断，日志没有 HTTP 状态，不能据此归因于余额或 schema。单代理沿用 v29 完整 DeepSeek 评分，两臂 Judge 身份一致；这属于工程恢复后的闭卷探索，当前无有效两臂比较，不能表述为方法优于基线或一次无故障初始并行运行。
+
+### v32/v33 工程恢复附录（动态状态）
+
+以下状态以 `2026-10-02T14:47:00Z` 的落盘快照为准；运行中状态不作为 TEST 结论，也不产生方法优势声明。
+
+v32 使用冻结代码完成了 C0 的 10 个 VAL 槽位（9/10 完整，`eligible=true`，selection utility `0.448814031420831`），随后处理 5 个 EVO 槽位，其中 1 个完成、4 个失败；C5 第一题失败。实验记录随后写入 `interruption.json`，终止时共 16 个 EVO/VAL 槽位已达到终态、6 个失败；没有选择最终 checkpoint，没有 TEST 答案或 TEST 均值。v32 运行与 v33 轨迹保持独立，不能合并经验或成绩。
+
+v33 于 `2026-10-02T14:32:39Z` 使用新的冻结代码（启动提交 `edba32635e97bafef5e8879288a640167f3a0567`）启动；无评分 preflight 已通过，仍从空经验执行相同的 20 EVO、五个 10 VAL checkpoint 和 33 TEST 协议。当前快照显示 C0 已完成 4 个、失败 1 个、另有 1 个 started；v33 尚未到达最终 checkpoint 或 TEST 阶段，不能计算或报告两臂差值。v33 的恢复策略包括新的 soft policy、精确去重上下文（119836→94476）和 Writer 反枚举修复；这些是工程实现变化，需在最终结果中单独披露。
