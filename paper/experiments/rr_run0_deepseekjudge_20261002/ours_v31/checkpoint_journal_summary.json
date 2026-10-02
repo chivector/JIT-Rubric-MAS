@@ -1,0 +1,386 @@
+{
+  "identity": {
+    "schema_version": "periodic-full-val-v1",
+    "execution": {
+      "arm": "ours_evolve_then_test",
+      "run_id": 0,
+      "manifest": {
+        "schema_version": "1.0",
+        "seed": 20261001,
+        "evolution": [
+          "6847465956a0f6376a6054a7",
+          "6847465956a0f6376a60543e",
+          "6847465956a0f6376a6054a9",
+          "6847465956a0f6376a6053f3",
+          "6847465956a0f6376a6053aa",
+          "6847465956a0f6376a605478",
+          "6847465956a0f6376a60547f",
+          "6847465956a0f6376a6053f5",
+          "6847465956a0f6376a60547e",
+          "684397d188c1deceb49af31b",
+          "6847465956a0f6376a6054ad",
+          "6847465956a0f6376a605371",
+          "6847465956a0f6376a6054c2",
+          "6847465956a0f6376a6053a7",
+          "683a58c9a7e7fe4e76958478",
+          "684397d188c1deceb49af315",
+          "683a58c9a7e7fe4e7695848e",
+          "684397d188c1deceb49af30b",
+          "6847465956a0f6376a605343",
+          "6847465956a0f6376a6054be"
+        ],
+        "validation": [
+          "6847465956a0f6376a605391",
+          "6847465956a0f6376a60535d",
+          "684397d188c1deceb49af31d",
+          "6847465956a0f6376a6053e8",
+          "6847465956a0f6376a6053b5",
+          "684397d188c1deceb49af329",
+          "6847465956a0f6376a605441",
+          "6847465956a0f6376a60542d",
+          "683a58c9a7e7fe4e7695849b",
+          "6847465956a0f6376a6053fb"
+        ],
+        "test": [
+          "6847465956a0f6376a605360",
+          "683a58c9a7e7fe4e76958492",
+          "6847465956a0f6376a605493",
+          "6847465956a0f6376a605476",
+          "683a58c9a7e7fe4e7695848b",
+          "6847465956a0f6376a6053ce",
+          "684397d188c1deceb49af316",
+          "684397d188c1deceb49af321",
+          "6847465956a0f6376a605492",
+          "6847465956a0f6376a605366",
+          "6847465956a0f6376a605424",
+          "683a58c9a7e7fe4e7695846f",
+          "6847465956a0f6376a605348",
+          "6847465956a0f6376a6054d0",
+          "684397d188c1deceb49af31c",
+          "6847465956a0f6376a6053a0",
+          "6847465956a0f6376a6053d0",
+          "6847465956a0f6376a605387",
+          "684397d188c1deceb49af32d",
+          "6847465956a0f6376a605355",
+          "6847465956a0f6376a605407",
+          "683a58c9a7e7fe4e76958488",
+          "6847465956a0f6376a605411",
+          "6847465956a0f6376a605362",
+          "684397d188c1deceb49af334",
+          "6847465956a0f6376a605469",
+          "6847465956a0f6376a6053d8",
+          "683a58c9a7e7fe4e76958498",
+          "6847465956a0f6376a60542a",
+          "6847465956a0f6376a6054cd",
+          "6847465956a0f6376a605443",
+          "6847465956a0f6376a605401",
+          "6847465956a0f6376a6053c9"
+        ],
+        "stream": [],
+        "deduplication": "task_id and normalized public question SHA256"
+      },
+      "config": {
+        "schema_version": "1.0",
+        "backend": "native_jit",
+        "execution_mode": "iterative_shared_ledger",
+        "unsafe_local": true,
+        "models": {
+          "meta": {
+            "schema_version": "1.0",
+            "model": "deepseek-v4-flash-vision",
+            "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+            "key_env": "RR_EXEC_API_KEY",
+            "max_tokens": 16000,
+            "timeout": 180.0,
+            "temperature": 0.0,
+            "thinking": "disabled",
+            "reasoning_effort": "none",
+            "context_window": 131072,
+            "context_margin": 2048,
+            "context_policy": "oldest_turns",
+            "expected_response_model": null
+          },
+          "global": {
+            "schema_version": "1.0",
+            "model": "deepseek-v4-flash-vision",
+            "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+            "key_env": "RR_EXEC_API_KEY",
+            "max_tokens": 16000,
+            "timeout": 180.0,
+            "temperature": 0.0,
+            "thinking": "disabled",
+            "reasoning_effort": "none",
+            "context_window": 131072,
+            "context_margin": 2048,
+            "context_policy": "oldest_turns",
+            "expected_response_model": null
+          },
+          "local": {
+            "schema_version": "1.0",
+            "model": "deepseek-v4-flash-vision",
+            "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+            "key_env": "RR_EXEC_API_KEY",
+            "max_tokens": 16000,
+            "timeout": 180.0,
+            "temperature": 0.0,
+            "thinking": "disabled",
+            "reasoning_effort": "none",
+            "context_window": 131072,
+            "context_margin": 2048,
+            "context_policy": "oldest_turns",
+            "expected_response_model": null
+          },
+          "exec": {
+            "schema_version": "1.0",
+            "model": "deepseek-v4-flash-vision",
+            "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+            "key_env": "RR_EXEC_API_KEY",
+            "max_tokens": 8192,
+            "timeout": 180.0,
+            "temperature": 0.0,
+            "thinking": "disabled",
+            "reasoning_effort": "none",
+            "context_window": 131072,
+            "context_margin": 2048,
+            "context_policy": "oldest_turns",
+            "expected_response_model": null
+          },
+          "judge": {
+            "schema_version": "1.0",
+            "model": "deepseek-v4-flash-vision",
+            "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+            "key_env": "RR_JUDGE_API_KEY",
+            "max_tokens": 4096,
+            "timeout": 180.0,
+            "temperature": 0.0,
+            "thinking": "disabled",
+            "reasoning_effort": "none",
+            "context_window": 131072,
+            "context_margin": 2048,
+            "context_policy": "oldest_turns",
+            "expected_response_model": null
+          }
+        },
+        "max_agents": 3,
+        "max_parallel": 2,
+        "team_max_calls": null,
+        "max_model_calls": null,
+        "max_total_tokens": 2000000,
+        "max_tool_calls": null,
+        "max_repairs": 2,
+        "candidates": 1,
+        "execution_timeout": 900.0,
+        "task_timeout": 900.0,
+        "max_inflight_requests": 1,
+        "local_planning": true,
+        "local_rounds": 1,
+        "local_attribution": true,
+        "persistent_experience": true,
+        "evolving_agent_pool": true,
+        "explicit_rubrics": true,
+        "fixed_team": null,
+        "seed": 0,
+        "available_tools": []
+      },
+      "dataset_sha256": "ea2023d03953b70ba4a2f7f1fe490b434f18cec26c4fdb48acc0e3edf3d8edfb",
+      "frozen_identity": {
+        "code": "a65012c1fb3af388ce5719b12c78bde233647b0fa9d7b0f115a10a914146355f",
+        "runner": "2168d0ed28b3678c1c8945569a9aa2282f142cbdfad467cd471ad457a0d298cc",
+        "config": "5767be37b20b7c731bd8370ab4b4a3d4f64a4e0829d313892e06ca3af09997f3",
+        "judge_parallel": 1,
+        "structured_output": "json_schema_planning",
+        "structured_policy": {
+          "planning_string_max_length": 2048,
+          "planning_communication_max_length": 1024,
+          "planning_array_max_items": 64,
+          "execution_schema_version": "rr-execution-v5",
+          "execution_answer_characters_per_token": 2,
+          "execution_checkpoint_reason_max_length": 512,
+          "execution_ledger_text_max_length": 2048,
+          "reference_schema_version": "rr-reference-v2"
+        },
+        "knowledge_policy": "model_general_knowledge_allowed",
+        "continuation_policy": "explicit-user-no-progress-final-deliverable-v4",
+        "files": {
+          "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\researchrubrics_live_20260930\\processed_data.jsonl": "ea2023d03953b70ba4a2f7f1fe490b434f18cec26c4fdb48acc0e3edf3d8edfb",
+          "C:\\Users\\chizh\\Desktop\\JIT-main\\paper\\experiments\\joint_task_splits_v5.json": "2839518b037e81b7f6f8765bda40ce5f7d42ffa3b4fe2b04d76442efe0f15cce",
+          "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\rr_split.json": "f0ef73ab584f6a81664ea57459fa4adce296418adc9fb51f97ec3a96e8a5ad60"
+        }
+      },
+      "selection": "fixed theoretical RR bounds, 9/10 complete, maximum normalized mean",
+      "validation_upper_bounds": {
+        "6847465956a0f6376a605391": 1.0,
+        "6847465956a0f6376a60535d": 1.0,
+        "684397d188c1deceb49af31d": 1.0,
+        "6847465956a0f6376a6053e8": 1.0,
+        "6847465956a0f6376a6053b5": 1.0,
+        "684397d188c1deceb49af329": 1.0,
+        "6847465956a0f6376a605441": 1.0,
+        "6847465956a0f6376a60542d": 1.0,
+        "683a58c9a7e7fe4e7695849b": 1.0,
+        "6847465956a0f6376a6053fb": 1.0
+      },
+      "normalization": "(score-L_t)/(U_t-L_t); missing=0; zero span=0"
+    },
+    "evolution_ids": [
+      "6847465956a0f6376a6054a7",
+      "6847465956a0f6376a60543e",
+      "6847465956a0f6376a6054a9",
+      "6847465956a0f6376a6053f3",
+      "6847465956a0f6376a6053aa",
+      "6847465956a0f6376a605478",
+      "6847465956a0f6376a60547f",
+      "6847465956a0f6376a6053f5",
+      "6847465956a0f6376a60547e",
+      "684397d188c1deceb49af31b",
+      "6847465956a0f6376a6054ad",
+      "6847465956a0f6376a605371",
+      "6847465956a0f6376a6054c2",
+      "6847465956a0f6376a6053a7",
+      "683a58c9a7e7fe4e76958478",
+      "684397d188c1deceb49af315",
+      "683a58c9a7e7fe4e7695848e",
+      "684397d188c1deceb49af30b",
+      "6847465956a0f6376a605343",
+      "6847465956a0f6376a6054be"
+    ],
+    "validation_ids": [
+      "6847465956a0f6376a605391",
+      "6847465956a0f6376a60535d",
+      "684397d188c1deceb49af31d",
+      "6847465956a0f6376a6053e8",
+      "6847465956a0f6376a6053b5",
+      "684397d188c1deceb49af329",
+      "6847465956a0f6376a605441",
+      "6847465956a0f6376a60542d",
+      "683a58c9a7e7fe4e7695849b",
+      "6847465956a0f6376a6053fb"
+    ],
+    "lower_bounds": {
+      "6847465956a0f6376a605391": -0.16470588235294117,
+      "6847465956a0f6376a60535d": -0.09859154929577464,
+      "684397d188c1deceb49af31d": -0.19736842105263158,
+      "6847465956a0f6376a6053e8": -0.10638297872340426,
+      "6847465956a0f6376a6053b5": -0.1,
+      "684397d188c1deceb49af329": -0.09722222222222222,
+      "6847465956a0f6376a605441": -0.07547169811320754,
+      "6847465956a0f6376a60542d": -0.046875,
+      "683a58c9a7e7fe4e7695849b": -0.09876543209876543,
+      "6847465956a0f6376a6053fb": -0.043859649122807015
+    },
+    "batch_size": 5,
+    "repeats": 1,
+    "minimum_complete": 9,
+    "checkpoint_positions": [
+      0,
+      5,
+      10,
+      15,
+      20
+    ]
+  },
+  "status": "running",
+  "selected_position": null,
+  "provisional_selected_position": null,
+  "checkpoints": [],
+  "sources": [],
+  "validation_cache": {
+    "a36767976c79d3cae28bc703421ea7bc9bf5de1423d16a5ac4ea20326c61d6be": {
+      "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "first_position": 0,
+      "slots": [
+        {
+          "task_id": "6847465956a0f6376a605391",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.16470588235294117,
+            1.0
+          ],
+          "selection_utility": 0.3434343434343434,
+          "official_score": 0.23529411764705882,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C0\\runs\\31542be52f24f64e3431b090402dfda6603b84f3fd1b16aa06f35bf21a2881ec",
+            "answer_hash": "e85dde019ba5997bf8f1dbf130779381f64c1175a6c5914afbdd3a3f6e3a09cf",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 33,
+              "tokens": 207932,
+              "wall_seconds": 154.07800000000861,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a60535d",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.09859154929577464,
+            1.0
+          ],
+          "selection_utility": 0.8205128205128205,
+          "official_score": 0.8028169014084507,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C0\\runs\\e45d772ea1621dc8794e325b5b0a92733ecbe4977c0d66062cab0ff0f59fb3cd",
+            "answer_hash": "7673b3a3dadf812df441d2f39aa47fd40e68da96c94e58a733a983e8aefe5b43",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 33,
+              "tokens": 245906,
+              "wall_seconds": 191.60899999999674,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "684397d188c1deceb49af31d",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.19736842105263158,
+            1.0
+          ],
+          "selection_utility": 0.46153846153846145,
+          "official_score": 0.35526315789473684,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C0\\runs\\a100eafa887f6fa2cbf192ee9d9bd28a2a77a5d7be7202dbd9ac8ecf8875f6ff",
+            "answer_hash": "34d342361cebaed3ea45eb044d869f2453e019791e7d70195268c56a23cc669d",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 38,
+              "tokens": 146682,
+              "wall_seconds": 111.31299999999464,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053e8",
+          "repeat": 0,
+          "status": "started",
+          "theoretical_bounds": [
+            -0.10638297872340426,
+            1.0
+          ],
+          "selection_utility": 0.0
+        }
+      ]
+    }
+  },
+  "raw_journal_sha256": "cca6d4cf0808525ff5b156f879f5b10108e1e346b6b2ee6a10e926cee167307c",
+  "original_output": "outputs/rr_jit_mas_run0_deepseekjudge_20261002_v31",
+  "compact_export": true
+}

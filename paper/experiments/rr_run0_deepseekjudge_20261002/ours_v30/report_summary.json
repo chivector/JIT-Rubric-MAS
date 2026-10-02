@@ -1,0 +1,71 @@
+{
+  "arm": "ours_evolve_then_test",
+  "status": "evolving",
+  "started_at": "2026-10-02T10:14:16.539554+00:00",
+  "test_failures": [],
+  "submitted_answer_hashes": {},
+  "pilot_status": "running",
+  "export_status": "interrupted",
+  "raw_report_status": "evolving",
+  "raw_journal_status": "running",
+  "snapshot_is_partial": false,
+  "interruption": {
+    "original_report_retained": true,
+    "timestamp": "2026-10-02T10:59:02.2458940Z",
+    "terminated_pids": [
+      2708,
+      4856
+    ],
+    "paired_difference": null,
+    "test_mean": null,
+    "reason": "Engineering recovery: first ten EVO slots failed, experience remained v0; replaced by frozen v31, without merging trajectories.",
+    "status": "interrupted"
+  },
+  "original_output": "outputs/rr_jit_mas_run0_deepseekjudge_20261002_v30",
+  "source_status_counts": {
+    "failed": 11,
+    "started": 1
+  },
+  "planned_evolution": 20,
+  "processed_evolution": 12,
+  "checkpoints": [
+    {
+      "position": 0,
+      "state_version": 0,
+      "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "cache_key": "f4fd496717b39073fa05d919e77cbc27004173943b72707c2697882a6318a10b",
+      "total_evaluations": 10,
+      "complete_evaluations": 8,
+      "eligible": false,
+      "selection_utility": 0.36696399311564354,
+      "utility_is_conservative_surrogate": true,
+      "reused_from": null
+    },
+    {
+      "position": 5,
+      "state_version": 0,
+      "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "cache_key": "f4fd496717b39073fa05d919e77cbc27004173943b72707c2697882a6318a10b",
+      "total_evaluations": 10,
+      "complete_evaluations": 8,
+      "eligible": false,
+      "selection_utility": 0.36696399311564354,
+      "utility_is_conservative_surrogate": true,
+      "reused_from": 0
+    },
+    {
+      "position": 10,
+      "state_version": 0,
+      "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "cache_key": "f4fd496717b39073fa05d919e77cbc27004173943b72707c2697882a6318a10b",
+      "total_evaluations": 10,
+      "complete_evaluations": 8,
+      "eligible": false,
+      "selection_utility": 0.36696399311564354,
+      "utility_is_conservative_surrogate": true,
+      "reused_from": 0
+    }
+  ],
+  "selected_checkpoint": null,
+  "raw_report_sha256": "9bc9e22ca725f056e4799fba4e6ddf8e63601e7e67cd588fc83d0cf95755691f"
+}

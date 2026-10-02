@@ -1,0 +1,14 @@
+{
+  "status": "method_running",
+  "preflight_pid": 792,
+  "runtime": "C:\\Users\\chizh\\Desktop\\JIT-main\\.runtime\\rr_deepseek_judge_20261002_v31",
+  "preflight_output": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_closed_book_preflight_deepseekjudge_20261002_v31",
+  "method_output": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31",
+  "judge_model": "deepseek-v4-flash-vision",
+  "judge_parallel": 1,
+  "max_inflight_requests": 1,
+  "structured_output": "json_schema_planning",
+  "model_attempts": 5,
+  "method_pid": 22268,
+  "preflight_exit": 0
+}

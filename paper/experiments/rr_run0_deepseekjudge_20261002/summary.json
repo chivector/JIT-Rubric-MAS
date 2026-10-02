@@ -1,0 +1,227 @@
+{
+  "schema_version": "1.0",
+  "snapshot_at": "2026-10-02T11:01:54.337445+00:00",
+  "protocol": "closed_book_exploratory_deepseek_self_judge",
+  "requested_model": "deepseek-v4-flash-vision",
+  "returned_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+  "baseline_v29": {
+    "export_status": "completed",
+    "completed": 33,
+    "all_task_mean": 0.47553977079687665,
+    "cost": {
+      "model_calls": 860,
+      "tokens": 2694113,
+      "by_stage": {
+        "inference": {
+          "model_calls": 33,
+          "input_tokens": 7864,
+          "output_tokens": 74119,
+          "estimated_calls": 0,
+          "request_seconds": 338.79599999999846
+        },
+        "evaluation": {
+          "model_calls": 827,
+          "input_tokens": 2314876,
+          "output_tokens": 297254,
+          "estimated_calls": 0,
+          "request_seconds": 2065.1630000001023
+        }
+      },
+      "unknown_budgets": 0,
+      "unsettled_calls": 0,
+      "monetary_cost": null
+    },
+    "scoring_seconds": 2095.0149999999994,
+    "finished_at": "2026-10-02T10:38:42.407538+00:00"
+  },
+  "history_v26": {
+    "export_status": "partial_interrupted",
+    "completed": 6,
+    "all_task_mean": null,
+    "complete_only_mean": 0.5303956635583617
+  },
+  "ours_v30": {
+    "status": "evolving",
+    "export_status": "interrupted",
+    "pilot_status": "running",
+    "raw_report_status": "evolving",
+    "raw_journal_status": "running",
+    "snapshot_is_partial": false,
+    "processed_evolution": 12,
+    "source_status_counts": {
+      "failed": 11,
+      "started": 1
+    },
+    "selected_checkpoint": null,
+    "checkpoints": [
+      {
+        "position": 0,
+        "state_version": 0,
+        "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+        "cache_key": "f4fd496717b39073fa05d919e77cbc27004173943b72707c2697882a6318a10b",
+        "total_evaluations": 10,
+        "complete_evaluations": 8,
+        "eligible": false,
+        "selection_utility": 0.36696399311564354,
+        "utility_is_conservative_surrogate": true,
+        "reused_from": null
+      },
+      {
+        "position": 5,
+        "state_version": 0,
+        "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+        "cache_key": "f4fd496717b39073fa05d919e77cbc27004173943b72707c2697882a6318a10b",
+        "total_evaluations": 10,
+        "complete_evaluations": 8,
+        "eligible": false,
+        "selection_utility": 0.36696399311564354,
+        "utility_is_conservative_surrogate": true,
+        "reused_from": 0
+      },
+      {
+        "position": 10,
+        "state_version": 0,
+        "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+        "cache_key": "f4fd496717b39073fa05d919e77cbc27004173943b72707c2697882a6318a10b",
+        "total_evaluations": 10,
+        "complete_evaluations": 8,
+        "eligible": false,
+        "selection_utility": 0.36696399311564354,
+        "utility_is_conservative_surrogate": true,
+        "reused_from": 0
+      }
+    ],
+    "interruption": {
+      "original_report_retained": true,
+      "timestamp": "2026-10-02T10:59:02.2458940Z",
+      "terminated_pids": [
+        2708,
+        4856
+      ],
+      "paired_difference": null,
+      "test_mean": null,
+      "reason": "Engineering recovery: first ten EVO slots failed, experience remained v0; replaced by frozen v31, without merging trajectories.",
+      "status": "interrupted"
+    }
+  },
+  "ours_v31": {
+    "status": "evolving",
+    "export_status": "running",
+    "pilot_status": "running",
+    "snapshot_is_partial": true,
+    "processed_evolution": 0,
+    "source_status_counts": {},
+    "selected_checkpoint": null,
+    "checkpoints": []
+  },
+  "preflights": [
+    {
+      "attempt": "v26",
+      "status": "failed",
+      "error_type": "RuntimeError",
+      "error": "BadRequestError: Error code: 400 - {'error': {'message': 'Grammar error: Unimplemented keys: [\"uniqueItems\"]', 'type': 'BadRequestError', 'param': '', 'code': 400}}",
+      "formal_score": null,
+      "judge_requests": 0,
+      "budget": {
+        "model_calls": 4,
+        "tokens": 86987,
+        "wall_seconds": 19.577999999994063,
+        "tool_calls": 0,
+        "cost": null
+      },
+      "summary_file": "preflight_v26/summary.json"
+    },
+    {
+      "attempt": "v27",
+      "status": "failed",
+      "error_type": "RuntimeError",
+      "error": "APIConnectionError: Connection error.",
+      "formal_score": null,
+      "judge_requests": 0,
+      "budget": {
+        "model_calls": 4,
+        "tokens": 136934,
+        "wall_seconds": 27.75,
+        "tool_calls": 0,
+        "cost": null
+      },
+      "summary_file": "preflight_v27/summary.json"
+    },
+    {
+      "attempt": "v28",
+      "status": "failed",
+      "error_type": "RuntimeError",
+      "error": "APIConnectionError: Connection error.",
+      "formal_score": null,
+      "judge_requests": 0,
+      "budget": {
+        "model_calls": 4,
+        "tokens": 70917,
+        "wall_seconds": 39.29700000000594,
+        "tool_calls": 0,
+        "cost": null
+      },
+      "summary_file": "preflight_v28/summary.json"
+    },
+    {
+      "attempt": "v29",
+      "status": "failed",
+      "error_type": "RuntimeError",
+      "error": "The response is a title or completion/provenance statement rather than the substantive deliverable requested by the public task; The response is a title or completion/provenance statement rather than the substantive deliverable requested by the public task",
+      "formal_score": null,
+      "judge_requests": 0,
+      "budget": {
+        "model_calls": 10,
+        "tokens": 93457,
+        "wall_seconds": 79.09400000001187,
+        "tool_calls": 0,
+        "cost": null
+      },
+      "summary_file": "preflight_v29/summary.json"
+    },
+    {
+      "attempt": "v30",
+      "status": "passed",
+      "error_type": null,
+      "error": null,
+      "formal_score": null,
+      "judge_requests": 0,
+      "budget": {
+        "model_calls": 9,
+        "tokens": 105626,
+        "wall_seconds": 104.98399999999674,
+        "tool_calls": 0,
+        "cost": null
+      },
+      "summary_file": "preflight_v30/summary.json"
+    },
+    {
+      "attempt": "v31",
+      "status": "passed",
+      "error_type": null,
+      "error": null,
+      "formal_score": null,
+      "judge_requests": 0,
+      "budget": {
+        "model_calls": 8,
+        "tokens": 82167,
+        "wall_seconds": 86.89100000000326,
+        "tool_calls": 0,
+        "cost": null
+      },
+      "summary_file": "preflight_v31/summary.json"
+    }
+  ],
+  "comparison": {
+    "valid_two_arm_comparison": false,
+    "paired_difference": null,
+    "reason": "Method is still running or lacks a complete eligible checkpoint/33 TEST scores."
+  },
+  "notes": [
+    "One frozen 33-task baseline answer set is reused and rescored uniformly with DeepSeek; prior GPT judgments are not mixed.",
+    "Each engineering retry is retained separately. v30 used json_object; v31 uses json_schema_planning with execution JSON object after planning failures, and starts from empty experience.",
+    "Runtime changes were frozen before attempts. Full local outputs and SQLite states remain outside this compact export.",
+    "Serving model path is gateway-reported identity, not independent proof of an immutable upstream snapshot.",
+    "Credential scan checks forbidden fields and sk-* literals; it does not classify arbitrary 48-character alphanumeric strings as secrets."
+  ]
+}

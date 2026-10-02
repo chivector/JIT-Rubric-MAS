@@ -1,0 +1,829 @@
+{
+  "identity": {
+    "schema_version": "periodic-full-val-v1",
+    "execution": {
+      "arm": "ours_evolve_then_test",
+      "run_id": 0,
+      "manifest": {
+        "schema_version": "1.0",
+        "seed": 20261001,
+        "evolution": [
+          "6847465956a0f6376a6054a7",
+          "6847465956a0f6376a60543e",
+          "6847465956a0f6376a6054a9",
+          "6847465956a0f6376a6053f3",
+          "6847465956a0f6376a6053aa",
+          "6847465956a0f6376a605478",
+          "6847465956a0f6376a60547f",
+          "6847465956a0f6376a6053f5",
+          "6847465956a0f6376a60547e",
+          "684397d188c1deceb49af31b",
+          "6847465956a0f6376a6054ad",
+          "6847465956a0f6376a605371",
+          "6847465956a0f6376a6054c2",
+          "6847465956a0f6376a6053a7",
+          "683a58c9a7e7fe4e76958478",
+          "684397d188c1deceb49af315",
+          "683a58c9a7e7fe4e7695848e",
+          "684397d188c1deceb49af30b",
+          "6847465956a0f6376a605343",
+          "6847465956a0f6376a6054be"
+        ],
+        "validation": [
+          "6847465956a0f6376a605391",
+          "6847465956a0f6376a60535d",
+          "684397d188c1deceb49af31d",
+          "6847465956a0f6376a6053e8",
+          "6847465956a0f6376a6053b5",
+          "684397d188c1deceb49af329",
+          "6847465956a0f6376a605441",
+          "6847465956a0f6376a60542d",
+          "683a58c9a7e7fe4e7695849b",
+          "6847465956a0f6376a6053fb"
+        ],
+        "test": [
+          "6847465956a0f6376a605360",
+          "683a58c9a7e7fe4e76958492",
+          "6847465956a0f6376a605493",
+          "6847465956a0f6376a605476",
+          "683a58c9a7e7fe4e7695848b",
+          "6847465956a0f6376a6053ce",
+          "684397d188c1deceb49af316",
+          "684397d188c1deceb49af321",
+          "6847465956a0f6376a605492",
+          "6847465956a0f6376a605366",
+          "6847465956a0f6376a605424",
+          "683a58c9a7e7fe4e7695846f",
+          "6847465956a0f6376a605348",
+          "6847465956a0f6376a6054d0",
+          "684397d188c1deceb49af31c",
+          "6847465956a0f6376a6053a0",
+          "6847465956a0f6376a6053d0",
+          "6847465956a0f6376a605387",
+          "684397d188c1deceb49af32d",
+          "6847465956a0f6376a605355",
+          "6847465956a0f6376a605407",
+          "683a58c9a7e7fe4e76958488",
+          "6847465956a0f6376a605411",
+          "6847465956a0f6376a605362",
+          "684397d188c1deceb49af334",
+          "6847465956a0f6376a605469",
+          "6847465956a0f6376a6053d8",
+          "683a58c9a7e7fe4e76958498",
+          "6847465956a0f6376a60542a",
+          "6847465956a0f6376a6054cd",
+          "6847465956a0f6376a605443",
+          "6847465956a0f6376a605401",
+          "6847465956a0f6376a6053c9"
+        ],
+        "stream": [],
+        "deduplication": "task_id and normalized public question SHA256"
+      },
+      "config": {
+        "schema_version": "1.0",
+        "backend": "native_jit",
+        "execution_mode": "iterative_shared_ledger",
+        "unsafe_local": true,
+        "models": {
+          "meta": {
+            "schema_version": "1.0",
+            "model": "deepseek-v4-flash-vision",
+            "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+            "key_env": "RR_EXEC_API_KEY",
+            "max_tokens": 16000,
+            "timeout": 180.0,
+            "temperature": 0.0,
+            "thinking": "disabled",
+            "reasoning_effort": "none",
+            "context_window": 131072,
+            "context_margin": 2048,
+            "context_policy": "oldest_turns",
+            "expected_response_model": null
+          },
+          "global": {
+            "schema_version": "1.0",
+            "model": "deepseek-v4-flash-vision",
+            "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+            "key_env": "RR_EXEC_API_KEY",
+            "max_tokens": 16000,
+            "timeout": 180.0,
+            "temperature": 0.0,
+            "thinking": "disabled",
+            "reasoning_effort": "none",
+            "context_window": 131072,
+            "context_margin": 2048,
+            "context_policy": "oldest_turns",
+            "expected_response_model": null
+          },
+          "local": {
+            "schema_version": "1.0",
+            "model": "deepseek-v4-flash-vision",
+            "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+            "key_env": "RR_EXEC_API_KEY",
+            "max_tokens": 16000,
+            "timeout": 180.0,
+            "temperature": 0.0,
+            "thinking": "disabled",
+            "reasoning_effort": "none",
+            "context_window": 131072,
+            "context_margin": 2048,
+            "context_policy": "oldest_turns",
+            "expected_response_model": null
+          },
+          "exec": {
+            "schema_version": "1.0",
+            "model": "deepseek-v4-flash-vision",
+            "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+            "key_env": "RR_EXEC_API_KEY",
+            "max_tokens": 8192,
+            "timeout": 180.0,
+            "temperature": 0.0,
+            "thinking": "disabled",
+            "reasoning_effort": "none",
+            "context_window": 131072,
+            "context_margin": 2048,
+            "context_policy": "oldest_turns",
+            "expected_response_model": null
+          },
+          "judge": {
+            "schema_version": "1.0",
+            "model": "deepseek-v4-flash-vision",
+            "endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+            "key_env": "RR_JUDGE_API_KEY",
+            "max_tokens": 4096,
+            "timeout": 180.0,
+            "temperature": 0.0,
+            "thinking": "disabled",
+            "reasoning_effort": "none",
+            "context_window": 131072,
+            "context_margin": 2048,
+            "context_policy": "oldest_turns",
+            "expected_response_model": null
+          }
+        },
+        "max_agents": 3,
+        "max_parallel": 2,
+        "team_max_calls": null,
+        "max_model_calls": null,
+        "max_total_tokens": 2000000,
+        "max_tool_calls": null,
+        "max_repairs": 2,
+        "candidates": 1,
+        "execution_timeout": 900.0,
+        "task_timeout": 900.0,
+        "max_inflight_requests": 1,
+        "local_planning": true,
+        "local_rounds": 1,
+        "local_attribution": true,
+        "persistent_experience": true,
+        "evolving_agent_pool": true,
+        "explicit_rubrics": true,
+        "fixed_team": null,
+        "seed": 0,
+        "available_tools": []
+      },
+      "dataset_sha256": "ea2023d03953b70ba4a2f7f1fe490b434f18cec26c4fdb48acc0e3edf3d8edfb",
+      "frozen_identity": {
+        "code": "ec8868aadcc98515b0736d80d6a926ee86a531a09bdb6ccef1c3aff0b7484505",
+        "runner": "b04645f00cec3e03d41b89d736ab3d9d73b8e070734a4004ade8f4788176bf5e",
+        "config": "5767be37b20b7c731bd8370ab4b4a3d4f64a4e0829d313892e06ca3af09997f3",
+        "judge_parallel": 1,
+        "structured_output": "json_object",
+        "structured_policy": {
+          "planning_string_max_length": 2048,
+          "planning_communication_max_length": 1024,
+          "planning_array_max_items": 64,
+          "execution_schema_version": "rr-execution-v5",
+          "execution_answer_characters_per_token": 2,
+          "execution_checkpoint_reason_max_length": 512,
+          "execution_ledger_text_max_length": 2048,
+          "reference_schema_version": "rr-reference-v2"
+        },
+        "knowledge_policy": "model_general_knowledge_allowed",
+        "continuation_policy": "explicit-user-no-progress-final-deliverable-v3",
+        "files": {
+          "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\researchrubrics_live_20260930\\processed_data.jsonl": "ea2023d03953b70ba4a2f7f1fe490b434f18cec26c4fdb48acc0e3edf3d8edfb",
+          "C:\\Users\\chizh\\Desktop\\JIT-main\\paper\\experiments\\joint_task_splits_v5.json": "2839518b037e81b7f6f8765bda40ce5f7d42ffa3b4fe2b04d76442efe0f15cce",
+          "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\rr_split.json": "f0ef73ab584f6a81664ea57459fa4adce296418adc9fb51f97ec3a96e8a5ad60"
+        }
+      },
+      "selection": "fixed theoretical RR bounds, 9/10 complete, maximum normalized mean",
+      "validation_upper_bounds": {
+        "6847465956a0f6376a605391": 1.0,
+        "6847465956a0f6376a60535d": 1.0,
+        "684397d188c1deceb49af31d": 1.0,
+        "6847465956a0f6376a6053e8": 1.0,
+        "6847465956a0f6376a6053b5": 1.0,
+        "684397d188c1deceb49af329": 1.0,
+        "6847465956a0f6376a605441": 1.0,
+        "6847465956a0f6376a60542d": 1.0,
+        "683a58c9a7e7fe4e7695849b": 1.0,
+        "6847465956a0f6376a6053fb": 1.0
+      },
+      "normalization": "(score-L_t)/(U_t-L_t); missing=0; zero span=0"
+    },
+    "evolution_ids": [
+      "6847465956a0f6376a6054a7",
+      "6847465956a0f6376a60543e",
+      "6847465956a0f6376a6054a9",
+      "6847465956a0f6376a6053f3",
+      "6847465956a0f6376a6053aa",
+      "6847465956a0f6376a605478",
+      "6847465956a0f6376a60547f",
+      "6847465956a0f6376a6053f5",
+      "6847465956a0f6376a60547e",
+      "684397d188c1deceb49af31b",
+      "6847465956a0f6376a6054ad",
+      "6847465956a0f6376a605371",
+      "6847465956a0f6376a6054c2",
+      "6847465956a0f6376a6053a7",
+      "683a58c9a7e7fe4e76958478",
+      "684397d188c1deceb49af315",
+      "683a58c9a7e7fe4e7695848e",
+      "684397d188c1deceb49af30b",
+      "6847465956a0f6376a605343",
+      "6847465956a0f6376a6054be"
+    ],
+    "validation_ids": [
+      "6847465956a0f6376a605391",
+      "6847465956a0f6376a60535d",
+      "684397d188c1deceb49af31d",
+      "6847465956a0f6376a6053e8",
+      "6847465956a0f6376a6053b5",
+      "684397d188c1deceb49af329",
+      "6847465956a0f6376a605441",
+      "6847465956a0f6376a60542d",
+      "683a58c9a7e7fe4e7695849b",
+      "6847465956a0f6376a6053fb"
+    ],
+    "lower_bounds": {
+      "6847465956a0f6376a605391": -0.16470588235294117,
+      "6847465956a0f6376a60535d": -0.09859154929577464,
+      "684397d188c1deceb49af31d": -0.19736842105263158,
+      "6847465956a0f6376a6053e8": -0.10638297872340426,
+      "6847465956a0f6376a6053b5": -0.1,
+      "684397d188c1deceb49af329": -0.09722222222222222,
+      "6847465956a0f6376a605441": -0.07547169811320754,
+      "6847465956a0f6376a60542d": -0.046875,
+      "683a58c9a7e7fe4e7695849b": -0.09876543209876543,
+      "6847465956a0f6376a6053fb": -0.043859649122807015
+    },
+    "batch_size": 5,
+    "repeats": 1,
+    "minimum_complete": 9,
+    "checkpoint_positions": [
+      0,
+      5,
+      10,
+      15,
+      20
+    ]
+  },
+  "status": "running",
+  "selected_position": null,
+  "provisional_selected_position": null,
+  "checkpoints": [
+    {
+      "position": 0,
+      "state_version": 0,
+      "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "cache_key": "f4fd496717b39073fa05d919e77cbc27004173943b72707c2697882a6318a10b",
+      "total_evaluations": 10,
+      "complete_evaluations": 8,
+      "eligible": false,
+      "selection_utility": 0.36696399311564354,
+      "utility_is_conservative_surrogate": true,
+      "reused_from": null
+    },
+    {
+      "position": 5,
+      "state_version": 0,
+      "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "cache_key": "f4fd496717b39073fa05d919e77cbc27004173943b72707c2697882a6318a10b",
+      "total_evaluations": 10,
+      "complete_evaluations": 8,
+      "eligible": false,
+      "selection_utility": 0.36696399311564354,
+      "utility_is_conservative_surrogate": true,
+      "reused_from": 0
+    },
+    {
+      "position": 10,
+      "state_version": 0,
+      "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "cache_key": "f4fd496717b39073fa05d919e77cbc27004173943b72707c2697882a6318a10b",
+      "total_evaluations": 10,
+      "complete_evaluations": 8,
+      "eligible": false,
+      "selection_utility": 0.36696399311564354,
+      "utility_is_conservative_surrogate": true,
+      "reused_from": 0
+    }
+  ],
+  "sources": [
+    {
+      "position": 1,
+      "task_id": "6847465956a0f6376a6054a7",
+      "status": "failed",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 0,
+      "after_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "failure": {
+        "task_id": "6847465956a0f6376a6054a7",
+        "error_type": "RuntimeError",
+        "error": "Each source reference needs source_id and locator",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\evolution\\951017e41b19cae7077def84a50a597aca96405983548c0e9408bf4fd2565b4d",
+        "budget": {
+          "model_calls": 6,
+          "tokens": 55468,
+          "wall_seconds": 60.98400000001129,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 2,
+      "task_id": "6847465956a0f6376a60543e",
+      "status": "failed",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 0,
+      "after_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "failure": {
+        "task_id": "6847465956a0f6376a60543e",
+        "error_type": "RuntimeError",
+        "error": "Each source reference needs source_id and locator",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\evolution\\93b91963dc54851e01d1d00b0c74a852d2e209e3c1e8bc3ff64d940238ac9c0d",
+        "budget": {
+          "model_calls": 7,
+          "tokens": 66676,
+          "wall_seconds": 63.671000000002095,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 3,
+      "task_id": "6847465956a0f6376a6054a9",
+      "status": "failed",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 0,
+      "after_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "failure": {
+        "task_id": "6847465956a0f6376a6054a9",
+        "error_type": "JSONDecodeError",
+        "error": "Unterminated string starting at: line 1 column 2144 (char 2143)",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\evolution\\e8774278e802188dcb39d7a77038261bbb30dd56166410578ff4c882705b7e6f",
+        "budget": {
+          "model_calls": 6,
+          "tokens": 91237,
+          "wall_seconds": 110.28099999998813,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 4,
+      "task_id": "6847465956a0f6376a6053f3",
+      "status": "failed",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 0,
+      "after_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "failure": {
+        "task_id": "6847465956a0f6376a6053f3",
+        "error_type": "ValueError",
+        "error": "Global attribution addressed an unknown agent",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\evolution\\0950e69f49c83ba590bc8d15ad90a08ac1eab98c7657e13c5c6c7cc78c262229",
+        "budget": {
+          "model_calls": 46,
+          "tokens": 375560,
+          "wall_seconds": 238.09399999999732,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 5,
+      "task_id": "6847465956a0f6376a6053aa",
+      "status": "failed",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 0,
+      "after_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "failure": {
+        "task_id": "6847465956a0f6376a6053aa",
+        "error_type": "ValueError",
+        "error": "Agent memory lesson writer_cite_remembered_sources cites evidence absent from update.evidence; missing_top_level_evidence_ids=['feedback:6847465956a0f6376a6053aa:r19:67c80c42e9ce']. Include these exact IDs in update.evidence only if they are in valid_evidence_ids, otherwise correct or remove the lesson.",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\evolution\\65712b0df69d43c41e62634036dac2f7974e3b06cd7db498d80b7fe73e52c923",
+        "budget": {
+          "model_calls": 50,
+          "tokens": 652714,
+          "wall_seconds": 228.75,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 6,
+      "task_id": "6847465956a0f6376a605478",
+      "status": "failed",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 0,
+      "after_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "failure": {
+        "task_id": "6847465956a0f6376a605478",
+        "error_type": "ValueError",
+        "error": "Global attribution addressed an unknown agent",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\evolution\\7fa4f1a68ac1ac50980c2eb40e9a299a02ecf86c4e7457bf38c9062b4ec94728",
+        "budget": {
+          "model_calls": 30,
+          "tokens": 207093,
+          "wall_seconds": 124.65600000000268,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 7,
+      "task_id": "6847465956a0f6376a60547f",
+      "status": "failed",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 0,
+      "after_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "failure": {
+        "task_id": "6847465956a0f6376a60547f",
+        "error_type": "ValueError",
+        "error": "Alignment contains empty or unknown rubric references",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\evolution\\ddb1c00d42d35ad4907712f6939f47f6e923b2b097d69d673f4a0be98aebd6c9",
+        "budget": {
+          "model_calls": 31,
+          "tokens": 258919,
+          "wall_seconds": 151.07800000000861,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 8,
+      "task_id": "6847465956a0f6376a6053f5",
+      "status": "failed",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 0,
+      "after_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "failure": {
+        "task_id": "6847465956a0f6376a6053f5",
+        "error_type": "RuntimeError",
+        "error": "ledger.requirements must be a list of nonempty strings",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\evolution\\310464747286e8ff8b8944c8012f2dcdebe6d5fa864ed467e2e40e026f8cb6e4",
+        "budget": {
+          "model_calls": 7,
+          "tokens": 72597,
+          "wall_seconds": 63.203000000008615,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 9,
+      "task_id": "6847465956a0f6376a60547e",
+      "status": "failed",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 0,
+      "after_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "failure": {
+        "task_id": "6847465956a0f6376a60547e",
+        "error_type": "RuntimeError",
+        "error": "ledger.requirements must be a list of nonempty strings",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\evolution\\a96a1b43df7b3549b5d76b3d089fb4fc70ce31efb73b1062757bf97ca431949e",
+        "budget": {
+          "model_calls": 5,
+          "tokens": 46658,
+          "wall_seconds": 50.328000000008615,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 10,
+      "task_id": "684397d188c1deceb49af31b",
+      "status": "failed",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 0,
+      "after_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "failure": {
+        "task_id": "684397d188c1deceb49af31b",
+        "error_type": "RuntimeError",
+        "error": "Expected a complete JSON object; response may be truncated",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\evolution\\6baac71181514f06b1c329883a8977dd2745cdd49efb2449b3d0cfe80f20ced5",
+        "budget": {
+          "model_calls": 7,
+          "tokens": 71420,
+          "wall_seconds": 70.31200000000536,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 11,
+      "task_id": "6847465956a0f6376a6054ad",
+      "status": "failed",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 0,
+      "after_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "failure": {
+        "task_id": "6847465956a0f6376a6054ad",
+        "error_type": "ValueError",
+        "error": "Agent evolution cited unavailable process evidence",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\evolution\\461d1f12f0767110a93bd6332dccb3099da8d3dbe1da13456cd9a2476ffd12f6",
+        "budget": {
+          "model_calls": 45,
+          "tokens": 686229,
+          "wall_seconds": 266.1719999999914,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 12,
+      "task_id": "6847465956a0f6376a605371",
+      "status": "started",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d"
+    }
+  ],
+  "validation_cache": {
+    "f4fd496717b39073fa05d919e77cbc27004173943b72707c2697882a6318a10b": {
+      "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "first_position": 0,
+      "slots": [
+        {
+          "task_id": "6847465956a0f6376a605391",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.16470588235294117,
+            1.0
+          ],
+          "selection_utility": 0.5858585858585859,
+          "official_score": 0.5176470588235295,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\checkpoints\\C0\\runs\\b7a41fc050592d643ba3d7c7ab14d0b3f2f755ffdacbd2b89eda5e86aa4f7642",
+            "answer_hash": "2b9abcb594afbc30c840923df8049af5befb9c772cae9a913d28d368c539e2da",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 32,
+              "tokens": 200208,
+              "wall_seconds": 139.29700000000594,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a60535d",
+          "repeat": 0,
+          "status": "failed",
+          "theoretical_bounds": [
+            -0.09859154929577464,
+            1.0
+          ],
+          "selection_utility": 0.0,
+          "official_score": null,
+          "complete_evaluation": false,
+          "is_imputed_for_selection": true,
+          "failure": {
+            "error_type": "RuntimeError",
+            "error": "Each evidence span needs text and a declared source_ref",
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\checkpoints\\C0\\runs\\ee30cbdb3bc502b5572b70050e718be670f43b7a2430333695bf4c5b25442ed7"
+          }
+        },
+        {
+          "task_id": "684397d188c1deceb49af31d",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.19736842105263158,
+            1.0
+          ],
+          "selection_utility": 0.49450549450549447,
+          "official_score": 0.39473684210526316,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\checkpoints\\C0\\runs\\d4480a70c755edcc962b591cb4a215180500627ff12cf4164f1f65a630a817ce",
+            "answer_hash": "7f7b74e9ca84b1eb0be713a83a368bc244b1da4b1a561def55ca2fd5cd25d3d7",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 41,
+              "tokens": 211825,
+              "wall_seconds": 169.59300000000803,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053e8",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.10638297872340426,
+            1.0
+          ],
+          "selection_utility": 0.34615384615384615,
+          "official_score": 0.2765957446808511,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\checkpoints\\C0\\runs\\1bcaefc58105973826551e05def995acad038210896de921ef4b976e052c1cb1",
+            "answer_hash": "3e952e5d03af29e7d5b9e2331c2351efb54422d359bb13f28f930158100cbfd4",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 30,
+              "tokens": 116217,
+              "wall_seconds": 114.04699999999139,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053b5",
+          "repeat": 0,
+          "status": "failed",
+          "theoretical_bounds": [
+            -0.1,
+            1.0
+          ],
+          "selection_utility": 0.0,
+          "official_score": null,
+          "complete_evaluation": false,
+          "is_imputed_for_selection": true,
+          "failure": {
+            "error_type": "RuntimeError",
+            "error": "ledger.outline must be a list of nonempty strings",
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\checkpoints\\C0\\runs\\6f2e1473f05898c2314c3d83409ee193d5988001edafb01d066bbd3e9c651294"
+          }
+        },
+        {
+          "task_id": "684397d188c1deceb49af329",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.09722222222222222,
+            1.0
+          ],
+          "selection_utility": 0.5316455696202531,
+          "official_score": 0.4861111111111111,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\checkpoints\\C0\\runs\\7288b7c61316be67d372f57bb708f1ce9da2a9653fd3238620217f5c8d7668f4",
+            "answer_hash": "bae6255cbd1f855e7c176a1e7337bd619ebca011c5bc1c37f26489d04b5c0462",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 39,
+              "tokens": 203632,
+              "wall_seconds": 168.7960000000021,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605441",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.07547169811320754,
+            1.0
+          ],
+          "selection_utility": 0.38596491228070173,
+          "official_score": 0.33962264150943394,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\checkpoints\\C0\\runs\\d70976e347530ead44dd313e6a00f6fe351330d61f472b3001b218f0ebea61c5",
+            "answer_hash": "9a2566ef982ce337f6235e9aeba9e7fe43e1a3cda580e43b51f5f43604212724",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 34,
+              "tokens": 102777,
+              "wall_seconds": 107.5,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a60542d",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.046875,
+            1.0
+          ],
+          "selection_utility": 0.29850746268656714,
+          "official_score": 0.265625,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\checkpoints\\C0\\runs\\49c355be0e19beba3efb1a4122b2ec6f0adcbe30183fd9dd280da3fbdc745be1",
+            "answer_hash": "fd2ec00667b7d8d98c7ebdd84929850afbdabc72da8561c2f0e66f483641cf17",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 29,
+              "tokens": 172923,
+              "wall_seconds": 171.20299999999406,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "683a58c9a7e7fe4e7695849b",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.09876543209876543,
+            1.0
+          ],
+          "selection_utility": 0.6404494382022472,
+          "official_score": 0.6049382716049383,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\checkpoints\\C0\\runs\\1808f8f1c9ef5534eca69c32d74bd2c14645f85c8ca3f2ef31e163c86be68ac0",
+            "answer_hash": "e6b1240c0f3d1b975203fc1254609fb997b2def4c479559ddbd6ae9263a3484d",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 29,
+              "tokens": 222438,
+              "wall_seconds": 134.0,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053fb",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.043859649122807015,
+            1.0
+          ],
+          "selection_utility": 0.38655462184873957,
+          "official_score": 0.35964912280701755,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v30\\ours\\checkpoints\\C0\\runs\\e2b8830d5c1f57c7e2b9b8f9cee39b9e871493bc74f004c0b4b3db2addd90af8",
+            "answer_hash": "9fa2a739118d854cb80a4c98def6d88f3730c69a1a42208d4a638ad27cf462b8",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 34,
+              "tokens": 142269,
+              "wall_seconds": 112.04699999999139,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        }
+      ]
+    }
+  },
+  "raw_journal_sha256": "2e89bb07754029386e9e040967f2fba7633c1bc8203772c561fa798d48a2ce11",
+  "original_output": "outputs/rr_jit_mas_run0_deepseekjudge_20261002_v30",
+  "compact_export": true
+}

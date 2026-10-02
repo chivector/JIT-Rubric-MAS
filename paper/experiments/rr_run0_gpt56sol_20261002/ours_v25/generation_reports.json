@@ -1,0 +1,13 @@
+{
+  "ours": {
+    "arm": "ours_evolve_then_test",
+    "status": "failed",
+    "error_type": "SystemExit",
+    "error": "1",
+    "submitted_outcomes": [],
+    "failures": [],
+    "test_failures": [],
+    "finished_at": "2026-10-02T09:01:03.507365+00:00",
+    "started_at": "2026-10-02T08:14:16.680323+00:00"
+  }
+}

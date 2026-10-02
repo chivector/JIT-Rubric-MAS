@@ -1,9 +1,11 @@
 """Joint meta/agent evolution and persistent role planning contracts."""
 
+import copy
 import json
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator, ValidationError as SchemaValidationError
 
 from jit_mas.agent_pool import role_context, seed_pool
 from jit_mas.config import MASConfig
@@ -179,6 +181,147 @@ def test_pool_planning_rejects_identity_substitution():
     with pytest.raises(ValueError, match="cannot invent or replace"):
         analyzer.reconcile(PublicTask(task_id="new", question="Write"),
                            Prediction(graph=RubricGraph(rubrics=[]), candidates=[candidate]), [])
+
+
+def test_pool_reconcile_schema_binds_roster_ids_and_pool_identity():
+    pool = seed_pool()
+    candidates = [
+        AgentSpec(agent_id="analyst_1", role="Analyst", capability="analysis",
+                  pool_agent_id="analyst", pool_agent_version=1),
+        AgentSpec(agent_id="writer_1", role="Writer", capability="writing",
+                  pool_agent_id="writer", pool_agent_version=1),
+    ]
+    prediction = Prediction(graph=RubricGraph(rubrics=[]), candidates=candidates)
+    response = {"graph": {"rubrics": []}, "team": {
+        "agents": [candidates[1].model_dump(mode="json")],
+        "synthesizer_id": "writer_1", "total_max_calls": 1}}
+    schemas = []
+
+    def model(messages):
+        schemas.append(json.loads(messages[0]["content"].split("conforming to this JSON Schema:\n", 1)[1]))
+        return json.dumps(response)
+
+    GlobalAnalyzer(model, agent_pool=pool).reconcile(
+        PublicTask(task_id="new", question="Write a comparison"), prediction, []).team
+    schema = schemas[0]
+    agent_branches = schema["$defs"]["AgentSpec"]["anyOf"]
+    assert {branch["properties"]["agent_id"]["const"] for branch in agent_branches} == {
+        "analyst_1", "writer_1"}
+    writer = next(branch for branch in agent_branches
+                  if branch["properties"]["agent_id"]["const"] == "writer_1")
+    assert writer["properties"]["pool_agent_id"]["const"] == "writer"
+    assert writer["properties"]["pool_agent_version"]["const"] == 1
+    assert schema["$defs"]["TeamSpec"]["properties"]["synthesizer_id"]["enum"] == [
+        "analyst_1", "writer_1"]
+    assert writer["properties"]["depends_on"]["items"]["enum"] == ["analyst_1"]
+    assert writer["additionalProperties"] is False
+    assert {"agent_id", "pool_agent_id", "pool_agent_version"} <= set(writer["required"])
+    assert "if" not in schema["$defs"]["AgentSpec"]
+    validator = Draft202012Validator(schema)
+    validator.check_schema(schema)
+    validator.validate(response)
+    for field, value in (("agent_id", "new_writer"), ("pool_agent_id", "critic"),
+                         ("pool_agent_version", 2), ("depends_on", ["writer_1"]),
+                         ("depends_on", ["invented_agent"])):
+        invalid = copy.deepcopy(response)
+        invalid["team"]["agents"][0][field] = value
+        with pytest.raises(SchemaValidationError):
+            validator.validate(invalid)
+    for field, value in (("synthesizer_id", "new_writer"), ("primary", {"r": "new_writer"}),
+                         ("coverage", {"r": ["new_writer"]}), ("reviewers", {"r": ["new_writer"]})):
+        invalid = copy.deepcopy(response)
+        invalid["team"][field] = value
+        with pytest.raises(SchemaValidationError):
+            validator.validate(invalid)
+    assert [(candidate.agent_id, candidate.pool_agent_id, candidate.pool_agent_version)
+            for candidate in prediction.candidates] == [
+                ("analyst_1", "analyst", 1), ("writer_1", "writer", 1)]
+
+
+@pytest.mark.parametrize("change", ["rename", "pool", "version"])
+@pytest.mark.parametrize("corrected", [True, False])
+def test_pool_reconcile_correction_names_original_binding_and_preserves_schema(change, corrected):
+    candidate = AgentSpec(agent_id="a", role="Writer", capability="writing",
+                          pool_agent_id="writer", pool_agent_version=1)
+    prediction = Prediction(graph=RubricGraph(rubrics=[]), candidates=[candidate])
+    valid = {"graph": {"rubrics": []}, "team": {
+        "agents": [candidate.model_dump(mode="json")], "synthesizer_id": "a", "total_max_calls": 1}}
+    invalid = copy.deepcopy(valid)
+    if change == "rename":
+        invalid["team"]["agents"][0]["agent_id"] = "writer_1"
+        invalid["team"]["synthesizer_id"] = "writer_1"
+    elif change == "pool":
+        invalid["team"]["agents"][0]["pool_agent_id"] = "critic"
+    else:
+        invalid["team"]["agents"][0]["pool_agent_version"] = 2
+    original = copy.deepcopy(invalid)
+    requests = []
+    schemas = []
+
+    def model(messages):
+        payload = json.loads(messages[1]["content"])
+        requests.append(payload)
+        schemas.append(json.loads(messages[0]["content"].split("conforming to this JSON Schema:\n", 1)[1]))
+        if "response_correction" in payload:
+            correction = payload["response_correction"]
+            assert json.loads(correction["previous_response"]) == original
+            message = correction["validation_errors"][0]["message"]
+            for detail in ("cannot invent or replace", "invalid_bindings=", "allowed_candidate_bindings=",
+                           '"agent_id": "a"', '"pool_agent_id": "writer"', '"pool_agent_version": 1',
+                           "do not add, rename or rebind"):
+                assert detail in message
+            if corrected:
+                return json.dumps(valid)
+        return json.dumps(invalid)
+
+    analyzer = GlobalAnalyzer(model, agent_pool=seed_pool())
+    task = PublicTask(task_id="new", question="Write an explanation")
+    if corrected:
+        result = analyzer.reconcile(task, prediction, [])
+        assert result.team.agents[0].agent_id == "a"
+        assert result.team.agents[0].pool_agent_id == "writer"
+        assert result.team.agents[0].pool_agent_version == 1
+    else:
+        with pytest.raises(ValueError, match="cannot invent or replace"):
+            analyzer.reconcile(task, prediction, [])
+    assert len(requests) == len(analyzer.call_records) == 2
+    assert schemas[0] == schemas[1]
+    assert invalid == original
+
+
+def test_pool_reconcile_self_review_correction_names_ids_without_rebinding_primary():
+    candidates = [
+        AgentSpec(agent_id="a", role="Analyst", capability="analysis", rubric_ids=["r"],
+                  pool_agent_id="analyst", pool_agent_version=1),
+        AgentSpec(agent_id="w", role="Writer", capability="writing", rubric_ids=["r"],
+                  pool_agent_id="writer", pool_agent_version=1, depends_on=["a"]),
+    ]
+    prediction = Prediction.model_validate({"graph": {"rubrics": [{"rubric_id": "r",
+        "requirement": "Check claims", "source": "inferred"}]},
+        "candidates": [candidate.model_dump(mode="json") for candidate in candidates]})
+    invalid = {"graph": prediction.graph.model_dump(mode="json"), "team": {
+        "agents": [candidate.model_dump(mode="json") for candidate in candidates],
+        "synthesizer_id": "w", "coverage": {"r": ["a", "w"]}, "primary": {"r": "a"},
+        "reviewers": {"r": ["a"]}, "total_max_calls": 2}}
+
+    def model(messages):
+        assert "SELF-REVIEW IS FORBIDDEN" in messages[0]["content"]
+        payload = json.loads(messages[1]["content"])
+        if "response_correction" not in payload:
+            return json.dumps(invalid)
+        assert "Do not change the primary owner" in messages[0]["content"]
+        error = payload["response_correction"]["validation_errors"][0]["message"]
+        for detail in ("rubric_id='r'", "reviewer_id='a'", "primary_owner_id='a'", "self-checks"):
+            assert detail in error
+        valid = copy.deepcopy(invalid)
+        valid["team"]["reviewers"] = {"r": ["w"]}
+        return json.dumps(valid)
+
+    analyzer = GlobalAnalyzer(model, agent_pool=seed_pool())
+    result = analyzer.reconcile(PublicTask(task_id="new", question="Explain accurately"), prediction, [])
+    assert result.team.primary == {"r": "a"}
+    assert result.team.reviewers == {"r": ["w"]}
+    assert len(analyzer.call_records) == 2
 
 
 @pytest.mark.parametrize("corrected", [True, False])

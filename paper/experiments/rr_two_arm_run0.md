@@ -62,3 +62,11 @@ v23 不评分预检在执行阶段拒绝了 checkpoint 说明字符串（原契�
 当前导出交接包为 `paper/experiments/rr_run0_gpt56sol_20261002`，包含 v15 完整评分、v16 终态失败记录及工程预检/中断摘要；v21 按 interruption.json 标为中断。所有旧轨迹独立保留，不合并为一次成功实验。
 
 v25 于北京时间 16:40 封存 C0：9/10 完整、eligible=true，normalized selection utility=0.14616904918346751。该值有理论范围归一化偏移，不能与 Single-Agent TEST 官方均值比较。EVO1 已开始。C0 有多份 title-only 原始 model_output，被原样封存并评为低分；有一题由 no-progress guard 阻断。没有修改已封存答案、重采样该 VAL 或注入工作区改动。
+
+v25 已于北京时间 2026-10-02 17:01 退出（原报告 `failed/SystemExit=1`，pilot `incomplete`）。终端日志报告 Judge HTTP 401/额度耗尽；持久文件仅确认 C5 最后一题的 16 条 `AuthenticationError` 和 12 条 `SystemExit`，未保存 HTTP 状态或余额正文。`ours_v25/interruption.json` 记录此证据边界，原 journal/report 不改写。EVO 实际处理 5/20（2 完成、3 失败），经验 v2；C5 2 完整、2 失败、1 个 started 后评分中断，余下 5 VAL 及 C10/C15/C20 未执行。C0 虽合格但仅 provisional position=0，未最终选版。TEST 33 个 `NoSelectedCheckpoint` 占位项没有真实生成尝试或答案，均值/配对差值仍为 null。525 次记录调用、3,411,927 tokens 中 28 次失败调用用量为估计，费用未知。交接包已刷新最终输出、提交答案/预算/失败证据及 SHA256。后续修复和新实验必须使用新冻结代码与新目录；不能合并旧失败作为成功运行。
+
+用户暂时授权 DeepSeek V4 Flash 作 Judge 后，Single-Agent v29 于北京时间 2026-10-02 18:38:42 完成：33/33 TEST 完整评分，全量均值 `0.47553977079687665`，评分耗时 `2095.015` 秒。33 份封存答案均复用，GPT Judge 分数未混用；新 DeepSeek 评分为 827 次记录调用。执行与 Judge 请求模型均为 `deepseek-v4-flash-vision`，返回 `/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp`。这是闭卷探索、自评条件，不能替代原共享证据、独立 GPT Judge 条件。完整逐题评分及答案哈希引用见 `rr_run0_deepseekjudge_20261002`。
+
+DeepSeek v26/v27/v28/v29 工程预检分别遇到 unsupported `uniqueItems`、连接错误、连接错误和标题终稿拒绝；所有历史独立保存。v30 改用 `json_object` 后无评分预检通过，从空经验正式启动。C0/C5 均为 8/10，不满足 9/10；前 11 EVO 全部失败，经验仍 v0，错误包括 ledger 形状、JSON 截断、归因 agent ID 与进化证据引用。北京时间约 18:59 停止 v30，另写 `interruption.json`，原 journal/report 保留；没有 TEST 或有效配对差值。
+
+新 v31 冻结于 `.runtime/rr_deepseek_judge_20261002_v31`，使用 `--structured-output json_schema_planning`：规划/归因保持 JSON Schema，执行使用 JSON Object。执行角色可自主进行一次 JSON/checkpoint/ledger 形状纠正；原始错误、模型输出和预算均保留，非法工具、peer 与未观察证据仍立即拒绝。相关回归 `142 passed`。v31 无评分预检通过后从空经验运行原 20 EVO、五次 10 VAL、选版后 33 TEST，输出 `outputs/rr_jit_mas_run0_deepseekjudge_20261002_v31`；当前运行中，方法均值与配对差值仍为 null。单代理沿用 v29 完整 DeepSeek 评分，两臂 Judge 身份一致；这属于工程恢复后的比较，不能表述为无故障初始并行运行。

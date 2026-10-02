@@ -1,0 +1,12 @@
+{
+  "protocol": "closed_book_exploratory",
+  "judge_model": "deepseek-v4-flash-vision",
+  "baseline_pid": 23072,
+  "baseline_output": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_deepseekjudge_20261002_v26",
+  "baseline_generation_reused": 33,
+  "baseline_old_judgments_reused": 0,
+  "status": "method_preflight_failed",
+  "runtime": "C:\\Users\\chizh\\Desktop\\JIT-main\\.runtime\\rr_deepseek_judge_20261002_v27",
+  "method_output": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v27",
+  "preflight_exit": 1
+}

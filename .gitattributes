@@ -1,6 +1,7 @@
 # Preserve exact bytes for the checksummed paper releases on every platform.
 paper/** -text
 paper/experiments/rr_run0_gpt56sol_20261002/** whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+paper/experiments/rr_run0_deepseekjudge_20261002/** whitespace=blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
 MANIFEST_SHA256.json -text
 README_Overleaf_ZH.md -text
 acl.sty -text

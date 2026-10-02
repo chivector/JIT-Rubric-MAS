@@ -13,112 +13,260 @@
   "baseline_evaluation_reused": 27,
   "baseline_new_evaluations": 6,
   "ours_evolution_run_complete": 2,
-  "ours_evolution_failures": 18,
+  "ours_evolution_failures": 3,
   "checkpoints": [
     {
       "position": 0,
       "state_version": 0,
-      "complete_evaluations": 4,
+      "complete_evaluations": 9,
       "total_evaluations": 10,
-      "eligible": false,
+      "eligible": true,
+      "selection_utility": 0.14616904918346751,
       "reused_from": null
-    },
-    {
-      "position": 5,
-      "state_version": 0,
-      "complete_evaluations": 4,
-      "total_evaluations": 10,
-      "eligible": false,
-      "reused_from": 0
-    },
-    {
-      "position": 10,
-      "state_version": 1,
-      "complete_evaluations": 0,
-      "total_evaluations": 10,
-      "eligible": false,
-      "reused_from": null
-    },
-    {
-      "position": 15,
-      "state_version": 1,
-      "complete_evaluations": 0,
-      "total_evaluations": 10,
-      "eligible": false,
-      "reused_from": 10
-    },
-    {
-      "position": 20,
-      "state_version": 1,
-      "complete_evaluations": 0,
-      "total_evaluations": 10,
-      "eligible": false,
-      "reused_from": 10
     }
   ],
   "cost": {
-    "model_calls": 594,
-    "tokens": 6192041,
+    "model_calls": 525,
+    "tokens": 3411927,
     "by_stage": {
       "inference": {
-        "model_calls": 279,
-        "input_tokens": 2140972,
-        "output_tokens": 768071,
-        "estimated_calls": 9,
-        "request_seconds": 2632.3450000000157
+        "model_calls": 135,
+        "input_tokens": 979272,
+        "output_tokens": 273588,
+        "estimated_calls": 0,
+        "request_seconds": 1330.3269999999611
       },
       "evaluation": {
-        "model_calls": 273,
-        "input_tokens": 1276467,
-        "output_tokens": 107075,
-        "estimated_calls": 0,
-        "request_seconds": 5909.77499999998
+        "model_calls": 370,
+        "input_tokens": 1178926,
+        "output_tokens": 209172,
+        "estimated_calls": 28,
+        "request_seconds": 7961.691000000021
       },
       "update": {
-        "model_calls": 42,
-        "input_tokens": 1796682,
-        "output_tokens": 102774,
+        "model_calls": 20,
+        "input_tokens": 714036,
+        "output_tokens": 56933,
         "estimated_calls": 0,
-        "request_seconds": 454.5800000000236
+        "request_seconds": 270.9519999999902
       }
     },
     "unknown_budgets": 0,
     "unsettled_calls": 0,
     "monetary_cost": null
   },
-  "elapsed_seconds": 3922.75,
+  "elapsed_seconds": 2815.318173,
   "serving_identity_limit": "The gateway returns the gpt-5.6-sol alias; no independently verified, immutable model snapshot is available. Failed HTTP attempts have no response_model.",
   "latest_attempt": {
-    "version": "v21",
+    "schema_version": "1.0",
+    "attempt": "v25",
     "status": "interrupted",
-    "evo_failed": 7,
-    "evo_interrupted": 1,
-    "evo_completed": 0,
-    "evo_not_started": 12,
-    "experience_version": 0,
-    "val_complete": 7,
-    "val_total": 10,
-    "test_completed": 0,
-    "test_mean": null,
+    "reason": "quota_exhausted",
+    "reported_reason_source": "prior_run_terminal_observation",
+    "terminal_observation": {
+      "endpoint_role": "judge",
+      "reported_http_status": 401,
+      "reported_message": "The prior terminal output reported insufficient quota / negative remaining balance.",
+      "limitation": "The HTTP response body was not persisted. Raw artifacts verify AuthenticationError and SystemExit only."
+    },
+    "raw_report_status": "failed",
+    "raw_pilot_status": "incomplete",
+    "raw_journal_status": "running",
+    "original_records_preserved": true,
+    "started_at": "2026-10-02T08:14:16.680323+00:00",
+    "generation_failed_at": "2026-10-02T09:01:03.476875+00:00",
+    "finished_at": "2026-10-02T09:01:11.997497+00:00",
+    "last_stage": "C5_validation_scoring",
+    "last_task_id": "6847465956a0f6376a6053b5",
+    "persistent_evidence": {
+      "failure": "ours/checkpoints/C5/runs/4ba9fcc3d8d94d4cc6370fbf369b65761872698780312a3db159695f8fcac6d9/failure.json",
+      "budget": "ours/checkpoints/C5/runs/4ba9fcc3d8d94d4cc6370fbf369b65761872698780312a3db159695f8fcac6d9/budget.json",
+      "call_trace": "ours/checkpoints/C5/runs/4ba9fcc3d8d94d4cc6370fbf369b65761872698780312a3db159695f8fcac6d9/call_trace.json",
+      "evaluation_error_counts": {
+        "AuthenticationError": 16,
+        "SystemExit": 12
+      }
+    },
+    "evolution": {
+      "planned": 20,
+      "processed": 5,
+      "completed": 2,
+      "failed": 3,
+      "not_started": 15
+    },
+    "experience_version": 2,
+    "experience_hash": "601333771719d6dbd2e392bdd0d78bbcb12581512839f13777b11d090e502c49",
+    "c0": {
+      "complete_evaluations": 9,
+      "total_evaluations": 10,
+      "eligible": true,
+      "selection_utility": 0.14616904918346751
+    },
+    "c5": {
+      "complete_evaluations": 2,
+      "total_evaluations": 10,
+      "slots_present": 5,
+      "slot_status_counts": {
+        "failed": 2,
+        "complete": 2,
+        "started": 1
+      },
+      "checkpoint_finalized": false,
+      "last_started_slot_interrupted": true
+    },
+    "checkpoints_not_reached": [
+      10,
+      15,
+      20
+    ],
+    "selected_checkpoint": null,
+    "provisional_selected_position": 0,
+    "test": {
+      "planned": 33,
+      "bookkeeping_submission_failed": 33,
+      "generation_attempts": 0,
+      "answers_generated": 0,
+      "completed": 0,
+      "mean_score": null,
+      "note": "NoSelectedCheckpoint placeholders were sealed after the method arm failed; no TEST answer was generated."
+    },
+    "comparison_status": "inconclusive",
+    "valid_two_arm_comparison": false,
     "paired_difference": null,
-    "recorded_call_lower_bound": 511,
-    "recorded_token_lower_bound": 5102238,
-    "active_call_usage_unknown": true
+    "cost": {
+      "model_calls": 525,
+      "tokens": 3411927,
+      "by_stage": {
+        "inference": {
+          "model_calls": 135,
+          "input_tokens": 979272,
+          "output_tokens": 273588,
+          "estimated_calls": 0,
+          "request_seconds": 1330.3269999999611
+        },
+        "evaluation": {
+          "model_calls": 370,
+          "input_tokens": 1178926,
+          "output_tokens": 209172,
+          "estimated_calls": 28,
+          "request_seconds": 7961.691000000021
+        },
+        "update": {
+          "model_calls": 20,
+          "input_tokens": 714036,
+          "output_tokens": 56933,
+          "estimated_calls": 0,
+          "request_seconds": 270.9519999999902
+        }
+      },
+      "unknown_budgets": 0,
+      "unsettled_calls": 0,
+      "monetary_cost": null
+    },
+    "cost_limit": "28 failed model calls use estimated token usage; monetary cost is unknown.",
+    "restart_policy": "Use a fresh frozen code snapshot and output directory; do not merge v25 into a successful run."
   },
-  "running_attempt": {
-    "version": "v25",
-    "status": "running",
-    "preflight_status": "passed",
-    "preflight_judge_requests": 0,
-    "formal_test_completed": 0,
-    "formal_test_mean": null,
-    "first_c0_submission_answer_chars": 102,
-    "first_c0_submission_limit": "Only a title was submitted; score will be retained under the frozen protocol.",
-    "c0_complete": 9,
-    "c0_total": 10,
-    "c0_eligible": true,
-    "c0_selection_utility": 0.14616904918346751,
-    "evo_status": "running",
-    "snapshot_not_terminal": true
-  }
+  "previous_attempts": {
+    "v16": {
+      "ours_status": "inconclusive",
+      "ours_evolution_run_complete": 2,
+      "ours_evolution_failures": 18,
+      "checkpoints": [
+        {
+          "position": 0,
+          "state_version": 0,
+          "complete_evaluations": 4,
+          "total_evaluations": 10,
+          "eligible": false,
+          "reused_from": null
+        },
+        {
+          "position": 5,
+          "state_version": 0,
+          "complete_evaluations": 4,
+          "total_evaluations": 10,
+          "eligible": false,
+          "reused_from": 0
+        },
+        {
+          "position": 10,
+          "state_version": 1,
+          "complete_evaluations": 0,
+          "total_evaluations": 10,
+          "eligible": false,
+          "reused_from": null
+        },
+        {
+          "position": 15,
+          "state_version": 1,
+          "complete_evaluations": 0,
+          "total_evaluations": 10,
+          "eligible": false,
+          "reused_from": 10
+        },
+        {
+          "position": 20,
+          "state_version": 1,
+          "complete_evaluations": 0,
+          "total_evaluations": 10,
+          "eligible": false,
+          "reused_from": 10
+        }
+      ],
+      "cost": {
+        "model_calls": 594,
+        "tokens": 6192041,
+        "by_stage": {
+          "inference": {
+            "model_calls": 279,
+            "input_tokens": 2140972,
+            "output_tokens": 768071,
+            "estimated_calls": 9,
+            "request_seconds": 2632.3450000000157
+          },
+          "evaluation": {
+            "model_calls": 273,
+            "input_tokens": 1276467,
+            "output_tokens": 107075,
+            "estimated_calls": 0,
+            "request_seconds": 5909.77499999998
+          },
+          "update": {
+            "model_calls": 42,
+            "input_tokens": 1796682,
+            "output_tokens": 102774,
+            "estimated_calls": 0,
+            "request_seconds": 454.5800000000236
+          }
+        },
+        "unknown_budgets": 0,
+        "unsettled_calls": 0,
+        "monetary_cost": null
+      },
+      "elapsed_seconds": 3922.75
+    },
+    "v21": {
+      "version": "v21",
+      "status": "interrupted",
+      "evo_failed": 7,
+      "evo_interrupted": 1,
+      "evo_completed": 0,
+      "evo_not_started": 12,
+      "experience_version": 0,
+      "val_complete": 7,
+      "val_total": 10,
+      "test_completed": 0,
+      "test_mean": null,
+      "paired_difference": null,
+      "recorded_call_lower_bound": 511,
+      "recorded_token_lower_bound": 5102238,
+      "active_call_usage_unknown": true
+    }
+  },
+  "ours_run_status": "failed",
+  "ours_attempt": "v25",
+  "ours_failure_reason": "quota_exhausted",
+  "ours_test_generation_attempts": 0,
+  "ours_evolution_not_started": 15,
+  "cost_limit": "28 failed model calls use estimated token usage; monetary cost is unknown."
 }

@@ -22,7 +22,7 @@ from scripts.models.base import ChatMessage
 JOINT_MANIFEST = Path(__file__).resolve().parents[2] / "paper" / "experiments" / "joint_task_splits_v5.json"
 
 
-@pytest.mark.parametrize("mode", ["json_schema", "json_object", "none"])
+@pytest.mark.parametrize("mode", ["json_schema", "json_object", "json_schema_planning", "none"])
 def test_structured_planning_sends_the_authoritative_schema_without_changing_payload(mode):
     requests = []
 
@@ -67,6 +67,20 @@ def test_structured_output_preserves_direct_answers_and_non_json_protocols(role,
     expected = {"type": "json_schema", "json_schema": {
         "name": "ExecutionResponse", "strict": True, "schema": pilot._execution_response_schema(messages, max_tokens=123)}}
     assert requests == [{"max_tokens": 123, **({"response_format": expected} if expects_json else {})}]
+
+
+def test_json_schema_planning_uses_schema_for_plans_and_json_object_for_execution():
+    requests = []
+    def transport(messages, **kwargs):
+        requests.append(kwargs)
+        return "{}"
+    planning = pilot.StructuredOutputModel(transport, "local", "writer", "json_schema_planning")
+    planning([{"role": "system", "content": "Return only one JSON object conforming to this JSON Schema:\n{}"},
+              {"role": "user", "content": "{}"}])
+    execution = pilot.StructuredOutputModel(transport, "exec", "writer", "json_schema_planning")
+    execution([{"role": "user", "content": '{"agent": {"checkpoints": []}}'}])
+    assert requests[0]["response_format"]["type"] == "json_schema"
+    assert requests[1]["response_format"] == {"type": "json_object"}
 
 
 def test_bounded_planning_schema_rejects_repeating_communication_and_preserves_original_schema():
@@ -367,6 +381,50 @@ def test_iterative_schema_keeps_unconfigured_call_ceilings_null():
         validator.validate({"agent_id": "analyst", "capability": "analysis", "max_calls": 3})
 
 
+def test_iterative_pooled_schema_nulls_anyof_call_ceilings_and_preserves_identity_bindings():
+    from jit_mas.planning import _pooled_reconciliation_schema
+    from jit_mas.schemas import AgentSpec, Prediction, RubricGraph
+
+    candidates = [
+        AgentSpec(agent_id="analyst_1", role="Analyst", capability="analysis",
+                  pool_agent_id="analyst", pool_agent_version=1),
+        AgentSpec(agent_id="writer_1", role="Writer", capability="writing",
+                  pool_agent_id="writer", pool_agent_version=2, depends_on=["analyst_1"]),
+    ]
+    original = _pooled_reconciliation_schema(
+        Prediction(graph=RubricGraph(rubrics=[]), candidates=candidates), max_agents=4)
+    untouched = json.dumps(original, sort_keys=True)
+    schema = pilot._reference_schema(original, {"phase": "reconcile", "limits": {
+        "execution_mode": "iterative_shared_ledger", "total_max_calls": None}})
+    branches = schema["$defs"]["AgentSpec"]["anyOf"]
+    assert [branch["properties"]["max_calls"] for branch in branches] == [
+        {"type": "null"}, {"type": "null"}]
+    assert schema["$defs"]["TeamSpec"]["properties"]["total_max_calls"] == {"type": "null"}
+    assert json.dumps(original, sort_keys=True) == untouched
+    for branch, candidate in zip(branches, candidates):
+        for field in ("agent_id", "pool_agent_id", "pool_agent_version"):
+            assert branch["properties"][field]["const"] == getattr(candidate, field)
+    validator = Draft202012Validator(schema)
+    validator.check_schema(schema)
+    response = {"graph": {"rubrics": []}, "team": {
+        "execution_mode": "iterative_shared_ledger",
+        "agents": [{**candidate.model_dump(mode="json"), "max_calls": None} for candidate in candidates],
+        "synthesizer_id": "writer_1", "total_max_calls": None}}
+    validator.validate(response)
+    finite_role = json.loads(json.dumps(response))
+    finite_role["team"]["agents"][1]["max_calls"] = 3
+    with pytest.raises(SchemaValidationError):
+        validator.validate(finite_role)
+    with pytest.raises(SchemaValidationError):
+        validator.validate({**response, "team": {**response["team"], "total_max_calls": 6}})
+    for field, invalid in (("agent_id", "writer_new"), ("pool_agent_id", "critic"),
+                           ("pool_agent_version", 1)):
+        changed_identity = json.loads(json.dumps(response))
+        changed_identity["team"]["agents"][1][field] = invalid
+        with pytest.raises(SchemaValidationError):
+            validator.validate(changed_identity)
+
+
 def test_general_knowledge_contribution_cannot_invent_source_records():
     messages = [{"role": "user", "content": json.dumps({
         "agent": {"tools": [], "checkpoints": []},
@@ -495,8 +553,14 @@ def test_pipeline_binds_parallel_judges_to_one_metered_credential_safe_task_ledg
     assert judge_secret not in artifacts
 
     args.judge_parallel = 1
+    args.judge_attempts = 2
     sequential = pilot._pipeline(config, object(), tmp_path / "sequential", args, manifest, None)
-    assert sequential.evaluator_factory is original_evaluator_factory
+    sequential_evaluator = sequential.evaluator_factory(judge)
+    assert sequential_evaluator._max_parallel_judgments == 1
+    assert sequential_evaluator._judge_factory is None
+    assert sequential_evaluator._max_attempts == 2
+    assert sequential_evaluator._judge_id == args.judge_model
+    assert sequential_evaluator._judge_api_base == args.judge_endpoint
 
 
 def test_closed_book_policy_reaches_pipeline_and_cannot_change_after_freeze(monkeypatch, tmp_path):

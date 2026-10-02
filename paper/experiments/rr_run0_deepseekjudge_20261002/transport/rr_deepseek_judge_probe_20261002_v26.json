@@ -1,0 +1,7 @@
+{
+  "http_status": 200,
+  "requested_model": "deepseek-v4-flash-vision",
+  "formal_score": null,
+  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+  "finish_reason": "stop"
+}

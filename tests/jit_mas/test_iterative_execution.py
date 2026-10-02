@@ -15,6 +15,7 @@ from jit_mas.execution import (
     TeamServices,
     _SinglePassModel,
     _run_agent_iterative,
+    _completion_quality_error,
     run_team,
 )
 from jit_mas.schemas import AgentHarnessPolicy, AgentSpec, PublicTask, RubricGraph, TeamSpec
@@ -75,6 +76,262 @@ def make_services(team, models, *, tools=None, pool=None, knowledge_policy=None)
 def run_writer(team, services, context):
     return _run_agent_iterative(team.agents[-1].model_dump(mode="json"),
                                 team.model_dump(mode="json"), context, services)
+
+
+def test_title_only_public_deliverable_gets_one_quality_correction():
+    team = make_team()
+    title = {"answer": "# A researched guide", "continue": False}
+    model = ScriptedModel([title, {"answer": "A substantive guide with the requested explanation.",
+                                   "continue": False}])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer == "A substantive guide with the requested explanation."
+    assert len(model.calls) == 2
+    assert any(event["kind"] == "quality_warning" for event in services.events)
+    assert result.trajectory[0].error is not None
+
+
+def test_short_format_public_task_is_not_forced_to_have_a_long_answer():
+    task = PublicTask(task_id="short", question="Return only the name of the capital city.")
+    assert _completion_quality_error("Paris", task) is None
+
+
+def test_completion_quality_rejects_status_disclaimer_without_report_body():
+    task = PublicTask(task_id="report", question="Write a comprehensive report on the policy.")
+    assert _completion_quality_error("No external sources were observed in this run.", task)
+
+
+@pytest.mark.parametrize("answer", [
+    "# Uranium market report [Remembered and unverified citations; no external sources observed.]",
+    "# Market report\nNo external sources were observed in this run.",
+    "The essay is the primary deliverable.",
+])
+def test_title_with_source_status_and_pure_meta_completion_is_rejected(answer):
+    task = PublicTask(task_id="report", question="Write a comprehensive report on the policy.")
+    assert _completion_quality_error(answer, task)
+
+
+@pytest.mark.parametrize("answer", [
+    "This report is about uranium prices. Supply disruptions raise prices while inventories buffer shocks.",
+    "No external sources were retrieved in this run. Supply disruptions raise prices while inventories buffer shocks.",
+    "# Market report\nSupply disruptions raise prices while inventories buffer shocks.",
+    "# Market report  Supply disruptions raise prices while inventories buffer shocks.",
+    "# Market report. Supply disruptions raise prices while inventories buffer shocks.",
+])
+def test_short_substantive_body_is_kept_even_with_title_or_status_disclaimer(answer):
+    task = PublicTask(task_id="report", question="Write a brief report on uranium prices.")
+    assert _completion_quality_error(answer, task) is None
+
+
+def test_nonterminal_title_draft_does_not_consume_quality_correction():
+    team = make_team()
+    model = ScriptedModel([{"answer": "# A researched guide", "continue": True},
+                           {"answer": "# A researched guide", "continue": False},
+                           {"answer": "The guide explains the relevant assumptions and conclusions."}])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.terminated_reason == "final_answer"
+    assert len(model.calls) == 3
+    assert result.trajectory[0].error is None
+    assert len([event for event in services.events if event["kind"] == "quality_warning"]) == 1
+
+
+def test_contributor_short_summary_with_substantive_ledger_remains_valid():
+    team = make_team(contributors=True)
+    contributor = {"answer": "# Research complete", "ledger": {
+        "requirements": ["Explain source assumptions"], "outline": ["Discuss the central claim"],
+        "evidence_spans": [], "source_references": []}}
+    searcher = ScriptedModel([contributor])
+    writer = ScriptedModel([{"answer": "The guide states the central claim and its assumptions."}])
+    services, context = make_services(team, {"searcher": searcher, "writer": writer})
+    result = run_team("Write a guide.", context, team, services)
+    assert result.terminated_reason == "final_answer"
+    assert len(searcher.calls) == len(writer.calls) == 1
+    assert not [event for event in services.events if event["kind"] == "quality_warning"]
+
+
+def test_iterative_protocol_correction_recovers_invalid_contributor_ledger_shape():
+    team = make_team(contributors=True)
+    malformed = {"answer": "Research contribution", "continue": False,
+                 "ledger": {"requirements": ["Explain assumptions"], "outline": [3],
+                             "evidence_spans": [], "source_references": []}}
+    corrected = {"answer": "Research contribution with the requested assumptions.", "continue": False,
+                 "ledger": {"requirements": ["Explain assumptions"],
+                            "outline": ["Discuss the central claim"],
+                            "evidence_spans": [], "source_references": []}}
+    def fixed(messages):
+        assert json.loads(messages[-2]["content"]) == malformed
+        assert messages[-1]["content"].startswith("Protocol correction:")
+        assert "ledger.outline must be" in messages[-1]["content"]
+        return corrected
+
+    searcher = ScriptedModel([malformed, fixed])
+    writer = ScriptedModel([{"answer": "The guide explains the central claim and assumptions."}])
+    services, context = make_services(team, {"searcher": searcher, "writer": writer})
+    result = run_team("Write a guide.", context, team, services)
+    assert result.terminated_reason == "final_answer"
+    assert len(searcher.calls) == 2
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == 1
+    searcher_output = [event for event in services.events if event["kind"] == "model_output"
+                       and event["agent_id"] == "searcher"]
+    assert json.loads(searcher_output[0]["content"]["content"]) == malformed
+    assert services.artifacts["searcher"]["ledger"] == corrected["ledger"]
+
+
+def test_repeated_invalid_contributor_ledger_fails_after_one_correction():
+    team = make_team(contributors=True)
+    malformed = {"answer": "Research contribution", "continue": False,
+                 "ledger": {"requirements": ["Explain assumptions"], "outline": [3],
+                             "evidence_spans": [], "source_references": []}}
+    searcher = ScriptedModel([malformed, malformed])
+    writer = ScriptedModel([{"answer": "Must never run"}])
+    services, context = make_services(team, {"searcher": searcher, "writer": writer})
+    result = run_team("Write a guide.", context, team, services)
+    assert result.terminated_reason == "error"
+    assert len(searcher.calls) == 2
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == 1
+    assert any("ledger.outline must be" in event["content"] for event in services.events
+               if event["kind"] == "execution_error")
+    assert "searcher" not in services.artifacts
+
+
+@pytest.mark.parametrize("bad_ledger,error", [
+    ({"requirements": [], "outline": [], "evidence_spans": [],
+      "source_references": [{"source_id": "remembered"}]}, "source_id and locator"),
+    ({"requirements": [], "outline": [], "evidence_spans": [{"text": "Claim"}],
+      "source_references": []}, "text and a declared source_ref"),
+])
+def test_contributor_repairs_source_shape_only_by_returning_new_ledger(bad_ledger, error):
+    team = make_team(contributors=True)
+    invalid = {"answer": "Remembered policy reasoning.", "ledger": bad_ledger}
+    repaired = {"answer": "Policy reasoning with uncertainty stated.", "ledger": {
+        "requirements": [], "outline": [], "evidence_spans": [], "source_references": []}}
+    model = ScriptedModel([invalid, repaired])
+    services, context = make_services(team, {"searcher": model},
+                                      knowledge_policy="model_general_knowledge_allowed")
+    result = _run_agent_iterative(team.agents[0].model_dump(mode="json"),
+                                 team.model_dump(mode="json"), context, services)
+    assert result.terminated_reason == "subtask_complete"
+    assert error in str(result.trajectory[0].error)
+    assert json.loads(result.trajectory[0].model_output_messages.content) == invalid
+    assert result.trajectory[1].error is None
+    assert services.artifacts["searcher"]["ledger"] == repaired["ledger"]
+    assert "For every role, put the substantive body" in model.calls[0][0]["content"]
+    assert "publish evidence_spans=[] and source_references=[]" in model.calls[0][0]["content"]
+
+
+def test_ledger_protocol_correction_retains_both_metered_calls_and_raw_error():
+    from jit_mas.budget import MeteredModel
+
+    team = make_team(contributors=True)
+    invalid = {"answer": "Contribution", "ledger": {"requirements": [], "outline": [2],
+        "evidence_spans": [], "source_references": []}}
+    valid = {"answer": "Reasoned contribution.", "ledger": {"requirements": [], "outline": [],
+        "evidence_spans": [], "source_references": []}}
+    raw = ScriptedModel([invalid, valid])
+    ledger = BudgetLedger(max_calls=2, max_tokens=20000, max_tool_calls=0)
+    model = MeteredModel(raw, ledger, "execution", "searcher", 4096)
+    services, context = make_services(team, {"searcher": model})
+    services.ledger = ledger
+    result = _run_agent_iterative(team.agents[0].model_dump(mode="json"),
+                                 team.model_dump(mode="json"), context, services)
+    assert result.terminated_reason == "subtask_complete"
+    assert len(result.trajectory) == len(raw.calls) == ledger.snapshot()["model_calls"] == 2
+    assert len([record for record in ledger.snapshot()["records"] if record["kind"] == "model"]) == 2
+    assert "ledger.outline must be" in str(result.trajectory[0].error)
+    assert json.loads(result.trajectory[0].model_output_messages.content) == invalid
+
+
+def test_malformed_checkpoint_cannot_hide_an_illegal_tool_for_correction():
+    team = make_team(checkpoints=["accuracy"])
+    invalid = {"answer": "Draft", "checkpoints": {"accuracy": "wrong shape"},
+               "tools": [{"name": "illegal", "arguments": {}}]}
+    model = ScriptedModel([invalid, {"answer": "Must never run"}])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.terminated_reason == "error" and result.answer is None
+    assert len(model.calls) == 1
+    assert not [event for event in services.events if event["kind"] == "protocol_warning"]
+
+
+def test_malformed_checkpoint_cannot_hide_a_fabricated_event_for_correction():
+    team = make_team(checkpoints=["accuracy"])
+    invalid = {"answer": "Draft", "evidence_ids": ["invented-event"],
+               "checkpoints": {"accuracy": "wrong shape"}}
+    model = ScriptedModel([invalid, {"answer": "Must never run"}])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.terminated_reason == "error" and result.answer is None
+    assert len(model.calls) == 1
+    assert not [event for event in services.events if event["kind"] == "protocol_warning"]
+
+
+def test_truncated_execution_json_gets_one_model_authored_shape_correction():
+    team = make_team()
+    malformed = '{"answer": "unfinished'
+    model = ScriptedModel([malformed, {"answer": "The guide presents complete reasoning."}])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.terminated_reason == "final_answer"
+    assert len(model.calls) == 2
+    assert result.trajectory[0].model_output_messages.content == malformed
+    assert "Expected a complete JSON object" in str(result.trajectory[0].error)
+
+
+def test_fabricated_evidence_id_does_not_receive_ledger_shape_correction():
+    team = make_team(contributors=True)
+    malformed = {"answer": "Research contribution", "continue": False,
+                 "evidence_ids": ["invented-event"],
+                 "ledger": {"requirements": ["Explain assumptions"], "outline": [3],
+                             "evidence_spans": [], "source_references": []}}
+    searcher = ScriptedModel([malformed])
+    writer = ScriptedModel([{"answer": "Must never run"}])
+    services, context = make_services(team, {"searcher": searcher, "writer": writer})
+    result = run_team("Write a guide.", context, team, services)
+    assert result.terminated_reason == "error"
+    assert len(searcher.calls) == 1
+    assert not [event for event in services.events if event["kind"] == "protocol_warning"]
+
+
+def test_final_tool_payload_is_checked_after_merging_completion_fields():
+    team = make_team()
+    model = ScriptedModel([
+        {"answer": "The complete guide explains the requested topic.", "continue": True,
+         "tools": [{"name": "final_answer", "arguments": {"answer": "# A researched guide"}}]},
+        {"tools": [{"name": "final_answer", "arguments": {
+            "answer": "The guide states the central claim and its assumptions."}}]},
+    ])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.terminated_reason == "final_answer"
+    assert len(model.calls) == 2
+    assert "substantive deliverable" in str(result.trajectory[0].error)
+
+
+def test_repeated_title_after_quality_correction_fails_without_final_artifact():
+    team = make_team()
+    title = {"answer": "# A researched guide", "continue": False}
+    model = ScriptedModel([title, title, {"answer": "Must never run"}])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer is None and result.terminated_reason == "error"
+    assert len(model.calls) == len(result.trajectory) == 2
+    assert "writer" not in services.artifacts
+    assert len([event for event in services.events if event["kind"] == "quality_warning"]) == 1
+    assert not any(event["kind"] == "final_answer" for event in services.events)
+
+
+def test_quality_correction_does_not_expand_role_call_budget():
+    team = make_team()
+    team.agents[-1].max_calls = 1
+    model = ScriptedModel([{"answer": "# A researched guide"}, {"answer": "Must never run"}])
+    services, context = make_services(team, {"writer": model})
+    services.model_factory = lambda agent_id: _SinglePassModel(
+        model, services, team.agents[-1].model_dump(mode="json"), team.model_dump(mode="json"))
+    result = run_writer(team, services, context)
+    assert result.answer is None and result.terminated_reason == "error"
+    assert len(model.calls) == services.calls == 1
+    assert "AgentSpec.max_calls exhausted" in str(result.trajectory[-1].error)
 
 
 def test_general_knowledge_researcher_completes_without_external_observations():
@@ -411,7 +668,6 @@ def test_checkpoint_correction_still_requires_every_exact_assigned_checkpoint():
      "Checkpoint cites evidence not observed"),
     ({"tools": [{"name": "send_message", "arguments": {
         "recipient": "invented", "content": "Please help"}}]}, "exact peer agent_id"),
-    ({"answer": "Draft", "checkpoints": []}, "checkpoints must be an object"),
 ])
 @pytest.mark.parametrize("after_checkpoint_correction", [False, True])
 def test_unrelated_protocol_errors_fail_without_a_checkpoint_correction(

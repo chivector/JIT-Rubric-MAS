@@ -1,0 +1,12 @@
+{
+    "original_report_retained":  true,
+    "timestamp":  "2026-10-02T10:59:02.2458940Z",
+    "terminated_pids":  [
+                            2708,
+                            4856
+                        ],
+    "paired_difference":  null,
+    "test_mean":  null,
+    "reason":  "Engineering recovery: first ten EVO slots failed, experience remained v0; replaced by frozen v31, without merging trajectories.",
+    "status":  "interrupted"
+}

@@ -167,6 +167,25 @@ def test_boolean_true_is_kept_as_unverified_self_report(execute_team):
         "basis": "self_reported", "independently_verified": False}
 
 
+@pytest.mark.parametrize("use_completion_tool", [False, True])
+def test_single_pass_synthesizer_rejects_title_only_without_a_role_recall(execute_team, use_completion_tool):
+    team = TeamSpec(agents=[AgentSpec(agent_id="solo", role="Writer", capability="writing",
+                                    max_calls=1)], synthesizer_id="solo")
+
+    def respond(*_):
+        if use_completion_tool:
+            return {"answer": "The argument contains a disputed assumption.",
+                    "tools": [{"name": "final_answer", "arguments": {
+                        "answer": "# An argument and its assumptions"}}]}
+        return {"answer": "# An argument and its assumptions"}
+
+    result, inputs, budget = execute_team(team, respond)
+    assert result.answer is None and result.terminated_reason == "error"
+    assert len(inputs["solo"]) == budget["model_calls"] == 1
+    assert "substantive deliverable" in str(result.sub_runs[0].trajectory[0].error)
+    assert not any(event["kind"] == "final_answer" for event in result.metadata["events"])
+
+
 def test_completed_check_is_preserved_without_upgrading_to_passed(execute_team):
     team = TeamSpec(agents=[AgentSpec(agent_id="solo", role="Writer", capability="writing",
                                     checkpoints=["Checked"], max_calls=1)], synthesizer_id="solo")

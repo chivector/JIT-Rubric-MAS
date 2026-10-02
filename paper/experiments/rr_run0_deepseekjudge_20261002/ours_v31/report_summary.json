@@ -1,0 +1,20 @@
+{
+  "arm": "ours_evolve_then_test",
+  "status": "evolving",
+  "started_at": "2026-10-02T10:53:28.479617+00:00",
+  "test_failures": [],
+  "submitted_answer_hashes": {},
+  "pilot_status": "running",
+  "export_status": "running",
+  "raw_report_status": "evolving",
+  "raw_journal_status": "running",
+  "snapshot_is_partial": true,
+  "interruption": null,
+  "original_output": "outputs/rr_jit_mas_run0_deepseekjudge_20261002_v31",
+  "source_status_counts": {},
+  "planned_evolution": 20,
+  "processed_evolution": 0,
+  "checkpoints": [],
+  "selected_checkpoint": null,
+  "raw_report_sha256": "176ba46ddf7aaef849e2c7a589cbd478960365b5cc4d3e73ea0cf3c61ecbc806"
+}

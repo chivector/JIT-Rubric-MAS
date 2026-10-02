@@ -1,0 +1,12 @@
+{
+  "status": "method_preflight_failed",
+  "preflight_pid": 14900,
+  "runtime": "C:\\Users\\chizh\\Desktop\\JIT-main\\.runtime\\rr_deepseek_judge_20261002_v28",
+  "preflight_output": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_closed_book_preflight_deepseekjudge_20261002_v29",
+  "method_output": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v29",
+  "model_attempts": 5,
+  "judge_model": "deepseek-v4-flash-vision",
+  "judge_parallel": 1,
+  "max_inflight_requests": 1,
+  "preflight_exit": 1
+}
