@@ -189,6 +189,9 @@ class JsonModelCalls:
                 "Do not merely restate a correction in selection_rationale while retaining invalid fields. "
                 "For a final-synthesizer DAG violation, final means a terminal node: no selected agent "
                 "may depend on the final synthesizer, and all selected contributors must be its ancestors. "
+                "Use one feasible topology: contributors -> reviewer -> final writer (the reviewer "
+                "depends on the primary owner and the final writer depends on both), or contributors "
+                "-> final writer with no reviewer for rubrics whose primary owner is that final writer. "
                 "If reviewers follow a writer, make a downstream selected role the final synthesizer "
                 "and require its full deliverable; alternatively move reviews before the final writer. "
                 "Never resolve it by adding an edge that makes a cycle."
@@ -200,7 +203,9 @@ class JsonModelCalls:
                 "conflict reported. If the primary owner is the terminal final synthesizer, "
                 "omit every optional reviewer assignment for that owner's rubrics (or emit []); "
                 "its upstream contributors cannot review its future final answer. Keep its "
-                "self-checks in checkpoints and do not add backward edges."
+                "self-checks in checkpoints and do not add backward edges. After any dependency "
+                "change, audit every primary and reviewers entry against the resulting ancestor "
+                "sets; changing only selection_rationale or task_prompt is not a fix."
                 if correction is not None else "")
             corrected_system = (instructions + correction_system
                                 + "\nReturn only one JSON object conforming to this JSON Schema:\n"
@@ -397,7 +402,15 @@ Do not allocate send_message, read_evidence, raise_issue or feedback request rou
 The roster, dependencies, checkpoints and budgets should follow this task's requirements,
 not a fixed workflow. Return only graph and team; the coordinator preserves the supplied
 local plans separately, so do not echo them. Return no answer to the task and do not invent
-evaluation feedback.
+evaluation feedback. Build a feasible terminal DAG before assigning optional reviews:
+choose one of (a) contributors -> reviewer -> final writer, where the reviewer depends on
+the artifact's primary owner and the final writer depends on both, or (b) contributors ->
+final writer with self-checks in checkpoints and no reviewer for rubrics whose primary owner
+is the final writer. Never make a reviewer depend on the final writer or make the final writer
+depend on a reviewer that reviews its future artifact. After choosing the topology, audit
+every structured primary/reviewers entry against actual agent dependencies and remove or
+reassign any review that cannot see the primary artifact; changing only rationale text is
+insufficient.
 
 Before returning, check ALL cross-field constraints against the actual JSON you will emit:
 - 1 <= len(team.agents) <= limits.max_agents. Agent IDs are unique. synthesizer_id
