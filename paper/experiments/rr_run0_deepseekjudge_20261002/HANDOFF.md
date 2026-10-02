@@ -4,7 +4,11 @@ Single-Agent v29 已完成 33/33 TEST 评分，均值 `0.47553977079687665`。33
 
 方法 v30 已人工中断；终态以 `ours_v30/interruption.json` 为准，原 report/pilot/journal 状态保留。已登记 EVO 12/20，状态计数为 `{'failed': 11, 'started': 1}`，没有最终 checkpoint 或 TEST 答案。v30 与 v31 轨迹独立，不能合并成成功实验。
 
+v30 的前 12 个 EVO 槽位中 11 个失败、1 个 started 后中断；C0/C5/C10 均为 8/10，未达到 9/10 门槛。
+
 方法 v31 的当前状态为 `failed`，pilot 为 `incomplete`；此导出以已落盘终态为准。已登记 EVO 5/20，最终 checkpoint 为 `None`。C0/C5/C10/C15/C20 每个仍要求固定 10 VAL 中至少 9 个完整；TEST 保持 33 题各一次。当前有效两臂比较为 `False`，配对差值为 `None`。
+
+v31 实际处理 5 个 EVO（2 完成、3 失败），C0 为 10/10；C5 有 6 个完成、2 个生成/校验失败、1 个评分中断、1 个未开始。失败证据见 `diagnostics_v31/`：启动 stderr 记录连续 5 次连接错误后客户端 `SystemExit=1`，并保留 C5 三个失败槽位的 `failure.json`/`call_trace.json`。TEST 仅登记 33 个 `submission_failed` 占位项，没有真实生成或评分尝试。
 
 v26 baseline 的六题局部评分、v26–v29 失败预检及 v30/v31 成功预检分别保留；不可拼成一次无故障运行。v26 的 uniqueItems 语法拒绝、v27/v28 的连接错误、v29 的标题终稿拒绝，以及 v30 的 json_object、v31 的 json_schema_planning 通过记录见 summary。预检不评分、不更新经验；v31 正式方法从空经验开始。
 

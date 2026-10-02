@@ -1786,5 +1786,25 @@
   ".runtime/rr_deepseek_judge_20261002_v31/benchmark/adapter/researchrubrics_prompts/user_prompt.txt": {
     "sha256": "1b04fecce0bcf62c79494230eea9d8d1fadbe39f27c6805337521f3e1c552e4f",
     "bytes": 735
+  },
+  "outputs/rr_deepseek_method_launch_20261002_v31/ours.stderr.log": {
+    "sha256": "bd19a2685faa1116139e860a23e562e9c6aeaffd159a7f98db1a4bb4c83efd8a",
+    "bytes": 6142
+  },
+  "outputs/rr_jit_mas_run0_deepseekjudge_20261002_v31/ours/checkpoints/C5/runs/0b6a04e7db4512bc33d7882ab38560c85597b3526edbccf33416ba272645672a/failure.json": {
+    "sha256": "d2d7e34d7f12657fb304ebf566290b0d15e47d29e26a32038f1ae6b179f1ead9",
+    "bytes": 5371
+  },
+  "outputs/rr_jit_mas_run0_deepseekjudge_20261002_v31/ours/checkpoints/C5/runs/3d9f0c61d68de84633faa8f4429885288c7c62f12af866369ef0536ae133721c/failure.json": {
+    "sha256": "caa310245e2143fd361d7df1637e64a3e4e17b1894d34e83882fde773c1b6f85",
+    "bytes": 416395
+  },
+  "outputs/rr_jit_mas_run0_deepseekjudge_20261002_v31/ours/checkpoints/C5/runs/338d0d566376a1d961ba5d0eabce09ff631033ad1ac65a4a82fca9aed5ac004a/failure.json": {
+    "sha256": "cb2961c236b98d22b014e88659af50465dbd6dd1aa3d8752664792559d5cb0b6",
+    "bytes": 30486
+  },
+  "outputs/rr_jit_mas_run0_deepseekjudge_20261002_v31/ours/checkpoints/C5/runs/338d0d566376a1d961ba5d0eabce09ff631033ad1ac65a4a82fca9aed5ac004a/call_trace.json": {
+    "sha256": "0eb62519537499301df95ae731ccd01222ae9f5da95eb32a316daa31ccbf1efe",
+    "bytes": 22309
   }
 }

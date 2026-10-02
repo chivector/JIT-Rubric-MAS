@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "snapshot_at": "2026-10-02T12:24:14.505591+00:00",
+  "snapshot_at": "2026-10-02T12:26:18.298774+00:00",
   "protocol": "closed_book_exploratory_deepseek_self_judge",
   "requested_model": "deepseek-v4-flash-vision",
   "returned_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
