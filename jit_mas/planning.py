@@ -172,7 +172,13 @@ class JsonModelCalls:
                 "Never resolve it by adding an edge that makes a cycle."
                 " For self-review, remove the named primary owner from reviewers for that rubric; "
                 "choose a different selected downstream agent or omit the optional review. "
-                "Do not change the primary owner merely to relabel a self-check as independent review."
+                "Do not change the primary owner merely to relabel a self-check as independent review. "
+                "For reviewer artifact-dependency errors, audit every actual rubric_id, "
+                "primary_owner_id, reviewer_id and reviewer ancestor set, not only the first "
+                "conflict reported. If the primary owner is the terminal final synthesizer, "
+                "omit every optional reviewer assignment for that owner's rubrics (or emit []); "
+                "its upstream contributors cannot review its future final answer. Keep its "
+                "self-checks in checkpoints and do not add backward edges."
                 if correction is not None else "")
             corrected_system = (instructions + correction_system
                                 + "\nReturn only one JSON object conforming to this JSON Schema:\n"
@@ -406,6 +412,9 @@ Before returning, check ALL cross-field constraints against the actual JSON you 
   SELF-REVIEW IS FORBIDDEN: compare the actual agent IDs in primary and reviewers for
   every rubric before returning; a different role label does not make the same ID
   independent. Omit the optional reviewer assignment when only self-checks are feasible.
+  If primary[rubric_id] == synthesizer_id, omit reviewers[rubric_id] or emit []; the
+  terminal final writer has no downstream reviewer in this DAG. Check every rubric's
+  actual primary/reviewer IDs and ancestor set, not just the first detected conflict.
 - sum(agent.max_calls) <= team.total_max_calls <= limits.total_max_calls, and
   team.max_parallel <= limits.max_parallel. Every agent.max_calls=1. All agent tools
   must be in task.tools; the final synthesizer must have tools=[].

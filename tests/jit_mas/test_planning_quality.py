@@ -136,6 +136,45 @@ def test_reviewer_correction_identifies_required_primary_artifact_dependency():
     assert len(requests) == len(analyzer.call_records) == 2
 
 
+@pytest.mark.parametrize("mode", ["single_pass", "iterative_shared_ledger"])
+def test_terminal_owner_correction_removes_all_optional_upstream_reviews(mode):
+    draft = prediction()
+    draft.graph.rubrics.append(draft.graph.rubrics[0].model_copy(update={"rubric_id": "clarity"}))
+    for candidate in draft.candidates:
+        candidate.rubric_ids = ["accuracy", "clarity"]
+        if mode == "iterative_shared_ledger":
+            candidate.max_calls = None
+    invalid = {"graph": draft.graph.model_dump(mode="json"), "team": {
+        "execution_mode": mode, "agents": [agent.model_dump(mode="json") for agent in draft.candidates],
+        "synthesizer_id": "check", "coverage": {rid: ["author", "check"] for rid in ("accuracy", "clarity")},
+        "primary": {rid: "check" for rid in ("accuracy", "clarity")},
+        "reviewers": {rid: ["author"] for rid in ("accuracy", "clarity")},
+        "total_max_calls": None if mode == "iterative_shared_ledger" else 2,
+    }}
+    observed = []
+
+    def model(messages):
+        request = json.loads(messages[1]["content"])
+        observed.append(request)
+        assert "If primary[rubric_id] == synthesizer_id" in messages[0]["content"]
+        if "response_correction" not in request:
+            return json.dumps(invalid)
+        assert "primary_owner_id='check'" in str(request["response_correction"])
+        assert "audit every actual rubric_id" in messages[0]["content"]
+        assert "omit every optional reviewer assignment" in messages[0]["content"]
+        fixed = copy.deepcopy(invalid)
+        fixed["team"]["reviewers"] = {"accuracy": [], "clarity": []}
+        return json.dumps(fixed)
+
+    result = GlobalAnalyzer(model, execution_mode=mode,
+                            total_max_calls=invalid["team"]["total_max_calls"]).reconcile(
+        PublicTask(task_id="terminal-review", question="Explain accurately and clearly"), draft, [])
+    assert result.team.primary == invalid["team"]["primary"]
+    assert result.team.reviewers == {"accuracy": [], "clarity": []}
+    assert result.team.agents[1].depends_on == ["author"]
+    assert len(observed) == 2
+
+
 def test_missing_producer_can_be_proposed_as_a_gap_without_inventing_dependency():
     draft = prediction()
     value = review_plan(depends_on=[], required_inputs=["A source record not yet provided"],

@@ -45,6 +45,12 @@ def _contributor_handoff_prompt():
         "claim, reasoning step, result or uncertainty, not a section heading alone. Ignore any "
         "3000-5000-word or other full-draft length request in task_prompt or retained role text; "
         "deliver compact fact chains for synthesis. Source locators may use <=2048 characters. "
+        "Make each key result explicit once so a downstream writer can reconstruct the requested "
+        "artifact from the ledger; include the relevant units, assumptions, formulas or boundary "
+        "conditions instead of headings or vague references. Convert long source passages into "
+        "short, source-linked claims and recommendations, retaining only points that change the "
+        "answer. Do not pad a list with guessed counts, speculative catalog entries, or a long "
+        "numbered enumeration when a compact set of actual items is sufficient. "
         "Distinguish explicit public requirements from inferred planner suggestions and guessed counts; "
         "do not invent facts or items to satisfy those guesses. "
         "For quantitative or financial work, preserve definitions, assumptions, units, formulas and "
@@ -60,7 +66,11 @@ def _answer_check_prompt():
         "figures from stated formulas, denominators, units and assumptions, including scenario changes. "
         "For regulatory claims, distinguish an actual obligation from a recommended strategy; avoid "
         "absolute necessity claims without support. Uncertainty labels do not establish unsupported "
-        "numbers, citations or legal assertions."
+        "numbers, citations or legal assertions. Compress copied source or ledger prose into the "
+        "smallest set of actual, answer-relevant claims and recommendations. Never invent a long "
+        "directory, catalog, numbered sequence, or repeated examples to appear comprehensive; use "
+        "representative items and state the scope or uncertainty when a complete enumeration is not "
+        "supported. Remove duplicated claims before adding detail."
     )
 
 
@@ -830,7 +840,11 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
             "explicit public-task requirement. For material claims include a specific mechanism, "
             "example or calculation when applicable, then state a clear conclusion. Use a format "
             "appropriate to the task; do not repeat drafts, ledger bodies, review narration or "
-            "protocol metadata, and leave enough room for valid JSON closure."
+            "protocol metadata, and leave enough room for valid JSON closure. "
+            f"The complete JSON response has a hard ceiling of {output_limit} output tokens. "
+            "Use about 80-85% of that ceiling as a soft planning target, including answer, "
+            "checkpoints and JSON escaping. Preserve every requested item, key argument and "
+            "calculation; reduce duplicated prose and unnecessary lists before shortening substance."
         )
     system += "\n" + (_answer_check_prompt() if synth else _contributor_handoff_prompt())
     messages = [{"role": "system", "content": system},
@@ -1112,6 +1126,11 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                     "results in ledger; for the synthesizer, put the complete public deliverable in answer. "
                     "Make the correction yourself; "
                     "the previous response has not been accepted or automatically edited. "
+                    "If the previous JSON was incomplete or truncated, rewrite one complete JSON "
+                    "response from the original task rather than continuing its broken tail or "
+                    "reproducing it unchanged. Preserve the key arguments, calculations, required "
+                    "items and honest limitations; delete duplicate passages, guessed directories "
+                    "and speculative numbered catalogs, then close every JSON field. "
                     + (_answer_check_prompt() if synth else _contributor_handoff_prompt()) + " "
                     "Exact validation error: " + str(exc))})
                 step.end_time = time.time()
@@ -1281,7 +1300,11 @@ def _run_agent(agent, team, ctx, services):
             "explicit public-task requirement. For material claims include a specific mechanism, "
             "example or calculation when applicable, then state a clear conclusion. Use a format "
             "appropriate to the task; do not repeat drafts, ledger bodies, review narration or "
-            "protocol metadata, and leave enough room for valid JSON closure."
+            "protocol metadata, and leave enough room for valid JSON closure. "
+            "Use about 80-85% of the output-token ceiling as a soft planning target for the complete "
+            "JSON response, including answer, checkpoints and escaping. Preserve every requested "
+            "item, key argument and calculation; reduce duplicated prose and unnecessary lists "
+            "before shortening substance."
         )
     system += (
         "\nTreat predicted requirements, upstream drafts and generated task-specific hints as "

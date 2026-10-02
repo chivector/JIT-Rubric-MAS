@@ -363,6 +363,13 @@ def test_truncated_execution_json_gets_one_model_authored_shape_correction():
     assert len(model.calls) == 2
     assert result.trajectory[0].model_output_messages.content == malformed
     assert "Expected a complete JSON object" in str(result.trajectory[0].error)
+    system = model.calls[0][0]["content"]
+    correction = model.calls[1][-1]["content"]
+    assert "80-85%" in system and "soft planning target" in system
+    assert "Never invent a long directory, catalog, numbered sequence" in system
+    assert "rewrite one complete JSON response from the original task" in correction
+    assert "Preserve the key arguments, calculations, required items" in correction
+    assert "delete duplicate passages, guessed directories" in correction
 
 
 def test_fabricated_evidence_id_does_not_receive_ledger_shape_correction():
