@@ -24,7 +24,9 @@ from scripts.kernel.types import (
 )
 from scripts.tools.registry import ToolRegistry
 from jit_mas.experience import experience_applicability
-from jit_mas.planning import knowledge_policy_prompt, knowledge_policy_role_adaptation
+from jit_mas.planning import (
+    QUALITY_ASSURANCE_PROMPT, knowledge_policy_prompt, knowledge_policy_role_adaptation,
+)
 from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGraph, TeamSpec, utc_now
 
 
@@ -55,7 +57,11 @@ def _contributor_handoff_prompt():
         "do not invent facts or items to satisfy those guesses. "
         "For quantitative or financial work, preserve definitions, assumptions, units, formulas and "
         "checked intermediate results. For regulatory work, distinguish legal or policy obligations "
-        "from recommended strategy or prudent risk controls."
+        "from recommended strategy or prudent risk controls. "
+        "A critic must check the original claim and consequential inference within the assigned "
+        "scope, report the specific defect and a supported correction, and carry critical "
+        "missing deliverables or contradictory calculations into the handoff; agreement or a "
+        "blanket uncertainty statement is not a check."
     )
 
 
@@ -847,6 +853,7 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
             "calculation; reduce duplicated prose and unnecessary lists before shortening substance."
         )
     system += "\n" + (_answer_check_prompt() if synth else _contributor_handoff_prompt())
+    system += "\n" + QUALITY_ASSURANCE_PROMPT
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(instruction, ensure_ascii=False)}]
     state = state if state is not None else {}
@@ -1049,7 +1056,7 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                 pending_observation_ids.update(item["event_id"] for item in observations)
             elif not terminal and content_hash(_iterative_public_ledger(services, aid)) == updated_hash:
                 continuation = (
-                    "Continue the assigned work with substantive facts, reasoning, results or revision. "
+                    "Continue the assigned work with substantive facts, reasoning, results or revision; make a substantive contribution. "
                     "A title, heading-only outline or promise of future work does not complete the assignment. "
                     "Return one valid JSON object. When the role is actually complete, include its "
                     "role-appropriate answer (complete deliverable for the synthesizer; compact summary "
@@ -1388,6 +1395,7 @@ def _run_agent(agent, team, ctx, services):
             "those future results as evidence you already observed."
         )
     system += "\n" + (_answer_check_prompt() if synth else _contributor_handoff_prompt())
+    system += "\n" + QUALITY_ASSURANCE_PROMPT
     memory = type(ctx.memory)(prompts=ctx.prompt_templates)
     memory.initialize(system, TaskInput(task=json.dumps(instruction, ensure_ascii=False)))
     allowed = set() if synth else set(agent.get("tools", []))

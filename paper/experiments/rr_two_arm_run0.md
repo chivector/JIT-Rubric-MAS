@@ -78,3 +78,11 @@ DeepSeek v26/v27/v28/v29 工程预检分别遇到 unsupported `uniqueItems`、�
 v32 使用冻结代码完成了 C0 的 10 个 VAL 槽位（9/10 完整，`eligible=true`，selection utility `0.448814031420831`），随后处理 5 个 EVO 槽位，其中 1 个完成、4 个失败；C5 第一题失败。实验记录随后写入 `interruption.json`，终止时共 16 个 EVO/VAL 槽位已达到终态、6 个失败；没有选择最终 checkpoint，没有 TEST 答案或 TEST 均值。v32 运行与 v33 轨迹保持独立，不能合并经验或成绩。
 
 v33 于 `2026-10-02T14:32:39Z` 使用新的冻结代码（启动提交 `edba32635e97bafef5e8879288a640167f3a0567`）启动；无评分 preflight 已通过，仍从空经验执行相同的 20 EVO、五个 10 VAL checkpoint 和 33 TEST 协议。当前快照显示 C0 已完成 4 个、失败 1 个、另有 1 个 started；v33 尚未到达最终 checkpoint 或 TEST 阶段，不能计算或报告两臂差值。v33 的恢复策略包括新的 soft policy、精确去重上下文（119836→94476）和 Writer 反枚举修复；这些是工程实现变化，需在最终结果中单独披露。
+
+v33 中断核实（`2026-10-02T15:40:07.258811+00:00`）：真实方法进程已经消失，原 PID `2184` 随后被无关的 `audiodg` 进程复用；当前 Python 进程仅为只读监控。实际退出时间、退出码和根因未知，现有 connection/HTTP 503 重试日志不足以确定原因。C0 为 9/10（utility `0.41061870901042125`），EVO1–5 全部完成、经验 v5；C5 完成 2 题，第 3 题 `684397d188c1deceb49af31d` 留在 started 且仅保存 `run_manifest.json`。累计 17 个终态槽位中 16 完成、1 个 Writer JSON 截断失败；没有最终 checkpoint 或 TEST。已新增 `outputs/rr_jit_mas_run0_deepseekjudge_20261002_v33/interruption.json`，launcher 标记 `method_interrupted` 并保留原 PID/参数；原任务、评分、journal 和报告均未改写。方法 TEST 均值和配对差值仍为 `null`，不可将该中断轨迹作为完整比较。
+
+v34 已从空经验在新目录 `outputs/rr_jit_mas_run0_deepseekjudge_20261002_v34` 启动，冻结提交为 `2ec11c8`（包含 `ace8471` 的截断纠正修复），正式运行开始时间为 `2026-10-02T15:39:40Z`，当前处于 C0。截断纠正保留原始坏稿轨迹，但下一次模型请求从原任务重新生成完整 JSON，避免回放超长截断内容。继续执行 20 EVO、C0/C5/C10/C15/C20 各 10 VAL、9/10 合格阈值及选版后 33 TEST；复用 Single-Agent v29 的 33/33 结果，不重跑 baseline。执行与 Judge 均使用 `deepseek-v4-flash-vision`，`json_schema_planning`，方法执行上限 12288、Judge 上限 4096、Judge attempts 2、Judge parallel 1、max inflight 1、model attempts 5、API failure action `raise`。本轮仍为闭卷探索和 DeepSeek self-judge，baseline 执行上限为 8192，资源预算不同；没有完整共享证据目录，当前没有方法组 TEST 均值或有效配对差值。
+
+v34 进度快照（`2026-10-02T16:32:48Z`）：C0 为 10/10 完整、合格，selection utility `0.5146184793591096`；EVO1–5 全部完成，C5 第 1 题因 reviewer 拓扑不满足依赖链而失败、第 2 题进行中。累计 16 个终态槽位中 15 完成、1 失败；576 次落盘模型调用均为 `stop`，没有 `length` 或上下文超限记录。方法进程仍存活，尚无 TEST。只读监控位于 `outputs/rr_v34_monitor_status.json`，每 60 秒更新；封存审计只在完整终态后释放差值。
+
+工作区已增加通用交付物和事实核对提示、独立中断恢复 helper 与封存评分审计；这些改动没有注入正在运行的冻结 v34。提示改进基于公开 VAL 题面和回答检查，覆盖数字的日期/地域/分母/单位/推导、法律适用条件与状态、历史情节事实和具体交付物，不嵌入某一道 VAL 的答案。恢复 helper 只在原进程消失且 TEST 尚未开始时使用，校验同一冻结身份并保留终态失败，不重采样中断槽位。封存审计要求 33 份唯一提交/评分、答案与评分哈希及报告一致、非空且一致的 Judge 身份、无中断标记；闭卷 self-judge 和不同资源预算的限制保持不变。

@@ -19,6 +19,28 @@ from .schemas import (
 T = TypeVar("T", bound=BaseModel)
 
 
+# Shared, task-agnostic quality checks for planning and final synthesis.  Keep
+# this separate from benchmark rubrics: it is a public-task completion guard
+# and must not smuggle evaluator-only requirements into the plan.
+QUALITY_ASSURANCE_PROMPT = """
+PUBLIC-DELIVERABLE QUALITY CHECK: Parse the public task into every explicit
+deliverable, constraint, audience, format, comparison, time horizon and example;
+assign each to a role and verify each appears in the final artifact. For numbers,
+give period/date, geography, denominator, units and assumptions; recompute derived
+values and keep tables, ranges and prose consistent. Label estimates without using
+uncertainty as a substitute for support. For law or policy, name jurisdiction and
+instrument, scope, effective/pending status and conditions; separate obligations
+from advice, controls and forecasts. For historical or literary work, check names,
+dates, sequence and key plot/source facts before interpretation; state exact gaps
+instead of hiding contradictions behind a disclaimer. For candidates, listings and
+sources, include identifiable entries only when supported by available inputs or
+confident knowledge, and distinguish existence from current availability, price
+and suitability; otherwise state the gap and give a verification procedure. Before
+submission remove contradictions, duplicate sections, internal rubric IDs and
+unfinished sentences, and ensure the conclusion follows from evidence/assumptions.
+""".strip()
+
+
 class _ReconciliationResponse(Record):
     graph: RubricGraph
     team: TeamSpec
@@ -600,7 +622,7 @@ class GlobalAnalyzer(JsonModelCalls):
         return {"limits": self._limits()}
 
     def _prompt(self, prompt: str) -> str:
-        prompt += BUDGET_AWARE_PROMPT
+        prompt += "\n" + QUALITY_ASSURANCE_PROMPT + BUDGET_AWARE_PROMPT
         if self.execution_mode == "iterative_shared_ledger":
             # The planning constants also document the historical single-pass
             # control. Remove those prohibitions before adding the iterative
