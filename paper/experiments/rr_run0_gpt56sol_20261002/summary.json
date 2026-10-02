@@ -113,6 +113,12 @@
     "formal_test_completed": 0,
     "formal_test_mean": null,
     "first_c0_submission_answer_chars": 102,
-    "first_c0_submission_limit": "Only a title was submitted; score will be retained under the frozen protocol."
+    "first_c0_submission_limit": "Only a title was submitted; score will be retained under the frozen protocol.",
+    "c0_complete": 9,
+    "c0_total": 10,
+    "c0_eligible": true,
+    "c0_selection_utility": 0.14616904918346751,
+    "evo_status": "running",
+    "snapshot_not_terminal": true
   }
 }

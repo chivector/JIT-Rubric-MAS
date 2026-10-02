@@ -57,6 +57,8 @@ EVO2 的 Analyst 连续 60 次返回相同 canonical JSON，continue=true、只�
 
 v23 不评分预检在执行阶段拒绝了 checkpoint 说明字符串（原契约要求 boolean 或结构化 status/reason），7 次调用、77,215 tokens，judge 请求 0；v24 在规划阶段拒绝 synthesizer 漏掉 critic 依赖的 DAG，6 次调用、69,332 tokens，judge 请求 0。v25 冻结于 `.runtime/rr_closed_book_repair_20261002_v25`，使用完整对象 anyOf 分支（rr-execution-v5），避免 decoder 不继承父节点 properties；解析合并 observation/ledger 消息中的全部可见 evidence ID。`explicit-user-no-progress-checkpoint-v2` 保留无进展保护，并仅为 checkpoint 格式错误提供一次角色内纠正，错误轨迹和预算保留；未观察证据、非法工具/peer、缺失答案仍失败。真实 checkpoint 示例与纠正指令保持诚实限制，不修改返回内容或评分。
 
-离线全量回归在修复最近记忆前为 936 passed、1 failed（旧测试期待最后一条 assistant）；修正后相关测试分组通过，最后 planning/pool/reflection/runner 119 passed，execution/runner/agent_pool 114 passed，追加 checkpoint 边界测试 34 passed；diff check 通过。v25 无评分预检通过：92.187 秒、8 次调用、73,685 tokens，judge 请求 0，无经验更新，不计正式成绩。随后从空经验启动 `outputs/rr_jit_mas_run0_gpt56sol_20261002_v25` 完整计划，baseline v15 保留；当前仍无方法组 TEST 结果，不能报告差值或优势。
+离线全量回归在修复最近记忆前为 936 passed、1 failed（旧测试期待最后一条 assistant）；修正后相关测试分组通过，最后 planning/pool/reflection/runner 119 passed，execution/runner/agent_pool 114 passed，追加 checkpoint 边界测试 34 passed；diff check 通过。v25 无评分预检执行协议通过：92.187 秒、8 次调用、73,685 tokens，judge 请求 0，无经验更新，不计正式成绩；答案虽为 9,264 字符，但后续人工审计发现风险段落未写完，不能称内容完整或质量通过。随后从空经验启动 `outputs/rr_jit_mas_run0_gpt56sol_20261002_v25` 完整计划，baseline v15 保留；当前仍无方法组 TEST 结果，不能报告差值或优势。
 
 当前导出交接包为 `paper/experiments/rr_run0_gpt56sol_20261002`，包含 v15 完整评分、v16 终态失败记录及工程预检/中断摘要；v21 按 interruption.json 标为中断。所有旧轨迹独立保留，不合并为一次成功实验。
+
+v25 于北京时间 16:40 封存 C0：9/10 完整、eligible=true，normalized selection utility=0.14616904918346751。该值有理论范围归一化偏移，不能与 Single-Agent TEST 官方均值比较。EVO1 已开始。C0 有多份 title-only 原始 model_output，被原样封存并评为低分；有一题由 no-progress guard 阻断。没有修改已封存答案、重采样该 VAL 或注入工作区改动。

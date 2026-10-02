@@ -133,6 +133,7 @@
   "ours_v21/ours/checkpoints/checkpoint_journal.json": "d2ca4a4babb519536a3b7f2d1b6cb22e10c1166820558a1db3acc4300c3bae83",
   "ours_v21/ours/report.json": "ece3cafa88c95e6ec9961040780d6368db85183fcb32490024ce6ff0b66f40df",
   "ours_v21/pilot_metadata.json": "774876da55b50f08b335e1be74ffe64978311c462f8ffe25b6dd647fac683600",
+  "ours_v25/ours/checkpoints/checkpoint_journal.json": "ca84dda451f3e3f9f3867ba3139b6a0a281205b73ad56047a9d68cb1b427b3f4",
   "ours_v25/pilot_metadata.json": "716e16f3e6e630d9055a7ca16cf0766192cef893e589fc61ad22f951b6f851e8",
   "preflight_v17/metadata.json": "49fd20b9fc4de13aae50a0516f1c781f3b6a77766f77be59c5f08b960e02ae8c",
   "preflight_v17/preflight_split.json": "dc0de8b668a1152d1f6b331458def4fd80f05d458f6814de92d771b588ed3963",
@@ -151,5 +152,5 @@
   "preflight_v24/summary.json": "fbc793a457cbc8a99b89783bdd1014c284096326664d47d3f5aa1ce1ffdbf5be",
   "preflight_v25/metadata.json": "081bc10460bba33307c42b19dafac21719773353fd4bd5d6dc3c76e11a2912b2",
   "preflight_v25/summary.json": "58dc8ce263cb0187fd331c310d9759f2f9a62f13d753ea5b7c5d8ad0d0236fe7",
-  "summary.json": "06c37645d7bf6291481269cc01e935802044cfea0844168f02d53c296436c461"
+  "summary.json": "469155a4f9ff4367db63cf681539030d0a2f973c516476f2d2c9ccad4bb5649f"
 }
