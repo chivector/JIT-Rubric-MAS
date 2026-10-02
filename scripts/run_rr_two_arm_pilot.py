@@ -86,12 +86,10 @@ def _config(args):
         backend="native_jit", execution_mode="iterative_shared_ledger", unsafe_local=True,
         models={"meta": ModelConfig(**generator), "global": ModelConfig(**generator),
                 "local": ModelConfig(**generator),
-                # Execution responses carry the final answer plus the structured
-                # ledger/checkpoint envelope.  The old 8192 ceiling regularly
-                # cut long JSON responses at the provider boundary (which then
-                # failed closed as an invalid submission).  Keep this explicit
-                # and overridable so a run's frozen identity records the choice.
-                "exec": ModelConfig(**{**generator, "max_tokens": getattr(args, "exec_max_tokens", 12288)}),
+                # Preserve the baseline's registered 8192-token answer cap.
+                # Method-only reliability experiments may explicitly override
+                # it; the frozen configuration records that budget change.
+                "exec": ModelConfig(**{**generator, "max_tokens": getattr(args, "exec_max_tokens", 8192)}),
                 "judge": ModelConfig(**judge)},
         max_agents=3, max_parallel=2, team_max_calls=None, max_model_calls=None,
         max_total_tokens=2_000_000, max_tool_calls=None, max_repairs=2, candidates=1,
@@ -786,7 +784,7 @@ def run_baseline(args, config, manifest, evidence_dir, output):
                     pipeline.tasks[task_id], None, pipeline.models,
                     pipeline.evaluator_factory, task_dir,
                     {"max_calls": 1, "max_tokens": config.max_total_tokens,
-                     "output_tokens": config.models["exec"].max_tokens}, defer_evaluation=True)
+                     "output_tokens": min(8192, config.models["exec"].max_tokens)}, defer_evaluation=True)
                 outcomes.append(outcome)
             except Exception as error:
                 budget_path = task_dir / "budget.json"
@@ -1075,8 +1073,8 @@ def main(argv=None):
     parser.add_argument("--judge-parallel", type=int, default=2)
     parser.add_argument("--max-inflight-requests", type=int, default=2)
     parser.add_argument("--judge-max-tokens", type=int, default=16000)
-    parser.add_argument("--exec-max-tokens", type=int, default=12288,
-                        help="Per-response output ceiling for iterative execution (default: 12288)")
+    parser.add_argument("--exec-max-tokens", type=int, default=8192,
+                        help="Per-response execution ceiling (default: 8192); explicit changes are frozen in run identity")
     parser.add_argument("--judge-attempts", type=int, default=1)
     parser.add_argument("--structured-output", choices=("none", "json_object", "json_schema", "json_schema_planning"),
                         default="json_schema",

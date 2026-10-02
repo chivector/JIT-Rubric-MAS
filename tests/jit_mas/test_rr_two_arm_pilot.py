@@ -477,14 +477,14 @@ def test_structured_output_mode_cannot_change_after_identity_freeze(monkeypatch)
         pilot._assert_identity(args)
 
 
-def test_rr_pilot_uses_larger_execution_ceiling_and_allows_frozen_override():
+def test_rr_pilot_preserves_registered_execution_ceiling_and_allows_frozen_override():
     common = dict(exec_model="offline-generator", exec_endpoint="https://example.org/v1",
                   judge_model="offline-judge", judge_endpoint="https://example.com/v1",
                   timeout=10)
     default = pilot._config(SimpleNamespace(**common))
-    assert default.models["exec"].max_tokens == 12288
-    overridden = pilot._config(SimpleNamespace(**common, exec_max_tokens=8192))
-    assert overridden.models["exec"].max_tokens == 8192
+    assert default.models["exec"].max_tokens == 8192
+    overridden = pilot._config(SimpleNamespace(**common, exec_max_tokens=12288))
+    assert overridden.models["exec"].max_tokens == 12288
 
 
 def test_pipeline_binds_parallel_judges_to_one_metered_credential_safe_task_ledger(monkeypatch, tmp_path):
@@ -951,11 +951,13 @@ def test_check_only_never_launches_arms_or_requires_credentials(monkeypatch, tmp
 
 
 @pytest.mark.parametrize("reused_count", [0, 32])
-def test_baseline_submits_exactly_one_output_per_test_task_without_network(monkeypatch, tmp_path, reused_count):
+@pytest.mark.parametrize("execution_cap", [8192, 12288])
+def test_baseline_submits_exactly_one_output_per_test_task_without_network(monkeypatch, tmp_path, reused_count,
+                                                                        execution_cap):
     manifest = pilot._manifest(JOINT_MANIFEST)
     args = SimpleNamespace(data="fixture.jsonl", timeout=10)
     config = SimpleNamespace(max_model_calls=10_000, max_total_tokens=1_000_000,
-                             models={"exec": SimpleNamespace(max_tokens=8192)})
+                             models={"exec": SimpleNamespace(max_tokens=execution_cap)})
     calls = []
     args.baseline_reuse = {}
     for task_id in manifest.test[:reused_count]:
@@ -970,7 +972,8 @@ def test_baseline_submits_exactly_one_output_per_test_task_without_network(monke
             "budget": {"model_calls": 1, "tokens": 8, "reserved_tokens": 0, "tool_calls": 0, "records": []}}
 
     class Model:
-        def __call__(self, messages, **_kwargs):
+        def __call__(self, messages, **kwargs):
+            assert kwargs["max_tokens"] == 8192
             task_id = json.loads(messages[-1]["content"])["task_id"]
             calls.append(task_id)
             return ChatMessage(role="assistant", content=f"Synthetic answer for {task_id}.")
