@@ -58,6 +58,7 @@ def test_role_quality_guidance_is_delivered_to_every_planning_phase(mode):
     result = analyzer.build(PublicTask(task_id="quality", question="Explain the conclusion and its evidence."))
     for phase in ("predict", "local_plan", "reconcile"):
         assert "competing full deliverable" in prompts[phase]
+        assert "3000-5000-word" in prompts[phase]
         assert "consequential defects" in prompts[phase]
         assert "supported correction" in prompts[phase]
         assert "never guess" in prompts[phase] or "must not be invented" in prompts[phase]

@@ -262,6 +262,31 @@ def test_contributor_answer_cap_is_enforced_for_json_object_fallback():
     assert "Contributor answer exceeds" in str(result.trajectory[0].error)
 
 
+def test_contributor_length_correction_keeps_summary_compact_and_preserves_fact_rich_handoff():
+    team = make_team(contributors=True)
+    bad = {"answer": "x" * 1201, "ledger": {
+        "requirements": [], "outline": [], "evidence_spans": [], "source_references": []}}
+    valid = {"answer": "Compact contribution summary.", "ledger": {
+        "requirements": ["Explain the requested result."],
+        "outline": ["The result follows after checking the stated assumptions and units."],
+        "evidence_spans": [], "source_references": []}}
+    model = ScriptedModel([bad, valid])
+    services, context = make_services(team, {"searcher": model})
+    result = _run_agent_iterative(team.agents[0].model_dump(mode="json"),
+                                 team.model_dump(mode="json"), context, services)
+    assert result.terminated_reason == "subtask_complete" and len(model.calls) == 2
+    correction = model.calls[1][-1]["content"]
+    assert "Keep answer <=1200 characters as a compact summary" in correction
+    assert "at most 12 items" in correction and "<=512 characters" in correction
+    assert "merge overlapping requirements while preserving public-task coverage" in correction
+    assert "Put the substantive contribution body in answer" not in correction
+    for prompt in (model.calls[0][0]["content"], correction):
+        assert "not a section heading alone" in prompt
+        assert "3000-5000-word" in prompt
+        assert "checked intermediate results" in prompt
+        assert "legal or policy obligations" in prompt
+
+
 def test_malformed_checkpoint_cannot_hide_an_illegal_tool_for_correction():
     team = make_team(checkpoints=["accuracy"])
     invalid = {"answer": "Draft", "checkpoints": {"accuracy": "wrong shape"},
@@ -416,7 +441,7 @@ def test_repeated_nonterminal_response_gets_correction_then_fails_without_progre
     result = run_writer(team, services, context)
     assert result.answer is None and result.terminated_reason == "error"
     assert len(model.calls) == 3
-    assert "Continue the assigned work with substantive contribution text" in model.calls[1][-1]["content"]
+    assert "Continue the assigned work with substantive facts, reasoning, results" in model.calls[1][-1]["content"]
     assert "Continuation correction" in model.calls[2][-1]["content"]
     warnings = [event for event in services.events if event["kind"] == "continuation_warning"]
     assert len(warnings) == 1

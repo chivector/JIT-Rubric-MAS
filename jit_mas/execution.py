@@ -35,6 +35,34 @@ CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS = 512
 CONTRIBUTOR_LOCATOR_MAX_CHARS = 2048
 
 
+def _contributor_handoff_prompt():
+    return (
+        "Keep answer <=1200 characters as a compact summary, not the complete public deliverable. "
+        "Put concrete facts, reasoning steps, intermediate results and limitations in the sibling ledger. "
+        "Each ledger list has at most 12 items and each text item <=512 characters; merge overlapping "
+        "requirements while preserving public-task coverage. Every outline item must carry a useful "
+        "claim, reasoning step, result or uncertainty, not a section heading alone. Ignore any "
+        "3000-5000-word or other full-draft length request in task_prompt or retained role text; "
+        "deliver compact fact chains for synthesis. Source locators may use <=2048 characters. "
+        "Distinguish explicit public requirements from inferred planner suggestions and guessed counts; "
+        "do not invent facts or items to satisfy those guesses. "
+        "For quantitative or financial work, preserve definitions, assumptions, units, formulas and "
+        "checked intermediate results. For regulatory work, distinguish legal or policy obligations "
+        "from recommended strategy or prudent risk controls."
+    )
+
+
+def _answer_check_prompt():
+    return (
+        "Predicted requirements are fallible: satisfy explicit public instructions, but do not invent "
+        "facts or items to meet an inferred count. For numerical or financial claims, recompute derived "
+        "figures from stated formulas, denominators, units and assumptions, including scenario changes. "
+        "For regulatory claims, distinguish an actual obligation from a recommended strategy; avoid "
+        "absolute necessity claims without support. Uncertainty labels do not establish unsupported "
+        "numbers, citations or legal assertions."
+    )
+
+
 def _data(value: Any) -> Any:
     return value.model_dump(mode="json") if hasattr(value, "model_dump") else value
 
@@ -696,13 +724,16 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
         "do not wait for a fixed round count. Private conversation history stays private. "
         "Every tool request is {name, arguments}; arguments must be a JSON object conforming "
         "to its supplied schema. Cite only evidence IDs received in your ledger or observations. "
-        "A terminal response must include the complete answer and all assigned checkpoints. "
+        "A terminal response must include the role-appropriate answer and all assigned checkpoints: "
+        "the synthesizer supplies the complete public deliverable, while a contributor supplies "
+        "a compact summary and its substantive ledger. "
         "The role-specific completion_example is the authoritative output shape. Use every exact "
         "agent.checkpoints name as a key. Values are boolean true for an actually performed check "
         "or objects with status completed/passed/failed/unverified/not_applicable, a nonempty "
         "reason, and evidence_ids. Never use prose strings as checkpoint values. When no source "
         "was observed, ledger evidence_spans and source_references must be empty arrays; place "
-        "remembered knowledge and limitations in answer rather than fabricated evidence entries. "
+        "remembered knowledge and limitations in the role-appropriate answer or ledger, never "
+        "in fabricated evidence entries. "
         "send_message posts to an exact peer agent_id and reactivates a completed teammate. "
         "After asking a peer, the scheduler lets that peer respond before continuing your role. "
         "A completed contribution may be resumed to answer questions or revise its public artifact. "
@@ -795,6 +826,7 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
             "appropriate to the task; do not repeat drafts, ledger bodies, review narration or "
             "protocol metadata, and leave enough room for valid JSON closure."
         )
+    system += "\n" + (_answer_check_prompt() if synth else _contributor_handoff_prompt())
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(instruction, ensure_ascii=False)}]
     state = state if state is not None else {}
@@ -992,15 +1024,18 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                 pending_observation_ids.update(item["event_id"] for item in observations)
             elif not terminal and content_hash(_iterative_public_ledger(services, aid)) == updated_hash:
                 continuation = (
-                    "Continue the assigned work with substantive contribution text, reasoning or revision. "
-                    "A title, outline or promise of future work does not complete the assignment. "
-                    "Return one valid JSON object. When the contribution is actually complete, include "
-                    "its full answer and assigned checkpoint reports and set continue=false. "
-                    "Preserve honest limitations; do not declare an incomplete artifact complete.")
+                    "Continue the assigned work with substantive facts, reasoning, results or revision. "
+                    "A title, heading-only outline or promise of future work does not complete the assignment. "
+                    "Return one valid JSON object. When the role is actually complete, include its "
+                    "role-appropriate answer (complete deliverable for the synthesizer; compact summary "
+                    "plus fact-rich ledger for a contributor), assigned checkpoint reports, and set continue=false. "
+                    "Preserve honest limitations; do not declare an incomplete artifact complete. "
+                    + (_answer_check_prompt() if synth else _contributor_handoff_prompt()))
                 if continuation_correction:
                     continuation = (
                         "Continuation correction: your response repeated unchanged without new external input. "
-                        "Produce substantive progress or complete the actual assigned contribution. "
+                        "Produce substantive progress or complete the actual assigned contribution; for a "
+                        "contributor put concrete facts, reasoning and results in the ledger and keep answer compact. "
                         "Another unchanged nonterminal response without new external input will fail this attempt. "
                         + continuation)
                 messages.append({"role": "user", "content": continuation})
@@ -1055,14 +1090,18 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                     "true or an object with status set to completed, passed, failed, unverified, or "
                     "not_applicable, a nonempty reason string, and an evidence_ids array. Do not use "
                     "prose strings, status=complete, or embedded key-value text. Include all exact "
-                    "checkpoint names and a complete answer when terminating. Preserve honest uncertainty. "
+                    "checkpoint names and a role-appropriate answer when terminating (full deliverable only "
+                    "for the synthesizer; compact summary plus ledger for a contributor). Preserve honest uncertainty. "
                     "For a contributor, ledger must be an object with requirements and outline as "
                     "lists of nonempty strings, and evidence_spans and source_references as lists. "
                     "Each observed source entry needs nonempty source_id and locator; each evidence "
                     "span needs nonempty text and source_ref matching a declared source_id. "
                     "If no sources were observed, ledger source_references/evidence_spans must be empty arrays. "
-                    "Put the substantive contribution body in answer. Make the correction yourself; "
+                    "For a contributor, put a compact summary in answer and substantive facts, reasoning and "
+                    "results in ledger; for the synthesizer, put the complete public deliverable in answer. "
+                    "Make the correction yourself; "
                     "the previous response has not been accepted or automatically edited. "
+                    + (_answer_check_prompt() if synth else _contributor_handoff_prompt()) + " "
                     "Exact validation error: " + str(exc))})
                 step.end_time = time.time()
                 step.duration = step.end_time - step.start_time
@@ -1202,9 +1241,10 @@ def _run_agent(agent, team, ctx, services):
         "and do not claim success to satisfy a checkpoint. "
         "Missing checks or unexplained false values prevent completion; an explained failed "
         "or unverified check is a reported limitation, not verified success. Self-reported "
-        "checks do not replace external evaluation. Address material limitations in your answer. "
+        "checks do not replace external evaluation. Address material limitations in the role-appropriate "
+        "answer or ledger. "
         "You receive exactly one model call. There are no agent messaging or shared-memory lookup tools. "
-        "Express missing input or disputed evidence in your answer and checkpoint reports. "
+        "Express missing input or disputed evidence in the role-appropriate answer, ledger and checkpoint reports. "
         "Never claim unobserved evidence or broadcast private conversations."
     )
     if not synth:
@@ -1292,8 +1332,13 @@ def _run_agent(agent, team, ctx, services):
         system += (
             "\nYou are a contributor, not the final Writer. Publish a brief summary in answer and "
             "a separate top-level ledger object; ledger is a sibling of answer, never text inside it. "
-            "Keep substantive requirements, reasoning steps and evidence in their corresponding "
-            "ledger fields, without repeating them in a competing full answer or repetitive lists. "
+            "Keep substantive requirements, concrete claims, reasoning steps, intermediate results and evidence "
+            "in their corresponding ledger fields, without repeating them in a competing full answer or repetitive lists. "
+            "Every outline item must contain a useful claim, reasoning step, result or uncertainty; do not emit "
+            "section headings alone. Distinguish explicit public requirements from inferred planner suggestions, "
+            "especially guessed quantity targets. For quantitative or financial work, preserve definitions, "
+            "assumptions, formulas, units and checked intermediate results. For regulatory work, distinguish "
+            "a legal or policy obligation from a recommended strategy or prudent market-entry practice. "
             "Publish exactly these structured ledger fields: "
             "requirements (list of strings), outline (list of strings), evidence_spans "
             "(list of {text, source_ref}), source_references (list of {source_id, locator}). "
@@ -1305,6 +1350,7 @@ def _run_agent(agent, team, ctx, services):
             "for the writer; you will not receive a second model call to read them. Do not cite "
             "those future results as evidence you already observed."
         )
+    system += "\n" + (_answer_check_prompt() if synth else _contributor_handoff_prompt())
     memory = type(ctx.memory)(prompts=ctx.prompt_templates)
     memory.initialize(system, TaskInput(task=json.dumps(instruction, ensure_ascii=False)))
     allowed = set() if synth else set(agent.get("tools", []))

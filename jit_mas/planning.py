@@ -233,11 +233,18 @@ Execution is single-pass: each selected agent receives one model call and publis
 Contributors publish a short answer and a structured ledger with requirements, outline,
 evidence_spans and source_references; the Writer consumes the shared ledger and submits
 the full deliverable. Plan contributors to supply compact, substantive facts, reasoning,
-examples and uncertainty useful for synthesis, not competing full deliverables. A review
+examples, intermediate results and uncertainty useful for synthesis, not competing full
+deliverables. Never assign a non-synthesizer a 3000-5000-word or other full-draft length
+target; budget compact fact chains instead. Every outline entry must carry a concrete
+claim, reasoning step, result or uncertainty; headings alone are not a handoff. A review
 should identify consequential defects and supported corrections rather than rewrite the
 whole answer. The final Writer must cover the public task, check consequential claims and
 inferences, and use citations only when their details are supported or confidently known;
 never guess an author, title, year, quotation or numerical result to appear well sourced.
+Keep explicit public requirements distinct from inferred planner suggestions, including
+guessed counts or coverage targets. For quantitative or financial work, hand off definitions,
+assumptions, units, formulas and checked intermediate results. For regulatory work, distinguish
+legal or policy obligations from recommended strategy and prudent risk controls.
 External tool calls may be batched once by a contributor; their
 results enter the ledger without another model turn. The Writer has tools=[]. Do not
 plan send_message, read_evidence, raise_issue, debate, role revisits or iterative review.
@@ -284,6 +291,14 @@ verdict. Name the producer dependency and required artifact. State what would fa
 suspect claim or reveal an omitted assumption; agreement between agents is not evidence.
 Plan a compact contribution containing the facts, reasoning, examples and uncertainty
 needed downstream, rather than a competing full deliverable or a source-status statement.
+Do not request a 3000-5000-word or other full-draft output for a non-synthesizer;
+budget compact fact chains with the intermediate details needed for synthesis.
+Every outline entry must contain a concrete claim, reasoning step, result or uncertainty,
+not only a section heading. Distinguish explicit public requirements from inferred planner
+suggestions, especially guessed quantity or coverage targets. For quantitative or financial
+work, preserve definitions, assumptions, units, formulas and checked intermediate results.
+For regulatory work, distinguish legal or policy obligations from recommended strategy and
+prudent risk controls.
 For review, identify consequential defects, explain their effect and give a specific
 supported correction; do not plan a rewritten copy of the whole artifact. If you may
 synthesize, plan to cover the public task and check consequential claims and inferences.
@@ -332,8 +347,10 @@ context allowance. Editing a full article still requires enough tokens to return
 full article; a genuinely short requested summary may need fewer tokens than its sources.
 Budget a concise final response without duplicating drafts, review narration or preambles.
 Give non-synthesizer roles compact, substantive material to produce: relevant facts,
-reasoning, examples, tradeoffs and uncertainty, not competing full deliverables. A reviewer
-should identify consequential defects with supported corrections, not rewrite the whole
+reasoning, examples, tradeoffs and uncertainty, not competing full deliverables. Do not
+assign non-synthesizers a 3000-5000-word or other full-draft length target. Allocate
+non-synthesizer output to compact fact chains and checked intermediate results instead.
+A reviewer should identify consequential defects with supported corrections, not rewrite the whole
 artifact. Make these distinctions explicit in responsibilities and task_prompt. The
 Writer must address all public task requirements and check consequential factual claims
 and inferences against available evidence and assumptions. Do not require guessed citation
