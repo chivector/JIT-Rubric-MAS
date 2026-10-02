@@ -134,9 +134,10 @@ def test_contributor_schema_caps_answer_and_ledger_without_capping_writer(submis
     for invalid in ({"answer": "A" * 1201},
                     {"ledger": {**empty_ledger, "outline": ["x" * 513]}},
                     {"ledger": {**empty_ledger, "outline": ["x"] * 13}},
-                    {"ledger": {**empty_ledger, "source_references": [{"source_id": "s", "locator": "x" * 513}]}}):
+                    {"ledger": {**empty_ledger, "source_references": [{"source_id": "s", "locator": "x" * 2049}]}}):
         with pytest.raises(SchemaValidationError):
             validator.validate(invalid)
+    validator.validate({"ledger": {**empty_ledger, "source_references": [{"source_id": "s", "locator": "x" * 2048}]}})
     writer_messages = [{"role": "user", "content": json.dumps({"agent": {"checkpoints": []},
                                                                   "submission": "final_answer"})}]
     Draft202012Validator(pilot._execution_response_schema(writer_messages, max_tokens=12288)).validate(

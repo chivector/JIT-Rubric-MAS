@@ -128,6 +128,8 @@ def test_each_role_receives_its_complete_output_shape_without_a_recall(execute_t
             assert "answer <=1200" in messages[0]["content"]
             assert "at most 12 items" in messages[0]["content"]
             assert "<=512 characters per item" in messages[0]["content"]
+            assert "soft target" in messages[0]["content"]
+            assert "terminate with continue=false" not in messages[0]["content"]
             assert set(example["ledger"]) == {"requirements", "outline", "evidence_spans", "source_references"}
             example["ledger"]["outline"] = ["State the assumptions before the conclusion."]
         example["answer"] = aid + " artifact"

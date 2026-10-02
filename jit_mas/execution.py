@@ -29,6 +29,10 @@ from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGrap
 
 
 ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v5"
+CONTRIBUTOR_ANSWER_MAX_CHARS = 1200
+CONTRIBUTOR_LEDGER_MAX_ITEMS = 12
+CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS = 512
+CONTRIBUTOR_LOCATOR_MAX_CHARS = 2048
 
 
 def _data(value: Any) -> Any:
@@ -438,16 +442,26 @@ def _contribution_ledger(value):
         if not isinstance(value.get(key), list) or any(
                 not isinstance(item, str) or not item.strip() for item in value[key]):
             raise ResponseProtocolError(f"ledger.{key} must be a list of nonempty strings")
+        if any(len(item) > CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS for item in value[key]):
+            raise ResponseProtocolError(
+                f"ledger.{key} entry exceeds {CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS} characters")
     sources = value.get("source_references")
     spans = value.get("evidence_spans")
     if not isinstance(sources, list) or not isinstance(spans, list):
         raise ResponseProtocolError("ledger needs evidence_spans and source_references lists")
+    for key in ("requirements", "outline", "source_references", "evidence_spans"):
+        if len(value[key]) > CONTRIBUTOR_LEDGER_MAX_ITEMS:
+            raise ResponseProtocolError(
+                f"ledger.{key} may contain at most {CONTRIBUTOR_LEDGER_MAX_ITEMS} items")
     source_ids = set()
     for source in sources:
         if not isinstance(source, dict) or any(
                 not isinstance(source.get(key), str) or not source[key].strip()
                 for key in ("source_id", "locator")):
             raise ResponseProtocolError("Each source reference needs source_id and locator")
+        if len(source["locator"]) > CONTRIBUTOR_LOCATOR_MAX_CHARS:
+            raise ResponseProtocolError(
+                f"ledger source locator exceeds {CONTRIBUTOR_LOCATOR_MAX_CHARS} characters")
         if source["source_id"] in source_ids:
             raise ResponseProtocolError("Source IDs must be unique within a contribution")
         source_ids.add(source["source_id"])
@@ -456,8 +470,21 @@ def _contribution_ledger(value):
                 or not span["text"].strip() or not isinstance(span.get("source_ref"), str)
                 or span["source_ref"] not in source_ids):
             raise ResponseProtocolError("Each evidence span needs text and a declared source_ref")
+        if len(span["text"]) > CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS:
+            raise ResponseProtocolError(
+                f"ledger evidence span exceeds {CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS} characters")
     return copy.deepcopy({key: value[key] for key in
                           ("requirements", "outline", "evidence_spans", "source_references")})
+
+
+def _validate_contributor_compactness(parsed):
+    """Apply contributor caps even when the provider only supports json_object."""
+    answer = parsed.get("answer")
+    if answer is not None and isinstance(answer, str) and len(answer) > CONTRIBUTOR_ANSWER_MAX_CHARS:
+        raise ResponseProtocolError(
+            f"Contributor answer exceeds {CONTRIBUTOR_ANSWER_MAX_CHARS} characters")
+    if parsed.get("ledger") is not None:
+        _contribution_ledger(parsed["ledger"])
 
 
 def _correctable_execution_shape_error(error, response, *, observed_ids, allowed_tools,
@@ -473,6 +500,10 @@ def _correctable_execution_shape_error(error, response, *, observed_ids, allowed
         "ledger.outline must be", "ledger needs evidence_spans and source_references lists",
         "Each source reference needs source_id and locator", "Source IDs must be unique",
         "Each evidence span needs text and a declared source_ref",
+        "Contributor answer exceeds", "ledger.requirements may contain at most",
+        "ledger.outline may contain at most", "ledger.source_references may contain at most",
+        "ledger.evidence_spans may contain at most", "ledger source locator exceeds",
+        "ledger evidence span exceeds", "ledger.requirements entry exceeds", "ledger.outline entry exceeds",
     )
     if not str(error).startswith(prefixes):
         return False
@@ -748,7 +779,9 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
             "ledger, with at most 12 items per list and <=512 characters per item; source locators "
             "may use up to 2048 characters so URLs remain exact. A reviewer should prioritize the "
             "three to five most consequential findings and concrete corrections, while preserving "
-            "additional omissions needed for correctness, never a rewritten draft. Target the "
+            "additional omissions needed for correctness, never a rewritten draft. Independently "
+            "verify the source claim and its consequential inference rather than approving it "
+            "because another agent agrees. Target the "
             "serialized contributor response at about half the per-response output-token budget, "
             "removing repetition while preserving facts and reasoning. This is a soft target: if a "
             "valid continuation is needed, continue with an incremental ledger update rather than "
@@ -871,6 +904,8 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                 elif name not in allowed:
                     raise PermissionError(f"tool '{name}' is not allowed for agent '{aid}'")
             merged["tools"] = []
+            if not synth:
+                _validate_contributor_compactness(merged)
             _validate_completion_fields(merged)
             evidence_ids = merged.get("evidence_ids", [])
             if not set(evidence_ids) <= observed_ids:
@@ -1181,7 +1216,9 @@ def _run_agent(agent, team, ctx, services):
             "ledger, with at most 12 items per list and <=512 characters per item; source locators "
             "may use up to 2048 characters so URLs remain exact. A reviewer should prioritize the "
             "three to five most consequential findings and concrete corrections, while preserving "
-            "additional omissions needed for correctness, never a rewritten draft. Target the "
+            "additional omissions needed for correctness, never a rewritten draft. Independently "
+            "verify the source claim and its consequential inference rather than approving it "
+            "because another agent agrees. Target the "
             "serialized contributor response at about half the per-response output-token budget, "
             "removing repetition while preserving facts and reasoning. This is a soft target: if a "
             "valid continuation is needed, continue with an incremental ledger update rather than "
@@ -1327,6 +1364,8 @@ def _run_agent(agent, team, ctx, services):
                         raise ResponseProtocolError("Completion cites evidence not observed by this agent")
                     _checkpoint_reports(agent, completion, observed_ids)
             parsed = merged_completion
+            if not synth:
+                _validate_contributor_compactness(parsed)
             if synth and parsed.get("answer") is not None:
                 quality_error = _completion_quality_error(parsed["answer"], services.public_task)
                 if quality_error:

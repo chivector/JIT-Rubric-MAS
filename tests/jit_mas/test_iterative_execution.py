@@ -216,12 +216,15 @@ def test_contributor_repairs_source_shape_only_by_returning_new_ledger(bad_ledge
     assert json.loads(result.trajectory[0].model_output_messages.content) == invalid
     assert result.trajectory[1].error is None
     assert services.artifacts["searcher"]["ledger"] == repaired["ledger"]
-    assert "For every role, put the substantive body" in model.calls[0][0]["content"]
+    assert "Contributors publish a compact substantive summary in answer" in model.calls[0][0]["content"]
+    assert "the synthesizer publishes the complete requested deliverable in answer" in model.calls[0][0]["content"]
     assert "publish evidence_spans=[] and source_references=[]" in model.calls[0][0]["content"]
     assert "FINAL ROLE OVERRIDE" in model.calls[0][0]["content"]
     assert "answer <=1200" in model.calls[0][0]["content"]
     assert "at most 12 items" in model.calls[0][0]["content"]
     assert "<=512 characters per item" in model.calls[0][0]["content"]
+    assert "soft target" in model.calls[0][0]["content"]
+    assert "terminate with continue=false" not in model.calls[0][0]["content"]
 
 
 def test_ledger_protocol_correction_retains_both_metered_calls_and_raw_error():
@@ -233,7 +236,9 @@ def test_ledger_protocol_correction_retains_both_metered_calls_and_raw_error():
     valid = {"answer": "Reasoned contribution.", "ledger": {"requirements": [], "outline": [],
         "evidence_spans": [], "source_references": []}}
     raw = ScriptedModel([invalid, valid])
-    ledger = BudgetLedger(max_calls=2, max_tokens=20000, max_tool_calls=0)
+    # The contributor compactness guidance is part of the metered prompt; leave
+    # enough shared budget for both the malformed response and its correction.
+    ledger = BudgetLedger(max_calls=2, max_tokens=30000, max_tool_calls=0)
     model = MeteredModel(raw, ledger, "execution", "searcher", 4096)
     services, context = make_services(team, {"searcher": model})
     services.ledger = ledger
@@ -244,6 +249,17 @@ def test_ledger_protocol_correction_retains_both_metered_calls_and_raw_error():
     assert len([record for record in ledger.snapshot()["records"] if record["kind"] == "model"]) == 2
     assert "ledger.outline must be" in str(result.trajectory[0].error)
     assert json.loads(result.trajectory[0].model_output_messages.content) == invalid
+
+
+def test_contributor_answer_cap_is_enforced_for_json_object_fallback():
+    team = make_team(contributors=True)
+    model = ScriptedModel([{"answer": "x" * 1201, "ledger": {
+        "requirements": [], "outline": [], "evidence_spans": [], "source_references": []}}])
+    services, context = make_services(team, {"searcher": model})
+    result = _run_agent_iterative(team.agents[0].model_dump(mode="json"),
+                                 team.model_dump(mode="json"), context, services)
+    assert result.terminated_reason == "error"
+    assert "Contributor answer exceeds" in str(result.trajectory[0].error)
 
 
 def test_malformed_checkpoint_cannot_hide_an_illegal_tool_for_correction():
