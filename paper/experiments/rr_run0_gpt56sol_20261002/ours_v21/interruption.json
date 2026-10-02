@@ -1,0 +1,116 @@
+{
+  "status": "interrupted",
+  "recorded_at": "2026-10-02T07:37:45.021631+00:00",
+  "reason": "Stopped after seven failed EVO tasks and an eighth unfinished task: repeated unchanged continue=true exhausted budget; reflection evidence envelope and pool binding correction failed. Frozen code was not edited.",
+  "stopped_process_ids": [
+    32028,
+    5372
+  ],
+  "journal_status_retained": "running",
+  "sources": [
+    {
+      "position": 1,
+      "task_id": "6847465956a0f6376a6054a7",
+      "status": "failed",
+      "error_type": "ValueError",
+      "error": "Agent memory lesson invented source tasks or unavailable process evidence"
+    },
+    {
+      "position": 2,
+      "task_id": "6847465956a0f6376a60543e",
+      "status": "failed",
+      "error_type": "RuntimeError",
+      "error": "BudgetExceeded: Team token budget exhausted before request"
+    },
+    {
+      "position": 3,
+      "task_id": "6847465956a0f6376a6054a9",
+      "status": "failed",
+      "error_type": "RuntimeError",
+      "error": "APIConnectionError: Connection error."
+    },
+    {
+      "position": 4,
+      "task_id": "6847465956a0f6376a6053f3",
+      "status": "failed",
+      "error_type": "ValueError",
+      "error": "Agent memory lesson invented source tasks or unavailable process evidence"
+    },
+    {
+      "position": 5,
+      "task_id": "6847465956a0f6376a6053aa",
+      "status": "failed",
+      "error_type": "ValueError",
+      "error": "A pool member may participate only once in a task"
+    },
+    {
+      "position": 6,
+      "task_id": "6847465956a0f6376a605478",
+      "status": "failed",
+      "error_type": "ValueError",
+      "error": "Agent memory lesson invented source tasks or unavailable process evidence"
+    },
+    {
+      "position": 7,
+      "task_id": "6847465956a0f6376a60547f",
+      "status": "failed",
+      "error_type": "ValidationError",
+      "error": "1 validation error for _ReconciliationResponse\nteam\n  Value error, Independent reviewer must depend on the primary owner's artifact [type=value_error, input_value={'schema_version': '1.0',...peer request is made.'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "position": 8,
+      "task_id": "6847465956a0f6376a6053f5",
+      "status": "started",
+      "error_type": null,
+      "error": null
+    }
+  ],
+  "checkpoints": [
+    {
+      "position": 0,
+      "complete_evaluations": 7,
+      "eligible": false,
+      "reused_from": null
+    },
+    {
+      "position": 5,
+      "complete_evaluations": 7,
+      "eligible": false,
+      "reused_from": 0
+    }
+  ],
+  "test_submissions": 0,
+  "test_mean": null,
+  "valid_two_arm_comparison": false,
+  "cost_recorded_settled_only": {
+    "model_calls": 511,
+    "tokens": 5102238,
+    "by_stage": {
+      "inference": {
+        "model_calls": 213,
+        "input_tokens": 3179433,
+        "output_tokens": 283208,
+        "estimated_calls": 2,
+        "request_seconds": 1393.5170000000217
+      },
+      "evaluation": {
+        "model_calls": 268,
+        "input_tokens": 541644,
+        "output_tokens": 71444,
+        "estimated_calls": 0,
+        "request_seconds": 5295.770000000171
+      },
+      "update": {
+        "model_calls": 30,
+        "input_tokens": 933601,
+        "output_tokens": 92908,
+        "estimated_calls": 0,
+        "request_seconds": 350.9520000000048
+      }
+    },
+    "unknown_budgets": 0,
+    "unsettled_calls": 0,
+    "monetary_cost": null
+  },
+  "active_call_usage_unknown": true
+}

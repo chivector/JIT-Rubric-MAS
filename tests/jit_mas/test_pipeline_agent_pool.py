@@ -181,6 +181,49 @@ def test_pool_planning_rejects_identity_substitution():
                            Prediction(graph=RubricGraph(rubrics=[]), candidates=[candidate]), [])
 
 
+@pytest.mark.parametrize("corrected", [True, False])
+def test_pool_duplicate_correction_names_participations_without_rebinding(corrected):
+    candidates = [
+        AgentSpec(agent_id="analyst_1", role="Analyst", capability="analysis",
+                  pool_agent_id="analyst", pool_agent_version=1),
+        AgentSpec(agent_id="analyst_2", role="Analyst", capability="analysis",
+                  pool_agent_id="analyst", pool_agent_version=1),
+        AgentSpec(agent_id="writer_1", role="Writer", capability="writing",
+                  pool_agent_id="writer", pool_agent_version=1),
+    ]
+    response = Prediction(graph=RubricGraph(rubrics=[]), candidates=candidates).model_dump(mode="json")
+    original = json.loads(json.dumps(response))
+    requests = []
+
+    def model(messages):
+        payload = json.loads(messages[1]["content"])
+        requests.append(payload)
+        if len(requests) == 2:
+            correction = payload["response_correction"]
+            assert json.loads(correction["previous_response"]) == original
+            message = correction["validation_errors"][0]["message"]
+            assert 'duplicate_pool_bindings={"analyst": ["analyst_1", "analyst_2"]}' in message
+            assert "Changing agent_id does not create another pool member" in message
+            assert "Reconciliation must retain" in message
+            if corrected:
+                return json.dumps({**response, "candidates": [response["candidates"][0],
+                                                             response["candidates"][2]]})
+        return json.dumps(response)
+
+    analyzer = GlobalAnalyzer(model, agent_pool=seed_pool())
+    task = PublicTask(task_id="new", question="Explain a technical comparison")
+    if corrected:
+        prediction = analyzer.predict(task)
+        assert [(agent.agent_id, agent.pool_agent_id) for agent in prediction.candidates] == [
+            ("analyst_1", "analyst"), ("writer_1", "writer")]
+    else:
+        with pytest.raises(ValueError, match="duplicate_pool_bindings"):
+            analyzer.predict(task)
+    assert len(requests) == len(analyzer.call_records) == 2
+    assert response == original
+    assert json.loads(analyzer.call_records[0]["response"]) == original
+
+
 @pytest.mark.parametrize("selected_skills, expected", [(None, {"synthesis"}), ([], set())])
 def test_local_skill_selection_preserves_explicit_empty_choice(selected_skills, expected):
     pool = seed_pool()

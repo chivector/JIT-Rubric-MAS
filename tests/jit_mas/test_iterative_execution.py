@@ -129,6 +129,96 @@ def test_writer_can_cite_delivered_upstream_artifact():
     assert final_event["parent_event_ids"] == [observed["artifact"]]
 
 
+def test_repeated_nonterminal_response_gets_correction_then_fails_without_progress():
+    repeated = {"answer": "A title only", "continue": True,
+                "evidence_ids": [], "checkpoints": {}}
+    reordered = json.dumps(dict(reversed(list(repeated.items()))), indent=4)
+    model = ScriptedModel([repeated, reordered, repeated])
+    team = make_team()
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer is None and result.terminated_reason == "error"
+    assert len(model.calls) == 3
+    assert "Continue the assigned work with substantive contribution text" in model.calls[1][-1]["content"]
+    assert "Continuation correction" in model.calls[2][-1]["content"]
+    warnings = [event for event in services.events if event["kind"] == "continuation_warning"]
+    assert len(warnings) == 1
+    assert "Repeated unchanged nonterminal response" in str(result.trajectory[-1].error)
+    assert "writer" not in services.artifacts
+    assert len([event for event in services.events if event["kind"] == "artifact_published"]) == 2
+
+
+def test_nonterminal_progress_resets_no_progress_guard():
+    replies = [
+        {"answer": "Initial draft", "continue": True, "evidence_ids": [], "checkpoints": {}},
+        {"answer": "Initial draft", "continue": True, "evidence_ids": [], "checkpoints": {}},
+        {"answer": "Expanded draft with the requested analysis", "continue": True,
+         "evidence_ids": [], "checkpoints": {}},
+        {"answer": "Expanded draft with the requested analysis", "continue": True,
+         "evidence_ids": [], "checkpoints": {}},
+        {"answer": "Complete guide", "continue": False, "evidence_ids": [], "checkpoints": {}},
+    ]
+    model = ScriptedModel(replies)
+    team = make_team()
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer == "Complete guide" and result.terminated_reason == "final_answer"
+    assert len(model.calls) == 5
+    assert len([event for event in services.events if event["kind"] == "continuation_warning"]) == 2
+
+
+def test_repeated_nonterminal_response_can_recover_after_correction():
+    repeated = {"answer": "A title only", "continue": True}
+
+    def corrected(messages):
+        assert "Continuation correction" in messages[-1]["content"]
+        return {"answer": "Completed substantive guide", "continue": False}
+
+    model = ScriptedModel([repeated, repeated, corrected])
+    team = make_team()
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer == "Completed substantive guide" and result.terminated_reason == "final_answer"
+    assert len(model.calls) == 3
+
+
+def test_identical_responses_with_new_peer_input_do_not_trigger_no_progress_guard():
+    repeated = {"answer": "Still assessing the peer findings", "continue": True}
+    team = make_team(contributors=True)
+    counter = iter(range(3))
+
+    def receive_peer(messages):
+        services.event("searcher", "peer_message", {"content": f"New finding {next(counter)}"},
+                       recipient="writer")
+        return repeated
+
+    model = ScriptedModel([receive_peer, receive_peer, receive_peer,
+                           {"answer": "Guide with the received findings", "continue": False}])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer == "Guide with the received findings"
+    assert len(model.calls) == 4
+    assert not [event for event in services.events if event["kind"] == "continuation_warning"]
+
+
+def test_identical_tool_requests_keep_receiving_new_observations():
+    team = make_team(tools=["search"])
+    request = {"continue": True, "tools": [{"name": "search", "arguments": {"query": "sources"}}]}
+    observed = []
+
+    def search(query):
+        observed.append(query)
+        return f"New source batch {len(observed)}"
+
+    model = ScriptedModel([request, request, request, {"answer": "Guide from the observations"}])
+    services, context = make_services(team, {"writer": model}, tools={"search": search})
+    result = run_writer(team, services, context)
+    assert result.answer == "Guide from the observations" and observed == ["sources"] * 3
+    assert len(model.calls) == 4
+    assert all(call[-1]["content"].startswith("Public observations: ") for call in model.calls[1:])
+    assert not [event for event in services.events if event["kind"] == "continuation_warning"]
+
+
 @pytest.mark.parametrize("failure", ["truncated JSON", RuntimeError("provider failure")])
 def test_failed_writer_draft_never_becomes_final_submission(failure):
     team = make_team()
@@ -251,6 +341,142 @@ def test_terminal_turn_cannot_reuse_a_previous_draft_without_answer():
     result = run_writer(team, services, context)
     assert result.answer is None and result.terminated_reason == "error"
     assert "complete answer" in str(result.trajectory[-1].error)
+
+
+def test_iterative_protocol_correction_recovers_invalid_checkpoint_shape():
+    team = make_team(checkpoints=["accuracy"])
+    model = ScriptedModel([
+        {"answer": "Draft", "continue": True, "checkpoints": {"accuracy": "status=complete"}},
+        {"answer": "Complete guide", "continue": False,
+         "checkpoints": {"accuracy": {"status": "passed", "reason": "Checked.", "evidence_ids": []}}},
+    ])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer == "Complete guide" and result.terminated_reason == "final_answer"
+    assert len(model.calls) == 2
+    assert len(result.trajectory) == 2
+    assert str(result.trajectory[0].error).startswith("A checkpoint must be")
+    assert "ResponseProtocolError" in result.trajectory[0].observations
+    assert result.trajectory[0].model_output_messages.content == json.dumps({
+        "answer": "Draft", "continue": True, "checkpoints": {"accuracy": "status=complete"}})
+    assert result.trajectory[1].error is None
+    assert result.metadata["checkpoint_reports"]["accuracy"]["status"] == "passed"
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == 1
+    assert not [event for event in services.events if event["kind"] == "execution_error"]
+    assert len([event for event in services.events if event["kind"] == "artifact_published"]) == 1
+
+
+def test_repeated_invalid_checkpoint_fails_after_one_correction_without_tool_dispatch():
+    team = make_team(tools=["search"], checkpoints=["accuracy"])
+    invalid = {"answer": "Unvalidated draft", "checkpoints": {"accuracy": "status=complete"},
+               "tools": [{"name": "search", "arguments": {"query": "must not dispatch"}}]}
+    model = ScriptedModel([invalid, invalid, {
+        "answer": "This response must never run", "checkpoints": {"accuracy": True}}])
+    dispatched = []
+    services, context = make_services(team, {"writer": model},
+                                      tools={"search": lambda query: dispatched.append(query)})
+    result = run_writer(team, services, context)
+    assert result.answer is None and result.terminated_reason == "error"
+    assert len(model.calls) == len(result.trajectory) == 2
+    assert all(str(step.error).startswith("A checkpoint must be") for step in result.trajectory)
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == 1
+    assert len([event for event in services.events if event["kind"] == "execution_error"]) == 1
+    assert not dispatched and "writer" not in services.artifacts
+    assert not any(event["kind"] in {"artifact_published", "final_answer"} for event in services.events)
+
+
+def test_checkpoint_correction_still_requires_every_exact_assigned_checkpoint():
+    team = make_team(checkpoints=["Verify source assumptions", "Address uncertainty"])
+    model = ScriptedModel([
+        {"answer": "Draft", "checkpoints": {"Verify source assumptions": "not checked"}},
+        {"answer": "Nominal final answer", "continue": False, "checkpoints": {
+            "Verify source assumptions": True,
+            "Address uncertainties": {"status": "unverified", "reason": "No source available."}}},
+    ])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer is None and result.terminated_reason == "error"
+    assert len(model.calls) == 2
+    assert str(result.trajectory[0].error).startswith("A checkpoint must be")
+    assert "Unconfirmed checkpoints" in str(result.trajectory[1].error)
+    assert "Address uncertainty" in str(result.trajectory[1].error)
+    assert "writer" not in services.artifacts
+    assert not any(event["kind"] == "final_answer" for event in services.events)
+
+
+@pytest.mark.parametrize("invalid, error", [
+    ({"answer": "Unsupported guide", "evidence_ids": ["unseen"]}, "Completion cites evidence not observed"),
+    ({"answer": "Unsupported guide", "checkpoints": {"accuracy": {
+        "status": "passed", "reason": "Cited a source", "evidence_ids": ["unseen"]}}},
+     "Checkpoint cites evidence not observed"),
+    ({"tools": [{"name": "send_message", "arguments": {
+        "recipient": "invented", "content": "Please help"}}]}, "exact peer agent_id"),
+    ({"answer": "Draft", "checkpoints": []}, "checkpoints must be an object"),
+])
+@pytest.mark.parametrize("after_checkpoint_correction", [False, True])
+def test_unrelated_protocol_errors_fail_without_a_checkpoint_correction(
+        invalid, error, after_checkpoint_correction):
+    team = make_team(contributors=True, checkpoints=["accuracy"])
+    replies = [invalid, {"answer": "This must never run", "checkpoints": {"accuracy": True}}]
+    if after_checkpoint_correction:
+        replies.insert(0, {"answer": "Draft", "checkpoints": {"accuracy": "wrong shape"}})
+    model = ScriptedModel(replies)
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer is None and result.terminated_reason == "error"
+    assert len(model.calls) == len(result.trajectory) == 1 + after_checkpoint_correction
+    assert error in str(result.trajectory[-1].error)
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == after_checkpoint_correction
+    assert "writer" not in services.artifacts
+    assert not any(event["kind"] == "final_answer" for event in services.events)
+
+
+def test_checkpoint_correction_does_not_reset_repeated_no_progress_protection():
+    team = make_team(checkpoints=["accuracy"])
+    repeated = {"answer": "A title only", "continue": True, "checkpoints": {"accuracy": True}}
+    model = ScriptedModel([
+        repeated, repeated,
+        {"answer": "A title only", "continue": True, "checkpoints": {"accuracy": "wrong shape"}},
+        repeated,
+        {"answer": "This must never run", "checkpoints": {"accuracy": True}},
+    ])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer is None and result.terminated_reason == "error"
+    assert len(model.calls) == 4
+    assert "Repeated unchanged nonterminal response" in str(result.trajectory[-1].error)
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == 1
+    assert len([event for event in services.events if event["kind"] == "continuation_warning"]) == 1
+    assert "writer" not in services.artifacts
+    assert not any(event["kind"] == "final_answer" for event in services.events)
+
+
+def test_recent_memory_retains_invalid_draft_with_its_protocol_correction():
+    team = make_team(checkpoints=["accuracy"])
+    pool = seed_pool()
+    team.agents[-1] = AgentSpec(**{**team.agents[-1].model_dump(mode="json"),
+        "pool_agent_id": "writer", "pool_agent_version": 1,
+        "harness": AgentHarnessPolicy(memory_policy="recent", memory_window=1)})
+    invalid = {"answer": "Draft whose substance must be preserved", "continue": True,
+               "checkpoints": {"accuracy": "checked carefully"}}
+
+    def corrected(messages):
+        assert len(messages) == 4
+        assert [message["role"] for message in messages] == ["system", "user", "assistant", "user"]
+        assert json.loads(messages[-2]["content"]) == invalid
+        assert messages[-1]["content"].startswith("Protocol correction:")
+        assert "Every assigned checkpoint value" in messages[-1]["content"]
+        assert json.loads(messages[1]["content"])["agent"]["checkpoints"] == ["accuracy"]
+        return {"answer": "Substantive revised guide", "continue": False,
+                "checkpoints": {"accuracy": {"status": "unverified", "reason": "No external source available.",
+                                             "evidence_ids": []}}}
+
+    model = ScriptedModel([invalid, corrected])
+    services, context = make_services(team, {"writer": model}, pool=pool)
+    result = run_writer(team, services, context)
+    assert result.answer == "Substantive revised guide" and result.terminated_reason == "final_answer"
+    assert len(model.calls) == 2
+    assert result.trajectory[0].error is not None and result.trajectory[1].error is None
 
 
 def test_recent_memory_receives_tool_result_and_peer_update_together():

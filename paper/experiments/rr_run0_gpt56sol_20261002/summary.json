@@ -87,5 +87,32 @@
     "monetary_cost": null
   },
   "elapsed_seconds": 3922.75,
-  "serving_identity_limit": "The gateway returns the gpt-5.6-sol alias; no independently verified, immutable model snapshot is available. Failed HTTP attempts have no response_model."
+  "serving_identity_limit": "The gateway returns the gpt-5.6-sol alias; no independently verified, immutable model snapshot is available. Failed HTTP attempts have no response_model.",
+  "latest_attempt": {
+    "version": "v21",
+    "status": "interrupted",
+    "evo_failed": 7,
+    "evo_interrupted": 1,
+    "evo_completed": 0,
+    "evo_not_started": 12,
+    "experience_version": 0,
+    "val_complete": 7,
+    "val_total": 10,
+    "test_completed": 0,
+    "test_mean": null,
+    "paired_difference": null,
+    "recorded_call_lower_bound": 511,
+    "recorded_token_lower_bound": 5102238,
+    "active_call_usage_unknown": true
+  },
+  "running_attempt": {
+    "version": "v25",
+    "status": "running",
+    "preflight_status": "passed",
+    "preflight_judge_requests": 0,
+    "formal_test_completed": 0,
+    "formal_test_mean": null,
+    "first_c0_submission_answer_chars": 102,
+    "first_c0_submission_limit": "Only a title was submitted; score will be retained under the frozen protocol."
+  }
 }

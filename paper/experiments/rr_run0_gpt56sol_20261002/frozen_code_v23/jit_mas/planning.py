@@ -115,21 +115,7 @@ class JsonModelCalls:
                 request.update(as_json(refresh_payload()))
             if correction is not None:
                 request["response_correction"] = correction
-            correction_system = (
-                "\nThis is the sole contract correction turn. The response_correction field names "
-                "the exact invalid cross-field assignments in your prior JSON. Fix those assignments "
-                "in the returned object, then recheck every affected dependency and identity. "
-                "Do not merely restate a correction in selection_rationale while retaining invalid fields. "
-                "For a final-synthesizer DAG violation, final means a terminal node: no selected agent "
-                "may depend on the final synthesizer, and all selected contributors must be its ancestors. "
-                "If reviewers follow a writer, make a downstream selected role the final synthesizer "
-                "and require its full deliverable; alternatively move reviews before the final writer. "
-                "Never resolve it by adding an edge that makes a cycle."
-                if correction is not None else "")
-            corrected_system = (instructions + correction_system
-                                + "\nReturn only one JSON object conforming to this JSON Schema:\n"
-                                + json.dumps(schema.model_json_schema())) if correction is not None else system
-            messages = [{"role": "system", "content": corrected_system},
+            messages = [{"role": "system", "content": system},
                         {"role": "user", "content": json.dumps(request, ensure_ascii=False)}]
             # Transport, authentication and budget failures are not output corrections.
             response = model(copy.deepcopy(messages))

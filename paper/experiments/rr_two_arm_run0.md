@@ -49,4 +49,14 @@ v16 已于 `2026-10-02T06:03:57Z` 结束，终态为 `inconclusive`：20/20 道 
 
 不评分的公开 VAL 输入预检 v17 因最后调用超过任务预算失败，v18 因长 Critic 评审导致 JSON 截断失败；两次均不计分且记录保留。v19 预检通过，约 38 秒提交终稿，judge 请求 0。v20 在 C0 阶段发现角色擅自添加有限调用上限、一般知识引用不合法来源和连接失败，已中断，未产生 EVO 或 TEST。新冻结版 v21 把未配置的调用上限绑定为 null，并禁止闭卷生成来源记录，从空经验启动同一计划；目录为 `outputs/rr_jit_mas_run0_gpt56sol_20261002_v21`，代码冻结于 `.runtime/rr_closed_book_repair_20261002_v21`。当前工作区另外加强了终态提交必须携带 checkpoint 的 schema 约束，该改动未注入正在运行的 v21。
 
-当前导出交接包为 `paper/experiments/rr_run0_gpt56sol_20261002`，包含 v15 完整评分、v16 终态失败记录及工程预检/中断摘要；v21 运行信息属于导出时的快照，须以原输出目录的终态为准。所有旧轨迹独立保留，不合并为一次成功实验。
+v21 已于北京时间 2026-10-02 15:34 停止：7 个 EVO 失败、1 个已启动但中断、12 个未开始，经验仍为 v0；C0/C5 均 7/10（C5 复用 C0），不满足 9/10。没有 TEST 答案或评分，均值仍为 null。原 journal 的 running 和 report 的 evolving 保留，另写 interruption.json 标识人工停止；不可当作完整运行。已落盘记录为 511 次模型调用、5,102,238 tokens，不包含第 8 题尚未落盘的请求，费用未知。
+
+EVO2 的 Analyst 连续 60 次返回相同 canonical JSON，continue=true、只有标题、无工具或 peer 请求；后续输入只有新增 assistant 历史，输入从 4,699 增至 50,422 tokens，最终耗尽预算。其余已定位失败包括三次 lesson evidence/counterevidence 未包含在顶层 update.evidence、一次重复绑定 pool member、一次 reviewer 未依赖 primary owner，以及一次 API 连接失败。没有自动补证据或替换失败答案。
+
+修复版增加：无新外部输入的 continue 回合追加明确 user 指令，相同响应重复后给予一次纠正，再次重复则登记失败；有效内容修订、peer 输入和工具观察保留正常迭代，最近记忆保留待修订草稿。`explicit-user-no-progress-v1` 写入身份和执行元数据。反思纠正列出缺失的顶层证据 ID，pool/reviewer 校验列出具体冲突；原拒绝规则、评分和 9/10 阈值不变。v22 不评分预检发现执行网关拒绝 schema 的 if/then（HTTP 400），judge 请求 0，6 次模型调用、78,613 tokens；没有正式 EVO/VAL/TEST 成绩。v23 冻结于 `.runtime/rr_closed_book_repair_20261002_v23`，以支持的 anyOf 表达终稿/checkpoint 或继续/tool 请求契约（rr-execution-v4），原 runtime 强校验保留。先做不评分公开 VAL 输入预检，通过后再从空经验运行原 20 EVO/五次 10 VAL/33 TEST 计划。旧实验各自独立保存，后续尝试不能报告为无故障的一次初始运行。
+
+v23 不评分预检在执行阶段拒绝了 checkpoint 说明字符串（原契约要求 boolean 或结构化 status/reason），7 次调用、77,215 tokens，judge 请求 0；v24 在规划阶段拒绝 synthesizer 漏掉 critic 依赖的 DAG，6 次调用、69,332 tokens，judge 请求 0。v25 冻结于 `.runtime/rr_closed_book_repair_20261002_v25`，使用完整对象 anyOf 分支（rr-execution-v5），避免 decoder 不继承父节点 properties；解析合并 observation/ledger 消息中的全部可见 evidence ID。`explicit-user-no-progress-checkpoint-v2` 保留无进展保护，并仅为 checkpoint 格式错误提供一次角色内纠正，错误轨迹和预算保留；未观察证据、非法工具/peer、缺失答案仍失败。真实 checkpoint 示例与纠正指令保持诚实限制，不修改返回内容或评分。
+
+离线全量回归在修复最近记忆前为 936 passed、1 failed（旧测试期待最后一条 assistant）；修正后相关测试分组通过，最后 planning/pool/reflection/runner 119 passed，execution/runner/agent_pool 114 passed，追加 checkpoint 边界测试 34 passed；diff check 通过。v25 无评分预检通过：92.187 秒、8 次调用、73,685 tokens，judge 请求 0，无经验更新，不计正式成绩。随后从空经验启动 `outputs/rr_jit_mas_run0_gpt56sol_20261002_v25` 完整计划，baseline v15 保留；当前仍无方法组 TEST 结果，不能报告差值或优势。
+
+当前导出交接包为 `paper/experiments/rr_run0_gpt56sol_20261002`，包含 v15 完整评分、v16 终态失败记录及工程预检/中断摘要；v21 按 interruption.json 标为中断。所有旧轨迹独立保留，不合并为一次成功实验。

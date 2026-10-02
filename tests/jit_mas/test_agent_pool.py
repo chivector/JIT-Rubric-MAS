@@ -306,8 +306,9 @@ def test_pooled_iterative_harness_runs_two_turns_with_retained_policy():
         assert result.terminated_reason == "final_answer" and result.answer == "Revised complete guide."
         assert len(calls) == ledger.snapshot()["model_calls"] == 2
         assert len(result.sub_runs[0].trajectory) == 2
-        assert calls[1][-1]["role"] == "assistant" and "Initial draft." in calls[1][-1]["content"]
-        assert len(calls[1]) == 3
+        assert calls[1][-2]["role"] == "assistant" and "Initial draft." in calls[1][-2]["content"]
+        assert calls[1][-1]["role"] == "user" and "substantive contribution" in calls[1][-1]["content"]
+        assert len(calls[1]) == 4
         assert json.loads(calls[1][1]["content"])["persistent_agent"]["harness"]["memory_policy"] == "recent"
         assert artifact.selection["strategy"] == "pooled_agent_reuse" and not artifact.meta_trajectory
     finally:

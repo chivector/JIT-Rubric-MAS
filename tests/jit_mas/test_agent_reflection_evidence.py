@@ -161,3 +161,35 @@ def test_held_out_local_planning_and_execution_receive_lessons_without_feedback_
         assert not forbidden.intersection(payload_keys(payload))
         assert "PRIVATE_CANARY" not in json.dumps(payload)
         assert "PRIVATE_REFERENCE_CANARY" not in json.dumps(payload)
+
+
+def test_reflection_correction_identifies_missing_top_level_counterevidence():
+    from jit_mas.pipeline import MASPipeline
+    from jit_mas.planning import JsonModelCalls
+    from jit_mas.schemas import AgentEvolutionUpdate
+    from types import SimpleNamespace
+
+    requests = []
+    response = {
+        "update_id": "update", "pool_agent_id": "critic", "base_agent_version": 1, "source_task_id": "task",
+        "evidence": ["event:support"],
+        "lessons": [{"lesson_id": "lesson", "instruction": "Preserve conflicting observations.",
+                     "applicability": "Comparisons", "source_task_ids": ["task"],
+                     "evidence": ["event:support"], "counterevidence": ["event:counter"]}]}
+
+    def model(messages):
+        payload = json.loads(messages[1]["content"])
+        requests.append(payload)
+        if len(requests) == 2:
+            message = payload["response_correction"]["validation_errors"][0]["message"]
+            assert "missing_top_level_evidence_ids=['event:counter']" in message
+            response["evidence"].append("event:counter")
+        return json.dumps(response)
+
+    profile = SimpleNamespace(pool_agent_id="critic", version=1)
+    result = JsonModelCalls(max_corrections=1).ask(
+        model, "agent_evolve", "Distill an observed lesson.", {}, AgentEvolutionUpdate,
+        validate=lambda update: MASPipeline._validate_agent_update(
+            update, profile, "task", {"event:support", "event:counter"}, "update"))
+    assert len(requests) == 2
+    assert result.evidence == ["event:support", "event:counter"]

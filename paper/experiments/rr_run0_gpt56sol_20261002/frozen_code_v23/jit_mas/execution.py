@@ -27,7 +27,7 @@ from jit_mas.planning import knowledge_policy_prompt, knowledge_policy_role_adap
 from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGraph, TeamSpec, utc_now
 
 
-ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-checkpoint-v2"
+ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-v1"
 
 
 def _data(value: Any) -> Any:
@@ -472,8 +472,7 @@ def _role_messages(messages, persistent):
     # agent can revise the draft instead of seeing only the instruction.
     if (selected and selected[0].get("role") == "user"
             and isinstance(selected[0].get("content"), str)
-            and selected[0]["content"].startswith(("Continue the assigned work", "Continuation correction:",
-                                                  "Protocol correction:"))
+            and selected[0]["content"].startswith(("Continue the assigned work", "Continuation correction:"))
             and len(tail) > len(selected)
             and tail[-len(selected) - 1].get("role") == "assistant"):
         selected = [tail[-len(selected) - 1], *selected]
@@ -504,9 +503,7 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
     model._native_tool_registry = role_tools
     peer_ids = [item["agent_id"] for item in team["agents"] if item["agent_id"] != aid]
     completion_example = {"answer": "The current complete deliverable." if synth else "Current contribution summary.",
-                          "evidence_ids": [], "checkpoints": {name: {
-                              "status": "unverified", "reason": "Replace with the actual check result or limitation.",
-                              "evidence_ids": []} for name in agent.get("checkpoints", [])}}
+                          "evidence_ids": [], "checkpoints": {}}
     if not synth:
         completion_example["ledger"] = {"requirements": [], "outline": [],
                                          "evidence_spans": [], "source_references": []}
@@ -520,12 +517,6 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
         "Every tool request is {name, arguments}; arguments must be a JSON object conforming "
         "to its supplied schema. Cite only evidence IDs received in your ledger or observations. "
         "A terminal response must include the complete answer and all assigned checkpoints. "
-        "The role-specific completion_example is the authoritative output shape. Use every exact "
-        "agent.checkpoints name as a key. Values are boolean true for an actually performed check "
-        "or objects with status completed/passed/failed/unverified/not_applicable, a nonempty "
-        "reason, and evidence_ids. Never use prose strings as checkpoint values. When no source "
-        "was observed, ledger evidence_spans and source_references must be empty arrays; place "
-        "remembered knowledge and limitations in answer rather than fabricated evidence entries. "
         "send_message posts to an exact peer agent_id and reactivates a completed teammate. "
         "After asking a peer, the scheduler lets that peer respond before continuing your role. "
         "A completed contribution may be resumed to answer questions or revise its public artifact. "
@@ -592,8 +583,7 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
                                "source_references": []}, checkpoint_reports={}, evidence_ids=[],
                  pending_observation_ids=set(), observed_ids=observed_ids,
                  ledger_hash=ledger_hash, handled_message_ids=set(), awaiting_messages=[],
-                 continuation_fingerprint=None, no_progress_correction_given=False,
-                 protocol_correction_given=False)
+                 continuation_fingerprint=None, no_progress_correction_given=False)
     return _continue_agent_iterative(agent, team, ctx, services, state,
                                      one_turn=one_turn,
                                      defer_final_submission=defer_final_submission)
@@ -790,41 +780,6 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                 step.duration = step.end_time - step.start_time
                 trajectory.append(step)
                 break
-        except ResponseProtocolError as exc:
-            # A gateway may return syntactically valid JSON that misses the
-            # nested checkpoint/evidence contract despite guided decoding. Give
-            # the same role one explicit protocol correction before failing the
-            # attempt; this is a normal iterative turn, not a harness repair or
-            # a score-based retry.
-            if (not state["protocol_correction_given"]
-                    and services.remaining_seconds() > 0
-                    and str(exc).startswith("A checkpoint must be")):
-                state["protocol_correction_given"] = True
-                step.error = exc
-                step.observations = f"{type(exc).__name__}: {exc}"
-                services.event(aid, "protocol_warning", step.observations, parents=[before])
-                messages.append({"role": "assistant", "content": getattr(response, "content", str(response))})
-                messages.append({"role": "user", "content": (
-                "Protocol correction: your previous JSON did not satisfy the execution contract. "
-                    "Return exactly one JSON object. Every assigned checkpoint value must be either "
-                    "true or an object with status set to completed, passed, failed, unverified, or "
-                    "not_applicable, a nonempty reason string, and an evidence_ids array. Do not use "
-                    "prose strings, status=complete, or embedded key-value text. Include all exact "
-                    "checkpoint names and a complete answer when terminating. Preserve honest uncertainty. "
-                    "If no sources were observed, ledger source_references/evidence_spans must be empty arrays. "
-                    "Exact validation error: " + str(exc))})
-                step.end_time = time.time()
-                step.duration = step.end_time - step.start_time
-                trajectory.append(step)
-                continue
-            step.error = exc
-            step.observations = f"{type(exc).__name__}: {exc}"
-            services.event(aid, "execution_error", step.observations, parents=[before])
-            reason = "error"
-            step.end_time = time.time()
-            step.duration = step.end_time - step.start_time
-            trajectory.append(step)
-            break
         except Exception as exc:
             step.error = exc
             step.observations = f"{type(exc).__name__}: {exc}"

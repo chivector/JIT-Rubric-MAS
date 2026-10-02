@@ -177,6 +177,19 @@ def test_terminal_completion_requires_checkpoints_but_interim_draft_does_not():
             validator.validate(response)
 
 
+def test_execution_schema_reads_observations_and_ledger_after_continuation_text():
+    messages = [{"role": "user", "content": json.dumps({
+        "agent": {"tools": [], "checkpoints": []}, "shared_ledger": {
+            "contributions": [], "tool_evidence": [], "communications": []}})},
+        {"role": "user", "content": 'Public observations: [{"event_id":"tool-event"}]\n'
+         'Updated shared ledger: {"communications":[{"event_id":"peer-event"}]}'},
+        {"role": "user", "content": 'Continue the assigned work.\n'
+         'Updated shared ledger: {"contributions":[{"event_id":"artifact-event"}]}'}]
+    schema = pilot._execution_response_schema(messages)
+    assert schema["properties"]["evidence_ids"]["items"]["enum"] == [
+        "artifact-event", "peer-event", "tool-event"]
+
+
 def test_execution_runtime_still_rejects_whitespace_only_checkpoint_reasons():
     from jit_mas.execution import ResponseProtocolError, _parse_response
 
@@ -203,12 +216,12 @@ def test_execution_schema_binds_checkpoint_names_and_evidence_ids_to_instruction
         "shared_ledger": {"contributions": [], "tool_evidence": [], "communications": []}})}]
     schema = pilot._execution_response_schema(messages)
     validator = Draft202012Validator(schema)
-    checkpoint_schema = schema["properties"]["checkpoints"]
+    checkpoint_schema = schema["anyOf"][0]["properties"]["checkpoints"]
     assert checkpoint_schema["required"] == [
         "Publish initial analysis with chosen turning point.",
         "Revise based on peer feedback if needed"]
     assert checkpoint_schema["additionalProperties"] is False
-    assert schema["properties"]["evidence_ids"]["maxItems"] == 0
+    assert schema["anyOf"][0]["properties"]["evidence_ids"]["maxItems"] == 0
     legal = {"answer": "A concise contribution.", "checkpoints": {
         "Publish initial analysis with chosen turning point.": True,
         "Revise based on peer feedback if needed": {
@@ -252,7 +265,7 @@ def test_execution_schema_tracks_observations_added_in_later_turns():
 
 def test_execution_schema_requires_single_source_reference_tokens():
     validator = _execution_schema_validator()
-    legal = {"ledger": {"requirements": [], "outline": [],
+    legal = {"continue": True, "ledger": {"requirements": [], "outline": [],
                          "source_references": [{"source_id": "SR-001", "locator": "p. 1"}],
                          "evidence_spans": [{"text": "A quoted line.", "source_ref": "SR-001"}]}}
     validator.validate(legal)
@@ -646,6 +659,8 @@ def test_main_baseline_only_calls_baseline_and_seals_only_33_test_slots(monkeypa
     assert comparison["metadata"]["frozen_identity"]["structured_output"] == "json_schema"
     assert comparison["metadata"]["structured_policy"] == pilot._structured_output_policy()
     assert comparison["metadata"]["frozen_identity"]["structured_policy"] == pilot._structured_output_policy()
+    assert comparison["metadata"]["continuation_policy"] == pilot.ITERATIVE_CONTINUATION_POLICY_VERSION
+    assert comparison["metadata"]["frozen_identity"]["continuation_policy"] == pilot.ITERATIVE_CONTINUATION_POLICY_VERSION
     assert comparison["metadata"]["parallel_arms"] is False
     assert len(pilot._read(output / "test_release" / "inventory.json")["slots"]) == 33
     assert not (output / "ours").exists()

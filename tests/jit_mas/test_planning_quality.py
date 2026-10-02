@@ -100,6 +100,42 @@ def test_available_tools_and_dependency_order_are_preserved_exactly():
     assert len(analyzer.call_records) == 1
 
 
+def test_reviewer_correction_identifies_required_primary_artifact_dependency():
+    draft = prediction()
+    invalid = {
+        "graph": draft.graph.model_dump(mode="json"),
+        "team": {"agents": [agent.model_dump(mode="json") for agent in draft.candidates],
+                 "synthesizer_id": "check", "coverage": {"accuracy": ["author", "check"]},
+                 "primary": {"accuracy": "check"}, "reviewers": {"accuracy": ["author"]}},
+    }
+    original = copy.deepcopy(invalid)
+    requests = []
+
+    def model(messages):
+        payload = json.loads(messages[1]["content"])
+        requests.append(payload)
+        if len(requests) == 2:
+            correction = payload["response_correction"]
+            assert json.loads(correction["previous_response"]) == original
+            message = correction["validation_errors"][0]["message"]
+            for detail in ("rubric_id='accuracy'", "reviewer_id='author'", "primary_owner_id='check'",
+                           "reviewer_ancestor_ids=[]", "backward dependency or cycle"):
+                assert detail in message
+            fixed = copy.deepcopy(invalid)
+            fixed["team"]["primary"] = {"accuracy": "author"}
+            fixed["team"]["reviewers"] = {"accuracy": ["check"]}
+            return json.dumps(fixed)
+        return json.dumps(invalid)
+
+    analyzer = GlobalAnalyzer(model)
+    result = analyzer.reconcile(PublicTask(task_id="t", question="Explain accurately"), draft, [])
+    assert result.team.primary == {"accuracy": "author"}
+    assert result.team.reviewers == {"accuracy": ["check"]}
+    assert result.team.agents[1].depends_on == ["author"]
+    assert invalid == original
+    assert len(requests) == len(analyzer.call_records) == 2
+
+
 def test_missing_producer_can_be_proposed_as_a_gap_without_inventing_dependency():
     draft = prediction()
     value = review_plan(depends_on=[], required_inputs=["A source record not yet provided"],

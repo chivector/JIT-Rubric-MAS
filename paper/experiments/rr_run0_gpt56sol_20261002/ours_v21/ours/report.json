@@ -1,0 +1,7 @@
+{
+  "arm": "ours_evolve_then_test",
+  "status": "evolving",
+  "started_at": "2026-10-02T06:49:41.454999+00:00",
+  "submitted_outcomes": [],
+  "test_failures": []
+}

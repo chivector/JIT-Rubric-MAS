@@ -146,7 +146,7 @@ def _structured_output_policy(args=None):
     return {"planning_string_max_length": getattr(args, "planning_string_max_length", 2048),
             "planning_communication_max_length": getattr(args, "planning_communication_max_length", 1024),
             "planning_array_max_items": getattr(args, "planning_array_max_items", 64),
-            "execution_schema_version": "rr-execution-v5",
+            "execution_schema_version": "rr-execution-v4",
             "execution_answer_characters_per_token": 2,
             "execution_checkpoint_reason_max_length": 512,
             "execution_ledger_text_max_length": 2048,
@@ -280,15 +280,13 @@ def _execution_response_schema(messages, max_tokens=None):
             candidate = json.loads(content)
         except (TypeError, ValueError):
             candidate = None
-            decoder = json.JSONDecoder()
             for marker in ("Updated shared ledger: ", "Public observations: "):
-                position = content.find(marker)
-                if position >= 0:
+                if content.startswith(marker):
                     try:
-                        embedded, _ = decoder.raw_decode(content[position + len(marker):].lstrip())
-                        payloads.append(embedded)
+                        candidate = json.loads(content[len(marker):])
                     except (TypeError, ValueError):
                         pass
+                    break
         if candidate is not None:
             payloads.append(candidate)
         if isinstance(candidate, dict) and isinstance(candidate.get("agent"), dict):
@@ -378,18 +376,11 @@ def _execution_response_schema(messages, max_tokens=None):
         # Guided decoding on the execution gateway supports anyOf, but rejects
         # if/then. A turn either reports checkpoints, explicitly continues, or
         # dispatches a tool. Terminal tool arguments enforce their own contract.
-        # Supply complete object branches: some guided-decoding compilers do not
-        # merge the parent's properties into partial anyOf branches.
-        branches = []
-        for field in ("checkpoints", "continue", "tools"):
-            branch = copy.deepcopy(schema)
-            branch["required"] = [field]
-            if field == "continue":
-                branch["properties"][field] = {"type": "boolean", "const": True}
-            elif field == "tools":
-                branch["properties"][field]["minItems"] = 1
-            branches.append(branch)
-        schema = {"anyOf": branches}
+        schema["anyOf"] = [
+            {"required": ["checkpoints"]},
+            {"required": ["continue"], "properties": {"continue": {"const": True}}},
+            {"required": ["tools"], "properties": {"tools": {"minItems": 1}}},
+        ]
     return schema
 
 
