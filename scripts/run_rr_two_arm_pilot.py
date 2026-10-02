@@ -86,7 +86,12 @@ def _config(args):
         backend="native_jit", execution_mode="iterative_shared_ledger", unsafe_local=True,
         models={"meta": ModelConfig(**generator), "global": ModelConfig(**generator),
                 "local": ModelConfig(**generator),
-                "exec": ModelConfig(**{**generator, "max_tokens": 8192}),
+                # Execution responses carry the final answer plus the structured
+                # ledger/checkpoint envelope.  The old 8192 ceiling regularly
+                # cut long JSON responses at the provider boundary (which then
+                # failed closed as an invalid submission).  Keep this explicit
+                # and overridable so a run's frozen identity records the choice.
+                "exec": ModelConfig(**{**generator, "max_tokens": getattr(args, "exec_max_tokens", 12288)}),
                 "judge": ModelConfig(**judge)},
         max_agents=3, max_parallel=2, team_max_calls=None, max_model_calls=None,
         max_total_tokens=2_000_000, max_tool_calls=None, max_repairs=2, candidates=1,
@@ -353,14 +358,21 @@ def _execution_response_schema(messages, max_tokens=None):
         checkpoint_object["required"] = checkpoint_names
 
     source_ref = {"type": "string", "minLength": 1, "pattern": r"^[^,\s]+$"}
-    ledger_text = {**text, "maxLength": 2048}
+    # Non-synthesizer roles publish compact material for the Writer.  Keep the
+    # limit in the guided-decoding schema so a long draft cannot be truncated
+    # before its JSON envelope closes.
+    is_contributor = instruction.get("submission") in {"contribution", "subtask_complete"}
+    is_synthesizer = not is_contributor
+    ledger_item_limit = 2048 if is_synthesizer else 160
+    ledger_max_items = 64 if is_synthesizer else 8
+    ledger_text = {**text, "maxLength": ledger_item_limit}
     ledger = {"type": "object", "properties": {
-        "requirements": {"type": "array", "items": ledger_text},
-        "outline": {"type": "array", "items": ledger_text},
-        "source_references": {"type": "array", "items": {"type": "object", "properties": {
+        "requirements": {"type": "array", "maxItems": ledger_max_items, "items": ledger_text},
+        "outline": {"type": "array", "maxItems": ledger_max_items, "items": ledger_text},
+        "source_references": {"type": "array", "maxItems": ledger_max_items, "items": {"type": "object", "properties": {
             "source_id": source_ref, "locator": text}, "required": ["source_id", "locator"], "additionalProperties": True}},
-        "evidence_spans": {"type": "array", "items": {"type": "object", "properties": {
-            "text": {"type": "string", "maxLength": 2048}, "source_ref": source_ref}, "required": ["text", "source_ref"], "additionalProperties": True}}},
+        "evidence_spans": {"type": "array", "maxItems": ledger_max_items, "items": {"type": "object", "properties": {
+            "text": {"type": "string", "maxLength": ledger_item_limit}, "source_ref": source_ref}, "required": ["text", "source_ref"], "additionalProperties": True}}},
         "required": ["requirements", "outline", "source_references", "evidence_spans"], "additionalProperties": False}
     if instruction.get("knowledge_policy") == "model_general_knowledge_allowed":
         for field in ("source_references", "evidence_spans"):
@@ -368,6 +380,8 @@ def _execution_response_schema(messages, max_tokens=None):
     answer_schema = {"type": "string"}
     if isinstance(max_tokens, int) and max_tokens > 0:
         answer_schema["maxLength"] = max_tokens * 2
+    if is_contributor:
+        answer_schema["maxLength"] = min(answer_schema.get("maxLength", 1200), 1200)
     completion = {"answer": {"anyOf": [answer_schema, {"type": "null"}]}, "evidence_ids": ids,
                   "checkpoints": checkpoint_object,
                   "ledger": {"anyOf": [ledger, {"type": "null"}]},
@@ -1061,6 +1075,8 @@ def main(argv=None):
     parser.add_argument("--judge-parallel", type=int, default=2)
     parser.add_argument("--max-inflight-requests", type=int, default=2)
     parser.add_argument("--judge-max-tokens", type=int, default=16000)
+    parser.add_argument("--exec-max-tokens", type=int, default=12288,
+                        help="Per-response output ceiling for iterative execution (default: 12288)")
     parser.add_argument("--judge-attempts", type=int, default=1)
     parser.add_argument("--structured-output", choices=("none", "json_object", "json_schema", "json_schema_planning"),
                         default="json_schema",
@@ -1083,6 +1099,8 @@ def main(argv=None):
         parser.error("--judge-parallel must be between 1 and 16")
     if args.judge_max_tokens < 1 or not 1 <= args.judge_attempts <= 3:
         parser.error("Judge token limit must be positive and attempts must be between 1 and 3")
+    if not 1 <= args.exec_max_tokens <= 16000:
+        parser.error("--exec-max-tokens must be between 1 and 16000")
     if any(value < 1 for value in (args.planning_string_max_length,
                                   args.planning_communication_max_length, args.planning_array_max_items)):
         parser.error("Structured planning limits must be positive")

@@ -459,6 +459,16 @@ def test_structured_output_mode_cannot_change_after_identity_freeze(monkeypatch)
         pilot._assert_identity(args)
 
 
+def test_rr_pilot_uses_larger_execution_ceiling_and_allows_frozen_override():
+    common = dict(exec_model="offline-generator", exec_endpoint="https://example.org/v1",
+                  judge_model="offline-judge", judge_endpoint="https://example.com/v1",
+                  timeout=10)
+    default = pilot._config(SimpleNamespace(**common))
+    assert default.models["exec"].max_tokens == 12288
+    overridden = pilot._config(SimpleNamespace(**common, exec_max_tokens=8192))
+    assert overridden.models["exec"].max_tokens == 8192
+
+
 def test_pipeline_binds_parallel_judges_to_one_metered_credential_safe_task_ledger(monkeypatch, tmp_path):
     from benchmark.adapter.researchrubrics import split_item
 

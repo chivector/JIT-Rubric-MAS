@@ -738,6 +738,23 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
                 "for evidence or research roles. Do not turn remembered knowledge into source entries. "
                 "Keep requirements and outline as lists of nonempty strings, even when empty."
             )
+    if not synth:
+        system += (
+            "\nFINAL ROLE OVERRIDE (takes priority over task_prompt and retained role text): "
+            "You are a contributor, never the final Writer. Do not write the complete public "
+            "deliverable even if task_prompt says write or produce it. Keep answer <=1200 "
+            "characters as a compact summary; put detailed material only in the structured "
+            "ledger, with at most 8 items per list and <=160 characters per item. A reviewer "
+            "reports at most five findings and concrete corrections, never a rewritten draft. "
+            "Reserve at least 20% of the response budget for JSON closure and checkpoints. "
+            "If content would exceed these limits, compress it and terminate with continue=false."
+        )
+    else:
+        system += (
+            "\nFINAL WRITER OVERRIDE: Return one terminal complete public deliverable. Do not "
+            "repeat drafts, ledger bodies, review narration or protocol metadata. Reserve at "
+            "least 15% of the response budget for valid JSON closure and checkpoints."
+        )
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(instruction, ensure_ascii=False)}]
     state = state if state is not None else {}
@@ -1148,6 +1165,23 @@ def _run_agent(agent, team, ctx, services):
         "Express missing input or disputed evidence in your answer and checkpoint reports. "
         "Never claim unobserved evidence or broadcast private conversations."
     )
+    if not synth:
+        system += (
+            "\nFINAL ROLE OVERRIDE (takes priority over task_prompt and retained role text): "
+            "You are a contributor, never the final Writer. Do not write the complete public "
+            "deliverable even if task_prompt says write or produce it. Keep answer <=1200 "
+            "characters as a compact summary; put detailed material only in the structured "
+            "ledger, with at most 8 items per list and <=160 characters per item. A reviewer "
+            "reports at most five findings and concrete corrections, never a rewritten draft. "
+            "Reserve at least 20% of the response budget for JSON closure and checkpoints. "
+            "If content would exceed these limits, compress it and terminate with continue=false."
+        )
+    else:
+        system += (
+            "\nFINAL WRITER OVERRIDE: Return one terminal complete public deliverable. Do not "
+            "repeat drafts, ledger bodies, review narration or protocol metadata. Reserve at "
+            "least 15% of the response budget for valid JSON closure and checkpoints."
+        )
     system += (
         "\nTreat predicted requirements, upstream drafts and generated task-specific hints as "
         "fallible planning hypotheses, not authoritative facts. The public task takes priority. "

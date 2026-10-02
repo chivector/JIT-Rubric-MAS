@@ -138,11 +138,24 @@ class OpenAIServerModel(Model):
             error,
         )
         if current_failures >= threshold:
+            # Keep the historical fail-fast default, but let an experiment
+            # runner hand the original provider exception back to its task
+            # retry/recovery layer.  A process-wide SystemExit is especially
+            # damaging when several roles share one gateway: failures from
+            # unrelated roles otherwise trip the same global counter.
+            action = os.getenv("MODULAR_AGENT_API_FAILURE_ACTION", "exit").strip().lower()
+            if action not in {"exit", "raise"}:
+                logger.warning(
+                    "Unknown MODULAR_AGENT_API_FAILURE_ACTION=%r; using exit",
+                    action,
+                )
+                action = "exit"
             logger.critical(
-                "Consecutive model API failures reached %s, terminating process.",
-                threshold,
+                "Consecutive model API failures reached %s (action=%s).",
+                threshold, action,
             )
-            raise SystemExit(1)
+            if action == "exit":
+                raise SystemExit(1)
 
     @staticmethod
     def truncate_content_based_on_stop_sequences(content: str, stop_sequences: List[str]) -> str:
