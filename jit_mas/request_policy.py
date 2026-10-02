@@ -77,6 +77,11 @@ class RequestPolicyModel:
             identity = {"response_model": getattr(raw, "model", None),
                         "system_fingerprint": getattr(raw, "system_fingerprint", None),
                         "response_id": getattr(raw, "id", None)}
+            choices = getattr(raw, "choices", None)
+            if choices:
+                finish_reason = getattr(choices[0], "finish_reason", None)
+                if finish_reason is not None:
+                    identity["finish_reason"] = finish_reason
             self.last_request_metadata.update(identity)
             if self.expected_model is not None and identity["response_model"] != self.expected_model:
                 raise ValueError("Provider response model differs from the frozen serving identity")

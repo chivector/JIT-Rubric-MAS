@@ -53,7 +53,8 @@ def test_native_requests_share_capacity_and_record_provider_identity():
             with lock:
                 active -= 1
             return ChatMessage(role="assistant", content='{"ok":true}',
-                               raw=SimpleNamespace(model="served-model", system_fingerprint="fixed", id="synthetic"))
+                               raw=SimpleNamespace(model="served-model", system_fingerprint="fixed", id="synthetic",
+                                                   choices=[SimpleNamespace(finish_reason="stop")]))
 
     models = [RequestPolicyModel(Model(), gate=gate, ledger=BudgetLedger(timeout_seconds=1),
                                  expected_model="served-model") for _ in range(6)]
@@ -61,6 +62,7 @@ def test_native_requests_share_capacity_and_record_provider_identity():
         responses = list(pool.map(lambda model: model([{"role": "user", "content": "Synthetic"}]), models))
     assert peak == 2 and len(responses) == 6
     assert all(model.last_request_metadata["response_model"] == "served-model" for model in models)
+    assert all(model.last_request_metadata["finish_reason"] == "stop" for model in models)
     assert any(model.last_request_metadata["queue_seconds"] > 0 for model in models)
 
 
