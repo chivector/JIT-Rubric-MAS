@@ -28,7 +28,7 @@ from jit_mas.planning import knowledge_policy_prompt, knowledge_policy_role_adap
 from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGraph, TeamSpec, utc_now
 
 
-ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v5"
+ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v6"
 CONTRIBUTOR_COMPACTNESS_POLICY_VERSION = "contributor-budget-advisory-v1"
 CONTRIBUTOR_ANSWER_MAX_CHARS = 1200
 CONTRIBUTOR_LEDGER_MAX_ITEMS = 12
@@ -1108,7 +1108,9 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                 step.error = exc
                 step.observations = f"{type(exc).__name__}: {exc}"
                 services.event(aid, "protocol_warning", step.observations, parents=[before])
-                messages.append({"role": "assistant", "content": getattr(response, "content", str(response))})
+                truncated = str(exc).startswith("Expected a complete JSON object; response may be truncated")
+                if not truncated:
+                    messages.append({"role": "assistant", "content": getattr(response, "content", str(response))})
                 messages.append({"role": "user", "content": (
                     "Protocol correction: your previous JSON did not satisfy the execution contract. "
                     "Return exactly one JSON object. Every assigned checkpoint value must be either "
@@ -1126,7 +1128,8 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                     "results in ledger; for the synthesizer, put the complete public deliverable in answer. "
                     "Make the correction yourself; "
                     "the previous response has not been accepted or automatically edited. "
-                    "If the previous JSON was incomplete or truncated, rewrite one complete JSON "
+                    "If the previous JSON was incomplete or truncated, the failed assistant text is intentionally "
+                    "omitted from this correction context; rewrite one complete JSON "
                     "response from the original task rather than continuing its broken tail or "
                     "reproducing it unchanged. Preserve the key arguments, calculations, required "
                     "items and honest limitations; delete duplicate passages, guessed directories "

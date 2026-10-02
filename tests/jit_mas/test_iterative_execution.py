@@ -329,6 +329,20 @@ def test_contributor_shape_correction_preserves_fact_rich_handoff_guidance():
         assert "legal or policy obligations" in prompt
 
 
+def test_truncated_json_correction_does_not_replay_failed_assistant_text():
+    team = make_team(checkpoints=["accuracy"])
+    bad = "{" + "x" * 3000
+    valid = {"answer": "Recovered.", "checkpoints": {"accuracy": {
+        "status": "completed", "reason": "Checked.", "evidence_ids": []}}, "continue": False}
+    model = ScriptedModel([bad, valid])
+    services, context = make_services(team, {"writer": model})
+    result = _run_agent_iterative(team.agents[0].model_dump(mode="json"),
+                                  team.model_dump(mode="json"), context, services)
+    assert result.terminated_reason == "final_answer"
+    assert result.trajectory[0].model_output_messages.content == bad
+    assert all("x" * 3000 not in json.dumps(call[0]) for call in model.calls[1:])
+
+
 def test_malformed_checkpoint_cannot_hide_an_illegal_tool_for_correction():
     team = make_team(checkpoints=["accuracy"])
     invalid = {"answer": "Draft", "checkpoints": {"accuracy": "wrong shape"},
