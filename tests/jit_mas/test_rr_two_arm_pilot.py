@@ -124,6 +124,24 @@ def test_execution_schema_reserves_space_for_checkpoints_and_json_closure():
         validator.validate({"answer": "Concise contribution", "ledger": {**ledger, "contributions": []}})
 
 
+@pytest.mark.parametrize("submission", ["contribution", "subtask_complete"])
+def test_contributor_schema_caps_answer_and_ledger_without_capping_writer(submission):
+    messages = [{"role": "user", "content": json.dumps({"agent": {"checkpoints": []},
+                                                          "submission": submission})}]
+    validator = Draft202012Validator(pilot._execution_response_schema(messages, max_tokens=12288))
+    empty_ledger = {"requirements": [], "outline": [], "source_references": [], "evidence_spans": []}
+    validator.validate({"answer": "A" * 1200, "ledger": {**empty_ledger, "outline": ["x" * 160] * 8}})
+    for invalid in ({"answer": "A" * 1201},
+                    {"ledger": {**empty_ledger, "outline": ["x" * 161]}},
+                    {"ledger": {**empty_ledger, "outline": ["x"] * 9}}):
+        with pytest.raises(SchemaValidationError):
+            validator.validate(invalid)
+    writer_messages = [{"role": "user", "content": json.dumps({"agent": {"checkpoints": []},
+                                                                  "submission": "final_answer"})}]
+    Draft202012Validator(pilot._execution_response_schema(writer_messages, max_tokens=12288)).validate(
+        {"answer": "A" * 1201})
+
+
 def _execution_schema_validator():
     messages = [{"role": "user", "content": json.dumps({
         "agent": {"tools": ["search"], "checkpoints": ["accuracy"]},

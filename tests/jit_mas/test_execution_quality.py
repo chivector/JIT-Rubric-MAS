@@ -124,6 +124,10 @@ def test_each_role_receives_its_complete_output_shape_without_a_recall(execute_t
         assert 'Complete with {"answer"' not in messages[0]["content"]
         if aid != team.synthesizer_id:
             assert "ledger is a sibling of answer" in messages[0]["content"]
+            assert "FINAL ROLE OVERRIDE" in messages[0]["content"]
+            assert "answer <=1200" in messages[0]["content"]
+            assert "at most 8 items" in messages[0]["content"]
+            assert "<=160 characters per item" in messages[0]["content"]
             assert set(example["ledger"]) == {"requirements", "outline", "evidence_spans", "source_references"}
             example["ledger"]["outline"] = ["State the assumptions before the conclusion."]
         example["answer"] = aid + " artifact"
