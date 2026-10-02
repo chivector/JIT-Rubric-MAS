@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "seed": 0,
+  "evolution": [],
+  "validation": [],
+  "test": [
+    "6847465956a0f6376a605391"
+  ],
+  "stream": [],
+  "deduplication": "task_id and normalized public question SHA256"
+}

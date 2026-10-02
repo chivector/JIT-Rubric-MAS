@@ -63,6 +63,88 @@ def test_joint_evolution_reuses_mature_agents_without_regenerating_harness(tmp_p
         store.close()
 
 
+def test_general_knowledge_policy_preserves_evolution_and_task_identity(tmp_path):
+    store = ExperienceStore(tmp_path / "state.sqlite")
+    models = FixtureModels()
+    policy = "model_general_knowledge_allowed"
+    pipeline = make_pipeline(MASConfig(backend="scripted"),
+                             store, tmp_path / "runs", fixture_models=models, knowledge_policy=policy)
+    try:
+        outcome = pipeline.run("evolve")[0]
+        assert store.snapshot().version == 1
+        assert len(outcome["agent_pool_updates"]) == 3
+        manifest = read_artifact(outcome, "run_manifest.json")
+        assert manifest["comparison"]["knowledge_policy"] == policy
+        execution = read_artifact(outcome, "execution.json")
+        assert execution["metadata"]["knowledge_policy"] == policy
+        assert execution["metadata"]["coordination"] == "single_pass_shared_ledger"
+        team = read_artifact(outcome, "frozen_plan.json")["TeamSpec"]
+        assert {agent["pool_agent_id"] for agent in team["agents"]} == {"analyst", "searcher", "writer"}
+        assert all(agent["tools"] == [] for agent in team["agents"])
+        calls = len(models.calls)
+        assert pipeline.run("evolve")[0]["resumed"]
+        assert len(models.calls) == calls
+        pipeline.knowledge_policy = None
+        with pytest.raises(ValueError, match="fresh store for changed policy"):
+            pipeline.run("evolve")
+        assert len(models.calls) == calls
+    finally:
+        store.close()
+
+
+def test_general_knowledge_planning_adapts_research_without_mutating_persistent_pool():
+    pool = seed_pool()
+    researcher = next(profile for profile in pool.profiles if profile.pool_agent_id == "searcher")
+    researcher.prompt = "Retain learned checks for conflicting assumptions."
+    original_hash = digest(pool)
+    candidates = [
+        AgentSpec(agent_id="knowledge", role="Knowledge Researcher", capability="research",
+                  pool_agent_id="searcher", pool_agent_version=1, max_calls=None,
+                  checkpoints=["Separate remembered facts from uncertainty"]),
+        AgentSpec(agent_id="writer", role="Writer", capability="writing",
+                  pool_agent_id="writer", pool_agent_version=1, max_calls=None,
+                  depends_on=["knowledge"]),
+    ]
+    calls = []
+
+    def model(messages):
+        payload = json.loads(messages[1]["content"])
+        calls.append((messages[0]["content"], payload))
+        if payload["phase"] == "predict":
+            return Prediction(graph=RubricGraph(rubrics=[]), candidates=candidates).model_dump_json()
+        if payload["phase"] == "local_plan":
+            candidate = payload["candidate"]
+            return LocalPlan(agent_id=candidate["agent_id"], capability=candidate["capability"],
+                             depends_on=candidate["depends_on"], max_calls=None,
+                             selected_skills=list(payload["agent_profile"]["skills"])).model_dump_json()
+        return json.dumps({"graph": {"rubrics": []}, "team": {
+            "execution_mode": "iterative_shared_ledger",
+            "agents": payload["prediction"]["candidates"], "synthesizer_id": "writer",
+            "total_max_calls": None}})
+
+    analyzer = GlobalAnalyzer(model, agent_pool=pool, execution_mode="iterative_shared_ledger",
+                              total_max_calls=None, knowledge_policy="model_general_knowledge_allowed")
+    planned = analyzer.build(PublicTask(task_id="research", question="Explain current TTS evaluation."))
+    assert {payload["phase"] for _, payload in calls} == {"predict", "local_plan", "reconcile"}
+    for prompt, payload in calls:
+        assert payload["limits"]["knowledge_policy"] == "model_general_knowledge_allowed"
+        assert "no external retrieval or source-access tools" in prompt
+        assert "Checkpoints must describe attainable checks" in prompt
+        assert "Dynamic role selection" in prompt
+        if "agent_pool_catalogue" in payload:
+            member = next(item for item in payload["agent_pool_catalogue"] if item["pool_agent_id"] == "searcher")
+            assert member["role"] == "Knowledge Researcher"
+            assert "search" not in member["capabilities"]
+            assert member["version"] == 1
+        if payload["phase"] == "local_plan" and payload["candidate"]["agent_id"] == "knowledge":
+            assert payload["agent_profile"]["prompt"].startswith("Organize relevant model general knowledge")
+            assert researcher.prompt in payload["agent_profile"]["prompt"]
+            assert payload["agent_profile"]["preferred_tools"] == []
+    assert planned.team.agents[-1].depends_on == ["knowledge"]
+    assert planned.team.execution_mode == "iterative_shared_ledger"
+    assert digest(pool) == original_hash
+
+
 def test_pool_planning_exposes_catalogue_and_preserves_local_internal_choices():
     pool = seed_pool()
     candidate = AgentSpec(agent_id="task-writer", role="Writer", capability="writing",

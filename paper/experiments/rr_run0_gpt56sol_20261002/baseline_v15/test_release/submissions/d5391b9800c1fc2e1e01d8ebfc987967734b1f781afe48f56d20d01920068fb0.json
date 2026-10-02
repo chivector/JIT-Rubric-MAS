@@ -1,0 +1,76 @@
+{
+  "slot": {
+    "slot_id": "baseline:6847465956a0f6376a60542a",
+    "task_id": "6847465956a0f6376a60542a",
+    "method": "baseline",
+    "repeat": 0
+  },
+  "status": "submitted",
+  "submission": {
+    "answer": "# Technical Report: Scaling a Social Media Platform to 1M Daily Active Users\n\n**Prepared for:** Engineering Team, [Startup Name]  \n**Date:** [Current Date]  \n**Subject:** Architectural Transition from Single-Node MySQL to a Distributed, High-Availability System\n\n---\n\n## 1. Executive Summary\n\nThe current architecture\u2014a monolithic web application backed by a single local MySQL instance\u2014is not viable for a target of 1 million daily active users (DAU) distributed globally. This report outlines the critical bottlenecks, proposes a phased migration to a cloud-native, horizontally scalable architecture, and provides specific recommendations for database, caching, messaging, and deployment changes. The recommended path prioritizes incremental improvements to minimize disruption while ensuring the system can handle peak loads, maintain high availability, and support global latency requirements.\n\n---\n\n## 2. Current State Analysis & Bottlenecks\n\n### 2.1. Identified Constraints\n\n| Component | Current State | Limitation at 1M DAU |\n| :--- | :--- | :--- |\n| **Database** | Single MySQL instance (local) | Single point of failure; storage and connection limits; write contention on `posts` and `follows` tables; no horizontal scaling. |\n| **Web Server** | Monolithic application | Cannot scale independently; CPU/memory bound during read-heavy operations (timeline generation). |\n| **Storage** | Local disk | Limited capacity; no redundancy; slow I/O for media uploads. |\n| **Network** | Single region | High latency for non-local users; no CDN for static assets. |\n| **Caching** | None | Every request hits the database, causing unnecessary load. |\n\n### 2.2. Critical Failure Points\n\n- **Timeline Generation:** For each user request, the system must fetch all posts from followed users. With 1M users, this is an O(N) query per request, which will exhaust database connections.\n- **Fan-out on Write:** When a user with 1M followers posts, the system must update 1M timelines. Without a queue, this will block the request thread.\n- **Global Latency:** A single-region deployment results in 300-500ms+ latency for users in other continents, violating user experience expectations.\n\n---\n\n## 3. Target Architecture Overview\n\nWe recommend a **microservices-based, cloud-native architecture** with the following core components:\n\n1.  **Global Load Balancer** (e.g., AWS Global Accelerator, Cloudflare)\n2.  **Stateless Application Servers** (Auto-scaling group)\n3.  **Distributed Cache** (Redis)\n4.  **Sharded Database** (MySQL with read replicas, or PostgreSQL with Citus)\n5.  **Message Queue** (Kafka or RabbitMQ) for asynchronous processing\n6.  **Object Storage** (S3) + **CDN** for media\n7.  **Search Service** (Elasticsearch/OpenSearch) for user and post search\n\n---\n\n## 4. Detailed Recommendations\n\n### 4.1. Database Migration (Highest Priority)\n\n**Problem:** Single MySQL cannot handle 1M DAU.\n\n**Recommendation:**\n- **Phase 1 (Immediate):** Move to a managed cloud database (e.g., AWS RDS MySQL) with **Multi-AZ** for high availability. Enable **read replicas** (2-3) to offload read traffic.\n- **Phase 2 (Within 3 months):** Implement **sharding** based on `user_id` (hash-based) to distribute write load. Use a sharding middleware (e.g., Vitess, ProxySQL) to avoid application changes.\n- **Phase 3 (Long-term):** Consider migrating to **PostgreSQL** with **Citus** extension for distributed tables, or **TiDB** for native horizontal scaling.\n\n**Schema Changes:**\n- **Denormalize** the `follows` table to include a `follower_count` column on the `users` table to avoid expensive COUNT queries.\n- **Partition** the `posts` table by date to improve query performance for recent content.\n\n### 4.2. Caching Strategy\n\n**Problem:** Timeline generation is read-heavy.\n\n**Recommendation:**\n- Deploy **Redis** (or Memcached) as a distributed cache.\n- **Cache the user's timeline** (list of post IDs) for 5-10 minutes. Invalidate on new post creation.\n- **Cache user profiles** and **follow relationships** (using a set data structure).\n- Use **cache-aside** pattern: Application checks cache first; on miss, reads DB and populates cache.\n\n### 4.3. Asynchronous Processing (Fan-out)\n\n**Problem:** Writing to 1M followers' timelines synchronously is impossible.\n\n**Recommendation:**\n- Introduce a **message queue** (Kafka preferred for high throughput).\n- **Flow:** User posts \u2192 API writes to `posts` table \u2192 Publish event to Kafka topic `new_post` \u2192 Consumer service updates follower timelines in Redis (or a dedicated `timelines` table).\n- This decouples the write path, allowing the API to respond in <100ms.\n\n### 4.4. Global Distribution & Latency\n\n**Problem:** Single region = high latency.\n\n**Recommendation:**\n- Deploy application servers in **3-4 regions** (e.g., US-East, EU-West, AP-Southeast).\n- Use **DNS-based global load balancing** (e.g., AWS Route 53 latency-based routing) or **Anycast** (Cloudflare).\n- **Database:** Use **global tables** (DynamoDB) or **multi-region replication** (MySQL Group Replication) for the `users` and `posts` tables. For simplicity, start with **read replicas** in each region and a single primary for writes.\n- **Media:** Store all images/videos in **S3** and serve via **CloudFront CDN** with edge caching.\n\n### 4.5. Application Architecture\n\n**Problem:** Monolith cannot scale.\n\n**Recommendation:**\n- Refactor into **stateless services** (e.g., `auth-service`, `post-service`, `timeline-service`, `follow-service`).\n- Deploy as **Docker containers** on **Kubernetes** (EKS/GKE) with **Horizontal Pod Autoscaler** (HPA) based on CPU/memory.\n- Use **API Gateway** (e.g., Kong, AWS API Gateway) for routing, rate limiting, and authentication.\n\n### 4.6. Search\n\n**Problem:** `LIKE '%query%'` on MySQL is slow and blocks the DB.\n\n**Recommendation:**\n- Deploy **Elasticsearch** (or OpenSearch).\n- Use a **CDC (Change Data Capture)** tool (e.g., Debezium) to stream changes from MySQL to Elasticsearch in real-time.\n- Implement search endpoints that query Elasticsearch only.\n\n### 4.7. Observability & Monitoring\n\n**Recommendation:**\n- Implement **structured logging** (JSON) and aggregate with **ELK stack** or **Datadog**.\n- Use **Prometheus + Grafana** for metrics (request latency, error rate, DB connections, cache hit ratio).\n- Set up **distributed tracing** (Jaeger) to debug microservice interactions.\n\n---\n\n## 5. Phased Implementation Plan\n\n| Phase | Duration | Key Deliverables | Risk Level |\n| :--- | :--- | :--- | :--- |\n| **Phase 0: Foundation** | 2 weeks | Move to cloud (AWS/GCP), set up CI/CD, deploy to managed MySQL with Multi-AZ. | Low |\n| **Phase 1: Caching & Read Scaling** | 4 weeks | Add Redis, implement cache-aside for timelines, add read replicas. | Low |\n| **Phase 2: Async Processing** | 4 weeks | Deploy Kafka, implement fan-out for posts, decouple write path. | Medium |\n| **Phase 3: Global Distribution** | 6 weeks | Deploy to 3 regions, add CDN, implement global load balancing. | Medium |\n| **Phase 4: Microservices & Sharding** | 8 weeks | Break monolith into services, implement DB sharding, deploy on Kubernetes. | High |\n| **Phase 5: Search & Advanced Features** | 4 weeks | Add Elasticsearch, implement real-time search, optimize for cost. | Medium |\n\n---\n\n## 6. Cost Considerations\n\n- **Initial (Phase 0-1):** ~$500-1,000/month (cloud DB, 2 app servers, Redis).\n- **Scaling (Phase 2-3):** ~$3,000-5,000/month (Kafka, multi-region, CDN).\n- **Full Scale (Phase 4-5):** ~$10,000-20,000/month (Kubernetes cluster, sharded DB, Elasticsearch).\n- **Optimization:** Use **spot instances** for non-critical workers, **auto-scaling** to match demand, and **S3 lifecycle policies** to archive old media.\n\n---\n\n## 7. Risks & Mitigations\n\n| Risk | Mitigation |\n| :--- | :--- |\n| **Data loss during sharding** | Use online migration tools (e.g., gh-ost, pt-online-schema-change); test extensively in staging. |\n| **Cache stampede** | Use request coalescing (single-flight) and jittered TTLs. |\n| **Kafka consumer lag** | Monitor lag; scale consumers horizontally; use dead-letter queues. |\n| **Multi-region consistency** | Accept eventual consistency for timelines; use strong consistency only for user profiles. |\n| **Cost overrun** | Set budget alerts; use reserved instances for baseline capacity. |\n\n---\n\n## 8. Conclusion\n\nThe transition to 1M DAU requires a fundamental shift from a monolithic, single-node architecture to a distributed, cloud-native system. The most critical changes are **database sharding**, **caching**, and **asynchronous processing**. By following the phased plan above, the startup can scale incrementally, manage costs, and maintain a high-quality user experience globally. **Immediate action should be taken to move to a managed cloud database and implement Redis caching**, as these provide the highest return on investment with the lowest risk.",
+    "answer_hash": "a5e991f521ad02adfa6558a81b6cb00f5d200f3b341af2884c35e9a32571cc45",
+    "submitted_at": "2026-10-01T15:04:27.632631+00:00"
+  },
+  "outcome": {
+    "task_id": "6847465956a0f6376a60542a",
+    "method": "direct_single",
+    "mode": "evaluate",
+    "status": "submitted_unscored",
+    "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a60542a",
+    "answer_hash": "a5e991f521ad02adfa6558a81b6cb00f5d200f3b341af2884c35e9a32571cc45",
+    "submitted_at": "2026-10-01T15:04:27.632631+00:00",
+    "evaluation": null,
+    "experience_version": 0,
+    "proposals": [],
+    "experience_updates": [],
+    "budget": {
+      "model_calls": 1,
+      "tokens": 2400,
+      "reserved_tokens": 0,
+      "tool_calls": 0,
+      "wall_seconds": 9.29699999999957,
+      "request_queue_idle_seconds": 0.0,
+      "task_timeout": null,
+      "cost": null,
+      "by_stage": {
+        "inference": {
+          "model_calls": 1,
+          "tokens": 2400,
+          "tool_calls": 0,
+          "communication_bytes": 0,
+          "cost": null
+        }
+      },
+      "records": [
+        {
+          "call_id": "20b2e368cde44c14a21bfba69dbfab54",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "direct",
+          "input_tokens": 223,
+          "output_tokens": 2177,
+          "estimated": false,
+          "wall_seconds": 9.29699999999957,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 227,
+            "sent_input_tokens": 227,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "312d24bbf538b3eff64b1ab42a517685fe535ab4f18d5add8f8983b6c0d336a7"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-49e50a30-0d83-4d3b-99b8-823ba5712eb1"
+          }
+        }
+      ]
+    },
+    "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a60542a"
+  }
+}

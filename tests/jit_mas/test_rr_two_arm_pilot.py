@@ -10,14 +10,382 @@ from threading import Barrier
 from types import SimpleNamespace
 
 import pytest
+from jsonschema import Draft202012Validator, ValidationError as SchemaValidationError
 
 import scripts.run_rr_two_arm_pilot as pilot
 from jit_mas.budget import BudgetLedger, MeteredModel
-from jit_mas.schemas import PublicTask
+from jit_mas.planning import JsonModelCalls
+from jit_mas.schemas import LocalPlan, PublicTask
 from scripts.models.base import ChatMessage
 
 
 JOINT_MANIFEST = Path(__file__).resolve().parents[2] / "paper" / "experiments" / "joint_task_splits_v5.json"
+
+
+@pytest.mark.parametrize("mode", ["json_schema", "json_object", "none"])
+def test_structured_planning_sends_the_authoritative_schema_without_changing_payload(mode):
+    requests = []
+
+    def transport(messages, **kwargs):
+        requests.append((messages, kwargs))
+        return ChatMessage(role="assistant", content=json.dumps({"agent_id": "writer", "capability": "synthesis"}))
+
+    model = pilot.StructuredOutputModel(transport, "local", "writer", mode)
+    calls = JsonModelCalls(max_corrections=0)
+    result = calls.ask(model, "local_plan", "Plan only your assigned role.",
+                       {"task": "Explain an offline synthetic box."}, LocalPlan, agent_id="writer")
+
+    assert result.agent_id == "writer"
+    messages, kwargs = requests[0]
+    assert messages == calls.call_records[0]["messages"]
+    assert json.loads(messages[1]["content"]) == {
+        "phase": "local_plan", "agent_id": "writer", "task": "Explain an offline synthetic box."}
+    if mode == "none":
+        assert "response_format" not in kwargs
+    elif mode == "json_object":
+        assert kwargs["response_format"] == {"type": "json_object"}
+    else:
+        assert kwargs["response_format"] == {"type": "json_schema", "json_schema": {
+            "name": "LocalPlan", "strict": True, "schema": pilot._bounded_planning_schema(
+                LocalPlan.model_json_schema(), pilot._structured_output_policy())}}
+        assert kwargs["response_format"]["json_schema"]["schema"]["additionalProperties"] is False
+
+
+@pytest.mark.parametrize("role,agent_id,expects_json", [
+    ("exec", "writer", True), ("exec", "direct", False), ("meta", "meta", False),
+    ("judge", "judge", False), ("global", "global", False)])
+def test_structured_output_preserves_direct_answers_and_non_json_protocols(role, agent_id, expects_json):
+    requests = []
+
+    def transport(messages, **kwargs):
+        requests.append(kwargs)
+        return "unchanged"
+
+    model = pilot.StructuredOutputModel(transport, role, agent_id, "json_schema")
+    messages = [{"role": "system", "content": "Role-specific protocol."}]
+    assert model(messages, max_tokens=123) == "unchanged"
+    expected = {"type": "json_schema", "json_schema": {
+        "name": "ExecutionResponse", "strict": True, "schema": pilot._execution_response_schema(messages, max_tokens=123)}}
+    assert requests == [{"max_tokens": 123, **({"response_format": expected} if expects_json else {})}]
+
+
+def test_bounded_planning_schema_rejects_repeating_communication_and_preserves_original_schema():
+    original = LocalPlan.model_json_schema()
+    untouched = json.dumps(original, sort_keys=True)
+    bounded = pilot._bounded_planning_schema(original, pilot._structured_output_policy())
+    validator = Draft202012Validator(bounded)
+    runaway = {"agent_id": "critic_1", "capability": "review", "communication": (
+        "I will preserve the analyst's private history and only reference published ledger events. " * 1000)}
+    assert LocalPlan.model_validate(runaway).communication == runaway["communication"]
+    with pytest.raises(SchemaValidationError, match="too long"):
+        validator.validate(runaway)
+    validator.validate({**runaway, "communication": "Publish concise review findings."})
+    assert json.dumps(original, sort_keys=True) == untouched
+    assert bounded["properties"]["communication"]["maxLength"] == 1024
+    assert bounded["properties"]["challenge"]["maxLength"] == 2048
+    assert bounded["properties"]["risks"]["maxItems"] == 64
+
+
+def test_bounded_schema_keeps_existing_tighter_limits_and_nested_schema_constraints():
+    original = {"type": "object", "properties": {
+        "short": {"type": "string", "maxLength": 8},
+        "nested": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}},
+        "required": ["short"], "additionalProperties": False}
+    bounded = pilot._bounded_planning_schema(original, pilot._structured_output_policy())
+    assert bounded["properties"]["short"]["maxLength"] == 8
+    assert bounded["properties"]["nested"]["anyOf"][0]["maxLength"] == 2048
+    assert bounded["properties"]["nested"]["anyOf"][0]["minLength"] == 1
+    assert bounded["required"] == ["short"]
+    assert bounded["additionalProperties"] is False
+
+
+def test_execution_schema_reserves_space_for_checkpoints_and_json_closure():
+    validator = Draft202012Validator(pilot._execution_response_schema([], max_tokens=4096))
+    validator.validate({"answer": "A complete artifact.\n\nMultiple lines remain allowed."})
+    with pytest.raises(SchemaValidationError):
+        validator.validate({"answer": "Repeated review " * 1000})
+    ledger = {"requirements": [], "outline": [], "source_references": [], "evidence_spans": []}
+    validator.validate({"answer": "Concise contribution", "ledger": ledger})
+    with pytest.raises(SchemaValidationError):
+        validator.validate({"answer": "Concise contribution", "ledger": {**ledger, "contributions": []}})
+
+
+def _execution_schema_validator():
+    messages = [{"role": "user", "content": json.dumps({
+        "agent": {"tools": ["search"], "checkpoints": ["accuracy"]},
+        "shared_ledger": {"contributions": [], "tool_evidence": [{"event_id": "event-1"}],
+                          "communications": []}})}]
+    schema = pilot._execution_response_schema(messages)
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema)
+
+
+@pytest.mark.parametrize("response", [
+    {"answer": "First line of the final deliverable.\nSecond line covers limits.", "checkpoints": {"accuracy": True}},
+    {"think": "Check the public evidence.", "answer": "Final deliverable.", "evidence_ids": ["event-1"],
+     "checkpoints": {"accuracy": {"status": "unverified", "reason": "No external evidence.", "evidence_ids": []}}},
+    {"continue": True, "tools": [{"name": "send_message", "arguments": {
+        "recipient": "analyst", "content": "Clarify the assumption."}}]},
+    {"continue": True, "tools": [{"name": "send_message", "arguments": {
+        "recipient": "analyst", "message": "Clarify the assumption."}}]},
+    {"continue": True, "tools": [{"name": "search", "arguments": {"query": "public source"}}]},
+    {"tools": [{"name": "final_answer", "arguments": {"answer": "Final deliverable.",
+        "evidence_ids": [], "checkpoints": {"accuracy": {"status": "passed", "reason": "Checked."}}}}]},
+    {"tools": [{"name": "complete", "arguments": {"answer": "Contributor summary.", "ledger": {
+        "requirements": ["Address the question."], "outline": ["Start with the conclusion."],
+        "source_references": [{"source_id": "source-1", "locator": "public document"}],
+        "evidence_spans": [{"text": "Observed source excerpt.", "source_ref": "source-1"}]},
+        "checkpoints": {"accuracy": True}}}]},
+])
+def test_execution_schema_keeps_legal_final_answers_tools_and_contributions(response):
+    from jit_mas.execution import _contribution_ledger, _parse_response
+
+    _execution_schema_validator().validate(response)
+    assert _parse_response(ChatMessage(role="assistant", content=json.dumps(response))) == response
+    for call in response.get("tools", []):
+        if "ledger" in call.get("arguments", {}):
+            assert _contribution_ledger(call["arguments"]["ledger"]) == call["arguments"]["ledger"]
+
+
+@pytest.mark.parametrize("response", [
+    {"checkpoints": {"accuracy": {"status": True, "reason": "Checked."}}},
+    {"checkpoints": {"accuracy": {"status": "done", "reason": "Checked."}}},
+    {"checkpoints": {"accuracy": {"status": "passed", "reason": ""}}},
+    {"continue": "false"},
+    {"ledger": {"requirements": [{"text": "Invalid wrapped requirement."}], "outline": [],
+                "source_references": [], "evidence_spans": []}},
+    {"ledger": {"requirements": [], "outline": [123], "source_references": [], "evidence_spans": []}},
+    {"ledger": {"requirements": [], "outline": [], "evidence_spans": [],
+                "source_references": [{"source_id": "source-1", "locator": 123}]}},
+    {"ledger": {"requirements": [], "outline": [], "source_references": [],
+                "evidence_spans": [{"text": "Source excerpt.", "source_ref": {"source_id": "source-1"}}]}},
+    {"tools": [{"name": "complete", "arguments": {"answer": "Summary.",
+        "checkpoints": {"accuracy": {"status": "passed", "reason": ""}}}}]},
+    {"tools": [{"name": "complete", "arguments": {"answer": "Summary.", "tools": []}}]},
+])
+def test_execution_schema_rejects_invalid_completion_shapes(response):
+    with pytest.raises(SchemaValidationError):
+        _execution_schema_validator().validate(response)
+
+
+def test_terminal_completion_requires_checkpoints_but_interim_draft_does_not():
+    validator = _execution_schema_validator()
+    validator.validate({"answer": "Draft pending peer checks", "continue": True})
+    for response in ({"answer": "Final answer"}, {"answer": "Final answer", "continue": False},
+                     {"tools": [{"name": "final_answer", "arguments": {"answer": "Final answer"}}]}):
+        with pytest.raises(SchemaValidationError):
+            validator.validate(response)
+
+
+def test_execution_runtime_still_rejects_whitespace_only_checkpoint_reasons():
+    from jit_mas.execution import ResponseProtocolError, _parse_response
+
+    response = {"checkpoints": {"accuracy": {"status": "passed", "reason": "   "}}}
+    _execution_schema_validator().validate(response)
+    with pytest.raises(ResponseProtocolError, match="nonempty reason"):
+        _parse_response(ChatMessage(role="assistant", content=json.dumps(response)))
+
+
+def test_execution_answer_without_budget_is_unbounded_and_source_excerpt_preserves_multiline():
+    schema = pilot._execution_response_schema([])
+    assert schema["properties"]["answer"]["anyOf"][0] == {"type": "string"}
+    ledger = schema["properties"]["ledger"]["anyOf"][0]
+    assert ledger["properties"]["evidence_spans"]["items"]["properties"]["text"] == {
+        "type": "string", "maxLength": 2048}
+    assert schema["additionalProperties"] is False
+
+
+def test_execution_schema_binds_checkpoint_names_and_evidence_ids_to_instruction():
+    messages = [{"role": "user", "content": json.dumps({
+        "agent": {"tools": [], "checkpoints": [
+            "Publish initial analysis with chosen turning point.",
+            "Revise based on peer feedback if needed"]},
+        "shared_ledger": {"contributions": [], "tool_evidence": [], "communications": []}})}]
+    schema = pilot._execution_response_schema(messages)
+    validator = Draft202012Validator(schema)
+    checkpoint_schema = schema["properties"]["checkpoints"]
+    assert checkpoint_schema["required"] == [
+        "Publish initial analysis with chosen turning point.",
+        "Revise based on peer feedback if needed"]
+    assert checkpoint_schema["additionalProperties"] is False
+    assert schema["properties"]["evidence_ids"]["maxItems"] == 0
+    legal = {"answer": "A concise contribution.", "checkpoints": {
+        "Publish initial analysis with chosen turning point.": True,
+        "Revise based on peer feedback if needed": {
+            "status": "unverified", "reason": "No peer feedback was available.", "evidence_ids": []}}}
+    validator.validate(legal)
+    with pytest.raises(SchemaValidationError):
+        validator.validate({"answer": "A", "evidence_ids": ["ev-1"], "checkpoints": legal["checkpoints"]})
+    with pytest.raises(SchemaValidationError):
+        validator.validate({"answer": "A", "checkpoints": {
+            "r1": True,
+            "Revise based on peer feedback if needed": True}})
+    with pytest.raises(SchemaValidationError):
+        validator.validate({"answer": "A", "checkpoints": {
+            "Publish initial analysis with chosen turning point": True,
+            "Revise based on peer feedback if needed": True}})
+
+
+def test_execution_schema_allows_only_observed_evidence_ids_when_present():
+    messages = [{"role": "user", "content": json.dumps({
+        "agent": {"tools": [], "checkpoints": []},
+        "observed_evidence_ids": ["event-1", "event-2"]})}]
+    schema = pilot._execution_response_schema(messages)
+    ids = schema["properties"]["evidence_ids"]
+    assert ids["maxItems"] == 2
+    assert ids["items"]["enum"] == ["event-1", "event-2"]
+    validator = Draft202012Validator(schema)
+    validator.validate({"evidence_ids": ["event-1", "event-2"]})
+    with pytest.raises(SchemaValidationError):
+        validator.validate({"evidence_ids": ["event-3"]})
+
+
+def test_execution_schema_tracks_observations_added_in_later_turns():
+    messages = [{"role": "user", "content": json.dumps({
+        "agent": {"tools": [], "checkpoints": []}, "shared_ledger": {
+            "contributions": [], "tool_evidence": [], "communications": []}})},
+        {"role": "user", "content": "Public observations: " + json.dumps([
+            {"event_id": "event-9", "output": "public result"}])}]
+    schema = pilot._execution_response_schema(messages)
+    assert schema["properties"]["evidence_ids"]["items"]["enum"] == ["event-9"]
+
+
+def test_execution_schema_requires_single_source_reference_tokens():
+    validator = _execution_schema_validator()
+    legal = {"ledger": {"requirements": [], "outline": [],
+                         "source_references": [{"source_id": "SR-001", "locator": "p. 1"}],
+                         "evidence_spans": [{"text": "A quoted line.", "source_ref": "SR-001"}]}}
+    validator.validate(legal)
+    for field, value in (("source_id", "SR-001, SR-005"), ("source_ref", "SR-001, SR-005"),
+                         ("source_id", "SR 001"), ("source_ref", "SR\t001")):
+        invalid = json.loads(json.dumps(legal))
+        if field == "source_id":
+            invalid["ledger"]["source_references"][0][field] = value
+        else:
+            invalid["ledger"]["evidence_spans"][0][field] = value
+        with pytest.raises(SchemaValidationError):
+            validator.validate(invalid)
+
+
+@pytest.mark.parametrize("answer", ["", "  \n  "])
+def test_execution_runtime_preserves_nonempty_answer_validation(answer):
+    from jit_mas.execution import ResponseProtocolError, _parse_response
+
+    response = {"answer": answer, "checkpoints": {"accuracy": True}}
+    _execution_schema_validator().validate(response)
+    with pytest.raises(ResponseProtocolError, match="nonempty string"):
+        _parse_response(ChatMessage(role="assistant", content=json.dumps(response)))
+
+
+def test_structured_transport_keeps_validation_failures_instead_of_repairing_provider_output():
+    def transport(_messages, **_kwargs):
+        return ChatMessage(role="assistant", content=json.dumps({
+            "agent_id": "writer", "capability": "synthesis", "team": {"agents": []}}))
+
+    calls = JsonModelCalls(max_corrections=0)
+    with pytest.raises(ValueError, match="Extra inputs"):
+        calls.ask(pilot.StructuredOutputModel(transport, "local", "writer", "json_schema"),
+                  "local_plan", "Plan only your role.", {}, LocalPlan)
+    assert calls.call_records[0]["validation_errors"][0]["type"] == "extra_forbidden"
+
+
+def test_reference_schema_rejects_unknown_attribution_agents_rubrics_and_evidence():
+    from jit_mas.attribution import AttributionOutline
+
+    payload = {"phase": "attribute_global", "team": {"agents": [{"agent_id": "analyst"}]},
+               "global_graph": {"rubrics": [{"rubric_id": "predicted"}]},
+               "planned_graph": {"rubrics": []}, "feedback": {"rubrics": [{"rubric_id": "official"}]},
+               "evidence_ids": ["event:actual"], "event_index": [{"event_id": "event:actual"}]}
+    schema = pilot._reference_schema(AttributionOutline.model_json_schema(), payload)
+    validator = Draft202012Validator(schema)
+    finding = {"finding_id": "f", "rubric_ids": ["official"], "categories": ["execution"],
+               "agent_ids": ["analyst"], "hypothesis": "A supported hypothesis.",
+               "supporting_evidence": ["event:actual"]}
+    validator.validate({"findings": [finding], "questions": {"analyst": ["What was checked?"]}})
+    with pytest.raises(SchemaValidationError):
+        validator.validate({"questions": {"global": ["Unsupported recipient"]}})
+    for field, invalid in (("agent_ids", ["global"]), ("rubric_ids", ["invented"]),
+                           ("supporting_evidence", ["event:invented"])):
+        with pytest.raises(SchemaValidationError):
+            validator.validate({"findings": [{**finding, field: invalid}]})
+
+
+def test_reference_schema_scopes_proposals_by_source_and_version():
+    from jit_mas.attribution import Proposals
+
+    payload = {"phase": "propose", "task": {"task_id": "task-a"}, "base_version": 3,
+               "valid_supporting_evidence_ids": ["event:a"], "valid_counterevidence_ids": []}
+    schema = pilot._reference_schema(Proposals.model_json_schema(), payload)
+    proposal = {"proposal_id": "task-a:3:process", "source_task_id": "task-a", "base_version": 3,
+                "experience": {"experience_id": "new", "bank": "execution", "instruction": "Check assumptions.",
+                               "applicability": "Analytical tasks", "source_task_ids": ["task-a"],
+                               "evidence": ["event:a"]}, "diff": "Add a process practice",
+                "rationale": "Observed evidence", "evidence": ["event:a"], "expected_benefit": "Fewer omissions"}
+    validator = Draft202012Validator(schema)
+    validator.validate({"proposals": [proposal]})
+    for field, invalid in (("proposal_id", "prop_001"), ("source_task_id", "task-b"),
+                           ("base_version", 2), ("evidence", ["invented"])):
+        with pytest.raises(SchemaValidationError):
+            validator.validate({"proposals": [{**proposal, field: invalid}]})
+    assert Proposals.model_json_schema()["$defs"]["ChangeProposal"]["properties"]["proposal_id"].get("pattern") is None
+
+
+def test_reference_schema_rejects_unknown_alignment_ids_and_empty_matches():
+    from jit_mas.schemas import RubricAlignment
+
+    schema = pilot._reference_schema(RubricAlignment.model_json_schema(),
+                                    {"phase": "align", "valid_predicted_ids": ["p"], "valid_evaluated_ids": ["e"]})
+    validator = Draft202012Validator(schema)
+    match = {"predicted_ids": ["p"], "evaluated_ids": ["e"], "relation": "equivalent",
+             "confidence": 0.7, "rationale": "Meaning overlaps."}
+    validator.validate({"matches": [match]})
+    for field, invalid in (("predicted_ids", ["invented"]), ("evaluated_ids", [])):
+        with pytest.raises(SchemaValidationError):
+            validator.validate({"matches": [{**match, field: invalid}]})
+
+
+def test_iterative_schema_keeps_unconfigured_call_ceilings_null():
+    schema = pilot._reference_schema(LocalPlan.model_json_schema(),
+                                    {"phase": "local_plan", "limits": {
+                                        "execution_mode": "iterative_shared_ledger", "total_max_calls": None}})
+    validator = Draft202012Validator(schema)
+    validator.validate({"agent_id": "analyst", "capability": "analysis", "max_calls": None})
+    with pytest.raises(SchemaValidationError):
+        validator.validate({"agent_id": "analyst", "capability": "analysis", "max_calls": 3})
+
+
+def test_general_knowledge_contribution_cannot_invent_source_records():
+    messages = [{"role": "user", "content": json.dumps({
+        "agent": {"tools": [], "checkpoints": []},
+        "knowledge_policy": "model_general_knowledge_allowed"})}]
+    validator = Draft202012Validator(pilot._execution_response_schema(messages))
+    ledger = {"requirements": ["Check assumptions"], "outline": [],
+              "source_references": [], "evidence_spans": []}
+    validator.validate({"answer": "General knowledge analysis", "ledger": ledger})
+    for field, source in (("source_references", {"source_id": "remembered", "locator": "unknown"}),
+                          ("evidence_spans", {"text": "Unsupported source", "source_ref": "remembered"})):
+        with pytest.raises(SchemaValidationError):
+            validator.validate({"ledger": {**ledger, field: [source]}})
+
+
+def test_structured_output_mode_cannot_change_after_identity_freeze(monkeypatch):
+    monkeypatch.setattr(pilot, "code_fingerprint", lambda: "frozen-code")
+    monkeypatch.setattr(pilot, "_runner_hash", lambda: "frozen-runner")
+    args = SimpleNamespace(exec_model="offline-generator", exec_endpoint="https://example.org/v1",
+                           judge_model="offline-judge", judge_endpoint="https://example.com/v1", timeout=10,
+                           structured_output="json_schema", judge_parallel=2)
+    args.frozen_identity = {"code": "frozen-code", "runner": "frozen-runner",
+                            "config": pilot.digest(pilot._config(args)), "judge_parallel": 2,
+                            "structured_output": "json_schema", "files": {}}
+    pilot._assert_identity(args)
+    args.structured_output = "none"
+    with pytest.raises(pilot.CheckpointIntegrityError, match="Frozen pilot"):
+        pilot._assert_identity(args)
+
+    args.structured_output = "json_schema"
+    args.planning_communication_max_length = 4096
+    with pytest.raises(pilot.CheckpointIntegrityError, match="Frozen pilot"):
+        pilot._assert_identity(args)
 
 
 def test_pipeline_binds_parallel_judges_to_one_metered_credential_safe_task_ledger(monkeypatch, tmp_path):
@@ -116,6 +484,32 @@ def test_pipeline_binds_parallel_judges_to_one_metered_credential_safe_task_ledg
     args.judge_parallel = 1
     sequential = pilot._pipeline(config, object(), tmp_path / "sequential", args, manifest, None)
     assert sequential.evaluator_factory is original_evaluator_factory
+
+
+def test_closed_book_policy_reaches_pipeline_and_cannot_change_after_freeze(monkeypatch, tmp_path):
+    captured = []
+
+    def make_pipeline(*_args, **kwargs):
+        captured.append(kwargs)
+        return SimpleNamespace(models=object(), tools={})
+
+    monkeypatch.setattr(pilot, "make_pipeline", make_pipeline)
+    monkeypatch.setattr(pilot, "code_fingerprint", lambda: "frozen-code")
+    monkeypatch.setattr(pilot, "_runner_hash", lambda: "frozen-runner")
+    args = SimpleNamespace(exec_model="offline-generator", exec_endpoint="https://example.org/v1",
+                           judge_model="offline-judge", judge_endpoint="https://example.com/v1",
+                           timeout=10, closed_book=True, judge_parallel=1,
+                           split_path=tmp_path / "split.json", data=tmp_path / "data.jsonl")
+    config = pilot._config(args)
+    pilot._pipeline(config, object(), tmp_path, args, pilot._manifest(JOINT_MANIFEST), None)
+    assert captured[0]["knowledge_policy"] == "model_general_knowledge_allowed"
+    args.frozen_identity = {"code": "frozen-code", "runner": "frozen-runner",
+                            "config": pilot.digest(config), "judge_parallel": 1,
+                            "knowledge_policy": "model_general_knowledge_allowed", "files": {}}
+    pilot._assert_identity(args)
+    args.closed_book = False
+    with pytest.raises(pilot.CheckpointIntegrityError, match="Frozen pilot"):
+        pilot._assert_identity(args)
 
 
 def test_manifest_uses_the_frozen_researchrubrics_20_10_33_membership():
@@ -248,6 +642,10 @@ def test_main_baseline_only_calls_baseline_and_seals_only_33_test_slots(monkeypa
     assert set(comparison["reports"]) == {"baseline"}
     assert comparison["paired"]["available"] is False
     assert comparison["metadata"]["selected_arm"] == "baseline"
+    assert comparison["metadata"]["structured_output"] == "json_schema"
+    assert comparison["metadata"]["frozen_identity"]["structured_output"] == "json_schema"
+    assert comparison["metadata"]["structured_policy"] == pilot._structured_output_policy()
+    assert comparison["metadata"]["frozen_identity"]["structured_policy"] == pilot._structured_output_policy()
     assert comparison["metadata"]["parallel_arms"] is False
     assert len(pilot._read(output / "test_release" / "inventory.json")["slots"]) == 33
     assert not (output / "ours").exists()

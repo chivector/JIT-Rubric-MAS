@@ -49,12 +49,13 @@ def make_team(*, tools=(), contributors=False, checkpoints=()):
                     synthesizer_id="writer", total_max_calls=None)
 
 
-def make_services(team, models, *, tools=None, pool=None):
+def make_services(team, models, *, tools=None, pool=None, knowledge_policy=None):
     installed = tools or {}
     services = TeamServices(lambda agent_id: models[agent_id],
                             PublicTask(task_id="iterative-review", question="Write a researched guide.",
                                        tools=list(installed)), RubricGraph(rubrics=[]),
-                            execution_mode="iterative_shared_ledger", agent_pool=pool)
+                            execution_mode="iterative_shared_ledger", agent_pool=pool,
+                            knowledge_policy=knowledge_policy)
     memory = TeamMemory()
     memory.initialize("coordinator", TaskInput(task="Write a guide."))
     context = SimpleNamespace(
@@ -74,6 +75,36 @@ def make_services(team, models, *, tools=None, pool=None):
 def run_writer(team, services, context):
     return _run_agent_iterative(team.agents[-1].model_dump(mode="json"),
                                 team.model_dump(mode="json"), context, services)
+
+
+def test_general_knowledge_researcher_completes_without_external_observations():
+    pool = seed_pool()
+    team = make_team(checkpoints=["Address peer requests if any"])
+    team.agents[-1] = AgentSpec(**{**team.agents[-1].model_dump(mode="json"),
+        "pool_agent_id": "searcher", "pool_agent_version": 1})
+
+    def complete(messages):
+        payload = json.loads(messages[1]["content"])
+        assert payload["knowledge_policy"] == "model_general_knowledge_allowed"
+        assert payload["allowed_tool_schemas"] == "[]"
+        assert payload["persistent_agent"]["role"] == "Knowledge Researcher"
+        assert payload["persistent_agent"]["prompt"].startswith("Organize relevant model general knowledge")
+        assert "never claim external retrieval" in messages[0]["content"]
+        assert "do not continue merely to wait for nonexistent tools" in messages[0]["content"]
+        assert "status=not_applicable" in messages[0]["content"]
+        return {"answer": "A guide based on general knowledge with explicit uncertainty.",
+                "continue": False, "evidence_ids": [], "checkpoints": {
+                    "Address peer requests if any": {"status": "not_applicable",
+                        "reason": "No peer request was received.", "evidence_ids": []}}}
+
+    model = ScriptedModel([complete])
+    services, context = make_services(team, {"writer": model}, pool=pool,
+                                      knowledge_policy="model_general_knowledge_allowed")
+    result = run_writer(team, services, context)
+    assert result.terminated_reason == "final_answer"
+    assert len(model.calls) == 1
+    assert not any(event["kind"] == "retrieved" for event in services.events)
+    assert next(profile for profile in pool.profiles if profile.pool_agent_id == "searcher").role == "Searcher"
 
 
 def test_writer_can_cite_delivered_upstream_artifact():
@@ -268,6 +299,18 @@ def test_iterative_role_call_limit_discards_an_unfinished_draft(role_limit):
         assert "AgentSpec.max_calls exhausted" in str(result.trajectory[-1].error)
         assert "writer" not in services.artifacts
         assert not any(event["kind"] == "final_answer" for event in services.events)
+
+
+def test_iterative_synthesizer_receives_final_artifact_contract_even_with_critic_role():
+    team = make_team()
+    team.agents[-1].role = "Critic"
+    model = ScriptedModel([{"answer": "Complete requested guide", "continue": False}])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer == "Complete requested guide"
+    system = model.calls[0][0]["content"]
+    assert "final synthesizer even if your persistent role is a reviewer or critic" in system
+    assert "cannot replace the requested deliverable" in system
 
 
 def test_single_pass_team_supports_an_unlimited_tool_budget():

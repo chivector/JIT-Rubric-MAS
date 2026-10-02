@@ -1,0 +1,91 @@
+{
+  "protocol": "closed_book_exploratory",
+  "judge_model": "gpt-5.6-sol",
+  "baseline_completed": 33,
+  "baseline_mean": 0.46926705010467296,
+  "ours_status": "inconclusive",
+  "ours_selected_checkpoint": null,
+  "ours_test_mean": null,
+  "ours_test_completed": 0,
+  "valid_two_arm_comparison": false,
+  "paired_difference": null,
+  "baseline_generation_reused": 33,
+  "baseline_evaluation_reused": 27,
+  "baseline_new_evaluations": 6,
+  "ours_evolution_run_complete": 2,
+  "ours_evolution_failures": 18,
+  "checkpoints": [
+    {
+      "position": 0,
+      "state_version": 0,
+      "complete_evaluations": 4,
+      "total_evaluations": 10,
+      "eligible": false,
+      "reused_from": null
+    },
+    {
+      "position": 5,
+      "state_version": 0,
+      "complete_evaluations": 4,
+      "total_evaluations": 10,
+      "eligible": false,
+      "reused_from": 0
+    },
+    {
+      "position": 10,
+      "state_version": 1,
+      "complete_evaluations": 0,
+      "total_evaluations": 10,
+      "eligible": false,
+      "reused_from": null
+    },
+    {
+      "position": 15,
+      "state_version": 1,
+      "complete_evaluations": 0,
+      "total_evaluations": 10,
+      "eligible": false,
+      "reused_from": 10
+    },
+    {
+      "position": 20,
+      "state_version": 1,
+      "complete_evaluations": 0,
+      "total_evaluations": 10,
+      "eligible": false,
+      "reused_from": 10
+    }
+  ],
+  "cost": {
+    "model_calls": 594,
+    "tokens": 6192041,
+    "by_stage": {
+      "inference": {
+        "model_calls": 279,
+        "input_tokens": 2140972,
+        "output_tokens": 768071,
+        "estimated_calls": 9,
+        "request_seconds": 2632.3450000000157
+      },
+      "evaluation": {
+        "model_calls": 273,
+        "input_tokens": 1276467,
+        "output_tokens": 107075,
+        "estimated_calls": 0,
+        "request_seconds": 5909.77499999998
+      },
+      "update": {
+        "model_calls": 42,
+        "input_tokens": 1796682,
+        "output_tokens": 102774,
+        "estimated_calls": 0,
+        "request_seconds": 454.5800000000236
+      }
+    },
+    "unknown_budgets": 0,
+    "unsettled_calls": 0,
+    "monetary_cost": null
+  },
+  "elapsed_seconds": 3922.75,
+  "serving_identity_limit": "The gateway returns the gpt-5.6-sol alias; no independently verified, immutable model snapshot is available. Failed HTTP attempts have no response_model."
+}

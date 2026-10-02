@@ -10,12 +10,14 @@ experiment artifacts.
 from __future__ import annotations
 
 import argparse
+import copy
 from concurrent.futures import ThreadPoolExecutor
 import json
 import hashlib
 import math
 import os
 import logging
+import re
 import shutil
 from pathlib import Path
 import time
@@ -96,8 +98,11 @@ def _config(args):
 def _pipeline(config, store, output, args, manifest, evidence_dir):
     split_path = Path(args.split_path)
     pipeline = make_pipeline(config, store, output, data=args.data, splits=split_path,
-                             benchmark="researchrubrics", evidence_dir=evidence_dir)
-    pipeline.models = SafeModels(pipeline.models, config)
+                             benchmark="researchrubrics", evidence_dir=evidence_dir,
+                             knowledge_policy=_knowledge_policy(args))
+    pipeline.models = SafeModels(pipeline.models, config,
+                                 structured_output=getattr(args, "structured_output", "none"),
+                                 structured_policy=_structured_output_policy(args))
     pipeline.synthesizer_factory = lambda meta: JITHarnessSynthesizer(
         backend="native_jit", meta_model=meta,
         meta_config={"model_id": config.models["meta"].model,
@@ -132,13 +137,294 @@ def _pipeline(config, store, output, args, manifest, evidence_dir):
     return pipeline
 
 
+def _knowledge_policy(args):
+    return "model_general_knowledge_allowed" if getattr(args, "closed_book", False) else None
+
+
+def _structured_output_policy(args=None):
+    return {"planning_string_max_length": getattr(args, "planning_string_max_length", 2048),
+            "planning_communication_max_length": getattr(args, "planning_communication_max_length", 1024),
+            "planning_array_max_items": getattr(args, "planning_array_max_items", 64),
+            "execution_schema_version": "rr-execution-v3",
+            "execution_answer_characters_per_token": 2,
+            "execution_checkpoint_reason_max_length": 512,
+            "execution_ledger_text_max_length": 2048,
+            "reference_schema_version": "rr-reference-v2"}
+
+
+def _bounded_planning_schema(schema, policy):
+    bounded = copy.deepcopy(schema)
+
+    def visit(node, field=""):
+        if isinstance(node, dict):
+            if node.get("type") == "string":
+                limit = policy["planning_communication_max_length"] if field == "communication" \
+                    else policy["planning_string_max_length"]
+                node["maxLength"] = min(node.get("maxLength", limit), limit)
+            if node.get("type") == "array":
+                limit = policy["planning_array_max_items"]
+                node["maxItems"] = min(node.get("maxItems", limit), limit)
+            for key, value in node.items():
+                if key == "properties":
+                    for name, child in value.items():
+                        visit(child, name)
+                elif isinstance(value, (dict, list)):
+                    visit(value, field)
+        elif isinstance(node, list):
+            for child in node:
+                visit(child, field)
+
+    visit(bounded)
+    return bounded
+
+
+def _reference_schema(schema, payload):
+    bounded = copy.deepcopy(schema)
+    definitions = bounded.get("$defs", {})
+
+    def restrict_array(node, values):
+        if not isinstance(node, dict):
+            return
+        allowed = sorted(set(values))
+        node["items"] = {"type": "string", "enum": allowed} if allowed else {"type": "string"}
+        if not allowed:
+            node["maxItems"] = 0
+
+    phase = payload.get("phase")
+    limits = payload.get("limits", {})
+    if limits.get("execution_mode") == "iterative_shared_ledger" and limits.get("total_max_calls") is None:
+        for definition in definitions.values():
+            properties = definition.get("properties", {})
+            for field in ("max_calls", "total_max_calls"):
+                if field in properties:
+                    properties[field] = {"type": "null"}
+        if "max_calls" in bounded.get("properties", {}):
+            bounded["properties"]["max_calls"] = {"type": "null"}
+    if phase == "align":
+        properties = definitions.get("AlignmentMatch", {}).get("properties", {})
+        for field, key in (("predicted_ids", "valid_predicted_ids"),
+                           ("evaluated_ids", "valid_evaluated_ids")):
+            restrict_array(properties.get(field), payload.get(key, []))
+            if field in properties:
+                properties[field]["minItems"] = 1
+        properties = bounded.get("properties", {})
+        restrict_array(properties.get("unmatched_predicted_ids"), payload.get("valid_predicted_ids", []))
+        restrict_array(properties.get("missed_evaluated_ids"), payload.get("valid_evaluated_ids", []))
+    if phase in {"attribute_global", "attribute_integrate"}:
+        agent_ids = [agent["agent_id"] for agent in payload.get("team", {}).get("agents", [])]
+        properties = bounded.get("properties", {})
+        questions = properties.get("questions")
+        if isinstance(questions, dict):
+            value_schema = questions.get("additionalProperties", {"type": "array", "items": {"type": "string"}})
+            questions["properties"] = {agent_id: copy.deepcopy(value_schema) for agent_id in agent_ids}
+            questions["additionalProperties"] = False
+        findings = definitions.get("AttributionFinding", {}).get("properties", {})
+        restrict_array(findings.get("agent_ids"), agent_ids)
+        rubric_ids = [rubric["rubric_id"] for key in ("global_graph", "planned_graph", "feedback")
+                      for rubric in payload.get(key, {}).get("rubrics", [])]
+        restrict_array(findings.get("rubric_ids"), rubric_ids)
+    if phase in {"attribute_global", "attribute_local", "attribute_local_followup", "attribute_integrate"}:
+        findings = definitions.get("AttributionFinding", {}).get("properties", {})
+        for field in ("supporting_evidence", "opposing_evidence"):
+            restrict_array(findings.get(field), payload.get("evidence_ids", []))
+        properties = bounded.get("properties", {})
+        event_ids = [event["event_id"] for event in payload.get("event_index", [])]
+        restrict_array(properties.get("evidence_requests"), event_ids if phase == "attribute_local" else [])
+        if phase == "attribute_local" and "evidence_requests" in properties:
+            properties["evidence_requests"]["maxItems"] = min(8, len(event_ids))
+    if phase == "propose":
+        properties = definitions.get("ChangeProposal", {}).get("properties", {})
+        source_id = payload["task"]["task_id"]
+        base_version = payload["base_version"]
+        if "proposal_id" in properties:
+            properties["proposal_id"]["pattern"] = "^" + re.escape(f"{source_id}:{base_version}:") + "[A-Za-z0-9_-]+$"
+        for field, value in (("source_task_id", source_id), ("base_version", base_version)):
+            if field in properties:
+                properties[field]["const"] = value
+        restrict_array(properties.get("evidence"), payload.get("valid_supporting_evidence_ids", []))
+        experience = definitions.get("Experience", {}).get("properties", {})
+        restrict_array(experience.get("evidence"), payload.get("valid_supporting_evidence_ids", []))
+        restrict_array(experience.get("counterevidence"), payload.get("valid_counterevidence_ids", []))
+        if "source_task_ids" in experience:
+            experience["source_task_ids"]["const"] = [source_id]
+        if "proposals" in bounded.get("properties", {}):
+            bounded["properties"]["proposals"]["maxItems"] = 3
+    if phase == "agent_evolve":
+        properties = bounded.get("properties", {})
+        for field in ("base_agent_version", "source_task_id", "update_id"):
+            if field in properties:
+                properties[field]["const"] = payload[field]
+        if "pool_agent_id" in properties:
+            properties["pool_agent_id"]["const"] = payload["agent_profile"]["pool_agent_id"]
+        restrict_array(properties.get("evidence"), payload.get("valid_evidence_ids", []))
+        lesson = definitions.get("AgentMemoryLesson", {}).get("properties", {})
+        for field in ("evidence", "counterevidence"):
+            restrict_array(lesson.get(field), payload.get("valid_evidence_ids", []))
+        if "source_task_ids" in lesson:
+            lesson["source_task_ids"]["const"] = [payload["source_task_id"]]
+    return bounded
+
+
+def _execution_response_schema(messages, max_tokens=None):
+    text = {"type": "string", "minLength": 1}
+    answer_text = {"type": "string"}
+
+    instruction = {}
+    payloads = []
+    for message in messages:
+        if message.get("role") != "user" or not isinstance(message.get("content"), str):
+            continue
+        content = message["content"]
+        try:
+            candidate = json.loads(content)
+        except (TypeError, ValueError):
+            candidate = None
+            for marker in ("Updated shared ledger: ", "Public observations: "):
+                if content.startswith(marker):
+                    try:
+                        candidate = json.loads(content[len(marker):])
+                    except (TypeError, ValueError):
+                        pass
+                    break
+        if candidate is not None:
+            payloads.append(candidate)
+        if isinstance(candidate, dict) and isinstance(candidate.get("agent"), dict):
+            instruction = candidate
+
+    observed_ids = set()
+    def collect_observed(value):
+        if isinstance(value, dict):
+            if isinstance(value.get("event_id"), str):
+                observed_ids.add(value["event_id"])
+            for key in ("observed_evidence_ids", "allowed_evidence_ids"):
+                explicit = value.get(key)
+                if isinstance(explicit, list):
+                    observed_ids.update(item for item in explicit if isinstance(item, str))
+            for key in ("observed_evidence_ids", "allowed_evidence_ids", "shared_ledger",
+                        "contributions", "tool_evidence", "communications", "observations"):
+                if key in value:
+                    collect_observed(value[key])
+        elif isinstance(value, list):
+            for item in value:
+                collect_observed(item)
+
+    for payload in payloads:
+        collect_observed(payload)
+    ids = {"type": "array", "maxItems": len(observed_ids),
+           "items": ({"type": "string", "enum": sorted(observed_ids)}
+                     if observed_ids else {"type": "string"})}
+
+    checkpoint = {"type": "object", "properties": {
+        "status": {"type": "string", "enum": ["completed", "passed", "failed", "unverified", "not_applicable"]},
+        "reason": {**text, "maxLength": 512}, "evidence_ids": ids}, "required": ["status", "reason"], "additionalProperties": True}
+    checkpoint_names = []
+    agent = instruction.get("agent")
+    if isinstance(agent, dict) and isinstance(agent.get("checkpoints"), list):
+        checkpoint_names = [name for name in agent["checkpoints"] if isinstance(name, str)]
+    checkpoint_properties = {name: {"anyOf": [{"type": "boolean"}, checkpoint]}
+                             for name in checkpoint_names}
+    checkpoint_object = {"type": "object", "properties": checkpoint_properties,
+                         "additionalProperties": False}
+    if checkpoint_names:
+        checkpoint_object["required"] = checkpoint_names
+
+    source_ref = {"type": "string", "minLength": 1, "pattern": r"^[^,\s]+$"}
+    ledger_text = {**text, "maxLength": 2048}
+    ledger = {"type": "object", "properties": {
+        "requirements": {"type": "array", "items": ledger_text},
+        "outline": {"type": "array", "items": ledger_text},
+        "source_references": {"type": "array", "items": {"type": "object", "properties": {
+            "source_id": source_ref, "locator": text}, "required": ["source_id", "locator"], "additionalProperties": True}},
+        "evidence_spans": {"type": "array", "items": {"type": "object", "properties": {
+            "text": {"type": "string", "maxLength": 2048}, "source_ref": source_ref}, "required": ["text", "source_ref"], "additionalProperties": True}}},
+        "required": ["requirements", "outline", "source_references", "evidence_spans"], "additionalProperties": False}
+    if instruction.get("knowledge_policy") == "model_general_knowledge_allowed":
+        for field in ("source_references", "evidence_spans"):
+            ledger["properties"][field]["maxItems"] = 0
+    answer_schema = {"type": "string"}
+    if isinstance(max_tokens, int) and max_tokens > 0:
+        answer_schema["maxLength"] = max_tokens * 2
+    completion = {"answer": {"anyOf": [answer_schema, {"type": "null"}]}, "evidence_ids": ids,
+                  "checkpoints": checkpoint_object,
+                  "ledger": {"anyOf": [ledger, {"type": "null"}]},
+                  "continue": {"type": "boolean"}, "think": {}}
+    terminal_tool = {"type": "object", "properties": {
+        "name": {"type": "string", "enum": ["complete", "final_answer"]},
+        "arguments": {"type": "object", "properties": completion, "additionalProperties": False}},
+        "required": ["name", "arguments"], "additionalProperties": True}
+    terminal_contract = {
+        "if": {"required": ["answer"], "not": {
+            "required": ["continue"], "properties": {"continue": {"const": True}}}},
+        "then": {"required": ["checkpoints"]}}
+    if checkpoint_names:
+        terminal_tool["properties"]["arguments"]["allOf"] = [terminal_contract]
+    tool_shapes = [terminal_tool]
+    allowed = set(agent.get("tools", [])) if isinstance(agent, dict) else set()
+    allowed.difference_update({"complete", "final_answer", "send_message"})
+    if allowed:
+        tool_shapes.append({"type": "object", "properties": {
+            "name": {"type": "string", "enum": sorted(allowed)},
+            "arguments": {"type": "object", "additionalProperties": True}},
+            "required": ["name"], "additionalProperties": True})
+    tool_shapes.append({"type": "object", "properties": {
+        "name": {"type": "string", "const": "send_message"},
+        "arguments": {"type": "object", "properties": {
+            "recipient": text, "content": text, "message": text}, "required": ["recipient"],
+            "anyOf": [{"required": ["content"]}, {"required": ["message"]}], "additionalProperties": True}},
+        "required": ["name", "arguments"], "additionalProperties": True})
+    schema = {"type": "object", "properties": {
+        **completion, "tools": {"type": "array", "items": {"anyOf": tool_shapes}}},
+        "additionalProperties": False}
+    if checkpoint_names:
+        schema["allOf"] = [terminal_contract]
+    return schema
+
+
+class StructuredOutputModel:
+    def __init__(self, model, role, agent_id, mode, *, policy=None):
+        if mode not in {"none", "json_object", "json_schema"}:
+            raise ValueError("Unknown structured output mode")
+        self.model, self.role, self.agent_id, self.mode = model, role, agent_id, mode
+        self.policy = dict(policy or _structured_output_policy())
+
+    def __call__(self, messages, **kwargs):
+        if self.mode != "none" and self.role in {"global", "local"}:
+            payload = next((json.loads(message["content"]) for message in messages
+                            if message.get("role") == "user" and isinstance(message.get("content"), str)
+                            and message["content"].lstrip().startswith("{")), {})
+            marker = "Return only one JSON object conforming to this JSON Schema:\n"
+            for message in messages:
+                content = message.get("content")
+                if message.get("role") == "system" and isinstance(content, str) and marker in content:
+                    schema = json.loads(content.rsplit(marker, 1)[1])
+                    schema = _bounded_planning_schema(schema, self.policy)
+                    schema = _reference_schema(schema, payload)
+                    kwargs["response_format"] = (
+                        {"type": "json_schema", "json_schema": {
+                            "name": schema.get("title", "StructuredResponse"), "strict": True, "schema": schema}}
+                        if self.mode == "json_schema" else {"type": "json_object"})
+                    break
+        elif self.mode != "none" and self.role == "exec" and self.agent_id != "direct":
+            kwargs["response_format"] = (
+                {"type": "json_schema", "json_schema": {
+                    "name": "ExecutionResponse", "strict": True, "schema": _execution_response_schema(
+                        messages, max_tokens=kwargs.get("max_tokens"))}}
+                if self.mode == "json_schema" else {"type": "json_object"})
+        return self.model(messages, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self.model, name)
+
+
 class SafeModels:
-    def __init__(self, provider, config):
-        self.provider, self.config = provider, config
+    def __init__(self, provider, config, *, structured_output="none", structured_policy=None):
+        self.provider, self.config, self.structured_output = provider, config, structured_output
+        self.structured_policy = dict(structured_policy or _structured_output_policy())
 
     def create(self, role, agent_id, ledger, stage):
-        model = SafeTransport(self.provider.create(role, agent_id, ledger, stage),
-                              os.environ[self.config.models[role].key_env])
+        model = StructuredOutputModel(self.provider.create(role, agent_id, ledger, stage),
+                                      role, agent_id, self.structured_output, policy=self.structured_policy)
+        model = SafeTransport(model, os.environ[self.config.models[role].key_env])
         return JudgeEnvelopeModel(model) if role == "judge" else model
 
 
@@ -239,6 +525,9 @@ def _assert_identity(args):
             or identity["runner"] != _runner_hash()
             or identity["config"] != digest(_config(args))
             or identity["judge_parallel"] != getattr(args, "judge_parallel", 2)
+            or identity.get("structured_output", "none") != getattr(args, "structured_output", "none")
+            or identity.get("structured_policy", _structured_output_policy()) != _structured_output_policy(args)
+            or identity.get("knowledge_policy", _knowledge_policy(args)) != _knowledge_policy(args)
             or any(hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected
                    for path, expected in identity["files"].items())):
         raise CheckpointIntegrityError("Frozen pilot code, data or evidence changed")
@@ -739,6 +1028,12 @@ def main(argv=None):
     parser.add_argument("--max-inflight-requests", type=int, default=2)
     parser.add_argument("--judge-max-tokens", type=int, default=16000)
     parser.add_argument("--judge-attempts", type=int, default=1)
+    parser.add_argument("--structured-output", choices=("none", "json_object", "json_schema"),
+                        default="json_schema",
+                        help="Constrain JIT planning responses and execution JSON; direct answers stay text.")
+    parser.add_argument("--planning-string-max-length", type=int, default=2048)
+    parser.add_argument("--planning-communication-max-length", type=int, default=1024)
+    parser.add_argument("--planning-array-max-items", type=int, default=64)
     parser.add_argument("--arm", choices=("both", "baseline", "ours"), default="both",
                         help="Run both arms in parallel, or isolate one arm for recovery/debugging.")
     parser.add_argument("--reuse-baseline-from", help="Import sealed baseline answers and fill only missing generations")
@@ -754,6 +1049,9 @@ def main(argv=None):
         parser.error("--judge-parallel must be between 1 and 16")
     if args.judge_max_tokens < 1 or not 1 <= args.judge_attempts <= 3:
         parser.error("Judge token limit must be positive and attempts must be between 1 and 3")
+    if any(value < 1 for value in (args.planning_string_max_length,
+                                  args.planning_communication_max_length, args.planning_array_max_items)):
+        parser.error("Structured planning limits must be positive")
     if not Path(args.data).is_file() or not Path(args.joint_manifest).is_file():
         parser.error("Pinned data and joint manifest must exist")
     manifest = _manifest(args.joint_manifest)
@@ -786,6 +1084,9 @@ def main(argv=None):
         files.extend(sorted((Path(source).resolve() / "test_release" / "evaluations").glob("*.json")))
     args.frozen_identity = {"code": code_fingerprint(), "runner": _runner_hash(), "config": digest(config),
                             "judge_parallel": args.judge_parallel,
+                            "structured_output": args.structured_output,
+                            "structured_policy": _structured_output_policy(args),
+                            "knowledge_policy": _knowledge_policy(args),
                             "files": {str(path): _sha256_file(path) for path in files}}
     metadata = {"version": "rr-two-arm-pilot-v2", "manifest": manifest.model_dump(mode="json"),
                 "data": str(Path(args.data).resolve()), **preflight,
@@ -793,6 +1094,8 @@ def main(argv=None):
                 "judge_model": args.judge_model, "judge_endpoint": args.judge_endpoint,
                 "judge_parallel": args.judge_parallel, "process_request_cap": config.max_inflight_requests,
                 "judge_attempts": args.judge_attempts,
+                "structured_output": args.structured_output,
+                "structured_policy": _structured_output_policy(args),
                 "model_attempts": os.getenv("JIT_MAS_MODEL_ATTEMPTS", "1"),
                 "consecutive_failure_limit": os.getenv("MODULAR_AGENT_MAX_CONSECUTIVE_API_FAILURES", "5"),
                 "tls_verify": os.getenv("JIT_MAS_TLS_VERIFY", "default"),

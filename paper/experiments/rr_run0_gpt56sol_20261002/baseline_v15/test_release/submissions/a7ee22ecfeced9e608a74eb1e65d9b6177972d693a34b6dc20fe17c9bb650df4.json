@@ -1,0 +1,76 @@
+{
+  "slot": {
+    "slot_id": "baseline:6847465956a0f6376a6053c9",
+    "task_id": "6847465956a0f6376a6053c9",
+    "method": "baseline",
+    "repeat": 0
+  },
+  "status": "submitted",
+  "submission": {
+    "answer": "# Designing a Custom Embedded Processor for a Thermostat: A Practical Guide\n\nWhen you set out to build a custom processor for a thermostat, you're not just designing silicon\u2014you're architecting the brain of a device that must run reliably for years, respond to temperature changes in milliseconds, and consume almost no power. This post walks through the full journey: from instruction set philosophy to open-source testing on Linux.\n\n## 1. Start with the Workload, Not the Silicon\n\nBefore choosing RISC or CISC, profile what your thermostat actually does:\n\n- **Read sensors** (temperature, humidity) via I\u00b2C or SPI every 1\u20135 seconds\n- **Run a PID control loop** (a few dozen multiply/accumulate operations)\n- **Drive a relay or solid-state switch** (GPIO toggling)\n- **Update a small LCD or LED display** (character or segment writes)\n- **Handle a user interface** (button debouncing, maybe a simple menu)\n- **Maintain a real-time clock** (timer interrupts)\n\nThat's it. No floating-point-heavy graphics, no complex OS, no network stacks (unless you add Wi-Fi). This workload is tiny, deterministic, and latency-tolerant.\n\n**Key insight:** Your processor doesn't need to be fast\u2014it needs to be *predictable* and *low-power*. A 16-bit core at 8\u201316 MHz is more than enough.\n\n## 2. RISC vs. CISC: The Real Trade-offs for a Thermostat\n\n### CISC (Complex Instruction Set Computing)\n- **Pros:** Dense code (fewer bytes per operation), built-in instructions for memory-to-memory moves, string ops, and complex addressing modes. Good if you're porting legacy code.\n- **Cons:** Variable-length instructions make pipelining harder, decode logic is complex (more silicon area, more power), and you often pay for instructions you never use.\n\n### RISC (Reduced Instruction Set Computing)\n- **Pros:** Fixed-length instructions (typically 16 or 32 bits) \u2192 simple decode, easy pipelining, lower power per instruction, and a clean compiler target. You can implement a 3-stage pipeline with minimal logic.\n- **Cons:** Code density is lower (more instructions for the same task), and you may need a separate load/store unit.\n\n### The Verdict for a Thermostat\n**Go RISC.** Here's why:\n\n1. **Power:** A simple 3-stage RISC pipeline (fetch, decode, execute) with no branch prediction or out-of-order logic draws far less power than a CISC core with microcode.\n2. **Determinism:** Fixed-length instructions mean you can calculate worst-case execution time (WCET) precisely\u2014critical for a PID loop that must run at a fixed rate.\n3. **Silicon area:** A minimal RISC core (like a 16-bit custom design) can fit in a few thousand gates, leaving room for peripherals on the same die.\n4. **Toolchain:** Modern open-source compilers (GCC, LLVM) target RISC architectures much more efficiently.\n\n**My recommendation:** A 16-bit RISC core with:\n- 16 general-purpose registers\n- 16-bit fixed-length instructions (with a 32-bit extension for immediates)\n- Load/store architecture (only `LD` and `ST` access memory)\n- A simple 3-stage pipeline\n- Hardware multiply (for PID) but no floating-point unit (use fixed-point math)\n\n## 3. Instruction Set Design: What You Actually Need\n\nDon't over-engineer. Your ISA should include:\n\n- **Arithmetic:** ADD, SUB, MUL (16\u00d716\u219232), AND, OR, XOR, SHL, SHR\n- **Compare & branch:** CMP, BEQ, BNE, BLT, BGT, BZ (branch on zero), and a conditional branch for loop counters\n- **Memory:** LD (load), ST (store), with immediate offset addressing\n- **Control:** JMP, CALL, RET, and a software interrupt (for debug)\n- **I/O:** Special memory-mapped registers for GPIO, timers, and UART (no separate I/O instructions\u2014keep it simple)\n\n**Avoid:** Floating-point, SIMD, virtual memory, and any instruction that takes more than 1 cycle to execute (except MUL, which can be 2\u20133 cycles).\n\n## 4. How to Actually Code and Test It Using Open-Source Tools\n\nThis is where the fun begins. You don't need expensive EDA tools\u2014the entire flow can be done on Linux with free software.\n\n### Step 1: Write the Core in Verilog or VHDL\nUse **Icarus Verilog** (open-source) for simulation. Write your RTL (register-transfer level) design:\n\n```verilog\nmodule thermostat_core (\n    input clk,\n    input rst,\n    output [15:0] pc,\n    input [15:0] instr,\n    // ... other ports\n);\n```\n\n### Step 2: Create a Testbench and Simulate\nUse **Verilator** (faster than Icarus for large designs) or Icarus for small ones. Write a testbench that:\n- Loads a program into memory\n- Steps the clock\n- Checks register values and memory after each instruction\n\n```bash\niverilog -o sim thermostat_core.v testbench.v\nvvp sim\n```\n\n### Step 3: Build a Cross-Compiler\nYou have two options:\n\n**Option A: Use an existing open-source compiler**\n- If you design your ISA to be a subset of an existing architecture (e.g., a simplified MIPS or RISC-V), you can use **GCC** with a custom backend. This is a lot of work but doable.\n- **Easier:** Use **RISC-V** as your base. You can implement a minimal RV32I subset and use the official RISC-V GCC toolchain. This gives you a real compiler for free.\n\n**Option B: Write a simple assembler and C compiler**\n- Use **GNU Assembler (GAS)** with a custom target, or write your own assembler in Python (using `argparse` and `struct`).\n- For C, you can use **LLVM** with a custom backend (steep learning curve) or write a tiny C-to-assembly translator for your specific workload (not recommended for production).\n\n**My practical advice:** Design your ISA to be **RISC-V compatible** (even if you only implement a subset). Then you can use:\n- `riscv64-unknown-elf-gcc` (or `riscv32-unknown-elf-gcc`) to compile C code\n- `riscv64-unknown-elf-objdump` to disassemble\n- `spike` (RISC-V ISA simulator) to run your compiled code before you even have hardware\n\n### Step 4: Use an Open-Source ISA Simulator for Early Testing\nBefore your RTL is ready, use **Spike** (RISC-V) or **QEMU** (if you emulate a full system) to test your firmware logic. This lets you develop the thermostat control algorithm in C and verify it works, independent of your hardware.\n\n### Step 5: Co-Simulation with Verilator\nOnce your RTL is stable, use **Verilator** to create a C++ model of your processor. Then you can:\n- Compile your C firmware to your ISA\n- Load the binary into the Verilator model\n- Run the simulation and observe GPIO toggles, timer interrupts, and sensor reads\n\nThis is the fastest way to catch bugs before synthesis.\n\n### Step 6: Synthesis and FPGA Prototyping\nUse **Yosys** (open-source synthesis) to synthesize your Verilog to a netlist. Then use **nextpnr** (open-source place-and-route) to target an FPGA like the iCE40 or ECP5. You can buy a $20 development board (e.g., iCEstick) and run your thermostat processor in real hardware.\n\n```bash\nyosys -p \"read_verilog thermostat_core.v; synth_ice40 -top top; write_json thermostat.json\"\nnextpnr-ice40 --hx1k --json thermostat.json --pcf thermostat.pcf --asc thermostat.asc\nicepack thermostat.asc thermostat.bin\n```\n\n### Step 7: Debugging on Linux\n- Use **GDB** with a custom stub that connects to your simulator or FPGA via UART. You can set breakpoints, single-step, and inspect registers.\n- Use **OpenOCD** if you have a JTAG interface on your FPGA.\n- For logic analysis, use **GTKWave** to view simulation waveforms.\n\n## 5. Peripheral Integration: The Real Thermostat Work\n\nYour processor is useless without peripherals. Design them as memory-mapped registers:\n\n- **Timer:** A 16-bit down-counter with interrupt on overflow (for the PID loop period)\n- **GPIO:** 8-bit input/output ports for buttons, relay, and LED\n- **I\u00b2C master:** For the temperature sensor (e.g., TMP102 or SHT30)\n- **UART:** For debugging and optional Wi-Fi module\n\nIn your C firmware, you'll write to these addresses like normal memory:\n\n```c\n#define TIMER_CTRL 0x1000\n#define TIMER_VAL  0x1004\n#define GPIO_OUT   0x2000\n#define I2C_DATA   0x3000\n\nvoid set_relay(int on) {\n    if (on) GPIO_OUT |= 0x01;\n    else    GPIO_OUT &= ~0x01;\n}\n```\n\n## 6. Power Management: The Silent Killer\n\nA thermostat runs on batteries or a small power supply. Your processor must:\n- **Sleep** between sensor reads (use a low-power mode with a watchdog timer)\n- **Wake on interrupt** (from timer or GPIO)\n- **Run at low voltage** (1.8V or 3.3V)\n\nDesign your core to support a `SLEEP` instruction that halts the clock until an interrupt. In your RTL, gate the clock to the ALU and register file when sleeping.\n\n## 7. Testing Strategy: From Simulation to Silicon\n\n1. **Unit tests:** Test each instruction in isolation using a Verilog testbench.\n2. **Randomized tests:** Generate random instruction sequences and compare your RTL against a reference model (e.g., a Python emulator).\n3. **Firmware tests:** Run your actual thermostat control loop in simulation and verify the relay toggles at the correct temperature.\n4. **FPGA validation:** Test on real hardware with a temperature sensor connected.\n5. **Formal verification:** Use **SymbiYosys** (open-source) to prove properties like \"the relay never turns on when temperature > setpoint + 2\u00b0C.\"\n\n## 8. The Open-Source Toolchain Summary\n\n| Tool | Purpose |\n|------|---------|\n| Icarus Verilog | RTL simulation |\n| Verilator | Fast co-simulation |\n| Yosys | Synthesis |\n| nextpnr | FPGA place-and-route |\n| GCC (RISC-V) | C compiler |\n| Spike | ISA simulator |\n| GDB | Debugging |\n| GTKWave | Waveform viewing |\n| SymbiYosys | Formal verification |\n\n## 9. Final Recommendations\n\n- **Don't design a general-purpose CPU.** Design a *domain-specific* processor optimized for control loops and I/O.\n- **Use RISC-V as your starting point.** You get a mature toolchain, and you can strip out what you don't need.\n- **Simulate early, simulate often.** Bugs in the ISA are 100x cheaper to fix in Verilog than in silicon.\n- **Keep your pipeline simple.** A 3-stage pipeline with no hazards (except load-use) is plenty.\n- **Test with real sensor data.** Record actual temperature readings and feed them into your simulation to verify the PID loop.\n\n## 10. A Concrete Minimal Example\n\nHere's a rough outline of your processor's instruction format (16-bit):\n\n```\n| Opcode (4) | Rd (4) | Rs (4) | Imm/Offset (4) |\n```\n\nAnd a sample C program for the PID loop:\n\n```c\n#include \"thermostat.h\"\n\nvolatile int setpoint = 220;  // 22.0\u00b0C in fixed-point\nvolatile int temperature;\n\nvoid pid_isr() {\n    int error = setpoint - temperature;\n    int output = Kp * error + Ki * integral + Kd * derivative;\n    set_relay(output > 0);\n}\n\nint main() {\n    init_timer(1000);  // 1ms interrupt\n    while(1) {\n        sleep();\n    }\n}\n```\n\nCompile this with `riscv32-unknown-elf-gcc -march=rv32i -mabi=ilp32 -O2`, then load the binary into your simulator.\n\n---\n\nBuilding a custom processor for a thermostat is a rewarding project that touches every layer of computing\u2014from ISA design to firmware. With the open-source Linux toolchain, you can go from concept to working FPGA prototype in a few weeks. Start small, test relentlessly, and remember: the best processor is the one that does exactly what your thermostat needs\u2014nothing more, nothing less.",
+    "answer_hash": "65fbcb2573dd705714f2a0c18a3b3481e5106b175053cb9665ec07708aaf72e2",
+    "submitted_at": "2026-10-01T15:05:02.496759+00:00"
+  },
+  "outcome": {
+    "task_id": "6847465956a0f6376a6053c9",
+    "method": "direct_single",
+    "mode": "evaluate",
+    "status": "submitted_unscored",
+    "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6053c9",
+    "answer_hash": "65fbcb2573dd705714f2a0c18a3b3481e5106b175053cb9665ec07708aaf72e2",
+    "submitted_at": "2026-10-01T15:05:02.496759+00:00",
+    "evaluation": null,
+    "experience_version": 0,
+    "proposals": [],
+    "experience_updates": [],
+    "budget": {
+      "model_calls": 1,
+      "tokens": 3028,
+      "reserved_tokens": 0,
+      "tool_calls": 0,
+      "wall_seconds": 12.20300000000043,
+      "request_queue_idle_seconds": 0.0,
+      "task_timeout": null,
+      "cost": null,
+      "by_stage": {
+        "inference": {
+          "model_calls": 1,
+          "tokens": 3028,
+          "tool_calls": 0,
+          "communication_bytes": 0,
+          "cost": null
+        }
+      },
+      "records": [
+        {
+          "call_id": "38a8f3d973484880ba1e510c9868a05d",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "direct",
+          "input_tokens": 197,
+          "output_tokens": 2831,
+          "estimated": false,
+          "wall_seconds": 12.20300000000043,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 201,
+            "sent_input_tokens": 201,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "54e4b44def2169019661499db158874667829a78c7792a0b1c65f67797d5d309"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-45fca938-7887-4cb8-ba90-37357fa3c7c1"
+          }
+        }
+      ]
+    },
+    "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a6053c9"
+  }
+}

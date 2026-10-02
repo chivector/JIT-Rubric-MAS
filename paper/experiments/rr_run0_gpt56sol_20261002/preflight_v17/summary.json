@@ -1,0 +1,276 @@
+{
+  "status": "failed",
+  "formal_score": null,
+  "judge_requests": 0,
+  "error_type": "RuntimeError",
+  "error": "Team did not submit a final answer; official evaluation was not invoked",
+  "failure": {
+    "task_id": "6847465956a0f6376a605391",
+    "mode": "evaluate",
+    "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_closed_book_preflight_20261002_v17\\runs\\154944a62feab140164ffdf090ffcdc38dba4bba9ca7b4e9549ac720e292c907",
+    "error_type": "RuntimeError",
+    "error": "Team did not submit a final answer; official evaluation was not invoked",
+    "budget": {
+      "model_calls": 8,
+      "tokens": 98975,
+      "reserved_tokens": 0,
+      "tool_calls": 0,
+      "wall_seconds": 1283.561999999998,
+      "request_queue_idle_seconds": 0.0,
+      "task_timeout": 900.0,
+      "cost": null,
+      "by_stage": {
+        "inference": {
+          "model_calls": 8,
+          "tokens": 98975,
+          "tool_calls": 0,
+          "communication_bytes": 0,
+          "cost": null
+        },
+        "execution": {
+          "model_calls": 0,
+          "tokens": 0,
+          "tool_calls": 0,
+          "communication_bytes": 80391,
+          "cost": null
+        }
+      },
+      "records": [
+        {
+          "call_id": "ed11f052ab9645d28fdc22517dfac177",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "global",
+          "input_tokens": 3988,
+          "output_tokens": 2662,
+          "estimated": false,
+          "wall_seconds": 11.109000000004016,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 3855,
+            "sent_input_tokens": 3855,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "2b1ca6bb26a43740c78c3f4fb3ad096a585c14db0def3194ea47dd6e273edb91"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-f60d51ee-9deb-435d-8422-db799a8dbb3c"
+          }
+        },
+        {
+          "call_id": "fe5672f8400549aa9bf8d1baeaa472bf",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "writer_1",
+          "input_tokens": 6785,
+          "output_tokens": 892,
+          "estimated": false,
+          "wall_seconds": 5.671999999998661,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 6597,
+            "sent_input_tokens": 6597,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "800a8de49cb91c6763911d6f5cf8911146e667cb5c813bbfcf6621a260287f86"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-6d57ea59-0534-4a73-8a51-91fe70728718"
+          }
+        },
+        {
+          "call_id": "86dcaf4cd7a94243b3e090124198ffeb",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "analyst_1",
+          "input_tokens": 6845,
+          "output_tokens": 1439,
+          "estimated": false,
+          "wall_seconds": 7.5310000000026776,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 6660,
+            "sent_input_tokens": 6660,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "e32c9cbb1ba710ef360ddfe78483576e717bbaea0cb311f058da3b5671aa5da4"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-416fbb85-371b-49ec-a5d8-3d6b39f83d95"
+          }
+        },
+        {
+          "call_id": "ef2c611f31b14f6dbe593835b5944ab2",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "critic_1",
+          "input_tokens": 6749,
+          "output_tokens": 1356,
+          "estimated": false,
+          "wall_seconds": 6.5,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 6567,
+            "sent_input_tokens": 6567,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "2ecfc6d38e24fed1956c2e5a2858befbaa57c2fb98ccbe95f0f56f0852349952"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-fd51245d-8da8-4e26-83b4-868a74711696"
+          }
+        },
+        {
+          "call_id": "044d81b184134b4dbdec2389d966ef50",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "global",
+          "input_tokens": 12377,
+          "output_tokens": 5085,
+          "estimated": false,
+          "wall_seconds": 15.343999999997322,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 12094,
+            "sent_input_tokens": 12094,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "20e827fca7ef5b1c200467b5152c05111b328ddeeca7baab733a4488f3566fba"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-d756b88f-c320-4d59-be4d-0d4198a96107"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "analyst_1",
+          "bytes": 146
+        },
+        {
+          "call_id": "3b58661fdfd741b4bbf642042ad39411",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "analyst_1",
+          "input_tokens": 6227,
+          "output_tokens": 6299,
+          "estimated": false,
+          "wall_seconds": 23.75,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 6136,
+            "sent_input_tokens": 6136,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "5a30feb344d2c65b6a2ee36adbe483ee55c9880402451de52d5edf9db1d0ed20"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-e45abf21-aa0e-4745-b394-7b62196cf475"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "writer_1",
+          "bytes": 27689
+        },
+        {
+          "call_id": "6b3329a2e63641a89343ba780b6ae994",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "writer_1",
+          "input_tokens": 11861,
+          "output_tokens": 6037,
+          "estimated": false,
+          "wall_seconds": 18.32800000000134,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 11749,
+            "sent_input_tokens": 11749,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "c9765a6dfe3a08a384ef1d32e3d64ae5214b54595938c2c200d5e51096da21c4"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-49b8f8dd-3a71-474f-ac93-072fedc10e92"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "critic_1",
+          "bytes": 52556
+        },
+        {
+          "call_id": "0d482e9eba4242f3b265291215db5277",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "critic_1",
+          "input_tokens": 18040,
+          "output_tokens": 2333,
+          "estimated": false,
+          "wall_seconds": 1201.9379999999946,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 17899,
+            "sent_input_tokens": 17899,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "897f90aed42c07c860319eb99678a676bd9fdba84fda02ed97c8ba86f88d5c3b"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-afed58bd-44cf-44bd-af84-6bc301ff0967"
+          }
+        }
+      ]
+    }
+  }
+}

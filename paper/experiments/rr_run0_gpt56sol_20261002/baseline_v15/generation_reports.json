@@ -1,0 +1,3925 @@
+{
+  "baseline": {
+    "arm": "single_agent_direct",
+    "status": "submitted",
+    "started_at": "2026-10-02T04:56:22.187192+00:00",
+    "elapsed_seconds": 3.436999999998079,
+    "scope": "one-run ResearchRubrics TEST, direct single-agent, closed-book unless evidence supplied",
+    "manifest": {
+      "schema_version": "1.0",
+      "seed": 20261001,
+      "evolution": [
+        "6847465956a0f6376a6054a7",
+        "6847465956a0f6376a60543e",
+        "6847465956a0f6376a6054a9",
+        "6847465956a0f6376a6053f3",
+        "6847465956a0f6376a6053aa",
+        "6847465956a0f6376a605478",
+        "6847465956a0f6376a60547f",
+        "6847465956a0f6376a6053f5",
+        "6847465956a0f6376a60547e",
+        "684397d188c1deceb49af31b",
+        "6847465956a0f6376a6054ad",
+        "6847465956a0f6376a605371",
+        "6847465956a0f6376a6054c2",
+        "6847465956a0f6376a6053a7",
+        "683a58c9a7e7fe4e76958478",
+        "684397d188c1deceb49af315",
+        "683a58c9a7e7fe4e7695848e",
+        "684397d188c1deceb49af30b",
+        "6847465956a0f6376a605343",
+        "6847465956a0f6376a6054be"
+      ],
+      "validation": [
+        "6847465956a0f6376a605391",
+        "6847465956a0f6376a60535d",
+        "684397d188c1deceb49af31d",
+        "6847465956a0f6376a6053e8",
+        "6847465956a0f6376a6053b5",
+        "684397d188c1deceb49af329",
+        "6847465956a0f6376a605441",
+        "6847465956a0f6376a60542d",
+        "683a58c9a7e7fe4e7695849b",
+        "6847465956a0f6376a6053fb"
+      ],
+      "test": [
+        "6847465956a0f6376a605360",
+        "683a58c9a7e7fe4e76958492",
+        "6847465956a0f6376a605493",
+        "6847465956a0f6376a605476",
+        "683a58c9a7e7fe4e7695848b",
+        "6847465956a0f6376a6053ce",
+        "684397d188c1deceb49af316",
+        "684397d188c1deceb49af321",
+        "6847465956a0f6376a605492",
+        "6847465956a0f6376a605366",
+        "6847465956a0f6376a605424",
+        "683a58c9a7e7fe4e7695846f",
+        "6847465956a0f6376a605348",
+        "6847465956a0f6376a6054d0",
+        "684397d188c1deceb49af31c",
+        "6847465956a0f6376a6053a0",
+        "6847465956a0f6376a6053d0",
+        "6847465956a0f6376a605387",
+        "684397d188c1deceb49af32d",
+        "6847465956a0f6376a605355",
+        "6847465956a0f6376a605407",
+        "683a58c9a7e7fe4e76958488",
+        "6847465956a0f6376a605411",
+        "6847465956a0f6376a605362",
+        "684397d188c1deceb49af334",
+        "6847465956a0f6376a605469",
+        "6847465956a0f6376a6053d8",
+        "683a58c9a7e7fe4e76958498",
+        "6847465956a0f6376a60542a",
+        "6847465956a0f6376a6054cd",
+        "6847465956a0f6376a605443",
+        "6847465956a0f6376a605401",
+        "6847465956a0f6376a6053c9"
+      ],
+      "stream": [],
+      "deduplication": "task_id and normalized public question SHA256"
+    },
+    "results": {
+      "tasks": [
+        {
+          "task_id": "6847465956a0f6376a605360",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605360",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 5092,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 17.686999999999898,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 5092,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "3d6be0c7c16e4e82b9114f1f00b42177",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 435,
+                "output_tokens": 4657,
+                "estimated": false,
+                "wall_seconds": 16.98399999999856,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 446,
+                  "sent_input_tokens": 446,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "a1439a69cbe2fc535faf4c11c843db38b080f3ee35af617be41b3360d7bbb917"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-c2498861-d6f3-4c18-90f0-b1d518a6160f"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "683a58c9a7e7fe4e76958492",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\683a58c9a7e7fe4e76958492",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 2125,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 8.905999999999949,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 2125,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "709ff17584a744d48b7b331ba1c49098",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 229,
+                "output_tokens": 1896,
+                "estimated": false,
+                "wall_seconds": 8.905999999999949,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 233,
+                  "sent_input_tokens": 233,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "b7bcefa27eeb6c7a5181f86e692452dd8f31cd281bdc13b67eab6d5057625bdf"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-a8e10351-922d-47f6-a435-bdebe307be3c"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605493",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605493",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1720,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 6.905999999999949,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1720,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "4a6e13f9fba64376927b090ce0f7516d",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 202,
+                "output_tokens": 1518,
+                "estimated": false,
+                "wall_seconds": 6.890999999999622,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 207,
+                  "sent_input_tokens": 207,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "192b7afe4765186764dc0ef802a24d3f549595ca758d6a67b9549c7a500c13e4"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-ff1aa531-8270-490a-816f-92a5fbeb4beb"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605476",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605476",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1897,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 8.735000000000582,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1897,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "202c19a631f94d55ae8205a8c9a0f6d2",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 233,
+                "output_tokens": 1664,
+                "estimated": false,
+                "wall_seconds": 8.719000000000051,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 237,
+                  "sent_input_tokens": 237,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "b29d16968b057ec9adaca2adc343c0d7ad847210abbdbcfb648aafeccd23d824"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-fd5ac6b1-c15f-4f63-9e9e-c4ab6231f79e"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "683a58c9a7e7fe4e7695848b",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\683a58c9a7e7fe4e7695848b",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1853,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 7.186999999999898,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1853,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "5cb666ca1205403b9a6154c765382c17",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 309,
+                "output_tokens": 1544,
+                "estimated": false,
+                "wall_seconds": 7.186999999999898,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 316,
+                  "sent_input_tokens": 316,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "9f521ea597ac29870eb3a323a8d773caa714eaa4af65e4df33dff38860c3e907"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-e7a1774a-dbe5-435b-b30a-449ac5fa6a5f"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053ce",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6053ce",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 3524,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 12.969000000000051,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 3524,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "5c23e7f2770149ddbd7bdb3c6818b3e0",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 351,
+                "output_tokens": 3173,
+                "estimated": false,
+                "wall_seconds": 12.95300000000043,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 354,
+                  "sent_input_tokens": 354,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "9886d3672de85d06093f0f9b2e32780247e808f74abb39c1a8d77f024bc9c1e5"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-f4e67ab5-c094-4f94-a9a0-a96d4e2fc57f"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "684397d188c1deceb49af316",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\684397d188c1deceb49af316",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1652,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 7.655999999999949,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1652,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "fb2ccfd69389403aa34847c7392c9701",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 197,
+                "output_tokens": 1455,
+                "estimated": false,
+                "wall_seconds": 7.640000000000327,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 200,
+                  "sent_input_tokens": 200,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "b675a5a0c0f35781af708eade0be1d2b2ed3c935d35752dff26af577b8056d63"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-35a1e1d2-c129-434f-8f34-a21e5c88c010"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "684397d188c1deceb49af321",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\684397d188c1deceb49af321",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 2097,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 8.75,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 2097,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "763dab1816264ad7891cfb5e6eaec8c2",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 267,
+                "output_tokens": 1830,
+                "estimated": false,
+                "wall_seconds": 8.75,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 268,
+                  "sent_input_tokens": 268,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "7e03b0797f8bfc17b141b7344065b62298b6c6f73a7ee10ea122843015200f66"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-96abf36c-d770-4023-82e6-c850238a92c2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605492",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605492",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1301,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 5.984000000000378,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1301,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "eaaa05440e8945abb94a54412d5d2821",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 167,
+                "output_tokens": 1134,
+                "estimated": false,
+                "wall_seconds": 5.967999999999847,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 171,
+                  "sent_input_tokens": 171,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "dcb119cf8dd058a8fd0205eab9f20687f6d5bf4901973bdeea040f35650f82e8"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-01fa4352-b2ed-443e-ac66-cc243670eb14"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605366",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605366",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1574,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 6.484000000000378,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1574,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "6fb9c77706374aee8ec94aaef74d4202",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 223,
+                "output_tokens": 1351,
+                "estimated": false,
+                "wall_seconds": 6.484000000000378,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 226,
+                  "sent_input_tokens": 226,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "0c44ff2c8d109e992b715e2776d31d3970e1fcddce06563f32a6df0693e62bdc"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-419c3dc3-b886-4af9-9626-f668599f17b8"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605424",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605424",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1833,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 7.5,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1833,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "2a6aa69a8c194dea80287d68dcbc9796",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 253,
+                "output_tokens": 1580,
+                "estimated": false,
+                "wall_seconds": 7.484000000000378,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 256,
+                  "sent_input_tokens": 256,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "eff3d48b5eeb5603174d5d293454536810836e968ef078e2014783f86544654e"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-b755239f-6e1c-402e-8f4f-1bfaf8ff20e3"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "683a58c9a7e7fe4e7695846f",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\683a58c9a7e7fe4e7695846f",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 3285,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 11.358999999999469,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 3285,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "00236b3761264e929d0017cd1efb98f6",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 238,
+                "output_tokens": 3047,
+                "estimated": false,
+                "wall_seconds": 11.344000000000051,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 244,
+                  "sent_input_tokens": 244,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "6b545eeb0d4fffe790452f1dc73d8901aa145e675cc45278f131c54caabf09bb"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-952edab9-09d8-4d47-a0ce-92b1e81f83b2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605348",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605348",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 3538,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 15.765000000000327,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 3538,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "6a5b74faa1cc44c4aa14b5ecb4ad8356",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 200,
+                "output_tokens": 3338,
+                "estimated": false,
+                "wall_seconds": 15.765000000000327,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 204,
+                  "sent_input_tokens": 204,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "e31a34c2accbf4174ea5955dc52f11af88deba0b1a3e182ad30b761a6e73d9f5"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-eedcac73-1b6e-45f6-921d-c726b42a3e45"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6054d0",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6054d0",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1700,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 8.186999999999898,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1700,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "d07de0d151bd41e9b6559515500f78bc",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 172,
+                "output_tokens": 1528,
+                "estimated": false,
+                "wall_seconds": 8.17199999999957,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 178,
+                  "sent_input_tokens": 178,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "519ddf234de6f13c51758960c3b4e995911ccb8a16f2af930e8cf5528a9e0434"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-f1fca483-661d-47b1-81a9-59cd741ef49e"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "684397d188c1deceb49af31c",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\684397d188c1deceb49af31c",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 3200,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 14.219000000000051,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 3200,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "2162c19280db4673a1292b6f52e718c3",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 287,
+                "output_tokens": 2913,
+                "estimated": false,
+                "wall_seconds": 14.20299999999952,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 291,
+                  "sent_input_tokens": 291,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "26cc502a34e5196130bd6c99705aae9cfdc4d99cd6bc42b5b7e73b2d9480e80d"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-3f9274e2-b566-4fdf-96d1-343ce852d5c5"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053a0",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6053a0",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 2396,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 9.780999999999949,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 2396,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "d862324ee5cf42aaa9b7d39154063c81",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 201,
+                "output_tokens": 2195,
+                "estimated": false,
+                "wall_seconds": 9.780999999999949,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 205,
+                  "sent_input_tokens": 205,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "f048e09f4ed73e7ae0f369d477394be745d0036eeb4f686b9104f83d64ba5d2f"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-6acfebc2-5c8b-44a4-be97-38ead4e826dd"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053d0",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6053d0",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1534,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 7.280999999999949,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1534,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "cb9a16c1240a42f9834e1e36dbaf03a5",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 203,
+                "output_tokens": 1331,
+                "estimated": false,
+                "wall_seconds": 7.266000000000531,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 207,
+                  "sent_input_tokens": 207,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "8bf6e06bb5ecc00833a03c57354f6fa835b875c478eab28a8b1a2b52eb296a06"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-505da823-2b04-47a2-abf0-0da34ac11e79"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605387",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605387",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 5144,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 21.188000000000102,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 5144,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "d31f731d074f43e3a64becda59418c67",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 423,
+                "output_tokens": 4721,
+                "estimated": false,
+                "wall_seconds": 21.188000000000102,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 429,
+                  "sent_input_tokens": 429,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "0c991da5d61186dd44c6f88a1906ee181eb087133e6434a92c56b2a7308a458c"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-f02ca904-1be5-4e92-be6c-6801ab0db197"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "684397d188c1deceb49af32d",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\684397d188c1deceb49af32d",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 2193,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 9.264999999999418,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 2193,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "d3843b6730f442b9ba491b41f815f9fb",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 232,
+                "output_tokens": 1961,
+                "estimated": false,
+                "wall_seconds": 9.264999999999418,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 235,
+                  "sent_input_tokens": 235,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "e2abff348656a8a089aa176b405ce1b6a7f1f9b55a28d119bfbafe385baf24f2"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-ae5fd470-6504-4c64-aa2d-50b7d46c84d6"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605355",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605355",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 3183,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 14.109999999999673,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 3183,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "b09081a053f140e89a7573313d154eeb",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 187,
+                "output_tokens": 2996,
+                "estimated": false,
+                "wall_seconds": 14.094000000000051,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 191,
+                  "sent_input_tokens": 191,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "31819e97870ecbb80c916cb0440603ff8b0ba476bc5403607588a8524cd0c522"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-edba6626-376b-49db-8d2c-6cef09a5f4ce"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605407",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605407",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1774,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 7.875,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1774,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "f592cb9b2b9e4fa68aef76dbcfa52e37",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 200,
+                "output_tokens": 1574,
+                "estimated": false,
+                "wall_seconds": 7.859999999999673,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 204,
+                  "sent_input_tokens": 204,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "082cd54e5c1e6cdf43c84d13976eb21b76be0cb2c506305fc52695a91dd8d493"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-e61176ad-cf9e-4284-9d35-6b6bc0cebcf3"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "683a58c9a7e7fe4e76958488",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\683a58c9a7e7fe4e76958488",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1877,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 8.391000000000531,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1877,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "a4f505f88a2c41c191d7af384ec34a3a",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 164,
+                "output_tokens": 1713,
+                "estimated": false,
+                "wall_seconds": 8.375,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 169,
+                  "sent_input_tokens": 169,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "e57a58cdb5337730cd8a452ae48b60a313b8f913cf2f0121255e1b65a6b635e5"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-b10f4c04-c6bf-4cda-818d-a3452c2e1cef"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605411",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605411",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 2546,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 9.5,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 2546,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "93ae7aa7ab2c46bb81b4338744a032c9",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 291,
+                "output_tokens": 2255,
+                "estimated": false,
+                "wall_seconds": 9.5,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 290,
+                  "sent_input_tokens": 290,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "45f4bcfa6f15a070f543e213edc9fa755fb2ed28698d8397a357493b6c1eb8f2"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-4a931cff-99d9-4865-b708-87b57ce49266"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605362",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605362",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1492,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 6.70299999999952,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1492,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "5dc14121371d4b8c95903ba35842388b",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 230,
+                "output_tokens": 1262,
+                "estimated": false,
+                "wall_seconds": 6.686999999999898,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 231,
+                  "sent_input_tokens": 231,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "caa43d7e8cf00e15bc285012df2fca97e1d00b9f01f44f996f55232b85a4ba17"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-f03f8708-4f0e-44d6-b903-da1a1e452d10"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "684397d188c1deceb49af334",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\684397d188c1deceb49af334",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 2129,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 9.811999999999898,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 2129,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "73ccee70d1f144e5879d3eed27dd99cb",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 265,
+                "output_tokens": 1864,
+                "estimated": false,
+                "wall_seconds": 9.79699999999957,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 272,
+                  "sent_input_tokens": 272,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "ae6142f4dd69bfb1f2d3643488ef00945c336b5a8f8caa4a23d2e5f0b6032491"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-46f9392d-e0d4-4dfd-a89c-2de5ddeaa22c"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605469",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605469",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1671,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 7.453000000000429,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1671,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "f3a08bf3fd854cb0970d4fe7e2878f9c",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 266,
+                "output_tokens": 1405,
+                "estimated": false,
+                "wall_seconds": 7.438000000000102,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 270,
+                  "sent_input_tokens": 270,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "cff6e83a9f98109aa3c47083e877fd71f33e3d5f0f4f89f3912ed3e4d9133094"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-a89a8652-a6e2-4fb9-bcbd-d3983b8948f7"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053d8",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6053d8",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 2105,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 9.344000000000051,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 2105,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "facb7c7584c44f1f8f889f114c8103ea",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 253,
+                "output_tokens": 1852,
+                "estimated": false,
+                "wall_seconds": 9.344000000000051,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 257,
+                  "sent_input_tokens": 257,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "7da4b5b166c4d2729bac3dc11a2cdffcea146758cf67b7f7dcb88bce20ef8e03"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-4110a297-3ebb-487f-a8e8-364778a90eb8"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "683a58c9a7e7fe4e76958498",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\683a58c9a7e7fe4e76958498",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 7002,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 26.82799999999952,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 7002,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "44fb8e4e92ae4b4b93b5474c6ec4dc81",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 176,
+                "output_tokens": 6826,
+                "estimated": false,
+                "wall_seconds": 26.82799999999952,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 180,
+                  "sent_input_tokens": 180,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "b25756d07ce3245541c2929d787a7d99c35c39b1af711471e4d86c5774bd2513"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-7da76e71-6509-4611-8fef-7574b1d90379"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a60542a",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a60542a",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 2400,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 9.29699999999957,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 2400,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "20b2e368cde44c14a21bfba69dbfab54",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 223,
+                "output_tokens": 2177,
+                "estimated": false,
+                "wall_seconds": 9.29699999999957,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 227,
+                  "sent_input_tokens": 227,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "312d24bbf538b3eff64b1ab42a517685fe535ab4f18d5add8f8983b6c0d336a7"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-49e50a30-0d83-4d3b-99b8-823ba5712eb1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6054cd",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6054cd",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1686,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 7.766000000000531,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1686,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "e762a5c6643f4bc1aebb127328dff984",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 191,
+                "output_tokens": 1495,
+                "estimated": false,
+                "wall_seconds": 7.766000000000531,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 195,
+                  "sent_input_tokens": 195,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "7254ea8ed87a8f1293efddeb94032422545db84082361f534c3e45d2b7d434b4"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-3062c303-653d-4f94-8aeb-b3a0a5b98d95"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605443",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605443",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1639,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 7.375,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1639,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "51af14dcb9934f538ebc326093e9fd20",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 174,
+                "output_tokens": 1465,
+                "estimated": false,
+                "wall_seconds": 7.375,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 180,
+                  "sent_input_tokens": 180,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "3ae4b359c101532fd65a0ebce654a784e185205396aa025a4a8a169a146ef2bc"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-071b55d4-08cf-4392-9cd7-65ff306b4ed3"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605401",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605401",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 1793,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 7.29700000000048,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 1793,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "c61b252ffdfc49b29d5d7f5fe2777c25",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 225,
+                "output_tokens": 1568,
+                "estimated": false,
+                "wall_seconds": 7.282000000000153,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 228,
+                  "sent_input_tokens": 228,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "2acd398541916a3683323165b14e92a1300e2bd5e65671d01ea98e19ed784b92"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-09bfd4aa-72af-49ef-994b-70c70c9e886e"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053c9",
+          "score": null,
+          "complete": false,
+          "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6053c9",
+          "budget": {
+            "model_calls": 1,
+            "tokens": 3028,
+            "reserved_tokens": 0,
+            "tool_calls": 0,
+            "wall_seconds": 12.20300000000043,
+            "request_queue_idle_seconds": 0.0,
+            "task_timeout": null,
+            "cost": null,
+            "by_stage": {
+              "inference": {
+                "model_calls": 1,
+                "tokens": 3028,
+                "tool_calls": 0,
+                "communication_bytes": 0,
+                "cost": null
+              }
+            },
+            "records": [
+              {
+                "call_id": "38a8f3d973484880ba1e510c9868a05d",
+                "kind": "model",
+                "stage": "inference",
+                "agent_id": "direct",
+                "input_tokens": 197,
+                "output_tokens": 2831,
+                "estimated": false,
+                "wall_seconds": 12.20300000000043,
+                "error": "",
+                "context": {
+                  "estimator": "cl100k_base_messages_v1",
+                  "context_window": 131072,
+                  "margin": 2048,
+                  "policy": "oldest_turns",
+                  "original_input_tokens": 201,
+                  "sent_input_tokens": 201,
+                  "removed_message_hashes": [],
+                  "sent_messages_hash": "54e4b44def2169019661499db158874667829a78c7792a0b1c65f67797d5d309"
+                },
+                "request": {
+                  "queue_seconds": 0.0,
+                  "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                  "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                  "response_id": "chatcmpl-45fca938-7887-4cb8-ba90-37357fa3c7c1"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "completed": 0,
+      "mean_score": null,
+      "denominator": 33,
+      "scored_denominator": 0
+    },
+    "failures": [],
+    "submitted_outcomes": [
+      {
+        "task_id": "6847465956a0f6376a605360",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605360",
+        "answer_hash": "743e44f8dd4028837fda3f24d73abe75fe5919bb64c56c8461ba5b133d8328e3",
+        "submitted_at": "2026-10-01T15:23:25.119951+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 5092,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 17.686999999999898,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 5092,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "3d6be0c7c16e4e82b9114f1f00b42177",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 435,
+              "output_tokens": 4657,
+              "estimated": false,
+              "wall_seconds": 16.98399999999856,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 446,
+                "sent_input_tokens": 446,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "a1439a69cbe2fc535faf4c11c843db38b080f3ee35af617be41b3360d7bbb917"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-c2498861-d6f3-4c18-90f0-b1d518a6160f"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605360"
+      },
+      {
+        "task_id": "683a58c9a7e7fe4e76958492",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\683a58c9a7e7fe4e76958492",
+        "answer_hash": "9d9d077a01f875d923f496f2c5fcc5cb4d814831bd0a18b00a06381076db28c1",
+        "submitted_at": "2026-10-01T14:59:46.943099+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 2125,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 8.905999999999949,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 2125,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "709ff17584a744d48b7b331ba1c49098",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 229,
+              "output_tokens": 1896,
+              "estimated": false,
+              "wall_seconds": 8.905999999999949,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 233,
+                "sent_input_tokens": 233,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "b7bcefa27eeb6c7a5181f86e692452dd8f31cd281bdc13b67eab6d5057625bdf"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-a8e10351-922d-47f6-a435-bdebe307be3c"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\683a58c9a7e7fe4e76958492"
+      },
+      {
+        "task_id": "6847465956a0f6376a605493",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605493",
+        "answer_hash": "fbff150c81bbaeaa1d7b19124db1f59d01ab8c4d6f557d040c33a9b3455d609c",
+        "submitted_at": "2026-10-01T14:59:53.880289+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1720,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 6.905999999999949,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1720,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "4a6e13f9fba64376927b090ce0f7516d",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 202,
+              "output_tokens": 1518,
+              "estimated": false,
+              "wall_seconds": 6.890999999999622,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 207,
+                "sent_input_tokens": 207,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "192b7afe4765186764dc0ef802a24d3f549595ca758d6a67b9549c7a500c13e4"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-ff1aa531-8270-490a-816f-92a5fbeb4beb"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605493"
+      },
+      {
+        "task_id": "6847465956a0f6376a605476",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605476",
+        "answer_hash": "895b7513dab6fdf38b983545d14adf4356671772e5d8f6044e984b37aee2e889",
+        "submitted_at": "2026-10-01T15:00:02.669720+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1897,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 8.735000000000582,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1897,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "202c19a631f94d55ae8205a8c9a0f6d2",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 233,
+              "output_tokens": 1664,
+              "estimated": false,
+              "wall_seconds": 8.719000000000051,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 237,
+                "sent_input_tokens": 237,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "b29d16968b057ec9adaca2adc343c0d7ad847210abbdbcfb648aafeccd23d824"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-fd5ac6b1-c15f-4f63-9e9e-c4ab6231f79e"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605476"
+      },
+      {
+        "task_id": "683a58c9a7e7fe4e7695848b",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\683a58c9a7e7fe4e7695848b",
+        "answer_hash": "92abf0f58bc239cd3074fa17ef9ad6637f75ebe0491e173d628c7605f9808015",
+        "submitted_at": "2026-10-01T15:00:09.916115+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1853,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 7.186999999999898,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1853,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "5cb666ca1205403b9a6154c765382c17",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 309,
+              "output_tokens": 1544,
+              "estimated": false,
+              "wall_seconds": 7.186999999999898,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 316,
+                "sent_input_tokens": 316,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "9f521ea597ac29870eb3a323a8d773caa714eaa4af65e4df33dff38860c3e907"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-e7a1774a-dbe5-435b-b30a-449ac5fa6a5f"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\683a58c9a7e7fe4e7695848b"
+      },
+      {
+        "task_id": "6847465956a0f6376a6053ce",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6053ce",
+        "answer_hash": "b7af3a0dbcaa1e0b5b582541a68365789334ad64ff394b1172b00bab09054f98",
+        "submitted_at": "2026-10-01T15:00:22.934098+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 3524,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 12.969000000000051,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 3524,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "5c23e7f2770149ddbd7bdb3c6818b3e0",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 351,
+              "output_tokens": 3173,
+              "estimated": false,
+              "wall_seconds": 12.95300000000043,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 354,
+                "sent_input_tokens": 354,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "9886d3672de85d06093f0f9b2e32780247e808f74abb39c1a8d77f024bc9c1e5"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-f4e67ab5-c094-4f94-a9a0-a96d4e2fc57f"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a6053ce"
+      },
+      {
+        "task_id": "684397d188c1deceb49af316",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\684397d188c1deceb49af316",
+        "answer_hash": "3ff95c6ff63487d060481f404bab7c1215b3921216cd83f2bb4864102232cb5f",
+        "submitted_at": "2026-10-01T15:00:30.629827+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1652,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 7.655999999999949,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1652,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "fb2ccfd69389403aa34847c7392c9701",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 197,
+              "output_tokens": 1455,
+              "estimated": false,
+              "wall_seconds": 7.640000000000327,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 200,
+                "sent_input_tokens": 200,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "b675a5a0c0f35781af708eade0be1d2b2ed3c935d35752dff26af577b8056d63"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-35a1e1d2-c129-434f-8f34-a21e5c88c010"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\684397d188c1deceb49af316"
+      },
+      {
+        "task_id": "684397d188c1deceb49af321",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\684397d188c1deceb49af321",
+        "answer_hash": "f2c92bbe151c7ee86efc0329e44229113c96820c6496d9bbdeb68a7f02d05156",
+        "submitted_at": "2026-10-01T15:00:39.431305+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 2097,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 8.75,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 2097,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "763dab1816264ad7891cfb5e6eaec8c2",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 267,
+              "output_tokens": 1830,
+              "estimated": false,
+              "wall_seconds": 8.75,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 268,
+                "sent_input_tokens": 268,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "7e03b0797f8bfc17b141b7344065b62298b6c6f73a7ee10ea122843015200f66"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-96abf36c-d770-4023-82e6-c850238a92c2"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\684397d188c1deceb49af321"
+      },
+      {
+        "task_id": "6847465956a0f6376a605492",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605492",
+        "answer_hash": "051130f9dae066eacbfae229f18e9cadaef798c5933d87f62fef391f70825886",
+        "submitted_at": "2026-10-01T15:00:45.457973+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1301,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 5.984000000000378,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1301,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "eaaa05440e8945abb94a54412d5d2821",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 167,
+              "output_tokens": 1134,
+              "estimated": false,
+              "wall_seconds": 5.967999999999847,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 171,
+                "sent_input_tokens": 171,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "dcb119cf8dd058a8fd0205eab9f20687f6d5bf4901973bdeea040f35650f82e8"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-01fa4352-b2ed-443e-ac66-cc243670eb14"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605492"
+      },
+      {
+        "task_id": "6847465956a0f6376a605366",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605366",
+        "answer_hash": "d7fbbfd3cd1303f5836fefcac22a198067c2baa434c98c42aa2f03247520353d",
+        "submitted_at": "2026-10-01T15:00:51.996741+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1574,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 6.484000000000378,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1574,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "6fb9c77706374aee8ec94aaef74d4202",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 223,
+              "output_tokens": 1351,
+              "estimated": false,
+              "wall_seconds": 6.484000000000378,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 226,
+                "sent_input_tokens": 226,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "0c44ff2c8d109e992b715e2776d31d3970e1fcddce06563f32a6df0693e62bdc"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-419c3dc3-b886-4af9-9626-f668599f17b8"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605366"
+      },
+      {
+        "task_id": "6847465956a0f6376a605424",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605424",
+        "answer_hash": "c0ca84a9fb542ce99b6b894f0f9b1cb5c664941a15d419e718af8e0904e9ddea",
+        "submitted_at": "2026-10-01T15:00:59.535977+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1833,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 7.5,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1833,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "2a6aa69a8c194dea80287d68dcbc9796",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 253,
+              "output_tokens": 1580,
+              "estimated": false,
+              "wall_seconds": 7.484000000000378,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 256,
+                "sent_input_tokens": 256,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "eff3d48b5eeb5603174d5d293454536810836e968ef078e2014783f86544654e"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-b755239f-6e1c-402e-8f4f-1bfaf8ff20e3"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605424"
+      },
+      {
+        "task_id": "683a58c9a7e7fe4e7695846f",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\683a58c9a7e7fe4e7695846f",
+        "answer_hash": "3ee5d82af5c2a9f8612ad0b6a17b9895346115c4ef72cd9550f14e1ab2b8efe3",
+        "submitted_at": "2026-10-01T15:01:10.940452+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 3285,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 11.358999999999469,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 3285,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "00236b3761264e929d0017cd1efb98f6",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 238,
+              "output_tokens": 3047,
+              "estimated": false,
+              "wall_seconds": 11.344000000000051,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 244,
+                "sent_input_tokens": 244,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "6b545eeb0d4fffe790452f1dc73d8901aa145e675cc45278f131c54caabf09bb"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-952edab9-09d8-4d47-a0ce-92b1e81f83b2"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\683a58c9a7e7fe4e7695846f"
+      },
+      {
+        "task_id": "6847465956a0f6376a605348",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605348",
+        "answer_hash": "5a8dc0d30d415d640bd227115d72bf7979f30929f3f2fa472b0ff37bd2d16e27",
+        "submitted_at": "2026-10-01T15:01:26.780008+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 3538,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 15.765000000000327,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 3538,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "6a5b74faa1cc44c4aa14b5ecb4ad8356",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 200,
+              "output_tokens": 3338,
+              "estimated": false,
+              "wall_seconds": 15.765000000000327,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 204,
+                "sent_input_tokens": 204,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "e31a34c2accbf4174ea5955dc52f11af88deba0b1a3e182ad30b761a6e73d9f5"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-eedcac73-1b6e-45f6-921d-c726b42a3e45"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605348"
+      },
+      {
+        "task_id": "6847465956a0f6376a6054d0",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6054d0",
+        "answer_hash": "6f6165e3d6c2fb620ca7f5c37d225e4efbedaea0e33095d58349f75bf10ab614",
+        "submitted_at": "2026-10-01T15:01:35.145521+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1700,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 8.186999999999898,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1700,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "d07de0d151bd41e9b6559515500f78bc",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 172,
+              "output_tokens": 1528,
+              "estimated": false,
+              "wall_seconds": 8.17199999999957,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 178,
+                "sent_input_tokens": 178,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "519ddf234de6f13c51758960c3b4e995911ccb8a16f2af930e8cf5528a9e0434"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-f1fca483-661d-47b1-81a9-59cd741ef49e"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a6054d0"
+      },
+      {
+        "task_id": "684397d188c1deceb49af31c",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\684397d188c1deceb49af31c",
+        "answer_hash": "c349225969cf5640afb4390967734fc189650d4b72beb3b3043065a8fbac3162",
+        "submitted_at": "2026-10-01T15:01:49.583421+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 3200,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 14.219000000000051,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 3200,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "2162c19280db4673a1292b6f52e718c3",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 287,
+              "output_tokens": 2913,
+              "estimated": false,
+              "wall_seconds": 14.20299999999952,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 291,
+                "sent_input_tokens": 291,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "26cc502a34e5196130bd6c99705aae9cfdc4d99cd6bc42b5b7e73b2d9480e80d"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-3f9274e2-b566-4fdf-96d1-343ce852d5c5"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\684397d188c1deceb49af31c"
+      },
+      {
+        "task_id": "6847465956a0f6376a6053a0",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6053a0",
+        "answer_hash": "2c15c1be523f2dcaa256dd9f5879c7b28bf47740f82f4734a9eedb9bcdd465be",
+        "submitted_at": "2026-10-01T15:01:59.542477+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 2396,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 9.780999999999949,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 2396,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "d862324ee5cf42aaa9b7d39154063c81",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 201,
+              "output_tokens": 2195,
+              "estimated": false,
+              "wall_seconds": 9.780999999999949,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 205,
+                "sent_input_tokens": 205,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "f048e09f4ed73e7ae0f369d477394be745d0036eeb4f686b9104f83d64ba5d2f"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-6acfebc2-5c8b-44a4-be97-38ead4e826dd"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a6053a0"
+      },
+      {
+        "task_id": "6847465956a0f6376a6053d0",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6053d0",
+        "answer_hash": "2b025f8a4a10d1f874d856c9f6d4c1b0055870a261e0045ab5896cd5019db8f4",
+        "submitted_at": "2026-10-01T15:02:07.068374+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1534,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 7.280999999999949,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1534,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "cb9a16c1240a42f9834e1e36dbaf03a5",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 203,
+              "output_tokens": 1331,
+              "estimated": false,
+              "wall_seconds": 7.266000000000531,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 207,
+                "sent_input_tokens": 207,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "8bf6e06bb5ecc00833a03c57354f6fa835b875c478eab28a8b1a2b52eb296a06"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-505da823-2b04-47a2-abf0-0da34ac11e79"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a6053d0"
+      },
+      {
+        "task_id": "6847465956a0f6376a605387",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605387",
+        "answer_hash": "3f1b52cf260d0e973f096d0a54f5a750a0b36d0a64c3e23ee5c6037d60be3f5c",
+        "submitted_at": "2026-10-01T15:02:28.508728+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 5144,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 21.188000000000102,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 5144,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "d31f731d074f43e3a64becda59418c67",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 423,
+              "output_tokens": 4721,
+              "estimated": false,
+              "wall_seconds": 21.188000000000102,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 429,
+                "sent_input_tokens": 429,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "0c991da5d61186dd44c6f88a1906ee181eb087133e6434a92c56b2a7308a458c"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-f02ca904-1be5-4e92-be6c-6801ab0db197"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605387"
+      },
+      {
+        "task_id": "684397d188c1deceb49af32d",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\684397d188c1deceb49af32d",
+        "answer_hash": "c547b27f0dc2dd3b1b1688c3dde859c07034c3fdb43e22047db53afceab3d3d3",
+        "submitted_at": "2026-10-01T15:02:37.829494+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 2193,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 9.264999999999418,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 2193,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "d3843b6730f442b9ba491b41f815f9fb",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 232,
+              "output_tokens": 1961,
+              "estimated": false,
+              "wall_seconds": 9.264999999999418,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 235,
+                "sent_input_tokens": 235,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "e2abff348656a8a089aa176b405ce1b6a7f1f9b55a28d119bfbafe385baf24f2"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-ae5fd470-6504-4c64-aa2d-50b7d46c84d6"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\684397d188c1deceb49af32d"
+      },
+      {
+        "task_id": "6847465956a0f6376a605355",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605355",
+        "answer_hash": "bd954aadd802f98915ceed6d3c1b873ac43a153c7a8dff59f08b803280c436b4",
+        "submitted_at": "2026-10-01T15:02:51.982287+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 3183,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 14.109999999999673,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 3183,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "b09081a053f140e89a7573313d154eeb",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 187,
+              "output_tokens": 2996,
+              "estimated": false,
+              "wall_seconds": 14.094000000000051,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 191,
+                "sent_input_tokens": 191,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "31819e97870ecbb80c916cb0440603ff8b0ba476bc5403607588a8524cd0c522"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-edba6626-376b-49db-8d2c-6cef09a5f4ce"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605355"
+      },
+      {
+        "task_id": "6847465956a0f6376a605407",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605407",
+        "answer_hash": "1379934f7eb9786159b889aa9ad5fae04f879c98ec90a69209f00ad5dbf6a236",
+        "submitted_at": "2026-10-01T15:02:59.893667+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1774,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 7.875,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1774,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "f592cb9b2b9e4fa68aef76dbcfa52e37",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 200,
+              "output_tokens": 1574,
+              "estimated": false,
+              "wall_seconds": 7.859999999999673,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 204,
+                "sent_input_tokens": 204,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "082cd54e5c1e6cdf43c84d13976eb21b76be0cb2c506305fc52695a91dd8d493"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-e61176ad-cf9e-4284-9d35-6b6bc0cebcf3"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605407"
+      },
+      {
+        "task_id": "683a58c9a7e7fe4e76958488",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\683a58c9a7e7fe4e76958488",
+        "answer_hash": "b57f9cdc23b026436af76fe91691d16bcb51a02087bd28376b985e35580dcaa8",
+        "submitted_at": "2026-10-01T15:03:08.336073+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1877,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 8.391000000000531,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1877,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "a4f505f88a2c41c191d7af384ec34a3a",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 164,
+              "output_tokens": 1713,
+              "estimated": false,
+              "wall_seconds": 8.375,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 169,
+                "sent_input_tokens": 169,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "e57a58cdb5337730cd8a452ae48b60a313b8f913cf2f0121255e1b65a6b635e5"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-b10f4c04-c6bf-4cda-818d-a3452c2e1cef"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\683a58c9a7e7fe4e76958488"
+      },
+      {
+        "task_id": "6847465956a0f6376a605411",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605411",
+        "answer_hash": "56dff63824b4ae4e397e4c76938000441681ee5c2e961cccb0e525b2fae4ed83",
+        "submitted_at": "2026-10-01T15:03:17.901131+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 2546,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 9.5,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 2546,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "93ae7aa7ab2c46bb81b4338744a032c9",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 291,
+              "output_tokens": 2255,
+              "estimated": false,
+              "wall_seconds": 9.5,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 290,
+                "sent_input_tokens": 290,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "45f4bcfa6f15a070f543e213edc9fa755fb2ed28698d8397a357493b6c1eb8f2"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-4a931cff-99d9-4865-b708-87b57ce49266"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605411"
+      },
+      {
+        "task_id": "6847465956a0f6376a605362",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605362",
+        "answer_hash": "dd0dea99c3bafe59ba9fc15582793f81d4aa0c2226bab5b75ad57ffc3b6e7485",
+        "submitted_at": "2026-10-01T15:03:24.662436+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1492,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 6.70299999999952,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1492,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "5dc14121371d4b8c95903ba35842388b",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 230,
+              "output_tokens": 1262,
+              "estimated": false,
+              "wall_seconds": 6.686999999999898,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 231,
+                "sent_input_tokens": 231,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "caa43d7e8cf00e15bc285012df2fca97e1d00b9f01f44f996f55232b85a4ba17"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-f03f8708-4f0e-44d6-b903-da1a1e452d10"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605362"
+      },
+      {
+        "task_id": "684397d188c1deceb49af334",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\684397d188c1deceb49af334",
+        "answer_hash": "d08ef5aa686626301d06eb9089a1f5857b18b22e4d3dc7db124b8f582f201418",
+        "submitted_at": "2026-10-01T15:03:34.520164+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 2129,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 9.811999999999898,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 2129,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "73ccee70d1f144e5879d3eed27dd99cb",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 265,
+              "output_tokens": 1864,
+              "estimated": false,
+              "wall_seconds": 9.79699999999957,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 272,
+                "sent_input_tokens": 272,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "ae6142f4dd69bfb1f2d3643488ef00945c336b5a8f8caa4a23d2e5f0b6032491"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-46f9392d-e0d4-4dfd-a89c-2de5ddeaa22c"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\684397d188c1deceb49af334"
+      },
+      {
+        "task_id": "6847465956a0f6376a605469",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605469",
+        "answer_hash": "390ce4462e6f69a8ff2d869e6c1a0083ec8e615ca227e6ab58520fdb7a966d72",
+        "submitted_at": "2026-10-01T15:03:42.019810+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1671,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 7.453000000000429,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1671,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "f3a08bf3fd854cb0970d4fe7e2878f9c",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 266,
+              "output_tokens": 1405,
+              "estimated": false,
+              "wall_seconds": 7.438000000000102,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 270,
+                "sent_input_tokens": 270,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "cff6e83a9f98109aa3c47083e877fd71f33e3d5f0f4f89f3912ed3e4d9133094"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-a89a8652-a6e2-4fb9-bcbd-d3983b8948f7"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605469"
+      },
+      {
+        "task_id": "6847465956a0f6376a6053d8",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6053d8",
+        "answer_hash": "d5d030043496b644470c2ca58927eebe0a3fd020f1adaa2c73b4131f0e6905ac",
+        "submitted_at": "2026-10-01T15:03:51.413383+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 2105,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 9.344000000000051,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 2105,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "facb7c7584c44f1f8f889f114c8103ea",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 253,
+              "output_tokens": 1852,
+              "estimated": false,
+              "wall_seconds": 9.344000000000051,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 257,
+                "sent_input_tokens": 257,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "7da4b5b166c4d2729bac3dc11a2cdffcea146758cf67b7f7dcb88bce20ef8e03"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-4110a297-3ebb-487f-a8e8-364778a90eb8"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a6053d8"
+      },
+      {
+        "task_id": "683a58c9a7e7fe4e76958498",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\683a58c9a7e7fe4e76958498",
+        "answer_hash": "5d91fadb420aa23dd56323cc04262afde2e29533578c60f5cd8d1663d1421673",
+        "submitted_at": "2026-10-01T15:04:18.291479+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 7002,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 26.82799999999952,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 7002,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "44fb8e4e92ae4b4b93b5474c6ec4dc81",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 176,
+              "output_tokens": 6826,
+              "estimated": false,
+              "wall_seconds": 26.82799999999952,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 180,
+                "sent_input_tokens": 180,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "b25756d07ce3245541c2929d787a7d99c35c39b1af711471e4d86c5774bd2513"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-7da76e71-6509-4611-8fef-7574b1d90379"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\683a58c9a7e7fe4e76958498"
+      },
+      {
+        "task_id": "6847465956a0f6376a60542a",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a60542a",
+        "answer_hash": "a5e991f521ad02adfa6558a81b6cb00f5d200f3b341af2884c35e9a32571cc45",
+        "submitted_at": "2026-10-01T15:04:27.632631+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 2400,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 9.29699999999957,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 2400,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "20b2e368cde44c14a21bfba69dbfab54",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 223,
+              "output_tokens": 2177,
+              "estimated": false,
+              "wall_seconds": 9.29699999999957,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 227,
+                "sent_input_tokens": 227,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "312d24bbf538b3eff64b1ab42a517685fe535ab4f18d5add8f8983b6c0d336a7"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-49e50a30-0d83-4d3b-99b8-823ba5712eb1"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a60542a"
+      },
+      {
+        "task_id": "6847465956a0f6376a6054cd",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6054cd",
+        "answer_hash": "06bfe4f18c42a3dccd1218ae0ab3b7e276229adec7da83ff0de9f37425f21ce9",
+        "submitted_at": "2026-10-01T15:04:35.461355+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1686,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 7.766000000000531,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1686,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "e762a5c6643f4bc1aebb127328dff984",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 191,
+              "output_tokens": 1495,
+              "estimated": false,
+              "wall_seconds": 7.766000000000531,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 195,
+                "sent_input_tokens": 195,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "7254ea8ed87a8f1293efddeb94032422545db84082361f534c3e45d2b7d434b4"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-3062c303-653d-4f94-8aeb-b3a0a5b98d95"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a6054cd"
+      },
+      {
+        "task_id": "6847465956a0f6376a605443",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605443",
+        "answer_hash": "d875e28a825ed44f780bd330b4eb7cd16e17a905a8332f0cfe129095763dcb76",
+        "submitted_at": "2026-10-01T15:04:42.890328+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1639,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 7.375,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1639,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "51af14dcb9934f538ebc326093e9fd20",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 174,
+              "output_tokens": 1465,
+              "estimated": false,
+              "wall_seconds": 7.375,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 180,
+                "sent_input_tokens": 180,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "3ae4b359c101532fd65a0ebce654a784e185205396aa025a4a8a169a146ef2bc"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-071b55d4-08cf-4392-9cd7-65ff306b4ed3"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605443"
+      },
+      {
+        "task_id": "6847465956a0f6376a605401",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a605401",
+        "answer_hash": "b8b957683f381dc4884be55a70a1df48b572a93bf5afe21238c617842dbe3b8b",
+        "submitted_at": "2026-10-01T15:04:50.240137+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 1793,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 7.29700000000048,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 1793,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "c61b252ffdfc49b29d5d7f5fe2777c25",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 225,
+              "output_tokens": 1568,
+              "estimated": false,
+              "wall_seconds": 7.282000000000153,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 228,
+                "sent_input_tokens": 228,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "2acd398541916a3683323165b14e92a1300e2bd5e65671d01ea98e19ed784b92"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-09bfd4aa-72af-49ef-994b-70c70c9e886e"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a605401"
+      },
+      {
+        "task_id": "6847465956a0f6376a6053c9",
+        "method": "direct_single",
+        "mode": "evaluate",
+        "status": "submitted_unscored",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_gpt56sol_20261002_v15\\baseline\\tasks\\6847465956a0f6376a6053c9",
+        "answer_hash": "65fbcb2573dd705714f2a0c18a3b3481e5106b175053cb9665ec07708aaf72e2",
+        "submitted_at": "2026-10-01T15:05:02.496759+00:00",
+        "evaluation": null,
+        "experience_version": 0,
+        "proposals": [],
+        "experience_updates": [],
+        "budget": {
+          "model_calls": 1,
+          "tokens": 3028,
+          "reserved_tokens": 0,
+          "tool_calls": 0,
+          "wall_seconds": 12.20300000000043,
+          "request_queue_idle_seconds": 0.0,
+          "task_timeout": null,
+          "cost": null,
+          "by_stage": {
+            "inference": {
+              "model_calls": 1,
+              "tokens": 3028,
+              "tool_calls": 0,
+              "communication_bytes": 0,
+              "cost": null
+            }
+          },
+          "records": [
+            {
+              "call_id": "38a8f3d973484880ba1e510c9868a05d",
+              "kind": "model",
+              "stage": "inference",
+              "agent_id": "direct",
+              "input_tokens": 197,
+              "output_tokens": 2831,
+              "estimated": false,
+              "wall_seconds": 12.20300000000043,
+              "error": "",
+              "context": {
+                "estimator": "cl100k_base_messages_v1",
+                "context_window": 131072,
+                "margin": 2048,
+                "policy": "oldest_turns",
+                "original_input_tokens": 201,
+                "sent_input_tokens": 201,
+                "removed_message_hashes": [],
+                "sent_messages_hash": "54e4b44def2169019661499db158874667829a78c7792a0b1c65f67797d5d309"
+              },
+              "request": {
+                "queue_seconds": 0.0,
+                "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+                "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+                "response_id": "chatcmpl-45fca938-7887-4cb8-ba90-37357fa3c7c1"
+              }
+            }
+          ]
+        },
+        "generation_reused_from": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_worldknowledge_20261002_v7\\baseline\\tasks\\6847465956a0f6376a6053c9"
+      }
+    ],
+    "experience_version": 0,
+    "experience_updates": false
+  }
+}

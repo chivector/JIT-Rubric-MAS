@@ -1,0 +1,10 @@
+{
+  "purpose": "Unscored engineering preflight on public VAL input; excluded from formal checkpoints and TEST.",
+  "original_split": "validation",
+  "task_id": "6847465956a0f6376a605391",
+  "knowledge_policy": "model_general_knowledge_allowed",
+  "code_hash": "3ba754e405018c8490d996fe00e40619f57ee16810295d9ab78c4a0f3326b859",
+  "state_updates_allowed": false,
+  "judge_requests": 0,
+  "status": "running"
+}

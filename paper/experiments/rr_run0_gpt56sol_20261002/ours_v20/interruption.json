@@ -1,0 +1,7 @@
+{
+  "status": "interrupted_engineering_run",
+  "reason": "Stopped during C0 validation after model-assigned finite role call limits, invalid general-knowledge provenance records, and API connection failures. No EVO or TEST result was produced.",
+  "restart_same_identity": false,
+  "replacement_run_requires_new_directory": true,
+  "formal_score": null
+}
