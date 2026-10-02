@@ -43,13 +43,16 @@ claim that successful reflection establishes a causal improvement. If evidence i
 retain the existing policy and record only a cautious, conditional lesson.
 
 Evidence whitelist (mechanical): valid_evidence_ids is the only allowed set. Before
-returning, set update.evidence to the sorted, deduplicated union of every lesson's
-evidence and counterevidence, then verify every item is in valid_evidence_ids. Never
-use rubric IDs or feedback:<id> labels as evidence unless that exact string appears
-in valid_evidence_ids; otherwise remove the lesson or omit the unsupported reference.
-When no reliable lesson evidence remains, return lessons=[] and preserve the existing
-policy; the required top-level evidence still cites a supplied observation supporting
-that decision, never an invented event."""
+returning, set update.evidence to a sorted, deduplicated nonempty list that contains
+the union of every lesson's evidence and counterevidence, and may additionally contain
+valid process observations supporting the update decision. Verify every item is in
+valid_evidence_ids. Never use rubric IDs or feedback:<id> labels as evidence unless
+that exact string appears in valid_evidence_ids; otherwise remove the lesson or omit
+the unsupported reference. When no reliable lesson evidence remains, return lessons=[]
+and preserve the existing policy; still cite one or more supplied observations in the
+required top-level evidence (for example evaluation:summary or an own event) that
+support retaining it, never an invented event. Extra decision evidence is allowed, but
+every lesson reference must remain included in the top-level union."""
 
 
 def submitted_source_digest(source_dir):
