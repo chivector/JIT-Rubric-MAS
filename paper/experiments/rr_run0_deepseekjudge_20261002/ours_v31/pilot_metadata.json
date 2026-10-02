@@ -243,7 +243,8 @@
   "repeats": 1,
   "test_feedback_updates_experience": false,
   "knowledge_policy": "model_general_knowledge_allowed",
-  "status": "running",
+  "status": "incomplete",
   "started_at": "2026-10-02T10:53:28.478632+00:00",
-  "monetary_cost": null
+  "monetary_cost": null,
+  "finished_at": "2026-10-02T12:07:46.449328+00:00"
 }

@@ -1,20 +1,411 @@
 {
   "arm": "ours_evolve_then_test",
-  "status": "evolving",
-  "started_at": "2026-10-02T10:53:28.479617+00:00",
+  "status": "failed",
+  "error_type": "SystemExit",
+  "error": "1",
+  "failures": [],
   "test_failures": [],
+  "finished_at": "2026-10-02T12:07:46.368884+00:00",
+  "started_at": "2026-10-02T10:53:28.479617+00:00",
+  "experience_store_unchanged_by_test": true,
+  "scoring_seconds": 9.577999999994063,
+  "cost": {
+    "model_calls": 783,
+    "tokens": 6634363,
+    "by_stage": {
+      "inference": {
+        "model_calls": 166,
+        "input_tokens": 1336056,
+        "output_tokens": 459219,
+        "estimated_calls": 0,
+        "request_seconds": 2034.8739999998652
+      },
+      "evaluation": {
+        "model_calls": 577,
+        "input_tokens": 2560883,
+        "output_tokens": 242243,
+        "estimated_calls": 5,
+        "request_seconds": 1983.9869999999646
+      },
+      "update": {
+        "model_calls": 40,
+        "input_tokens": 1884972,
+        "output_tokens": 150990,
+        "estimated_calls": 0,
+        "request_seconds": 652.6230000000069
+      }
+    },
+    "unknown_budgets": 0,
+    "unsettled_calls": 0,
+    "monetary_cost": null
+  },
+  "test": {
+    "completed": 0,
+    "denominator": 33,
+    "scored_denominator": 0,
+    "mean_score": null,
+    "all_task_mean": null,
+    "tasks": [
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605360",
+          "task_id": "6847465956a0f6376a605360",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:683a58c9a7e7fe4e76958492",
+          "task_id": "683a58c9a7e7fe4e76958492",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605493",
+          "task_id": "6847465956a0f6376a605493",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605476",
+          "task_id": "6847465956a0f6376a605476",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:683a58c9a7e7fe4e7695848b",
+          "task_id": "683a58c9a7e7fe4e7695848b",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a6053ce",
+          "task_id": "6847465956a0f6376a6053ce",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:684397d188c1deceb49af316",
+          "task_id": "684397d188c1deceb49af316",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:684397d188c1deceb49af321",
+          "task_id": "684397d188c1deceb49af321",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605492",
+          "task_id": "6847465956a0f6376a605492",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605366",
+          "task_id": "6847465956a0f6376a605366",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605424",
+          "task_id": "6847465956a0f6376a605424",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:683a58c9a7e7fe4e7695846f",
+          "task_id": "683a58c9a7e7fe4e7695846f",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605348",
+          "task_id": "6847465956a0f6376a605348",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a6054d0",
+          "task_id": "6847465956a0f6376a6054d0",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:684397d188c1deceb49af31c",
+          "task_id": "684397d188c1deceb49af31c",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a6053a0",
+          "task_id": "6847465956a0f6376a6053a0",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a6053d0",
+          "task_id": "6847465956a0f6376a6053d0",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605387",
+          "task_id": "6847465956a0f6376a605387",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:684397d188c1deceb49af32d",
+          "task_id": "684397d188c1deceb49af32d",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605355",
+          "task_id": "6847465956a0f6376a605355",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605407",
+          "task_id": "6847465956a0f6376a605407",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:683a58c9a7e7fe4e76958488",
+          "task_id": "683a58c9a7e7fe4e76958488",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605411",
+          "task_id": "6847465956a0f6376a605411",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605362",
+          "task_id": "6847465956a0f6376a605362",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:684397d188c1deceb49af334",
+          "task_id": "684397d188c1deceb49af334",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605469",
+          "task_id": "6847465956a0f6376a605469",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a6053d8",
+          "task_id": "6847465956a0f6376a6053d8",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:683a58c9a7e7fe4e76958498",
+          "task_id": "683a58c9a7e7fe4e76958498",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a60542a",
+          "task_id": "6847465956a0f6376a60542a",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a6054cd",
+          "task_id": "6847465956a0f6376a6054cd",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605443",
+          "task_id": "6847465956a0f6376a605443",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a605401",
+          "task_id": "6847465956a0f6376a605401",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      },
+      {
+        "slot": {
+          "slot_id": "ours:6847465956a0f6376a6053c9",
+          "task_id": "6847465956a0f6376a6053c9",
+          "method": "ours",
+          "repeat": 0
+        },
+        "official_score": null,
+        "complete": false
+      }
+    ]
+  },
   "submitted_answer_hashes": {},
-  "pilot_status": "running",
-  "export_status": "running",
-  "raw_report_status": "evolving",
+  "pilot_status": "incomplete",
+  "export_status": "incomplete",
+  "raw_report_status": "failed",
   "raw_journal_status": "running",
-  "snapshot_is_partial": true,
+  "snapshot_is_partial": false,
   "interruption": null,
   "original_output": "outputs/rr_jit_mas_run0_deepseekjudge_20261002_v31",
-  "source_status_counts": {},
+  "source_status_counts": {
+    "failed": 3,
+    "complete": 2
+  },
   "planned_evolution": 20,
-  "processed_evolution": 0,
-  "checkpoints": [],
+  "processed_evolution": 5,
+  "checkpoints": [
+    {
+      "position": 0,
+      "state_version": 0,
+      "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "cache_key": "a36767976c79d3cae28bc703421ea7bc9bf5de1423d16a5ac4ea20326c61d6be",
+      "total_evaluations": 10,
+      "complete_evaluations": 10,
+      "eligible": true,
+      "selection_utility": 0.4882946764036428,
+      "utility_is_conservative_surrogate": false,
+      "reused_from": null
+    }
+  ],
   "selected_checkpoint": null,
-  "raw_report_sha256": "176ba46ddf7aaef849e2c7a589cbd478960365b5cc4d3e73ea0cf3c61ecbc806"
+  "raw_report_sha256": "abdc0c6690a2d84196f7fdfbf19b47076d1327c9c853eba9a2c76030c701dd58"
 }

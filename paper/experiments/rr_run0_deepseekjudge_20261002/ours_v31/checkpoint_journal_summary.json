@@ -281,9 +281,133 @@
   },
   "status": "running",
   "selected_position": null,
-  "provisional_selected_position": null,
-  "checkpoints": [],
-  "sources": [],
+  "provisional_selected_position": 0,
+  "checkpoints": [
+    {
+      "position": 0,
+      "state_version": 0,
+      "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "cache_key": "a36767976c79d3cae28bc703421ea7bc9bf5de1423d16a5ac4ea20326c61d6be",
+      "total_evaluations": 10,
+      "complete_evaluations": 10,
+      "eligible": true,
+      "selection_utility": 0.4882946764036428,
+      "utility_is_conservative_surrogate": false,
+      "reused_from": null
+    }
+  ],
+  "sources": [
+    {
+      "position": 1,
+      "task_id": "6847465956a0f6376a6054a7",
+      "status": "failed",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 0,
+      "after_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "failure": {
+        "task_id": "6847465956a0f6376a6054a7",
+        "error_type": "ValueError",
+        "error": "Agent memory lesson searcher_1_pilot_detail_depth cites evidence absent from update.evidence; missing_top_level_evidence_ids=['feedback:6847465956a0f6376a6054a7:r19:257dc75cb595', 'feedback:6847465956a0f6376a6054a7:r1:e26a50a15563', 'feedback:6847465956a0f6376a6054a7:r3:66a13c4ca2f7']. Include these exact IDs in update.evidence only if they are in valid_evidence_ids, otherwise correct or remove the lesson.",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\evolution\\519b18133cb046fcdcbf22f0dce0e3871c14458110708caeb44105d3567ce0bb",
+        "budget": {
+          "model_calls": 46,
+          "tokens": 679432,
+          "wall_seconds": 325.06299999999464,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 2,
+      "task_id": "6847465956a0f6376a60543e",
+      "status": "complete",
+      "before_version": 0,
+      "before_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "after_version": 1,
+      "after_hash": "7f7b8a4db119d7150065ef09376ae60d3a6cc1cccebf369ec8140e12858e1ed1",
+      "outcome": {
+        "task_id": "6847465956a0f6376a60543e",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\evolution\\299d3b81cde54ae1a57e85f37ad520623a579b7bfbc1bdfb5899af4f3f6d13bb",
+        "answer_hash": "63a0e42be082e52efe5e894b1d7968ef4a0048508e89f9d9939420e2167b230a",
+        "next_experience_version": 1,
+        "budget": {
+          "model_calls": 44,
+          "tokens": 630579,
+          "wall_seconds": 272.1719999999914,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 3,
+      "task_id": "6847465956a0f6376a6054a9",
+      "status": "failed",
+      "before_version": 1,
+      "before_hash": "7f7b8a4db119d7150065ef09376ae60d3a6cc1cccebf369ec8140e12858e1ed1",
+      "after_version": 1,
+      "after_hash": "7f7b8a4db119d7150065ef09376ae60d3a6cc1cccebf369ec8140e12858e1ed1",
+      "failure": {
+        "task_id": "6847465956a0f6376a6054a9",
+        "error_type": "ValueError",
+        "error": "Agent assignments disagree with rubric coverage: critic_1.rubric_ids must be ['r10', 'r11', 'r12', 'r13', 'r14', 'r15', 'r16', 'r17', 'r18', 'r2', 'r5', 'r6', 'r8', 'r9']",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\evolution\\d775d41f2f430d7aba611fe2e26a23cfb0755cdbb8dbd5e071648448181347dd",
+        "budget": {
+          "model_calls": 6,
+          "tokens": 81896,
+          "wall_seconds": 69.6710000000021,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 4,
+      "task_id": "6847465956a0f6376a6053f3",
+      "status": "complete",
+      "before_version": 1,
+      "before_hash": "7f7b8a4db119d7150065ef09376ae60d3a6cc1cccebf369ec8140e12858e1ed1",
+      "after_version": 2,
+      "after_hash": "e8b17baa659d3ee22e2fc0cccf7d30fd0a51f5186901b8e9a98ed3d171dba93e",
+      "outcome": {
+        "task_id": "6847465956a0f6376a6053f3",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\evolution\\a2c6e9ab48f4351bacce6a5b110309a8fa2df0bd9ebeee4cd7bc79e5407cd931",
+        "answer_hash": "269aee3a0bb1d5b707399eb33441e0079341300315c1bd90c4b799d4229c9613",
+        "next_experience_version": 2,
+        "budget": {
+          "model_calls": 51,
+          "tokens": 914019,
+          "wall_seconds": 354.14100000000326,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    },
+    {
+      "position": 5,
+      "task_id": "6847465956a0f6376a6053aa",
+      "status": "failed",
+      "before_version": 2,
+      "before_hash": "e8b17baa659d3ee22e2fc0cccf7d30fd0a51f5186901b8e9a98ed3d171dba93e",
+      "after_version": 2,
+      "after_hash": "e8b17baa659d3ee22e2fc0cccf7d30fd0a51f5186901b8e9a98ed3d171dba93e",
+      "failure": {
+        "task_id": "6847465956a0f6376a6053aa",
+        "error_type": "ValueError",
+        "error": "Agent memory lesson analyst_1_energy_analysis_specifics cites evidence absent from update.evidence; missing_top_level_evidence_ids=['feedback:6847465956a0f6376a6053aa:r10:e21f8dd6a950', 'feedback:6847465956a0f6376a6053aa:r11:b52e9cc53d4e', 'feedback:6847465956a0f6376a6053aa:r14:54a47e1a349e', 'feedback:6847465956a0f6376a6053aa:r16:82161ef52301', 'feedback:6847465956a0f6376a6053aa:r18:148b08300331', 'feedback:6847465956a0f6376a6053aa:r19:67c80c42e9ce', 'feedback:6847465956a0f6376a6053aa:r20:f327519abcc9', 'feedback:6847465956a0f6376a6053aa:r21:a47dbb06c7e4', 'feedback:6847465956a0f6376a6053aa:r24:e51dc57e93f2', 'feedback:6847465956a0f6376a6053aa:r26:c41ebf1f0058', 'feedback:6847465956a0f6376a6053aa:r4:12583d426d87', 'feedback:6847465956a0f6376a6053aa:r5:09e548498534', 'feedback:6847465956a0f6376a6053aa:r7:f04cd296a0fa', 'feedback:6847465956a0f6376a6053aa:r8:7eba7f19c070', 'feedback:6847465956a0f6376a6053aa:r9:863d8d37425d']. Include these exact IDs in update.evidence only if they are in valid_evidence_ids, otherwise correct or remove the lesson.",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\evolution\\24f8a768d6c49b7c9f336b5fa5c7efd01a78ee9aa3332c4349909dd566031a2f",
+        "budget": {
+          "model_calls": 48,
+          "tokens": 600133,
+          "wall_seconds": 260.67200000000594,
+          "tool_calls": 0,
+          "cost": null
+        }
+      }
+    }
+  ],
   "validation_cache": {
     "a36767976c79d3cae28bc703421ea7bc9bf5de1423d16a5ac4ea20326c61d6be": {
       "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
@@ -370,9 +494,389 @@
         {
           "task_id": "6847465956a0f6376a6053e8",
           "repeat": 0,
-          "status": "started",
+          "status": "complete",
           "theoretical_bounds": [
             -0.10638297872340426,
+            1.0
+          ],
+          "selection_utility": 0.4230769230769231,
+          "official_score": 0.3617021276595745,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C0\\runs\\24c2b95a5230160b07a52871464fcdb6429242811b095a63d820267e725454a1",
+            "answer_hash": "500d16a6c94805f6768f57edfe1e7e683d5375c737382315405dc7ceea1229c9",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 31,
+              "tokens": 117111,
+              "wall_seconds": 103.35899999999674,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053b5",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.1,
+            1.0
+          ],
+          "selection_utility": 0.7575757575757575,
+          "official_score": 0.7333333333333333,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C0\\runs\\bc9bfa088bd3b941cc117354d5c3a899f1c972ada805dde7bef253828c9fd054",
+            "answer_hash": "779387e3798aed5b70681c04a91418cced1b27892f750a34a969c8f5cd6c9c31",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 33,
+              "tokens": 205892,
+              "wall_seconds": 142.46900000001187,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "684397d188c1deceb49af329",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.09722222222222222,
+            1.0
+          ],
+          "selection_utility": 0.17721518987341772,
+          "official_score": 0.09722222222222222,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C0\\runs\\1aa7e27c2139e613ae0a44a2d5818fa2ec6bef8cc377a419b44fa1c912005c2d",
+            "answer_hash": "275779acb5a993c2999a91a124a079ffc75924f9fc27a453586623b0a40f4df1",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 39,
+              "tokens": 190220,
+              "wall_seconds": 194.40600000000268,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605441",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.07547169811320754,
+            1.0
+          ],
+          "selection_utility": 0.4210526315789474,
+          "official_score": 0.37735849056603776,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C0\\runs\\827abb4f8acd6d0f67506866059efedf0567c7093dd3983dc1aa3956abb166b6",
+            "answer_hash": "fbbf7ef6a0af5e12180bd7be798d83ee2637c3acda9cd5c7c53dcd3cab3efbdf",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 34,
+              "tokens": 106973,
+              "wall_seconds": 97.125,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a60542d",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.046875,
+            1.0
+          ],
+          "selection_utility": 0.04477611940298507,
+          "official_score": 0.0,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C0\\runs\\660f92e5cc7596cdf6e963229b229f83479bad13d2f3b50c4ee68f4f73585818",
+            "answer_hash": "5890d132a99572da84e6c6e75d765d3e4d0ceb33299415ec94327c3ddf4ec7d4",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 31,
+              "tokens": 219497,
+              "wall_seconds": 267.8440000000119,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "683a58c9a7e7fe4e7695849b",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.09876543209876543,
+            1.0
+          ],
+          "selection_utility": 0.8539325842696629,
+          "official_score": 0.8395061728395061,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C0\\runs\\b3959efb5ee4cf4c35e32e7a73815d84f1e25ada818581463716261abfa27f59",
+            "answer_hash": "9ca6268f71514048339cea64de81e134c60f30002cf6197954c84fe19704854a",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 31,
+              "tokens": 269172,
+              "wall_seconds": 171.23500000000058,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053fb",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.043859649122807015,
+            1.0
+          ],
+          "selection_utility": 0.5798319327731093,
+          "official_score": 0.5614035087719298,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C0\\runs\\0ce3b2d93c874a93bb2d030ed96a69226f191dac6ef71ac274fa94c90c24a86d",
+            "answer_hash": "8277d8768e518e15d821fa81cff4a41cdf2e091ed659680f3f7f2dd83d23e194",
+            "mode": "validate",
+            "experience_version": 0,
+            "budget": {
+              "model_calls": 34,
+              "tokens": 205850,
+              "wall_seconds": 137.17200000000594,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        }
+      ]
+    },
+    "3265dee544c4964b2372a340f5d0406f5b4f34d5a92bd8b7e0e96c7ae38a53c0": {
+      "state_hash": "e8b17baa659d3ee22e2fc0cccf7d30fd0a51f5186901b8e9a98ed3d171dba93e",
+      "first_position": 5,
+      "slots": [
+        {
+          "task_id": "6847465956a0f6376a605391",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.16470588235294117,
+            1.0
+          ],
+          "selection_utility": 0.5959595959595959,
+          "official_score": 0.5294117647058824,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C5\\runs\\02c70f7f148f4c96a0c940b30d513172523a76652986b0ef2294627e1e683ecc",
+            "answer_hash": "b4261e1cad918de93cd49e2edc61058091b7131ac483abb7cf45f63eb1424555",
+            "mode": "validate",
+            "experience_version": 2,
+            "budget": {
+              "model_calls": 33,
+              "tokens": 291054,
+              "wall_seconds": 209.875,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a60535d",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.09859154929577464,
+            1.0
+          ],
+          "selection_utility": 0.8333333333333333,
+          "official_score": 0.8169014084507042,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C5\\runs\\7937828c6ffc334229711e7344df69afd21fc1a5b3a37b4a806c4f59a13bf18f",
+            "answer_hash": "e574b91b70dc4750b36dcb92b391f31c8f893f19c66dd3397b639b230aeb8b52",
+            "mode": "validate",
+            "experience_version": 2,
+            "budget": {
+              "model_calls": 33,
+              "tokens": 252190,
+              "wall_seconds": 199.25,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "684397d188c1deceb49af31d",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.19736842105263158,
+            1.0
+          ],
+          "selection_utility": 0.4725274725274725,
+          "official_score": 0.3684210526315789,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C5\\runs\\f568f0ed60da5965a7c329d913d241d72247a2490c5c84481725be79314c87c1",
+            "answer_hash": "1bf93f60a9f784fa5bfdd3dbb8cc112f62a9497fd0ce6cb3b9c5bf7409e3d9f9",
+            "mode": "validate",
+            "experience_version": 2,
+            "budget": {
+              "model_calls": 38,
+              "tokens": 150557,
+              "wall_seconds": 182.125,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053e8",
+          "repeat": 0,
+          "status": "failed",
+          "theoretical_bounds": [
+            -0.10638297872340426,
+            1.0
+          ],
+          "selection_utility": 0.0,
+          "official_score": null,
+          "complete_evaluation": false,
+          "is_imputed_for_selection": true,
+          "failure": {
+            "error_type": "ValidationError",
+            "error": "1 validation error for _ReconciliationResponse\nteam\n  Value error, Expected output tokens exceed the role response ceilings [type=value_error, input_value={'schema_version': '1.0',...her calls are needed.'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error",
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C5\\runs\\0b6a04e7db4512bc33d7882ab38560c85597b3526edbccf33416ba272645672a"
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a6053b5",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.1,
+            1.0
+          ],
+          "selection_utility": 0.8636363636363635,
+          "official_score": 0.85,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C5\\runs\\7c3649f4cfe77487e6b97ac773e9354153ee758322fd05e8ba984ce0bd33461b",
+            "answer_hash": "c033cb54e1f612e55251c3eaa181e08955d1e715cfe9561f1e51cb6cf324cec6",
+            "mode": "validate",
+            "experience_version": 2,
+            "budget": {
+              "model_calls": 31,
+              "tokens": 243811,
+              "wall_seconds": 158.15699999999197,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "684397d188c1deceb49af329",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.09722222222222222,
+            1.0
+          ],
+          "selection_utility": 0.39240506329113917,
+          "official_score": 0.3333333333333333,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C5\\runs\\b7b10927405210c15e2e830217a72284ac058f5b7d131f70f2322836d4ea1199",
+            "answer_hash": "dd3d08fd64059aeda0247bff2ec58971be284c21fa8dc5e36a1c153459efc95f",
+            "mode": "validate",
+            "experience_version": 2,
+            "budget": {
+              "model_calls": 41,
+              "tokens": 263996,
+              "wall_seconds": 194.67200000000594,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a605441",
+          "repeat": 0,
+          "status": "complete",
+          "theoretical_bounds": [
+            -0.07547169811320754,
+            1.0
+          ],
+          "selection_utility": 0.4298245614035088,
+          "official_score": 0.3867924528301887,
+          "complete_evaluation": true,
+          "is_imputed_for_selection": false,
+          "outcome": {
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C5\\runs\\8ed5eda1d60c9ea04ee98b4fddd013797d235324ecfb0e2cbd7ecc5bab4ac59c",
+            "answer_hash": "86b43704b1ec703c1e35f6b01e162748c3de790f3faff471e8a188588733ed88",
+            "mode": "validate",
+            "experience_version": 2,
+            "budget": {
+              "model_calls": 34,
+              "tokens": 132746,
+              "wall_seconds": 129.73399999999674,
+              "tool_calls": 0,
+              "cost": null
+            }
+          }
+        },
+        {
+          "task_id": "6847465956a0f6376a60542d",
+          "repeat": 0,
+          "status": "failed",
+          "theoretical_bounds": [
+            -0.046875,
+            1.0
+          ],
+          "selection_utility": 0.0,
+          "official_score": null,
+          "complete_evaluation": false,
+          "is_imputed_for_selection": true,
+          "failure": {
+            "error_type": "RuntimeError",
+            "error": "Expected a complete JSON object; response may be truncated; Expected a complete JSON object; response may be truncated",
+            "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C5\\runs\\3d9f0c61d68de84633faa8f4429885288c7c62f12af866369ef0536ae133721c"
+          }
+        },
+        {
+          "task_id": "683a58c9a7e7fe4e7695849b",
+          "repeat": 0,
+          "status": "started",
+          "theoretical_bounds": [
+            -0.09876543209876543,
             1.0
           ],
           "selection_utility": 0.0
@@ -380,7 +884,7 @@
       ]
     }
   },
-  "raw_journal_sha256": "cca6d4cf0808525ff5b156f879f5b10108e1e346b6b2ee6a10e926cee167307c",
+  "raw_journal_sha256": "e56ae273734279587db4cb99b5c744b7d7c6b740a14795a0875ea7acef310bfc",
   "original_output": "outputs/rr_jit_mas_run0_deepseekjudge_20261002_v31",
   "compact_export": true
 }

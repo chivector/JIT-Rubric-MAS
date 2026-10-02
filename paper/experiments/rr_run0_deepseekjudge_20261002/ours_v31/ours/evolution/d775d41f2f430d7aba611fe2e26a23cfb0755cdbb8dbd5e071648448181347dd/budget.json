@@ -1,0 +1,183 @@
+{
+  "model_calls": 6,
+  "tokens": 81896,
+  "reserved_tokens": 0,
+  "tool_calls": 0,
+  "wall_seconds": 69.6710000000021,
+  "request_queue_idle_seconds": 0.0,
+  "task_timeout": 900.0,
+  "cost": null,
+  "by_stage": {
+    "inference": {
+      "model_calls": 6,
+      "tokens": 81896,
+      "tool_calls": 0,
+      "communication_bytes": 0,
+      "cost": null
+    }
+  },
+  "records": [
+    {
+      "call_id": "2ec552b281ca44b8b3e295e2e4ae1d2c",
+      "kind": "model",
+      "stage": "inference",
+      "agent_id": "global",
+      "input_tokens": 4068,
+      "output_tokens": 2330,
+      "estimated": false,
+      "wall_seconds": 8.546999999991385,
+      "error": "",
+      "context": {
+        "estimator": "cl100k_base_messages_v1",
+        "context_window": 131072,
+        "margin": 2048,
+        "policy": "oldest_turns",
+        "original_input_tokens": 3929,
+        "sent_input_tokens": 3929,
+        "removed_message_hashes": [],
+        "sent_messages_hash": "28cef8ae7f1aec8de139c38ccd72b84ba31382f35698950f273b455ac12e162f"
+      },
+      "request": {
+        "queue_seconds": 0.0,
+        "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+        "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+        "response_id": "chatcmpl-f8a12ef6-68eb-4f6e-82b0-0a917a33b668"
+      }
+    },
+    {
+      "call_id": "31b1f5cb935643359ce02c014d619ad0",
+      "kind": "model",
+      "stage": "inference",
+      "agent_id": "critic_1",
+      "input_tokens": 6654,
+      "output_tokens": 1143,
+      "estimated": false,
+      "wall_seconds": 6.765999999988708,
+      "error": "",
+      "context": {
+        "estimator": "cl100k_base_messages_v1",
+        "context_window": 131072,
+        "margin": 2048,
+        "policy": "oldest_turns",
+        "original_input_tokens": 6473,
+        "sent_input_tokens": 6473,
+        "removed_message_hashes": [],
+        "sent_messages_hash": "54b80ab1ab5fef9000e6e02fb8bedfa4f32b0ae9bc40ca92f95197cb7b0cf7da"
+      },
+      "request": {
+        "queue_seconds": 0.0,
+        "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+        "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+        "response_id": "chatcmpl-9ca63f77-80a3-4e78-bb66-2330993e3163"
+      }
+    },
+    {
+      "call_id": "6ac1a1ce12f5452aa91e23595d849ce0",
+      "kind": "model",
+      "stage": "inference",
+      "agent_id": "analyst_1",
+      "input_tokens": 7647,
+      "output_tokens": 1332,
+      "estimated": false,
+      "wall_seconds": 12.937999999994645,
+      "error": "",
+      "context": {
+        "estimator": "cl100k_base_messages_v1",
+        "context_window": 131072,
+        "margin": 2048,
+        "policy": "oldest_turns",
+        "original_input_tokens": 7437,
+        "sent_input_tokens": 7437,
+        "removed_message_hashes": [],
+        "sent_messages_hash": "7a295442f12f6f2f5218c22b8d779c19efb40ec2c03eee805e6aeb187f1d3dc5"
+      },
+      "request": {
+        "queue_seconds": 6.765999999988708,
+        "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+        "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+        "response_id": "chatcmpl-495c083f-5d8b-44a0-8273-9b8f96751acb"
+      }
+    },
+    {
+      "call_id": "53fbd298591d4cfd9038c0fc9cd35306",
+      "kind": "model",
+      "stage": "inference",
+      "agent_id": "writer_1",
+      "input_tokens": 7362,
+      "output_tokens": 1019,
+      "estimated": false,
+      "wall_seconds": 11.639999999999418,
+      "error": "",
+      "context": {
+        "estimator": "cl100k_base_messages_v1",
+        "context_window": 131072,
+        "margin": 2048,
+        "policy": "oldest_turns",
+        "original_input_tokens": 7165,
+        "sent_input_tokens": 7165,
+        "removed_message_hashes": [],
+        "sent_messages_hash": "6b9ab44f34b96ff666a056fe5cb72ad8053655f66cd4131b696045c03750cd0f"
+      },
+      "request": {
+        "queue_seconds": 6.125,
+        "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+        "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+        "response_id": "chatcmpl-c5fb76a7-65f9-4a57-95ae-78602e01d7d2"
+      }
+    },
+    {
+      "call_id": "56e35f62045a463aba2d52a06860e097",
+      "kind": "model",
+      "stage": "inference",
+      "agent_id": "global",
+      "input_tokens": 13435,
+      "output_tokens": 7279,
+      "estimated": false,
+      "wall_seconds": 21.15700000000652,
+      "error": "",
+      "context": {
+        "estimator": "cl100k_base_messages_v1",
+        "context_window": 131072,
+        "margin": 2048,
+        "policy": "oldest_turns",
+        "original_input_tokens": 13127,
+        "sent_input_tokens": 13127,
+        "removed_message_hashes": [],
+        "sent_messages_hash": "90d3b558d97cbb23a9ff37a62f50287a59c2d05c79447e5c3212aa5b49c637ac"
+      },
+      "request": {
+        "queue_seconds": 0.0,
+        "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+        "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+        "response_id": "chatcmpl-19b49a82-5d66-4028-9576-c4ea923ec47d"
+      }
+    },
+    {
+      "call_id": "fbba09fc05fb4d4a926f14f62b2f7c19",
+      "kind": "model",
+      "stage": "inference",
+      "agent_id": "global",
+      "input_tokens": 22357,
+      "output_tokens": 7270,
+      "estimated": false,
+      "wall_seconds": 21.172000000005937,
+      "error": "",
+      "context": {
+        "estimator": "cl100k_base_messages_v1",
+        "context_window": 131072,
+        "margin": 2048,
+        "policy": "oldest_turns",
+        "original_input_tokens": 21732,
+        "sent_input_tokens": 21732,
+        "removed_message_hashes": [],
+        "sent_messages_hash": "2a9451185d1a136955c8eee14d54aefb20c63814dcd11ae5e3c8fed8b5ba2d78"
+      },
+      "request": {
+        "queue_seconds": 0.0,
+        "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+        "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+        "response_id": "chatcmpl-fd03e7c8-078f-487e-9761-810275dfc130"
+      }
+    }
+  ]
+}

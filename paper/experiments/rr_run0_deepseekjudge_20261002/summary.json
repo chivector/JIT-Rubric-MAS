@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "snapshot_at": "2026-10-02T11:01:54.337445+00:00",
+  "snapshot_at": "2026-10-02T12:24:14.505591+00:00",
   "protocol": "closed_book_exploratory_deepseek_self_judge",
   "requested_model": "deepseek-v4-flash-vision",
   "returned_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
@@ -105,14 +105,30 @@
     }
   },
   "ours_v31": {
-    "status": "evolving",
-    "export_status": "running",
-    "pilot_status": "running",
-    "snapshot_is_partial": true,
-    "processed_evolution": 0,
-    "source_status_counts": {},
+    "status": "failed",
+    "export_status": "incomplete",
+    "pilot_status": "incomplete",
+    "snapshot_is_partial": false,
+    "processed_evolution": 5,
+    "source_status_counts": {
+      "failed": 3,
+      "complete": 2
+    },
     "selected_checkpoint": null,
-    "checkpoints": []
+    "checkpoints": [
+      {
+        "position": 0,
+        "state_version": 0,
+        "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+        "cache_key": "a36767976c79d3cae28bc703421ea7bc9bf5de1423d16a5ac4ea20326c61d6be",
+        "total_evaluations": 10,
+        "complete_evaluations": 10,
+        "eligible": true,
+        "selection_utility": 0.4882946764036428,
+        "utility_is_conservative_surrogate": false,
+        "reused_from": null
+      }
+    ]
   },
   "preflights": [
     {
@@ -220,6 +236,7 @@
   "notes": [
     "One frozen 33-task baseline answer set is reused and rescored uniformly with DeepSeek; prior GPT judgments are not mixed.",
     "Each engineering retry is retained separately. v30 used json_object; v31 uses json_schema_planning with execution JSON object after planning failures, and starts from empty experience.",
+    "v31 stopped during C5 Judge evaluation after repeated APIConnectionError transport failures reached the client circuit-breaker; two other C5 failures were a reconciliation response token-ceiling violation and truncated JSON. The log has no HTTP status, so this is not evidence of a balance or schema rejection.",
     "Runtime changes were frozen before attempts. Full local outputs and SQLite states remain outside this compact export.",
     "Serving model path is gateway-reported identity, not independent proof of an immutable upstream snapshot.",
     "Credential scan checks forbidden fields and sk-* literals; it does not classify arbitrary 48-character alphanumeric strings as secrets."

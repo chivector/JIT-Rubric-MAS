@@ -1,0 +1,265 @@
+{
+  "task_id": "6847465956a0f6376a60542d",
+  "mode": "validate",
+  "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v31\\ours\\checkpoints\\C5\\runs\\3d9f0c61d68de84633faa8f4429885288c7c62f12af866369ef0536ae133721c",
+  "error_type": "RuntimeError",
+  "error": "Expected a complete JSON object; response may be truncated; Expected a complete JSON object; response may be truncated",
+  "budget": {
+    "model_calls": 8,
+    "tokens": 105845,
+    "reserved_tokens": 0,
+    "tool_calls": 0,
+    "wall_seconds": 105.45299999999406,
+    "request_queue_idle_seconds": 0.031000000002677552,
+    "task_timeout": 900.0,
+    "cost": null,
+    "by_stage": {
+      "inference": {
+        "model_calls": 8,
+        "tokens": 105845,
+        "tool_calls": 0,
+        "communication_bytes": 0,
+        "cost": null
+      },
+      "execution": {
+        "model_calls": 0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "communication_bytes": 35565,
+        "cost": null
+      }
+    },
+    "records": [
+      {
+        "call_id": "efd50001281e478487acdaeedae91316",
+        "kind": "model",
+        "stage": "inference",
+        "agent_id": "global",
+        "input_tokens": 4028,
+        "output_tokens": 3025,
+        "estimated": false,
+        "wall_seconds": 10.35899999999674,
+        "error": "",
+        "context": {
+          "estimator": "cl100k_base_messages_v1",
+          "context_window": 131072,
+          "margin": 2048,
+          "policy": "oldest_turns",
+          "original_input_tokens": 3894,
+          "sent_input_tokens": 3894,
+          "removed_message_hashes": [],
+          "sent_messages_hash": "d60a20a8ab90b1b4f1a7826a4781a0a4e06b3fe324c4df4a669cc07eda2932a5"
+        },
+        "request": {
+          "queue_seconds": 0.0,
+          "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+          "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+          "response_id": "chatcmpl-9748c66b-6841-499d-a157-36b04ccb0c90"
+        }
+      },
+      {
+        "call_id": "165e3332d6004dd9b773028d0e437cff",
+        "kind": "model",
+        "stage": "inference",
+        "agent_id": "critic_1",
+        "input_tokens": 6686,
+        "output_tokens": 1118,
+        "estimated": false,
+        "wall_seconds": 5.937000000005355,
+        "error": "",
+        "context": {
+          "estimator": "cl100k_base_messages_v1",
+          "context_window": 131072,
+          "margin": 2048,
+          "policy": "oldest_turns",
+          "original_input_tokens": 6523,
+          "sent_input_tokens": 6523,
+          "removed_message_hashes": [],
+          "sent_messages_hash": "e18cec0f5d42711d726bfcb8d6af6c353f019fc576e28b0c1ae787f00b7aa2a6"
+        },
+        "request": {
+          "queue_seconds": 0.0,
+          "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+          "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+          "response_id": "chatcmpl-b8e994ba-e3bb-4e7d-972b-19a5883cd7ec"
+        }
+      },
+      {
+        "call_id": "9314614ee2594932a903861eff8679b0",
+        "kind": "model",
+        "stage": "inference",
+        "agent_id": "analyst_1",
+        "input_tokens": 8821,
+        "output_tokens": 1028,
+        "estimated": false,
+        "wall_seconds": 11.781000000002678,
+        "error": "",
+        "context": {
+          "estimator": "cl100k_base_messages_v1",
+          "context_window": 131072,
+          "margin": 2048,
+          "policy": "oldest_turns",
+          "original_input_tokens": 8593,
+          "sent_input_tokens": 8593,
+          "removed_message_hashes": [],
+          "sent_messages_hash": "8a7f1121e4a5d145b87e3fbf2bbd7d565eb26d29ceb988b9be0a3be38d70563d"
+        },
+        "request": {
+          "queue_seconds": 5.968000000008033,
+          "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+          "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+          "response_id": "chatcmpl-6383ebbc-ae59-4d17-b98c-bc465b0e5bbe"
+        }
+      },
+      {
+        "call_id": "7324458f3ded4b18b59f5f3e306e5be6",
+        "kind": "model",
+        "stage": "inference",
+        "agent_id": "writer_1",
+        "input_tokens": 8376,
+        "output_tokens": 1125,
+        "estimated": false,
+        "wall_seconds": 11.39100000000326,
+        "error": "",
+        "context": {
+          "estimator": "cl100k_base_messages_v1",
+          "context_window": 131072,
+          "margin": 2048,
+          "policy": "oldest_turns",
+          "original_input_tokens": 8162,
+          "sent_input_tokens": 8162,
+          "removed_message_hashes": [],
+          "sent_messages_hash": "913f7ae6fa946518262e6f56a5949b930c94c3649f20b2a1da2e86d98782d79b"
+        },
+        "request": {
+          "queue_seconds": 5.76600000000326,
+          "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+          "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+          "response_id": "chatcmpl-9803ae1b-58c2-4701-bab5-7e9af1b62679"
+        }
+      },
+      {
+        "call_id": "bec0963d88374402a8f39fcdb76af588",
+        "kind": "model",
+        "stage": "inference",
+        "agent_id": "global",
+        "input_tokens": 13203,
+        "output_tokens": 4766,
+        "estimated": false,
+        "wall_seconds": 15.0,
+        "error": "",
+        "context": {
+          "estimator": "cl100k_base_messages_v1",
+          "context_window": 131072,
+          "margin": 2048,
+          "policy": "oldest_turns",
+          "original_input_tokens": 12917,
+          "sent_input_tokens": 12917,
+          "removed_message_hashes": [],
+          "sent_messages_hash": "a3238a9a2079e723ae2765eb0fe41ddbe1634e81f203393c5eeafc44cc721592"
+        },
+        "request": {
+          "queue_seconds": 0.0,
+          "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+          "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+          "response_id": "chatcmpl-86e63f1a-127d-4a2d-b34a-d40db6e8f6a0"
+        }
+      },
+      {
+        "kind": "communication",
+        "stage": "execution",
+        "agent_id": "analyst_1",
+        "bytes": 146
+      },
+      {
+        "call_id": "4d9fe89187a84021a63707aa3c6dea2b",
+        "kind": "model",
+        "stage": "inference",
+        "agent_id": "analyst_1",
+        "input_tokens": 5828,
+        "output_tokens": 8173,
+        "estimated": false,
+        "wall_seconds": 32.88999999999942,
+        "error": "",
+        "context": {
+          "estimator": "cl100k_base_messages_v1",
+          "context_window": 131072,
+          "margin": 2048,
+          "policy": "oldest_turns",
+          "original_input_tokens": 5773,
+          "sent_input_tokens": 5773,
+          "removed_message_hashes": [],
+          "sent_messages_hash": "5cc13df6dba1782f5d422def08b853d2dbf55d4aa717852840efc8a10e01e08f"
+        },
+        "request": {
+          "queue_seconds": 0.0,
+          "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+          "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+          "response_id": "chatcmpl-5d7a644a-acfe-44f6-8849-af718fa850fd"
+        }
+      },
+      {
+        "kind": "communication",
+        "stage": "execution",
+        "agent_id": "critic_1",
+        "bytes": 35419
+      },
+      {
+        "call_id": "c511f76778d6418db9fcf99cecb05cba",
+        "kind": "model",
+        "stage": "inference",
+        "agent_id": "critic_1",
+        "input_tokens": 13582,
+        "output_tokens": 4096,
+        "estimated": false,
+        "wall_seconds": 16.34299999999348,
+        "error": "",
+        "context": {
+          "estimator": "cl100k_base_messages_v1",
+          "context_window": 131072,
+          "margin": 2048,
+          "policy": "oldest_turns",
+          "original_input_tokens": 13717,
+          "sent_input_tokens": 13717,
+          "removed_message_hashes": [],
+          "sent_messages_hash": "7481b42f69b5d31d85af7d8a93f2e6a3ad45695546643347d2eff45eb7c5fe58"
+        },
+        "request": {
+          "queue_seconds": 0.0,
+          "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+          "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+          "response_id": "chatcmpl-ef46f75b-410a-4be1-b7aa-f16076d75fa1"
+        }
+      },
+      {
+        "call_id": "517d4902ef594efa98f2210b0aa6e5bc",
+        "kind": "model",
+        "stage": "inference",
+        "agent_id": "critic_1",
+        "input_tokens": 17894,
+        "output_tokens": 4096,
+        "estimated": false,
+        "wall_seconds": 12.718999999997322,
+        "error": "",
+        "context": {
+          "estimator": "cl100k_base_messages_v1",
+          "context_window": 131072,
+          "margin": 2048,
+          "policy": "oldest_turns",
+          "original_input_tokens": 18061,
+          "sent_input_tokens": 18061,
+          "removed_message_hashes": [],
+          "sent_messages_hash": "242c43d691b093c86f894b0e54512822b6830ac16d4161cafceccbca55dd0475"
+        },
+        "request": {
+          "queue_seconds": 0.0,
+          "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+          "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+          "response_id": "chatcmpl-e4291648-c4eb-416c-87f7-1f5236874157"
+        }
+      }
+    ]
+  },
+  "repeat": 0,
+  "state_hash": "e8b17baa659d3ee22e2fc0cccf7d30fd0a51f5186901b8e9a98ed3d171dba93e"
+}
