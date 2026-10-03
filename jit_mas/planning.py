@@ -311,6 +311,21 @@ class JsonModelCalls:
                 request.update(as_json(refresh_payload()))
             if correction is not None:
                 request["response_correction"] = correction
+            exact_assignment_repair = ""
+            if correction is not None and phase == "reconcile":
+                audit = correction.get("assignment_audit", {})
+                entries = audit.get("agent_assignments", []) if isinstance(audit, dict) else []
+                expected = {entry.get("agent_id"): entry.get("coverage_rubric_ids")
+                            for entry in entries
+                            if isinstance(entry, dict) and isinstance(entry.get("agent_id"), str)
+                            and isinstance(entry.get("coverage_rubric_ids"), list)}
+                if expected:
+                    exact_assignment_repair = (
+                        " Before emitting the corrected JSON, mechanically replace every selected "
+                        "agent's rubric_ids with this exact map derived from team.coverage; do not "
+                        "copy stale lists from the previous response: "
+                        + json.dumps(expected, sort_keys=True) + ". The lists must match these "
+                        "values as sets, while preserving the selected candidate identities.")
             correction_system = (
                 "\nThis is the sole contract correction turn. The response_correction field names "
                 "the exact invalid cross-field assignments in your prior JSON. Fix those assignments "
@@ -347,7 +362,8 @@ class JsonModelCalls:
                 "synthesizer_downstream_agent_ids, unknown_dependencies, cyclic_agent_ids and "
                 "reviewer_checks. Recompute this audit after changing coverage or topology; the "
                 "returned synthesizer must be terminal and receive every selected contribution."
-                   if phase == "reconcile" else "")
+                + exact_assignment_repair
+                    if phase == "reconcile" else "")
                 if correction is not None else "")
             if correction is not None and phase == "agent_evolve":
                 correction_system += (
