@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from typing import Callable
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -23,7 +24,7 @@ from .schemas import PublicTask, digest, utc_now
 
 PUBLIC_REFINEMENT_VERSION = "public-draft-review-revision-v3"
 PUBLIC_REFINEMENT_IDS = ("public-review", "public-revision")
-PUBLIC_REFINEMENT_GUARD_VERSION = "public-artifact-regression-guard-v1"
+PUBLIC_REFINEMENT_GUARD_VERSION = "public-artifact-regression-guard-v2"
 _BODY_LOSS_LIMITS = {
     "minimum_draft_non_whitespace_characters": 1000,
     "minimum_draft_punctuation_or_line_chunks": 3,
@@ -31,6 +32,25 @@ _BODY_LOSS_LIMITS = {
     "maximum_revision_punctuation_or_line_chunks": 1,
     "maximum_revision_to_draft_character_ratio": 0.1,
 }
+_ATX_HEADING = re.compile(r" {0,3}#{1,6}(?:[ \t]+[^\r\n]*|[ \t]*)")
+_TITLE_VERB = r"(?:return|write|provide|give|generate|output)"
+_TITLE_PRODUCT = r"(?:(?:a|one|the|single)\s+)?(?:title|headline)"
+_TITLE_ONLY_GROUP = re.compile(
+    r"\b(?:(?:only|just)\s+" + _TITLE_VERB + r"\s+" + _TITLE_PRODUCT + r"|"
+    + _TITLE_VERB + r"\s+(?:(?:only|just)\s+" + _TITLE_PRODUCT + r"|"
+    + _TITLE_PRODUCT + r"\s+(?:only|and\s+nothing\s+else)))\b"
+    r"(?:\s+(?:for|about|on)\s+[^.!?\r\n]+)?", re.IGNORECASE)
+_ONLY_OUTPUT_HINT = re.compile(
+    r"\b" + _TITLE_VERB + r"\s+(?:with\s+)?(?:only|just)\b|"
+    r"\b(?:only|just)\s+" + _TITLE_VERB + r"\b|\bnothing\s+else\b|"
+    r"\b(?:no|without)\s+(?:any\s+)?(?:other|additional|extra)\s+"
+    r"(?:text|content|commentary|output)\b|"
+    r"\b(?:title|headline)\s+only\b|\b(?:only|just)\s+"
+    r"(?:(?:a|one|the|single)\s+)?(?:title|headline)\b|"
+    r"\b" + _TITLE_VERB + r"\s+" + _TITLE_PRODUCT + r"\b", re.IGNORECASE)
+_TITLE_QUOTED_DATA = re.compile(
+    r'```[\s\S]*?```|~~~[\s\S]*?~~~|"[^"\n]*"|\u201c[^\u201d]*\u201d|'
+    r"(?<!\w)'[^'\n]*'(?!\w)|\u2018[^\u2019]*\u2019|`[^`\n]*`")
 
 GUARDED_REVISION_HINT = """Return the complete finished body, even when no repair
 is necessary. A title, acknowledgement or statement that the draft is good
@@ -39,8 +59,20 @@ available output budget across the complete artifact and JSON escaping/closing
 syntax; state each passage once and stop after the closing brace. Preserve every
 explicit public length and content requirement. The coordinator applies a
 transparent public structural guard and may retain the initial artifact after a
-local response-validation failure or catastrophic body loss. This guard is not
-an evaluator, a quality retry or permission to omit the finished artifact.
+local response-validation failure, catastrophic or Markdown-heading-only body loss or a sufficiently
+proven regression of compiled public literal minima. This guard is not an
+evaluator, a quality retry or permission to omit the finished artifact.
+"""
+
+PUBLIC_LITERAL_HINT = """\npublic_literal_constraints contains only conservatively
+compiled minimum word-occurrence requirements from the original public task,
+with their exact public spans and complete-draft observations. Preserve these
+original requirements in the complete finished artifact. Strict original-case
+counts can establish a sufficient pass; a broader casefolded substring count
+below the minimum establishes a sufficient failure. All other observations are
+unknown, not proof of either compliance or noncompliance. Compounds, plural or
+embedded forms and process notes cannot establish the strict pass. Do not expand
+an unknown observation into a new requirement or guess a benchmark score.
 """
 
 REVIEW_PROMPT = """You are the global component reviewing an actual completed
@@ -332,6 +364,62 @@ def _catastrophic_body_loss(draft_diagnostics, revision_diagnostics):
     )
 
 
+def _public_title_scope(task):
+    """Finite positive title-only instructions suppress structural selection.
+
+    Complex only-output scopes are unknown and suppress the new heading branch.
+    This is a conservative scope aid, not a general natural-language classifier.
+    """
+    from .public_literal_constraints import PublicLiteralSpan
+    from .public_word_slots import independent_positive_position_span
+
+    sources = [("question", task.question), *[(f"constraints[{index}]", value)
+                                               for index, value in enumerate(task.constraints)]]
+    confirmed, unknown = [], False
+    for source, text in sources:
+        masked = list(text)
+        for quote in _TITLE_QUOTED_DATA.finditer(text):
+            masked[quote.start():quote.end()] = " " * (quote.end() - quote.start())
+        plain = "".join(masked)
+        groups = list(_TITLE_ONLY_GROUP.finditer(plain))
+        for hint in _ONLY_OUTPUT_HINT.finditer(plain):
+            if not any(group.start() <= hint.start() and hint.end() <= group.end() for group in groups):
+                unknown = True
+        for group in groups:
+            span = PublicLiteralSpan(source, group.start(), group.end(), text[group.start():group.end()])
+            if (re.search(r"\b(?:if|unless|conditional(?:ly)?|provided\s+that)\b", plain, re.IGNORECASE)
+                    or not independent_positive_position_span(plain, span)):
+                unknown = True
+            else:
+                confirmed.append(span.audit())
+    return {"status": "unknown" if unknown else "title_only" if confirmed else "ordinary",
+            "public_spans": confirmed,
+            "limitations": "Only finite positive title/headline-only instructions are recognized; bare title requests and unknown only-output scopes suppress heading-only selection."}
+
+
+def _heading_only_diagnostics(answer):
+    lines = answer.splitlines()
+    nonempty = [index for index, line in enumerate(lines) if line.strip()]
+    heading_only = (len(nonempty) == 1 and _ATX_HEADING.fullmatch(lines[nonempty[0]]) is not None)
+    body = "\n".join(line for index, line in enumerate(lines) if index not in nonempty)
+    return {"single_strict_markdown_atx_heading": heading_only,
+            "nonempty_lines": len(nonempty),
+            "body_non_whitespace_characters": (sum(not character.isspace() for character in body)
+                                                if heading_only else None)}
+
+
+def _markdown_heading_only_body_loss(draft_diagnostics, revision_diagnostics, heading):
+    return (draft_diagnostics["non_whitespace_characters"] >=
+                _BODY_LOSS_LIMITS["minimum_draft_non_whitespace_characters"]
+            and draft_diagnostics["punctuation_or_line_chunks"] >=
+                _BODY_LOSS_LIMITS["minimum_draft_punctuation_or_line_chunks"]
+            and heading["single_strict_markdown_atx_heading"]
+            and heading["body_non_whitespace_characters"] == 0
+            and revision_diagnostics["non_whitespace_characters"] /
+                draft_diagnostics["non_whitespace_characters"] <=
+                _BODY_LOSS_LIMITS["maximum_revision_to_draft_character_ratio"])
+
+
 def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
                          knowledge_policy=None, synthesizer_id=None,
                          audit_writer: Callable[[dict], None] | None = None):
@@ -380,6 +468,18 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         "public_diagnostics": (public_output_metrics(task, result.answer)
                                if isinstance(result.answer, str) else None),
     }
+    literal_plan = None
+    literal_initial_diagnostics = None
+    title_scope = None
+    if guarded:
+        from .public_literal_constraints import public_literal_plan
+
+        literal_plan = public_literal_plan(task)
+        title_scope = _public_title_scope(task)
+        if literal_plan is not None:
+            literal_initial_diagnostics = literal_plan.diagnose(result.answer)
+            public_input["public_literal_constraints"] = literal_plan.audit()
+            public_input["draft_literal_constraint_diagnostics"] = literal_initial_diagnostics
     audit = {"version": PUBLIC_REFINEMENT_VERSION, "component": "global", "stage": "inference",
              "organization": "two fixed global component calls; local AgentSpec caps unchanged",
              "planned_call_agents": list(PUBLIC_REFINEMENT_IDS), "output_cap": output_cap,
@@ -398,6 +498,15 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
             "initial_eligibility": eligibility,
             "body_loss_limits": copy.deepcopy(_BODY_LOSS_LIMITS),
             "limitations": "Initial eligibility proves execution termination only. Structural counts do not certify semantic quality or all public constraints.",
+            "public_literal_constraints": (literal_plan.audit() if literal_plan is not None else
+                {"status": "unknown", "reason": "No complete set of supported positive public literal minima"}),
+            "literal_candidate_checks": {"initial": literal_initial_diagnostics, "revision": None},
+            "markdown_heading_only_guard": {"public_title_scope": title_scope,
+                "minimum_draft_non_whitespace_characters": 1000,
+                "minimum_draft_punctuation_or_line_chunks": 3,
+                "maximum_revision_to_draft_character_ratio": 0.1,
+                "revision_diagnostics": None,
+                "limitations": "Heading-only body loss is a structural heuristic, not semantic or public-task compliance certification."},
         }
     if config.public_positional_construction:
         audit["public_positional_construction"] = (
@@ -499,13 +608,14 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
 
     try:
         publish()
-        review = call("public-review", REVIEW_PROMPT, public_input, PublicReview)
+        review = call("public-review", REVIEW_PROMPT + (PUBLIC_LITERAL_HINT if literal_plan else ""),
+                      public_input, PublicReview)
         audit["review"] = review.model_dump(mode="json")
         audit["review_hash"] = digest(audit["review"])
         audit["status"] = "reviewed"
         publish()
         revision_schema = PublicRevision
-        revision_instructions = REVISION_PROMPT
+        revision_instructions = REVISION_PROMPT + (PUBLIC_LITERAL_HINT if literal_plan else "")
         revision_payload = {**public_input, "review": audit["review"]}
         if positional_plan is not None or numeric_construction_plan is not None:
             revision_instructions = revision_instructions.replace(
@@ -574,7 +684,20 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         audit["revision_public_diagnostics"] = public_output_metrics(task, final_answer)
         if guarded:
             audit["revision_answer_hash"] = digest(final_answer)
-            if eligibility["eligible"] and _catastrophic_body_loss(
+            heading = _heading_only_diagnostics(final_answer)
+            audit["public_candidate_guard"]["markdown_heading_only_guard"]["revision_diagnostics"] = heading
+            if literal_plan is not None:
+                literal_revision_diagnostics = literal_plan.diagnose(final_answer)
+                audit["public_candidate_guard"]["literal_candidate_checks"]["revision"] = literal_revision_diagnostics
+                if (eligibility["eligible"] and literal_initial_diagnostics["status"] == "pass"
+                        and literal_revision_diagnostics["status"] == "fail"):
+                    return select(audit["draft"], "initial_draft",
+                                  "explicit_public_literal_minimum_regression")
+            if (eligibility["eligible"] and title_scope["status"] == "ordinary"
+                    and _markdown_heading_only_body_loss(public_input["public_diagnostics"],
+                                                        audit["revision_public_diagnostics"], heading)):
+                return select(audit["draft"], "initial_draft", "markdown_heading_only_large_draft_body_loss")
+            if eligibility["eligible"] and title_scope["status"] != "title_only" and _catastrophic_body_loss(
                     public_input["public_diagnostics"], audit["revision_public_diagnostics"]):
                 return select(audit["draft"], "initial_draft", "catastrophic_revision_body_loss")
             return select(final_answer, "revision", "validated_revision_without_catastrophic_body_loss")

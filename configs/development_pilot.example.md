@@ -1,19 +1,23 @@
 # Development pilot configuration
 
-`development_pilot.example.json` contains the frozen v17 development candidate
-and common budgets. Its full suite passed, and all 30 fixed benchmark slots
-are sealed: 29 were graded and one Native JIT generation failed. The six-source
-descriptive normalized macro is higher than Direct and lower than Native JIT.
-This is a validated development candidate, not a winning configuration recommendation.
-The complete v16 inventory, including failures and negative results, remains
-recorded separately. Initial-MAS did not beat both baselines overall in v16;
-this example is not a recommendation of a winning configuration. Compared with
-v16, it adds `planning_response_format=json_schema` and
-`public_refinement_guard=true`; sampling parameters and budgets stay the same.
-It matches the actual v17 configuration except for the endpoint, model alias
-and exact response-model pin placeholders. Source changes need their own
-registrations and validation. The template is not a completed experiment
-registration and contains no credentials or local data paths.
+`development_pilot.example.json` retains the same parameters and common budgets
+used in v17 and registered for the v18 public guard candidate. All five v18
+campaigns are sealed: 30 fixed slots, 26 graded, 4 generation failures
+and 0 evaluation failures. Initial-MAS completed 10 of 10. The single
+full suite passed with 2,215 tests and 60 subtests. The six-source descriptive
+normalized failure-zero macro is Direct 0.6129510826, Initial-MAS
+0.6827660459 and Native JIT 0.3954661558. This is a small exposed
+development inventory with serving-model diagnostic judges for four sources;
+it does not establish a clean held-out or uniform benchmark win. Actual
+calls, tokens and failures are retained in the experiment record.
+
+v17 introduced `planning_response_format=json_schema` and
+`public_refinement_guard=true` relative to v16; v18 retains those settings and
+changes the guard implementation without adding flags, sampling changes or
+budgets. This file matches the actual v18 configuration except for the endpoint,
+model alias and exact response-model pin placeholders. Every source version
+needs its own registrations and validation. The template is not a completed
+experiment registration and contains no credentials or local data paths.
 
 Copy the file to your own configuration and set all five model roles to your
 provider's credential-free HTTPS endpoint and model alias. The template uses
@@ -82,12 +86,41 @@ prove that the endpoint enforces it. Invalid outputs fail with their cost record
 without format fallback, JSON-prefix selection or another sample, except for the
 narrow ordinary-revision candidate guard described below.
 
-`public_refinement_guard=true` can retain the sole initial completed artifact
-after an ordinary revision locally fails JSON/schema validation, or after a
-large multi-part draft collapses to an extremely short single-part revision.
-The structural rule requires at least 1,000 initial non-whitespace characters
-and three punctuation/line chunks, with at most 100 revised non-whitespace
-characters, one revised chunk and a revision-to-draft ratio at most 0.1.
+`public_refinement_guard=true` enables guard v2 in the v18 source. It can retain
+the sole initial completed artifact after ordinary revision locally fails
+JSON/schema validation, after supported structural body loss, or after a
+sufficiently established regression of finite public literal minima. The
+original structural rule remains unchanged: at least 1,000 initial non-whitespace
+characters and three punctuation/line chunks, with at most 100 revised
+non-whitespace characters, one revised chunk and a revision-to-draft ratio at
+most 0.1. A separate new branch checks a single strict Markdown ATX heading with
+no body, the same initial size/chunk floor and ratio ceiling. It does not
+broaden the 100-character ceiling for ordinary prose.
+
+The title-scope probe recognizes only finite independent positive title-only
+instructions. A recognized title-only task suppresses structural selection;
+unknown only-output scope suppresses the new heading branch, while the prior
+short-output heuristic remains in place. This is a textual aid with incomplete
+language coverage, not a general instruction classifier.
+
+The literal compiler recognizes finite independent positive English Use/Include
+instructions specifying one ASCII alphabetic word and a digit minimum. It
+counts the complete decoded artifact, not a bounded diagnostic vocabulary.
+An original-case standalone strict count at least the minimum is sufficient
+for `PASS`; even the broader overlapping casefolded substring count below the
+minimum is sufficient for `FAIL`; intermediate observations are `UNKNOWN`.
+The casefolded strict count is diagnostic only. Unicode word units and internal
+apostrophes/dashes prevent an ASCII prefix in a compound or combined unit from
+establishing the strict pass.
+
+If a frequency-like family or recognized scope is unsupported, the complete
+frequency plan is unknown and cannot select a candidate by frequency. Quoted
+examples, negation, conditionals, scoped/case-qualified counts and unsupported
+minima conservatively decline within the compiler's finite syntax. Frequency
+selection requires every compiled initial rule to be `PASS` and at least one
+revision rule to be clearly `FAIL`; an ambiguous count is not a failure. These
+local counts do not certify other public requirements, meaning or quality.
+
 Eligibility means a nonempty execution `final_answer`; it does not certify
 semantic correctness or satisfaction of all public constraints. A projected
 initial draft or active positional/numeric construction is ineligible. Review
@@ -96,12 +129,16 @@ continue to fail. Both candidate hashes, raw component failures, selection
 reason and all calls/costs are retained; no evaluator, score comparison, extra
 sample or retry chooses the answer. The library default is off, and the flag
 requires `public_refinement=true`.
-The guard can retain an overlong initial artifact when the task actually calls
-for a correct short revision, and can miss a collapse to 101 characters or two
-chunks. The 0.1 ratio follows mathematically from the 1,000/100 thresholds and
-is not an independent guarantee. Public diagnostic lists and positions can be
-truncated; they are not official checkers, and absent diagnostics do not mean
-a constraint passed or failed.
+Both public review and revision remain the same two model calls; compilation
+and candidate checks add no model API, grader call or quality resampling.
+The guard can still retain an overlong initial artifact when the task calls
+for a correct short revision. The prior short-prose branch can still miss
+101 characters or two chunks; the heading branch recognizes only its finite
+ATX shape. For the prior 1,000/100 rule, the 0.1 ratio is mathematically implied
+and is not an independent guarantee. Public diagnostic lists and positions can
+be truncated; they are not official checkers, and absent diagnostics do not
+mean a constraint passed or failed. The literal compiler counts the complete
+decoded artifact separately, without certifying semantic correctness.
 
 `planning_response_format=json_schema` requests strict schemas for predict,
 local-plan and reconciliation records; its library default is `json_object`.

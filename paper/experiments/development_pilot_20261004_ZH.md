@@ -6,7 +6,26 @@
 
 曝光审计边界：本文台账中的 **5 个固定 selected TEST ID**仅表示正式选用的开发任务，**不代表整个开发过程总共只见过 5 个 ID 或其他历史 private evaluation 从未曝光**。v9 冻结后的历史评价搜索事件另见文末与 supplemental exposure ledger；已有一个额外 RR task_id 被确认可见，其余实际可见范围因原输出截断而为 `unknown`。未来干净确认必须排除已知 ID 并审计未知范围，不能据本轮固定选题范围作全局未曝光声明。
 
-## 当前完整统一轮次：v17，三十槽全部封存、二十九槽完整评分
+## 当前完整统一轮次：v18，三十槽全部封存、26槽完整评分
+
+五个campaign先统一注册，固定30槽全部终结封存；**26完整评分、4生成失败、0评价失败**。Direct 10/10完成、Initial-MAS 10/10完成、Native JIT 6/10完成。下表只用本轮全部固定来源，失败保持缺失值，旧轮较高成绩不替入。
+
+| Benchmark 与输入 | 槽 | Direct | Initial-MAS | Native JIT |
+|---|---:|---:|---:|---:|
+| IFEval strict prompt | 6 | 1.000000 | 1.000000 | 1.000000 |
+| IFBench loose prompt | 6 | 0.500000 | 1.000000 | `null` |
+| DSQA F1 / shared evidence | 6 | 0.466667 | 0.466667 | `null` |
+| RR native weighted / shared evidence | 3 | 0.312500 | 0.287500 | `null` |
+| DRB aggregate / shared evidence | 3 | 0.517241 | 0.448276 | 0.517241 |
+| WritingBench mean / 10 | 6 | 8.5 | 8.6 | 8.7 |
+
+六来源equal normalized failure-zero的**事后描述性macro**：Direct **0.6129510826**、Initial-MAS **0.6827660459**、Native JIT **0.3954661558**。本轮Initial-MAS宏均值高于两个baseline。它不是新增正式主指标，不证明所有benchmark都更好；具体胜负、缺失与真实观察0见完整库存。Baseline失败影响failure-zero宏均值，不能据此宣称已评分任务质量全面提高。
+
+IFEval / IFBench采用pinned author checker；其余四来源仍为同serving Exp模型诊断性judge，不是独立judge或official leaderboard。10道固定开发题包括已授权曝光的TEST题，temperature0.6单轮差值不能证明稳定提升或单项改动因果。相同上限下三方法实际算量不同。
+
+完整费用 **394模型调用 / 5,397,201tokens**，含生成 **322 / 5,200,435** 与评价 **72 / 196,766**；失败与组件调用均计费，美元费用`null`。新版实际唯一full suite **2,215 passed + 60 subtests / 448.16秒**，187 source compile通过。独立synthetic预检7调用 / 74,505tokens另计；源、证据、参数与checker身份绑定见v18附录。
+
+## 历史统一轮次：v17，三十槽全部封存、二十九槽完整评分
 
 同source / config的30槽先统一注册，五个campaign已全部保存sealed summaries、controller exit0；**29完整评分、1生成失败（Native JIT WritingBench433）、0评价失败**。Direct与Initial-MAS均10/10完成，Native JIT为9/10。下表只用v17本轮全部固定来源，旧版本的较高行不替入本轮，失败保持`null`和完整成本。
 
@@ -1826,3 +1845,188 @@ Initial-MAS由本轮预先登记的v1 body-loss guard保留initial，获得完�
 本轮runtime **`fbb842503a6b0a07ba5728f28d277a38defbe7661f98c68a257a09a946ecd146`**、runner **`2a9e9e26f5987b45062f3b970542880c7c58e8de6e557d17f7a289cf571b3afc`**在全部五注册与30槽期间保持冻结。最终实际一次full suite为 **2,092 passed + 60 subtests / 467.30秒（wrapper469.438秒）**，185 source compile / diff check通过；正式v5八文件、23 unique data / evidence / formal与14 unique checker / NLTK身份匹配。Exposure ledger更新为 **5 selected TEST IDs / 29 campaign references / 1 incidental legacy事件**，不增题，也不抹去已知额外历史ID和unknown可见范围。
 
 example仅代表v17已验证开发候选，实际差异仍只有五角色endpoint / model / response-pin的15个占位字段；library defaults、有限语法scope、unsupported参数fail-closed与revision-only penalty边界不变。此前v16的47-file发布审计属于已提交的旧身份，本轮须另按真实Git候选逐文件审查；`.runtime`、outputs、dataset及本机敏感helper永不加入发布。本轮文档与公开metadata工作为 **0 model API / 0生产和测试编辑 / 0 staging**，本节不对后续尚未登记或尚未封存的版本给出结果或final-clean结论。
+
+## v18 main源候选已转入：公开最低频次与单ATX标题保护，完整库存待封存
+
+v17已独立commit并push，父HEAD为 **`575a7cb8cc3a8172b4b0050cca069f0fb3dcc94d`**。v18隔离实现通过独立只读review及 **256 targeted / 12.79秒**，随后三文件按审阅SHA转入main，记录`.runtime/v18_main_transfer_receipt.json`。当前runtime为 **`47ead26692c3a264eed3794685b9c06d7a6536f7c56ee340ea0ea2f3951fd2b7`**，runner仍为 **`2a9e9e26f5987b45062f3b970542880c7c58e8de6e557d17f7a289cf571b3afc`**。main实际一次完整测试与真实synthetic预检随后完成，五组固定30槽注册已落盘；本轮benchmark数值仍待各组sealed，不把旧v17完整测试或结果当成v18验证。
+
+三文件为`jit_mas/public_refinement.py`（SHA256 `11a2bf72eaced5d87b094de9b40a59e2c944d270b02fb5dffa010e5d6d707067`）、新`jit_mas/public_literal_constraints.py`（`cc9cd64c56b32e22b03e6188f90230ef38b9fa0ed0f1c3263ffe1008ed4ebbf6`）和新`tests/jit_mas/test_public_literal_constraints.py`（`1412e12b38db231dabe3c213902b789cb04bdba9af37d7747bf5a0918f4270a5`）。变化只在guard的公开可判定保护、配套公开提示和合成行为测试，没有添加benchmark ID路由、私有criterion或参考答案。
+
+`.runtime/public_refinement_v18.config.json`字节SHA仍为 **`f83030961c1f9fe5bdda9da0775a72afeaee1f8444c5e0dea36a8f0c0394de48`**，与v17配置完全相同：没有新flag、frequency变化、温度变化、预算扩大或证据包修改。四生成角色0.6 / judge0、role frequency None、revision-only0.25、planning / public construction strict schema、2m token / 900 active seconds、null call caps、固定任务 / 证据 / checker规则保持原方案。example JSON也保留原有字节，只更新配套说明区分新源候选；它不是已完成的本轮注册或胜出配置推荐。
+
+### Guard v2的有限公开ASCII单词最低频次保护
+
+新compiler只接受原public question / constraints中有限、独立、正向的英文Use / Include指令：单个ASCII字母词、有显式数字最低出现次数，支持相同句中用and连接多项。指令词参数可以有引号；引文示例、否定、条件、部分计数scope、大小写限定及未支持的frequency family保守拒绝，**任一已识别但未支持的frequency family使整个frequency plan为UNKNOWN**，而非只保留容易的部分。这个scope探测是有限文本约定，不能保证覆盖全部自然语言歧义；不重写原任务，也不凭frequency未知状态选择candidate。
+
+计数遍历**完整decoded artifact**，不依赖有截断的public diagnostics词表。Original-case standalone exact-strict出现次数达到公开最低值才为 **PASS**；即使更宽的casefolded overlapping substring计数仍低于最低值才为 **FAIL**；其余为 **UNKNOWN**。Casefold strict计数仅作diagnostic，不独立决定PASS。词法单位包括Unicode字母数字 / underscore / combining marks及内部apostrophe / dash连接，不能靠在复合词或组合单位中抽取ASCII前缀证明strict pass。完整文本计数仍不区分语义与过程注释，不能证明稿件完成公开请求或整体内容正确。
+
+只有initial仍工程eligible、**全部compiled initial rules均PASS**、revision至少一项明确FAIL时，才保留唯一initial并记`explicit_public_literal_minimum_regression`；revision UNKNOWN不是FAIL，initial任一UNKNOWN也不能用于该选择。Audit保存原公共span、匿名可发布计数对应的完整内部规则、两候选hash和选择reason，private evaluator不进入编译或选择。文档只发布匿名counts / 类别 / hash，不复制已选benchmark的原文字面量或完整题面。
+
+### 新单ATX标题分支保持独立，未泛化扩大普通短文阈值
+
+新分支只识别**一个严格Markdown ATX标题、没有正文**的revision，并要求initial至少 **1,000非空白字符 / 3个punctuation-or-line chunks**、revision / initial非空白字符比例不超过 **0.1**。这是与既有短输出heuristic并列的分支，没有把原普通正文的100字符上限整体提高，也不接受任意短回复、普通标题或两行摘要的语义分类。
+
+有限、独立、正向的title / headline-only任务被识别后会抑制结构保留；未支持的only-output scope为UNKNOWN时只抑制新的单标题分支，既有v1短输出heuristic仍按原边界运行。两者都是heuristic而非author checker，有限scope可能漏识别，正确短revision可能被拒绝，101字符普通短文或两chunk正文也可能漏过旧分支。保留initial不证明所有显式或语义约束满足，尤其不能仅因过了工程执行schema就认证其内容正确。
+
+已有JSON / schema local失败保留、provider / review / budget / typed失败继续失败、projected或尚未完成typed construction初稿ineligible等边界不变。Public review与revision仍只有既定 **2模型调用**；编译和本地计数没有额外模型API、Judge调用、质量重采样或分数择优。所有raw失败、各组件调用及成本、两候选hash与最终选择仍完整保存。
+
+顶部最新完整统一表仍是v17，不预填本轮未封存的benchmark数值。Exposure ledger仍为 **5 selected TEST IDs / 29 campaign references / 1 legacy incident**；五个真实新注册的metadata已知，全部运行封存后再同步引用至34，不凭计划增加题目。新的publication审查按实际dirty路径准备为6项：三份source / test文件、实验文档、example MD与最终ledger；example JSON没有参数变化，字节保持已发布v17值，作为未改的配套配置核对，不能为计数而强行修改。当前不执行final privacy结论，不能复用v17的10-file发布审计。
+
+### v18 main单次完整测试、独立真实预检与五组注册
+
+`.runtime/final_v18_validation_baseline_runtime.json`与`.runtime/final_v18_test_metadata_summary_baseline_runtime.json`记录main **唯一一轮full suite：2,215 passed + 60 subtests / pytest448.16秒（wrapper450.157秒）、exit0**；**187 first-party Git source Python compile / diff check通过**。正式v5八文件、23份metadata / data / evidence、14份checker / NLTK及依赖版本身份一致，完整source集合before / after SHA256为 **`4fb7e92bd952b199e816b4b07b18d0ee38bea06bdfb270e3ddf31142e88e507c`**，87份测试文件集SHA256为 **`8e1c91c6f1b4bf06721eb6fca3ff1edb4bb2251277d5ac4883c6b1b91c779f23`**。UTF8测试日志SHA256 **`55ec1eb95158ed562841ebea5a3a8881d814d159562bf17af92fd81e586788d8`**。主工作区runtime / runner与上列冻结身份一致；这些是软件验证，不是benchmark分数。
+
+真实full-MAS synthetic预检`.runtime/full_mas_literal_guard_v18_20261004/preflight.json`已completed，`.runtime/v18_preflight_metadata.json`只读元数据记录 **7模型调用 / 74,505tokens / 31.172秒 / 美元费用null**。4次planning全部finish stop、requested strict schema、实际model pin一致，reconcile使用原有唯一contract correction一次，frozen team call caps为null。Guard为v2，两个匿名最低词频规则下限为 **4 / 5**，initial与revision的exact-strict / casefold-strict / broad计数均分别 **8 / 8 / 8**与 **7 / 7 / 7**，全部PASS，选择revision；没有触发保留initial。Draft / revision / selected hashes和原始调用审计保留，没有author checker、私有评分或benchmark成绩。这个synthetic只证明该路径运行成功，**7调用 / 74,505tokens独立计费，不加入后续30 benchmark槽**，也不证明本轮任务全部满足。
+
+五个真实registration metadata已核对共 **30 fixed generation slots**，全部recorded source为runtime **`47ead266…`** / runner **`2a9e9e26…`**，parsed配置canonical SHA256一致为 **`e828bc174b3b7f1bcf3ddc2aafe2b35b58ab98bb0b09e2dec2dcc4534a85c709`**，与v17相同。Controller执行流程为先注册全部五组，再按既定顺序运行；每组仍在三臂全部生成终态封存后评分。表内只记录已存在的注册身份，结果等封存后追加。
+
+| v18 campaign | 固定来源 / knowledge mode | generation slots | registration hash（结果不含在本表） |
+|---|---|---:|---|
+| `exposed_v18` | IFEval2 / IFBench2，exposed TEST / closed-book | 12 | `30cc38f8b759ae434c3efe77cab5c835818422b48874812965a6180d54dd954b` |
+| `dsqa_evidence_v18` | DSQA2，source EVO / 同两份frozen evidence | 6 | `41ef677d3e6d9129895537554e02529303227594e5284b52ff06160961aebd12` |
+| `rr_evidence_v18` | RR1，source EVO / 原shared evidence | 3 | `c4a68e2aac5a8cfcee765b91a2ff211d2d0ca430f51086b26ec33f14ace70d56` |
+| `drb_evidence_v18` | DRB1，exposed TEST / 原五份官方证据 | 3 | `dcb9d35f05ad0d4605cef5ae75fcf09884425829a308d9d54b66a3bda21a3318` |
+| `writing_v18` | WB2，source EVO / closed-book | 6 | `fd71ece821a79976ef3f0a76a7b2ca06316cf090362ebe9aad071c788a19809a` |
+
+固定源 / task顺序、原pack、模型设置、2m900预算与scoring规则仍同v17，差别是本节明确的v2源实现；parent campaign为同来源v17。当前各benchmark未按本节更新数值或完整macro，全部失败、真实观察0、guard保留与所有成本须随实际sealed summaries一并报出，不能只摘保留成功案例。
+
+`.runtime/final_v18_registration_binding_baseline_runtime.json`（SHA256 `daa82ada781f44aa68e0426b6e434bd054a6b6ddb83310b7f7471c5873341efa`）随后核对五组30槽与parent v17的selected / source / pack / checker / model parameters / budgets / config / scoring一致，顶层差别为code与新iteration登记metadata。完整测试报告补入该binding链接，没有重跑测试；main runtime、runner、raw config及模型配置身份保持上述值。这是注册和软件身份核对，不是已封存答案或成绩证明。
+
+## v18首组指令实验已封存：Initial-MAS四题满分，完整六源仍待后续四组
+
+`outputs/development_pilot_20261004_exposed_v18/summary.json` 已sealed，注册 **`30cc38f8…`**。原12槽 **11 submitted / completed，1 Native JIT generation failed，0 evaluation failures**，`comparison_complete=false`。Initial-MAS四题生成与评分全部成功；IFEval使用pinned author strict prompt-level accuracy，IFBench使用pinned loose prompt-level accuracy，secondary指标不替换主指标。
+
+| 固定任务prompt accuracy | Direct | Initial-MAS | Native JIT |
+|---|---:|---:|---|
+| IFEval1203 | 1 | 1 | 1 |
+| IFEval1246 | 1 | 1 | 1 |
+| IFBench13 | 0 | 1 | 0 |
+| IFBench22 | 1 | 1 | `null` / `AttributeError` |
+| IFEval两题完整均值 | 1.0 | 1.0 | 1.0 |
+| IFBench两题完整均值 | 0.5 | 1.0 | `null` |
+| IFBench normalized failure-zero | 0.5 | 1.0 | 0.0 |
+| 本组两来源等权normalized macro | 0.75 | 1.0 | 0.5 |
+
+IFEval1203三臂instruction secondary均为 **2/2**，1246均 **1/1**；IFBench13为Direct **0/1**、Initial-MAS **1/1**、Native **0/1**，22为Direct与Initial-MAS各 **2/2**，Native失败时secondary保持`null`。Native IFBench13的0是完整提交的观察0分，22的失败仍是缺失分数；failure-zero统计没有把失败冒称真实评分0，也没有给Native计算一个完整IFBench均值。
+
+| 方法 | 完整提交 / 槽 | 生成调用 / tokens | 生成 / checker活动秒 | input / output tokens |
+|---|---|---|---|---|
+| Direct | 4 / 4 | 4 / 2,741 | 14.281 / 3.578 | 901 / 1,840 |
+| Initial-MAS | 4 / 4 | 28 / 282,949 | 148.125 / 3.814 | 242,787 / 40,162 |
+| Native JIT | 3 / 4 | 11 / 104,687 | 97.844 / 2.469 | 76,848 / 27,839 |
+
+生成共 **43模型调用 / 390,377tokens / 260.250活动秒**；pinned checkers共 **0模型API / 0tokens / 9.861活动秒**；全部 **320,536 input / 69,841 output tokens**，失败调用已计入，unknown / estimated / queue idle为0，美元费用`null`。同配置独立synthetic预检7调用 / 74,505tokens未混入此账。
+
+Initial-MAS IFEval完整均值从v17的0.5变为本轮1.0，IFBench仍为1.0；本组macro高于Direct与Native failure-zero统计，IFEval则与两个baseline持平。这个局部观察不能提前变成完整六源结论，也不能仅凭分数推断v2保留分支被触发或单项保护的因果；具体候选选择、匿名三值计数和hash关系等整批sealed后的只读公开receipt汇总。当前顶部仍保留完整v17，ledger仍29，后续四组结果继续按完整固定库存报出。
+
+Native IFBench22的公开生成代码随后做了只读AST接口核查，工件`.runtime/v18_native_ifb22_interface_diagnostic_baseline_runtime.json`（SHA256 `41a7997faffdcb916be8419966dbf5c4d5684b491882062f2df1927e847a105d`）。绑定harness的四份生成Python文件hash均一致；生成action在`select_tools()`返回的框架`ToolSelection`上调用了不存在的`get_skills_prompt()`，而该方法属于tool policy，生成policy自身已经实现。公开框架类型与loader注入没有显示adapter错误。这属于Native生成代码接口误用，保留为方法生成/执行失败；没有给返回类型补方法或重试此槽。失败预算实记 **1模型调用 / 20,249tokens / 0执行模型调用 / 0工具调用**，已包含于上表Native全部费用，不另计为隐藏重试。核查没有import或execute生成代码、调用API、读取评分正文或改动source与tests。
+
+## v18统一三十槽最终封存：完整任务、费用与公开候选审计
+
+本节由五份sealed summary、registration metadata与公开actor receipt投影生成，没有读取评分正文、参考答案或private rubric。所有30固定槽均保留，失败不替换；末次统一运行controller的exit状态另由运行日志核对。
+
+| Benchmark | task ID | 方法 | native score | normalized score | generation / evaluation |
+|---|---|---|---:|---:|---|
+| ifeval | ifeval:1203 | Direct | 1.000000 | 1.000000 | submitted / completed |
+| ifeval | ifeval:1203 | Initial-MAS | 1.000000 | 1.000000 | submitted / completed |
+| ifeval | ifeval:1203 | Native JIT | 1.000000 | 1.000000 | submitted / completed |
+| ifeval | ifeval:1246 | Direct | 1.000000 | 1.000000 | submitted / completed |
+| ifeval | ifeval:1246 | Initial-MAS | 1.000000 | 1.000000 | submitted / completed |
+| ifeval | ifeval:1246 | Native JIT | 1.000000 | 1.000000 | submitted / completed |
+| ifbench | ifbench:13 | Direct | 0.000000 | 0.000000 | submitted / completed |
+| ifbench | ifbench:13 | Initial-MAS | 1.000000 | 1.000000 | submitted / completed |
+| ifbench | ifbench:13 | Native JIT | 0.000000 | 0.000000 | submitted / completed |
+| ifbench | ifbench:22 | Direct | 1.000000 | 1.000000 | submitted / completed |
+| ifbench | ifbench:22 | Initial-MAS | 1.000000 | 1.000000 | submitted / completed |
+| ifbench | ifbench:22 | Native JIT | `null` | `null` | failed / submission_failed |
+| deepsearchqa | deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c | Direct | 0.933333 | 0.933333 | submitted / completed |
+| deepsearchqa | deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c | Initial-MAS | 0.933333 | 0.933333 | submitted / completed |
+| deepsearchqa | deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c | Native JIT | `null` | `null` | failed / submission_failed |
+| deepsearchqa | deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c | Direct | 0.000000 | 0.000000 | submitted / completed |
+| deepsearchqa | deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c | Initial-MAS | 0.000000 | 0.000000 | submitted / completed |
+| deepsearchqa | deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c | Native JIT | `null` | `null` | failed / submission_failed |
+| researchrubrics | 6847465956a0f6376a6054a7 | Direct | 0.312500 | 0.360465 | submitted / completed |
+| researchrubrics | 6847465956a0f6376a6054a7 | Initial-MAS | 0.287500 | 0.337209 | submitted / completed |
+| researchrubrics | 6847465956a0f6376a6054a7 | Native JIT | `null` | `null` | failed / submission_failed |
+| deepresearch_bench_ii | deepresearch_bench_ii:1 | Direct | 0.517241 | 0.517241 | submitted / completed |
+| deepresearch_bench_ii | deepresearch_bench_ii:1 | Initial-MAS | 0.448276 | 0.448276 | submitted / completed |
+| deepresearch_bench_ii | deepresearch_bench_ii:1 | Native JIT | 0.517241 | 0.517241 | submitted / completed |
+| writingbench | writingbench:335 | Direct | 8.000000 | 0.777778 | submitted / completed |
+| writingbench | writingbench:335 | Initial-MAS | 8.200000 | 0.800000 | submitted / completed |
+| writingbench | writingbench:335 | Native JIT | 8.600000 | 0.844444 | submitted / completed |
+| writingbench | writingbench:433 | Direct | 9.000000 | 0.888889 | submitted / completed |
+| writingbench | writingbench:433 | Initial-MAS | 9.000000 | 0.888889 | submitted / completed |
+| writingbench | writingbench:433 | Native JIT | 8.800000 | 0.866667 | submitted / completed |
+
+| 方法 | 生成 calls / tokens | 评价 calls / tokens | 活动秒 generation / evaluation | input / output tokens |
+|---|---|---|---|---|
+| Direct | 10 / 34,611 | 34 / 82,409 | 63.781 / 72.983 | 88,657 / 28,363 |
+| Initial-MAS | 77 / 1,181,727 | 34 / 90,043 | 552.875 / 71.813 | 1,085,726 / 186,044 |
+| Native JIT | 235 / 3,984,097 | 4 / 24,314 | 826.157 / 21.984 | 3,789,677 / 218,734 |
+
+全账 **394模型调用 / 5,397,201tokens**；生成 **322 / 5,200,435**、评价 **72 / 196,766**。unknown slots=0，estimated attempts=0，queue idle=0.000秒，美元费用保持`null`。独立synthetic和软件测试不计入30槽。
+
+失败库存：
+
+- ifbench / ifbench:22 / Native JIT：generation=AttributeError，evaluation=none。native分数缺失，failure-zero仅是保守汇总规则，不冒称已评分0。
+- deepsearchqa / deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c / Native JIT：generation=RuntimeError，evaluation=none。native分数缺失，failure-zero仅是保守汇总规则，不冒称已评分0。
+- deepsearchqa / deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c / Native JIT：generation=RuntimeError，evaluation=none。native分数缺失，failure-zero仅是保守汇总规则，不冒称已评分0。
+- researchrubrics / 6847465956a0f6376a6054a7 / Native JIT：generation=AttributeError，evaluation=none。native分数缺失，failure-zero仅是保守汇总规则，不冒称已评分0。
+
+| Benchmark | Direct normalized failure-zero | Initial-MAS | Native JIT |
+|---|---:|---:|---:|
+| IFEval strict prompt | 1.0000000000 | 1.0000000000 | 1.0000000000 |
+| IFBench loose prompt | 0.5000000000 | 1.0000000000 | 0.0000000000 |
+| DSQA F1 / shared evidence | 0.4666666667 | 0.4666666667 | 0.0000000000 |
+| RR native weighted / shared evidence | 0.3604651163 | 0.3372093023 | 0.0000000000 |
+| DRB aggregate / shared evidence | 0.5172413793 | 0.4482758621 | 0.5172413793 |
+| WritingBench mean / 10 | 0.8333333333 | 0.8444444444 | 0.8555555556 |
+
+这些normalized值保持各注册bounds；RR真实观察0与缺失分数不同，负分不裁剪。完整均值遇到任一未评分槽为`null`。六来源macro为事后描述，不是事前新增的正式主指标；两个instruction来源可以分别看各原主指标。
+
+| 同题两方法都完整评分的比较 | ours wins | ties | losses | 未成对评分（不计为胜出） |
+|---|---:|---:|---:|---:|
+| Initial-MAS vs Direct | 2 | 6 | 2 | 0 |
+| Initial-MAS vs Native JIT | 2 | 2 | 2 | 4 |
+
+上表只比较同题已评分normalized值，以10道原任务为固定库存；缺失pair单独记录，不当作质量胜出，不替代原benchmark指标或六来源macro。
+
+公开10项actor投影`.runtime/v18_ours_public_receipts_baseline_runtime.json`，SHA256 `4653987ba13fe448ac5362b289107e24f469967e160b1c057280e7d4b0817815`。读取的是公开执行与refinement审计，题面、原答案、literal词与span不在本节复制。
+
+| 公开候选审计指标 | 全部10槽实际汇总 |
+|---|---|
+| all_10_ours_terminal | `true` |
+| all_code_matches_registration | `true` |
+| all_saved_teams_uncapped | `true` |
+| selected_candidate_counts | `{"initial_draft": 2, "revision": 8}` |
+| selection_reason_counts | `{"catastrophic_revision_body_loss": 1, "markdown_heading_only_large_draft_body_loss": 1, "validated_revision_without_catastrophic_body_loss": 8}` |
+| refinement_status_counts | `{"completed": 10}` |
+| guard_version_counts | `{"public-artifact-regression-guard-v2": 10}` |
+| all_selected_submission_execution_and_audit_hashes_match | `true` |
+| total_generation_tokens | `1181727` |
+| total_generation_model_calls | `77` |
+| total_planning_calls | `40` |
+| total_execution_model_calls | `17` |
+| total_refinement_calls | `20` |
+| literal_regression_selections | `0` |
+| heading_only_selections | `1` |
+| local_invalid_revision_selections | `0` |
+
+| task ID | refinement status | selected | selection reason |
+|---|---|---|---|
+| ifeval:1203 | completed | revision | validated_revision_without_catastrophic_body_loss |
+| ifeval:1246 | completed | revision | validated_revision_without_catastrophic_body_loss |
+| ifbench:13 | completed | revision | validated_revision_without_catastrophic_body_loss |
+| ifbench:22 | completed | revision | validated_revision_without_catastrophic_body_loss |
+| deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c | completed | revision | validated_revision_without_catastrophic_body_loss |
+| deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c | completed | revision | validated_revision_without_catastrophic_body_loss |
+| 6847465956a0f6376a6054a7 | completed | revision | validated_revision_without_catastrophic_body_loss |
+| deepresearch_bench_ii:1 | completed | initial_draft | markdown_heading_only_large_draft_body_loss |
+| writingbench:335 | completed | initial_draft | catastrophic_revision_body_loss |
+| writingbench:433 | completed | revision | validated_revision_without_catastrophic_body_loss |
+
+候选选择在评分前完成，不根据judge分数选稿；计数或结构guard只是有限的公开工程保护，不是语义正确证明。实际未触发的分支不能据分数改善解释为已发生救回。若存在component failure，原response、异常与预算仍保留，不能声称全部组件调用成功。
+
+曝光台账同步为 **5 selected TEST IDs / 34 campaign references / 1 legacy incident**，只新增本轮五个实际注册引用；已知额外历史RR ID和unknown可见范围仍保留，不作全局只有五题曝光或剩余历史TEST干净声明。正式v5八文件、原共同证据和模型配置不修改。
+
+后续独立版本的公开诊断设计尚未实现、未登记、没有成绩：筛选任务应把原题hard conditions与inferred rubric建议分离，并用原始观测、单位、scope重算数值比较，未知证据保持UNKNOWN；写作任务可对已验证空issues且纯CR/LF删除造成的段落退化保留initial，但单行/代码等公开布局转换必须排除，近似字数不变成隐含精确CJK阈值。这两项不能引用为当前v18已经实现或评分提升原因。
