@@ -1,0 +1,880 @@
+{
+  "created_at": "2026-10-03T06:24:08.819593+00:00",
+  "experience_version": 0,
+  "experience_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+  "R_global": {
+    "schema_version": "1.0",
+    "rubrics": [
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r1",
+        "requirement": "Structure the argument by examining social media's impact across key domains of society (e.g., communication, mental health, politics, economy, education, social cohesion).",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Domain-by-domain structure"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r2",
+        "requirement": "For each domain, evaluate both positive and negative effects.",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Balanced treatment per domain"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r3",
+        "requirement": "Use evidence from academic studies, journalist reports, and case studies.",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Cited studies/reports/cases"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r4",
+        "requirement": "Construct a definitive judgment that weighs the impacts against each other.",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Explicit overall verdict with reasoning"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r5",
+        "requirement": "Ensure the final judgment is supported by the domain analyses and not merely asserted.",
+        "source": "inferred",
+        "importance": 0.9,
+        "confidence": 0.8,
+        "expected_evidence": [
+          "Coherent link between analysis and verdict"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r6",
+        "requirement": "Maintain a balanced, evidence-based tone; avoid unsupported claims or overgeneralization.",
+        "source": "inferred",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Nuanced language, caveats"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r7",
+        "requirement": "Clearly define the scope and criteria used for the overall judgment (e.g., weighting by severity, prevalence, reversibility).",
+        "source": "inferred",
+        "importance": 0.7,
+        "confidence": 0.6,
+        "expected_evidence": [
+          "Explicit weighting criteria"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      }
+    ],
+    "edges": [
+      {
+        "schema_version": "1.0",
+        "source": "r1",
+        "target": "r2",
+        "relation": "prerequisite",
+        "rationale": "Domain structure must be established before balanced evaluation within each domain.",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r2",
+        "target": "r4",
+        "relation": "prerequisite",
+        "rationale": "Balanced domain evaluations provide the evidence base for the overall judgment.",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r3",
+        "target": "r2",
+        "relation": "support",
+        "rationale": "Evidence supports the positive/negative evaluations.",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r4",
+        "target": "r5",
+        "relation": "support",
+        "rationale": "A definitive judgment must be supported by prior analysis.",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r7",
+        "target": "r4",
+        "relation": "support",
+        "rationale": "Explicit weighting criteria make the judgment defensible.",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r6",
+        "target": "r5",
+        "relation": "support",
+        "rationale": "Balanced tone supports credible synthesis.",
+        "uncertainty": 0.3,
+        "evidence": []
+      }
+    ]
+  },
+  "R_planned": {
+    "schema_version": "1.0",
+    "rubrics": [
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r1",
+        "requirement": "Structure the argument by examining social media's impact across key domains of society (e.g., communication, mental health, politics, economy, education, social cohesion).",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Domain-by-domain structure"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r2",
+        "requirement": "For each domain, evaluate both positive and negative effects.",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Balanced treatment per domain"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r3",
+        "requirement": "Use evidence from academic studies, journalist reports, and case studies.",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Cited studies/reports/cases"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r4",
+        "requirement": "Construct a definitive judgment that weighs the impacts against each other.",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Explicit overall verdict with reasoning"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r5",
+        "requirement": "Ensure the final judgment is supported by the domain analyses and not merely asserted.",
+        "source": "inferred",
+        "importance": 0.9,
+        "confidence": 0.8,
+        "expected_evidence": [
+          "Coherent link between analysis and verdict"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r6",
+        "requirement": "Maintain a balanced, evidence-based tone; avoid unsupported claims or overgeneralization.",
+        "source": "inferred",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Nuanced language, caveats"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r7",
+        "requirement": "Clearly define the scope and criteria used for the overall judgment (e.g., weighting by severity, prevalence, reversibility).",
+        "source": "inferred",
+        "importance": 0.7,
+        "confidence": 0.6,
+        "expected_evidence": [
+          "Explicit weighting criteria"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r8",
+        "requirement": "For each domain, provide at least one concrete remembered example or case study (e.g., Arab Spring, Cambridge Analytica, #MeToo, vaccine misinformation) with a clear statement of what it illustrates and its limitations as evidence.",
+        "source": "inferred",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Named case per domain with illustrative role and caveat"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r9",
+        "requirement": "Distinguish between effects that are well-supported by multiple remembered studies and those that are contested or context-dependent; label confidence per claim.",
+        "source": "inferred",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Confidence labels (high/medium/low) per key claim"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r10",
+        "requirement": "Include a brief introduction that frames the debate and states the scope of the analysis (domains covered, time period, and the nature of the evidence used).",
+        "source": "inferred",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Introductory paragraph with scope statement"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r11",
+        "requirement": "Include a conclusion that restates the definitive judgment and summarizes the key reasons, without introducing new evidence or arguments.",
+        "source": "inferred",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Concluding paragraph that synthesizes the verdict"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      }
+    ],
+    "edges": [
+      {
+        "schema_version": "1.0",
+        "source": "r1",
+        "target": "r2",
+        "relation": "prerequisite",
+        "rationale": "Domain structure must be established before balanced evaluation within each domain.",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r2",
+        "target": "r4",
+        "relation": "prerequisite",
+        "rationale": "Balanced domain evaluations provide the evidence base for the overall judgment.",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r3",
+        "target": "r2",
+        "relation": "support",
+        "rationale": "Evidence supports the positive/negative evaluations.",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r4",
+        "target": "r5",
+        "relation": "support",
+        "rationale": "A definitive judgment must be supported by prior analysis.",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r7",
+        "target": "r4",
+        "relation": "support",
+        "rationale": "Explicit weighting criteria make the judgment defensible.",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r6",
+        "target": "r5",
+        "relation": "support",
+        "rationale": "Balanced tone supports credible synthesis.",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r8",
+        "target": "r2",
+        "relation": "support",
+        "rationale": "Concrete cases illustrate and test the balanced effects.",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r9",
+        "target": "r6",
+        "relation": "support",
+        "rationale": "Confidence labels support balanced, evidence-based tone.",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r10",
+        "target": "r1",
+        "relation": "prerequisite",
+        "rationale": "Scope framing precedes domain structure.",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r11",
+        "target": "r4",
+        "relation": "support",
+        "rationale": "Conclusion restates the verdict without new evidence.",
+        "uncertainty": 0.3,
+        "evidence": []
+      }
+    ]
+  },
+  "TeamSpec": {
+    "schema_version": "1.0",
+    "execution_mode": "iterative_shared_ledger",
+    "agents": [
+      {
+        "schema_version": "1.0",
+        "agent_id": "analyst_1",
+        "role": "Analyst",
+        "capability": "analysis, comparison, explanation, reasoning",
+        "rubric_ids": [
+          "r1",
+          "r2",
+          "r3",
+          "r7",
+          "r8",
+          "r9"
+        ],
+        "responsibilities": [
+          "Identify key domains of society affected by social media (communication, mental health, politics, economy, education, social cohesion).",
+          "For each domain, compile positive and negative effects with remembered evidence (academic studies, journalist reports, case studies), including at least one concrete case study per domain with its illustrative role and limitations.",
+          "Define explicit weighting criteria for the overall judgment (severity, prevalence, reversibility, distributional equity) and explain how each applies.",
+          "Label confidence (high/medium/low) for each key claim, distinguishing well-supported from contested findings.",
+          "Publish a compact evidence ledger (approx. 1500-2500 words) with domain-by-domain findings, remembered citations marked as unverified, and uncertainties."
+        ],
+        "tools": [],
+        "depends_on": [],
+        "max_calls": null,
+        "max_tokens": 8192,
+        "checkpoints": [
+          "Verify that each domain includes both positive and negative effects with distinct evidence.",
+          "Verify that at least one concrete case study is included per domain with a caveat about its limitations.",
+          "Verify that weighting criteria are explicit and defined (severity, prevalence, reversibility, distributional equity).",
+          "Verify that confidence labels are applied to key claims and that remembered citations are marked as unverified."
+        ],
+        "pool_agent_id": "analyst",
+        "pool_agent_version": 1,
+        "task_prompt": "Analyze social media's impact across key domains (communication, mental health, politics, economy, education, social cohesion). For each domain, provide both positive and negative effects with remembered evidence from academic studies, journalist reports, and case studies. Include at least one concrete case study per domain (e.g., Arab Spring, Cambridge Analytica, #MeToo, vaccine misinformation) with its illustrative role and limitations. Define explicit weighting criteria (severity, prevalence, reversibility, distributional equity) and explain how each applies. Label confidence (high/medium/low) for each key claim. Publish a compact evidence ledger with facts, remembered citations marked as unverified, and uncertainties. Do not attempt external retrieval; use model general knowledge only.",
+        "selected_skills": [
+          "tradeoff_analysis"
+        ],
+        "reasoning_strategy": "For each domain, I will: (1) list positive and negative effects; (2) attach remembered sources with confidence labels; (3) identify one concrete case; (4) note scope/context limitations. I will then define weighting criteria and apply them provisionally to show how a verdict could be reached, leaving the final synthesis to writer_1. I will distinguish explicit public requirements (domain structure, balanced effects, evidence, definitive judgment) from inferred additions (r8, r9).",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "communication": "Publish a single compact evidence ledger to the shared ledger. Do not request peer clarification unless a critical ambiguity arises; the task is self-contained. I will not use tools (task.tools is empty). I will mark all remembered citations as unverified and provide source_references=[] and evidence_spans=[] per knowledge policy."
+      },
+      {
+        "schema_version": "1.0",
+        "agent_id": "critic_1",
+        "role": "Critic",
+        "capability": "review, verification, criticism",
+        "rubric_ids": [
+          "r5",
+          "r6",
+          "r8",
+          "r9"
+        ],
+        "responsibilities": [
+          "Review the analyst's evidence ledger for balance, unsupported claims, and coherence.",
+          "Check that each domain's positive and negative effects are supported by distinct, attributable evidence rather than the same source being used to support both sides without differentiation.",
+          "Verify that the weighting criteria (severity, prevalence, reversibility, distributional equity) are applied consistently across all domains and that the final judgment explicitly states how each criterion was weighed.",
+          "Check that confidence labels are used appropriately and that no unsupported claims or overgeneralizations remain.",
+          "Publish a concise review (approx. 500-800 words) with specific defects and supported corrections, not a blanket approval."
+        ],
+        "tools": [],
+        "depends_on": [
+          "analyst_1"
+        ],
+        "max_calls": null,
+        "max_tokens": 4096,
+        "checkpoints": [
+          "Verify that each domain analysis is balanced with distinct evidence for positive and negative effects.",
+          "Verify that the weighting criteria are explicit, defensible, and applied consistently across domains.",
+          "Verify that confidence labels are used appropriately and that no unsupported claims or overgeneralizations remain.",
+          "Verify that at least one concrete case study is included per domain with its limitations noted."
+        ],
+        "pool_agent_id": "critic",
+        "pool_agent_version": 1,
+        "task_prompt": "Review the analyst's evidence ledger for balance, unsupported claims, and coherence. Check that each domain's positive and negative effects are supported by distinct evidence, that the weighting criteria are applied consistently, and that confidence labels are used appropriately. Identify specific defects and propose supported corrections. Do not rewrite the full answer; focus on consequential issues that would affect the final judgment.",
+        "selected_skills": [
+          "claim_check"
+        ],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty. For each domain, independently check whether the positive and negative effects are supported by distinct evidence and whether the weighting criteria are applied consistently. Use counterexamples or alternative explanations to test consequential claims.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "communication": "Publish a concise review with specific defects and supported corrections. Flag any missing domains or evidence gaps explicitly. Do not rewrite the full answer; focus on consequential issues that would affect the final judgment."
+      },
+      {
+        "schema_version": "1.0",
+        "agent_id": "writer_1",
+        "role": "Writer",
+        "capability": "writing, synthesis, creative-writing",
+        "rubric_ids": [
+          "r1",
+          "r2",
+          "r3",
+          "r4",
+          "r5",
+          "r6",
+          "r7",
+          "r8",
+          "r9",
+          "r10",
+          "r11"
+        ],
+        "responsibilities": [
+          "Synthesize the analyst's evidence ledger and critic's review into a final structured essay.",
+          "Include a brief introduction that frames the debate and states the scope of the analysis (domains covered, time period, and the nature of the evidence used).",
+          "Cover all key domains with balanced positive/negative effects, evidence, and at least one concrete case study per domain with its limitations.",
+          "Construct a definitive judgment with explicit weighting criteria (severity, prevalence, reversibility, distributional equity) and support it from the domain analyses.",
+          "Include a conclusion that restates the definitive judgment and summarizes the key reasons, without introducing new evidence or arguments.",
+          "Ensure the final deliverable is complete, coherent, and free of contradictions or unfinished sentences.",
+          "Mark all remembered citations as unverified and note the limitation of no external retrieval in the introduction or methodology note."
+        ],
+        "tools": [],
+        "depends_on": [
+          "analyst_1",
+          "critic_1"
+        ],
+        "max_calls": null,
+        "max_tokens": 12288,
+        "checkpoints": [
+          "Verify that all explicit requirements are covered (domain structure, balanced effects, evidence, definitive judgment).",
+          "Verify that the final judgment follows from the domain analyses and is supported by explicit weighting criteria.",
+          "Verify that the introduction frames the debate and states the scope, and the conclusion restates the verdict without new evidence.",
+          "Verify that the essay is complete, polished, and free of contradictions or unfinished sentences."
+        ],
+        "pool_agent_id": "writer",
+        "pool_agent_version": 1,
+        "task_prompt": "Write the final essay on social media's overall impact, structured by domains (communication, mental health, politics, economy, education, social cohesion), with balanced positive/negative effects and evidence. Include a brief introduction framing the debate and scope, and a conclusion restating the verdict. Construct a definitive judgment with explicit weighting criteria (severity, prevalence, reversibility, distributional equity) and support it from the domain analyses. Use the analyst's evidence ledger and critic's review. Do not invent sources; use remembered citations with appropriate caveats and mark them as unverified.",
+        "selected_skills": [
+          "synthesis"
+        ],
+        "reasoning_strategy": "I will synthesize the analyst's evidence ledger and critic's review into a coherent essay, preserving useful facts and citations while clearly marking them as remembered and unverified. I will ensure the definitive judgment follows from the domain analyses and is supported by explicit weighting criteria. I will check for contradictions, duplicate sections, and unfinished sentences before finalizing.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "communication": "I will publish the final essay as my terminal answer, incorporating the analyst's evidence and critic's corrections. I will note any unresolved gaps or limitations in the essay's methodology section."
+      }
+    ],
+    "synthesizer_id": "writer_1",
+    "coverage": {
+      "r1": [
+        "analyst_1",
+        "writer_1"
+      ],
+      "r2": [
+        "analyst_1",
+        "writer_1"
+      ],
+      "r3": [
+        "analyst_1",
+        "writer_1"
+      ],
+      "r4": [
+        "writer_1"
+      ],
+      "r5": [
+        "critic_1",
+        "writer_1"
+      ],
+      "r6": [
+        "critic_1",
+        "writer_1"
+      ],
+      "r7": [
+        "analyst_1",
+        "writer_1"
+      ],
+      "r8": [
+        "analyst_1",
+        "critic_1",
+        "writer_1"
+      ],
+      "r9": [
+        "analyst_1",
+        "critic_1",
+        "writer_1"
+      ],
+      "r10": [
+        "writer_1"
+      ],
+      "r11": [
+        "writer_1"
+      ]
+    },
+    "primary": {
+      "r1": "analyst_1",
+      "r2": "analyst_1",
+      "r3": "analyst_1",
+      "r4": "writer_1",
+      "r5": "critic_1",
+      "r6": "critic_1",
+      "r7": "analyst_1",
+      "r8": "analyst_1",
+      "r9": "analyst_1",
+      "r10": "writer_1",
+      "r11": "writer_1"
+    },
+    "reviewers": {
+      "r1": [],
+      "r2": [],
+      "r3": [],
+      "r4": [],
+      "r5": [
+        "writer_1"
+      ],
+      "r6": [
+        "writer_1"
+      ],
+      "r7": [],
+      "r8": [
+        "critic_1"
+      ],
+      "r9": [
+        "critic_1"
+      ],
+      "r10": [],
+      "r11": []
+    },
+    "selection_rationale": "Reconciled global draft with local plans. Merged r8 and r9 from analyst and critic into unified rubrics: r8 (concrete case per domain) and r9 (confidence labels) now cover both evidence differentiation and consistent weighting application. Added r10 (introduction with scope) and r11 (conclusion restating verdict) from writer's local plan. Elevated r7 importance to 1.0 and confidence to 0.9 as it is essential to the task's core requirement of a definitive judgment. Rejected critic's proposal to add separate r8/r9 for evidence differentiation and weighting consistency because these are already covered by the merged r8/r9; the critic's review responsibilities now explicitly include checking these aspects. Rejected writer's proposal to add r8/r9 for introduction/conclusion as separate rubrics because they are now r10/r11. The final topology is analyst -> critic -> writer, with writer as synthesizer. The critic reviews the analyst's ledger (r5, r6, r8, r9) and the writer depends on both analyst and critic. No reviewer is assigned to the writer's final output because the writer is the terminal synthesizer; self-checks are in the writer's checkpoints. All agents use model general knowledge only; no external retrieval is available.",
+    "termination": "All required artifacts and final synthesis submitted",
+    "max_parallel": 2,
+    "total_max_calls": null,
+    "budget_plan": {
+      "schema_version": "1.0",
+      "agents": [
+        {
+          "schema_version": "1.0",
+          "agent_id": "analyst_1",
+          "expected_model_calls": 1,
+          "expected_input_tokens": 2000,
+          "expected_output_tokens": 3000,
+          "expected_tool_calls": 0,
+          "expected_communication_bytes": 12000,
+          "rationale": "One call to produce the evidence ledger. Input includes task text and rubric context. Output is the compact ledger (approx. 1500-2500 words) plus JSON structure. No tools available."
+        },
+        {
+          "schema_version": "1.0",
+          "agent_id": "critic_1",
+          "expected_model_calls": 1,
+          "expected_input_tokens": 3500,
+          "expected_output_tokens": 1000,
+          "expected_tool_calls": 0,
+          "expected_communication_bytes": 4000,
+          "rationale": "One call to review the analyst's ledger. Input includes the analyst's published ledger. Output is a concise review (approx. 500-800 words) plus checklist. No tools available."
+        },
+        {
+          "schema_version": "1.0",
+          "agent_id": "writer_1",
+          "expected_model_calls": 1,
+          "expected_input_tokens": 5000,
+          "expected_output_tokens": 6000,
+          "expected_tool_calls": 0,
+          "expected_communication_bytes": 24000,
+          "rationale": "One call to synthesize the final essay. Input includes the analyst's ledger and critic's review. Output is the complete essay (approx. 1500-2500 words) plus JSON structure. No tools available."
+        }
+      ],
+      "reserved_future_tokens": 5000,
+      "reserved_future_model_calls": 0,
+      "quality_cost_tradeoff": "The team uses three agents to ensure balanced analysis, critical review, and coherent synthesis. The analyst provides the evidence base, the critic checks for balance and consistency, and the writer synthesizes the final essay. This adds moderate token cost but improves quality by catching defects before final synthesis. The writer's max_tokens (12288) is sufficient for the full essay plus JSON structure. No external tools are used, so no tool cost.",
+      "stopping_policy": "Stop when the writer has produced the final essay that covers all explicit requirements (domain structure, balanced effects, evidence, definitive judgment) and incorporates the critic's corrections. If the writer's output exceeds the token budget, trim non-essential detail while preserving the core analysis and verdict. Do not continue beyond the writer's single call unless a critical defect is identified that requires revision."
+    }
+  },
+  "AgentPool": {
+    "schema_version": "1.0",
+    "version": 0,
+    "profiles": [
+      {
+        "schema_version": "1.0",
+        "pool_agent_id": "writer",
+        "version": 1,
+        "role": "Writer",
+        "capabilities": [
+          "writing",
+          "synthesis",
+          "creative-writing"
+        ],
+        "prompt": "Build a coherent deliverable from the public task and observed evidence.",
+        "skills": {
+          "synthesis": "Resolve conflicting contributions, preserve useful detail and sources."
+        },
+        "preferred_tools": [],
+        "memory": [],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        "planning_strategy": "Choose methods appropriate to the assigned goal and available inputs.",
+        "communication": "Publish concise, evidence-linked contributions and explicit unresolved gaps.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "source_task_ids": [],
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "pool_agent_id": "searcher",
+        "version": 1,
+        "role": "Searcher",
+        "capabilities": [
+          "search",
+          "source verification",
+          "research",
+          "evidence"
+        ],
+        "prompt": "Retrieve and organize evidence with explicit provenance and uncertainty.",
+        "skills": {
+          "evidence_selection": "Prefer direct sources and distinguish observed facts from inference."
+        },
+        "preferred_tools": [],
+        "memory": [],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        "planning_strategy": "Choose methods appropriate to the assigned goal and available inputs.",
+        "communication": "Publish concise, evidence-linked contributions and explicit unresolved gaps.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "source_task_ids": [],
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "pool_agent_id": "critic",
+        "version": 1,
+        "role": "Critic",
+        "capabilities": [
+          "review",
+          "verification",
+          "criticism"
+        ],
+        "prompt": "Check consequential claims independently and provide supported corrections.",
+        "skills": {
+          "claim_check": "Check assumptions, counterexamples and conflicting evidence before accepting a claim."
+        },
+        "preferred_tools": [],
+        "memory": [],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        "planning_strategy": "Choose methods appropriate to the assigned goal and available inputs.",
+        "communication": "Publish concise, evidence-linked contributions and explicit unresolved gaps.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "source_task_ids": [],
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "pool_agent_id": "planner",
+        "version": 1,
+        "role": "Planner",
+        "capabilities": [
+          "planning",
+          "requirements",
+          "decomposition"
+        ],
+        "prompt": "Turn the public task into feasible requirements and a concrete work plan.",
+        "skills": {
+          "decomposition": "Identify required inputs, dependencies, constraints and observable completion conditions."
+        },
+        "preferred_tools": [],
+        "memory": [],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        "planning_strategy": "Choose methods appropriate to the assigned goal and available inputs.",
+        "communication": "Publish concise, evidence-linked contributions and explicit unresolved gaps.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "source_task_ids": [],
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "pool_agent_id": "analyst",
+        "version": 1,
+        "role": "Analyst",
+        "capabilities": [
+          "analysis",
+          "comparison",
+          "explanation",
+          "reasoning"
+        ],
+        "prompt": "Analyze the problem with explicit assumptions and supported reasoning.",
+        "skills": {
+          "tradeoff_analysis": "Compare alternatives under stated conditions and test important inferences."
+        },
+        "preferred_tools": [],
+        "memory": [],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        "planning_strategy": "Choose methods appropriate to the assigned goal and available inputs.",
+        "communication": "Publish concise, evidence-linked contributions and explicit unresolved gaps.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "source_task_ids": [],
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "pool_agent_id": "generalist",
+        "version": 1,
+        "role": "Generalist",
+        "capabilities": [
+          "general task solving",
+          "specialized tasks"
+        ],
+        "prompt": "Solve the assigned role using public requirements and report limitations.",
+        "skills": {
+          "task_check": "Check the public constraints and the completeness of your contribution."
+        },
+        "preferred_tools": [],
+        "memory": [],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        "planning_strategy": "Choose methods appropriate to the assigned goal and available inputs.",
+        "communication": "Publish concise, evidence-linked contributions and explicit unresolved gaps.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "source_task_ids": [],
+        "evidence": []
+      }
+    ],
+    "applied_updates": []
+  },
+  "hashes": {
+    "R_global": "7a1c5f76e674fab6a5362c4483b7a6f94afdd0d8c0f8b270fa5e4e0227ffbe57",
+    "R_planned": "6ef9727918c80a3915eeba8a54ec80ced046d02878c227b8ab8f67ea4542abec",
+    "TeamSpec": "5e4f6380bd43e69e03730a0fdc8a1dbc73568a73e65d568c59ff76d7c1625c08",
+    "AgentPool": "1d01cd61ab72fde7dc991e043bf08cc2dfde4c6a33ae3d9e6f011093d4665697"
+  }
+}

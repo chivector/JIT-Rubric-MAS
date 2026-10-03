@@ -1,0 +1,33 @@
+{
+  "task_id": "6847465956a0f6376a6053fb",
+  "run_key": "0d91d76ef594393f3baf3b3376d0cfce316aeae2d6dd37c6c2ebd7a84ff5a753",
+  "coordination": "iterative_shared_ledger",
+  "execution_calls": [
+    {
+      "role": "Analyst",
+      "call_index": 1,
+      "execution_role": "contributor",
+      "agent_id": "analyst_1",
+      "event_id": "run_462d570a07c642afa12260e08caa73d5:e3",
+      "timestamp": "2026-10-03T06:34:43.337576+00:00"
+    },
+    {
+      "role": "Critic",
+      "call_index": 1,
+      "execution_role": "contributor",
+      "agent_id": "critic_1",
+      "event_id": "run_462d570a07c642afa12260e08caa73d5:e9",
+      "timestamp": "2026-10-03T06:34:50.404455+00:00"
+    },
+    {
+      "role": "Writer",
+      "call_index": 1,
+      "execution_role": "writer",
+      "agent_id": "writer_1",
+      "event_id": "run_462d570a07c642afa12260e08caa73d5:e15",
+      "timestamp": "2026-10-03T06:34:57.087996+00:00"
+    }
+  ],
+  "shared_ledger_hash": "39b9100ac22d3ad1ffc780ef478f167635a9dd4dc28845fb49ef1ff0dc4b783a",
+  "evaluator_calls": []
+}

@@ -1,0 +1,964 @@
+{
+  "created_at": "2026-10-03T06:20:46.301194+00:00",
+  "experience_version": 0,
+  "experience_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+  "R_global": {
+    "schema_version": "1.0",
+    "rubrics": [
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r1",
+        "requirement": "Analyze the institution of Roman slavery as depicted in Plautus' Pseudolus, using the play as a primary source",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Specific scenes and characters from Pseudolus",
+          "Slave protagonist Pseudolus and his actions"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r2",
+        "requirement": "Situate the portrayal within the wider historically grounded legal and social framework of the Roman Republic",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Roman legal status of slaves",
+          "Social hierarchy and master-slave relations in the Republic"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r3",
+        "requirement": "Explore how comedic representations of slave agency, deception, and the master-slave relationship both reflect and subvert realities of Roman slave society and its underlying ideologies",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Analysis of slave agency in the play",
+          "Deception as a comedic and social device",
+          "Master-slave relationship dynamics",
+          "Reflection and subversion of Roman ideologies"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r4",
+        "requirement": "Provide a coherent, well-structured analysis suitable for an academic audience",
+        "source": "inferred",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Clear thesis",
+          "Logical argument structure",
+          "Evidence-based claims"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r5",
+        "requirement": "Use the play as the primary source, with historical context drawn from general knowledge of Roman law and society",
+        "source": "inferred",
+        "importance": 0.9,
+        "confidence": 0.8,
+        "expected_evidence": [
+          "Quotes or paraphrases from Pseudolus",
+          "References to Roman legal concepts (e.g., manumission, peculium, status)"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r6",
+        "requirement": "Distinguish between the play's fictional comedic portrayal and the actual historical realities of Roman slavery",
+        "source": "inferred",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Explicit discussion of where the play diverges from historical reality",
+          "Acknowledgment of comedic exaggeration"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r7",
+        "requirement": "Avoid unsupported claims about specific historical events, laws, or sources not confidently known",
+        "source": "inferred",
+        "importance": 0.7,
+        "confidence": 0.6,
+        "expected_evidence": [
+          "Caveats or uncertainty markers where appropriate",
+          "No fabricated citations or dates"
+        ],
+        "applicability": "current task",
+        "prohibition": true,
+        "experience_ids": []
+      }
+    ],
+    "edges": [
+      {
+        "schema_version": "1.0",
+        "source": "r1",
+        "target": "r2",
+        "relation": "prerequisite",
+        "rationale": "Understanding the play's depiction requires grounding in the historical legal/social framework",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r2",
+        "target": "r3",
+        "relation": "support",
+        "rationale": "Historical context supports analysis of reflection/subversion",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r1",
+        "target": "r3",
+        "relation": "support",
+        "rationale": "Play's depiction is the basis for exploring agency/deception/master-slave dynamics",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r3",
+        "target": "r4",
+        "relation": "support",
+        "rationale": "Substantive analysis supports coherent structure",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r5",
+        "target": "r1",
+        "relation": "support",
+        "rationale": "Primary source use supports the play analysis",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r6",
+        "target": "r3",
+        "relation": "overlap",
+        "rationale": "Distinguishing fiction from reality overlaps with reflection/subversion analysis",
+        "uncertainty": 0.4,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r7",
+        "target": "r5",
+        "relation": "tradeoff",
+        "rationale": "Avoiding unsupported claims may limit confident historical detail",
+        "uncertainty": 0.4,
+        "evidence": []
+      }
+    ]
+  },
+  "R_planned": {
+    "schema_version": "1.0",
+    "rubrics": [
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r1",
+        "requirement": "Analyze the institution of Roman slavery as depicted in Plautus' Pseudolus, using the play as a primary source",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Specific scenes and characters from Pseudolus",
+          "Slave protagonist Pseudolus and his actions"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r2",
+        "requirement": "Situate the portrayal within the wider historically grounded legal and social framework of the Roman Republic",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Roman legal status of slaves",
+          "Social hierarchy and master-slave relations in the Republic"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r3",
+        "requirement": "Explore how comedic representations of slave agency, deception, and the master-slave relationship both reflect and subvert realities of Roman slave society and its underlying ideologies",
+        "source": "explicit",
+        "importance": 1.0,
+        "confidence": 1.0,
+        "expected_evidence": [
+          "Analysis of slave agency in the play",
+          "Deception as a comedic and social device",
+          "Master-slave relationship dynamics",
+          "Reflection and subversion of Roman ideologies"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r4",
+        "requirement": "Provide a coherent, well-structured analysis suitable for an academic audience",
+        "source": "inferred",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Clear thesis",
+          "Logical argument structure",
+          "Evidence-based claims"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r5",
+        "requirement": "Use the play as the primary source, with historical context drawn from general knowledge of Roman law and society",
+        "source": "inferred",
+        "importance": 0.9,
+        "confidence": 0.8,
+        "expected_evidence": [
+          "Quotes or paraphrases from Pseudolus",
+          "References to Roman legal concepts (e.g., manumission, peculium, status)"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r6",
+        "requirement": "Distinguish between the play's fictional comedic portrayal and the actual historical realities of Roman slavery",
+        "source": "inferred",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Explicit discussion of where the play diverges from historical reality",
+          "Acknowledgment of comedic exaggeration"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r7",
+        "requirement": "Avoid unsupported claims about specific historical events, laws, or sources not confidently known",
+        "source": "inferred",
+        "importance": 0.7,
+        "confidence": 0.6,
+        "expected_evidence": [
+          "Caveats or uncertainty markers where appropriate",
+          "No fabricated citations or dates"
+        ],
+        "applicability": "current task",
+        "prohibition": true,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r8",
+        "requirement": "Provide specific, accurately recalled plot details and character names from Pseudolus (e.g., Pseudolus, Simo, Calidorus, Phoenicium, Ballio, Harpax) with line/scene references where confidently known",
+        "source": "explicit",
+        "importance": 0.9,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Named characters and their roles",
+          "Key plot beats: Calidorus' love for Phoenicium, Ballio the pimp, Pseudolus' wager with Simo, the soldier's proxy Harpax, the letter/seal deception"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r9",
+        "requirement": "Distinguish between the play's fictional comedic portrayal and the actual historical realities of Roman slavery",
+        "source": "explicit",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Explicit discussion of where the play diverges from historical reality",
+          "Acknowledgment of comedic exaggeration"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r10",
+        "requirement": "Provide a clear thesis statement that frames the analysis of reflection and subversion",
+        "source": "inferred",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Explicit thesis in introduction"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r11",
+        "requirement": "Include specific textual references (quotes or paraphrases) from Pseudolus to support claims about slave agency, deception, and master-slave relations",
+        "source": "explicit",
+        "importance": 0.9,
+        "confidence": 0.8,
+        "expected_evidence": [
+          "Named characters and scenes",
+          "Direct quotes or close paraphrases"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      },
+      {
+        "schema_version": "1.0",
+        "rubric_id": "r12",
+        "requirement": "Address the legal concepts of manumission, peculium, and slave status as they relate to the play's depiction",
+        "source": "inferred",
+        "importance": 0.8,
+        "confidence": 0.7,
+        "expected_evidence": [
+          "Discussion of manumission",
+          "Discussion of peculium",
+          "Discussion of legal status"
+        ],
+        "applicability": "current task",
+        "prohibition": false,
+        "experience_ids": []
+      }
+    ],
+    "edges": [
+      {
+        "schema_version": "1.0",
+        "source": "r1",
+        "target": "r2",
+        "relation": "prerequisite",
+        "rationale": "Understanding the play's depiction requires grounding in the historical legal/social framework",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r2",
+        "target": "r3",
+        "relation": "support",
+        "rationale": "Historical context supports analysis of reflection/subversion",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r1",
+        "target": "r3",
+        "relation": "support",
+        "rationale": "Play's depiction is the basis for exploring agency/deception/master-slave dynamics",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r3",
+        "target": "r4",
+        "relation": "support",
+        "rationale": "Substantive analysis supports coherent structure",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r5",
+        "target": "r1",
+        "relation": "support",
+        "rationale": "Primary source use supports the play analysis",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r6",
+        "target": "r3",
+        "relation": "overlap",
+        "rationale": "Distinguishing fiction from reality overlaps with reflection/subversion analysis",
+        "uncertainty": 0.4,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r7",
+        "target": "r5",
+        "relation": "tradeoff",
+        "rationale": "Avoiding unsupported claims may limit confident historical detail",
+        "uncertainty": 0.4,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r8",
+        "target": "r1",
+        "relation": "support",
+        "rationale": "Specific plot details support the play analysis",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r9",
+        "target": "r6",
+        "relation": "overlap",
+        "rationale": "Both require distinguishing fiction from reality",
+        "uncertainty": 0.3,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r10",
+        "target": "r4",
+        "relation": "support",
+        "rationale": "Clear thesis supports coherent structure",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r11",
+        "target": "r1",
+        "relation": "support",
+        "rationale": "Textual references support the play analysis",
+        "uncertainty": 0.2,
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "source": "r12",
+        "target": "r2",
+        "relation": "support",
+        "rationale": "Legal concepts support historical grounding",
+        "uncertainty": 0.2,
+        "evidence": []
+      }
+    ]
+  },
+  "TeamSpec": {
+    "schema_version": "1.0",
+    "execution_mode": "iterative_shared_ledger",
+    "agents": [
+      {
+        "schema_version": "1.0",
+        "agent_id": "analyst_1",
+        "role": "Analyst",
+        "capability": "Analysis of Plautus' Pseudolus and Roman slavery; historical context synthesis",
+        "rubric_ids": [
+          "r1",
+          "r2",
+          "r3",
+          "r5",
+          "r6",
+          "r8",
+          "r9",
+          "r12"
+        ],
+        "responsibilities": [
+          "Analyze Pseudolus' plot, characters, and key scenes depicting slave agency, deception, and master-slave relations",
+          "Provide historically grounded context on Roman Republican slavery (legal status, manumission, peculium, social hierarchy)",
+          "Identify where the play reflects and subverts Roman ideologies",
+          "Publish a concise analysis with specific play references and historical facts, noting uncertainties"
+        ],
+        "tools": [],
+        "depends_on": [],
+        "max_calls": null,
+        "max_tokens": 6000,
+        "checkpoints": [
+          "Verify key plot points and character names from Pseudolus are accurately recalled",
+          "Ensure historical claims about Roman slavery are supported by general knowledge or flagged as uncertain",
+          "Check that the analysis addresses both reflection and subversion"
+        ],
+        "pool_agent_id": "analyst",
+        "pool_agent_version": 1,
+        "task_prompt": "Analyze Plautus' Pseudolus as a primary source for Roman slavery. Cover: (1) the slave protagonist Pseudolus' agency and deception; (2) the master-slave relationship (e.g., with Simo); (3) historical legal/social context of Roman Republican slavery (status, manumission, peculium, social mobility); (4) how the comedy reflects and subverts real slave society. Use remembered knowledge only; no external tools. Flag uncertain historical details. Publish a compact analysis with specific play references and historical facts.",
+        "selected_skills": [
+          "tradeoff_analysis"
+        ],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty. For each historical claim, ask: is this general knowledge I can state confidently, or is it an inference that needs qualification? For each play detail, ask: am I confident about this character/plot point, or should I flag it as uncertain?",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "communication": "Publish a concise, evidence-linked analysis with explicit uncertainty flags. Do not wait for peer requests; publish once and be available for follow-up if the critic requests clarification."
+      },
+      {
+        "schema_version": "1.0",
+        "agent_id": "critic_1",
+        "role": "Critic",
+        "capability": "Review of analysis for accuracy, coherence, and coverage of requirements",
+        "rubric_ids": [
+          "r4",
+          "r6",
+          "r7",
+          "r8",
+          "r9"
+        ],
+        "responsibilities": [
+          "Review the analyst's published analysis for factual accuracy, logical coherence, and coverage of all explicit requirements",
+          "Identify any unsupported claims or gaps in the reflection/subversion analysis",
+          "Suggest specific corrections or additions",
+          "Publish a concise review with actionable feedback"
+        ],
+        "tools": [],
+        "depends_on": [
+          "analyst_1"
+        ],
+        "max_calls": null,
+        "max_tokens": 4000,
+        "checkpoints": [
+          "Check that all explicit requirements (r1-r3) are addressed",
+          "Verify that historical claims are appropriately qualified",
+          "Ensure the analysis distinguishes comedic fiction from historical reality"
+        ],
+        "pool_agent_id": "critic",
+        "pool_agent_version": 1,
+        "task_prompt": "Review the analyst's contribution on Plautus' Pseudolus and Roman slavery. Check: (1) accuracy of play references and historical context; (2) coverage of slave agency, deception, master-slave relationship, reflection/subversion; (3) coherence and academic quality; (4) appropriate uncertainty flags. Provide specific corrections, not vague praise. Publish a concise review.",
+        "selected_skills": [
+          "claim_check"
+        ],
+        "reasoning_strategy": "Independently recall key plot points and character names from Pseudolus; compare against the analyst's claims. For historical claims, distinguish well-attested general knowledge (e.g., slaves were property, manumission existed, peculium was a common practice) from uncertain specifics (e.g., exact legal provisions, demographic percentages). Flag any claim that cannot be supported by remembered general knowledge. Report uncertainty explicitly rather than asserting false corrections.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "communication": "Publish a concise review with specific, actionable corrections. Use the shared ledger to communicate with analyst_1 if clarification is needed, but do not wait for unsolicited peer activity. Report any gaps in the analyst's contribution clearly."
+      },
+      {
+        "schema_version": "1.0",
+        "agent_id": "writer_1",
+        "role": "Writer",
+        "capability": "Synthesis of analysis into a polished academic essay",
+        "rubric_ids": [
+          "r1",
+          "r2",
+          "r3",
+          "r4",
+          "r5",
+          "r6",
+          "r7",
+          "r8",
+          "r9",
+          "r10",
+          "r11",
+          "r12"
+        ],
+        "responsibilities": [
+          "Synthesize the analyst's findings and critic's feedback into a coherent, well-structured analysis",
+          "Ensure all explicit requirements are covered",
+          "Produce the final deliverable: a full analysis of Roman slavery in Pseudolus",
+          "Include appropriate citations/paraphrases from the play and historical context, with uncertainty flags where needed"
+        ],
+        "tools": [],
+        "depends_on": [
+          "analyst_1",
+          "critic_1"
+        ],
+        "max_calls": null,
+        "max_tokens": 8000,
+        "checkpoints": [
+          "Verify the final essay covers all explicit requirements (r1-r3)",
+          "Check that the argument is coherent and evidence-based",
+          "Ensure no unsupported claims or fabricated citations",
+          "Confirm the essay distinguishes comedic fiction from historical reality"
+        ],
+        "pool_agent_id": "writer",
+        "pool_agent_version": 1,
+        "task_prompt": "Write the final analysis of Roman slavery in Plautus' Pseudolus, synthesizing the analyst's and critic's contributions. The essay must: (1) analyze the play's depiction of the slave protagonist and his interactions; (2) situate it within the legal/social framework of the Roman Republic; (3) explore how comedic representations of slave agency, deception, and master-slave relationship reflect and subvert realities/ideologies. Use the play as primary source, with historical context from general knowledge. Flag uncertainties. Produce the full deliverable.",
+        "selected_skills": [
+          "synthesis"
+        ],
+        "reasoning_strategy": "Synthesize the analyst's findings and critic's corrections into a coherent argument. Verify key claims about Pseudolus and Roman slavery against remembered knowledge. Distinguish confident historical facts from inferences. Flag any gaps in the analyst's contribution rather than fabricating details. Structure the essay to address all explicit requirements (r1-r3) while maintaining academic rigor.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "communication": "Publish the final essay as the terminal deliverable. If the analyst's contribution lacks specific play references, note this limitation in the essay's introduction or a brief methodological note. Do not fabricate quotations or historical details. Ensure the essay is self-contained and addresses all rubric requirements."
+      }
+    ],
+    "synthesizer_id": "writer_1",
+    "coverage": {
+      "r1": [
+        "analyst_1",
+        "writer_1"
+      ],
+      "r2": [
+        "analyst_1",
+        "writer_1"
+      ],
+      "r3": [
+        "analyst_1",
+        "writer_1"
+      ],
+      "r4": [
+        "critic_1",
+        "writer_1"
+      ],
+      "r5": [
+        "analyst_1",
+        "writer_1"
+      ],
+      "r6": [
+        "analyst_1",
+        "critic_1",
+        "writer_1"
+      ],
+      "r7": [
+        "critic_1",
+        "writer_1"
+      ],
+      "r8": [
+        "analyst_1",
+        "critic_1",
+        "writer_1"
+      ],
+      "r9": [
+        "analyst_1",
+        "critic_1",
+        "writer_1"
+      ],
+      "r10": [
+        "writer_1"
+      ],
+      "r11": [
+        "writer_1"
+      ],
+      "r12": [
+        "analyst_1",
+        "writer_1"
+      ]
+    },
+    "primary": {
+      "r1": "analyst_1",
+      "r2": "analyst_1",
+      "r3": "analyst_1",
+      "r4": "writer_1",
+      "r5": "analyst_1",
+      "r6": "analyst_1",
+      "r7": "critic_1",
+      "r8": "analyst_1",
+      "r9": "analyst_1",
+      "r10": "writer_1",
+      "r11": "writer_1",
+      "r12": "analyst_1"
+    },
+    "reviewers": {
+      "r1": [
+        "writer_1"
+      ],
+      "r2": [
+        "writer_1"
+      ],
+      "r3": [
+        "writer_1"
+      ],
+      "r4": [],
+      "r5": [
+        "writer_1"
+      ],
+      "r6": [
+        "critic_1",
+        "writer_1"
+      ],
+      "r7": [
+        "writer_1"
+      ],
+      "r8": [
+        "critic_1",
+        "writer_1"
+      ],
+      "r9": [
+        "critic_1",
+        "writer_1"
+      ],
+      "r10": [],
+      "r11": [],
+      "r12": [
+        "writer_1"
+      ]
+    },
+    "selection_rationale": "Reconciled global draft with local plans. Merged r8 (specific plot details) and r9 (fiction vs. reality) from analyst's additions into the graph, and r10 (thesis), r11 (textual references), r12 (legal concepts) from writer's additions. Critic's r8/r9 additions were merged into existing r8/r9 with expanded scope. Rejected critic's proposal to make r8/r9 primary to critic since analyst is the primary source of play analysis; critic reviews them. Rejected writer's challenge that analyst may lack textual references\u2014writer is responsible for r11 and can supply remembered details. All agents selected from pool with exact pool_agent_id/version. Topology: analyst -> critic -> writer, with writer as synthesizer. No reviewer depends on writer; writer reviews analyst's work (r1,r2,r3,r5,r6,r12) and critic's work (r4,r6,r7,r8,r9) as downstream consumer.",
+    "termination": "All required artifacts and final synthesis submitted",
+    "max_parallel": 2,
+    "total_max_calls": null,
+    "budget_plan": {
+      "schema_version": "1.0",
+      "agents": [
+        {
+          "schema_version": "1.0",
+          "agent_id": "analyst_1",
+          "expected_model_calls": 1,
+          "expected_input_tokens": 2000,
+          "expected_output_tokens": 5000,
+          "expected_tool_calls": 0,
+          "expected_communication_bytes": 0,
+          "rationale": "Single call to produce compact analysis; input includes task context and remembered knowledge."
+        },
+        {
+          "schema_version": "1.0",
+          "agent_id": "critic_1",
+          "expected_model_calls": 1,
+          "expected_input_tokens": 3000,
+          "expected_output_tokens": 3000,
+          "expected_tool_calls": 0,
+          "expected_communication_bytes": 0,
+          "rationale": "Single call to review analyst's contribution; input includes analyst's published analysis."
+        },
+        {
+          "schema_version": "1.0",
+          "agent_id": "writer_1",
+          "expected_model_calls": 1,
+          "expected_input_tokens": 5000,
+          "expected_output_tokens": 7000,
+          "expected_tool_calls": 0,
+          "expected_communication_bytes": 0,
+          "rationale": "Single call to synthesize final essay; input includes analyst's and critic's contributions."
+        }
+      ],
+      "reserved_future_tokens": 0,
+      "reserved_future_model_calls": 0,
+      "quality_cost_tradeoff": "Using three agents (analyst, critic, writer) provides independent verification and synthesis at moderate token cost. Analyst produces substantive analysis; critic checks accuracy; writer synthesizes. This balances quality with cost.",
+      "stopping_policy": "Stop after writer produces final essay. No further iterations unless critical gaps identified by critic require revision."
+    }
+  },
+  "AgentPool": {
+    "schema_version": "1.0",
+    "version": 0,
+    "profiles": [
+      {
+        "schema_version": "1.0",
+        "pool_agent_id": "writer",
+        "version": 1,
+        "role": "Writer",
+        "capabilities": [
+          "writing",
+          "synthesis",
+          "creative-writing"
+        ],
+        "prompt": "Build a coherent deliverable from the public task and observed evidence.",
+        "skills": {
+          "synthesis": "Resolve conflicting contributions, preserve useful detail and sources."
+        },
+        "preferred_tools": [],
+        "memory": [],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        "planning_strategy": "Choose methods appropriate to the assigned goal and available inputs.",
+        "communication": "Publish concise, evidence-linked contributions and explicit unresolved gaps.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "source_task_ids": [],
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "pool_agent_id": "searcher",
+        "version": 1,
+        "role": "Searcher",
+        "capabilities": [
+          "search",
+          "source verification",
+          "research",
+          "evidence"
+        ],
+        "prompt": "Retrieve and organize evidence with explicit provenance and uncertainty.",
+        "skills": {
+          "evidence_selection": "Prefer direct sources and distinguish observed facts from inference."
+        },
+        "preferred_tools": [],
+        "memory": [],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        "planning_strategy": "Choose methods appropriate to the assigned goal and available inputs.",
+        "communication": "Publish concise, evidence-linked contributions and explicit unresolved gaps.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "source_task_ids": [],
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "pool_agent_id": "critic",
+        "version": 1,
+        "role": "Critic",
+        "capabilities": [
+          "review",
+          "verification",
+          "criticism"
+        ],
+        "prompt": "Check consequential claims independently and provide supported corrections.",
+        "skills": {
+          "claim_check": "Check assumptions, counterexamples and conflicting evidence before accepting a claim."
+        },
+        "preferred_tools": [],
+        "memory": [],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        "planning_strategy": "Choose methods appropriate to the assigned goal and available inputs.",
+        "communication": "Publish concise, evidence-linked contributions and explicit unresolved gaps.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "source_task_ids": [],
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "pool_agent_id": "planner",
+        "version": 1,
+        "role": "Planner",
+        "capabilities": [
+          "planning",
+          "requirements",
+          "decomposition"
+        ],
+        "prompt": "Turn the public task into feasible requirements and a concrete work plan.",
+        "skills": {
+          "decomposition": "Identify required inputs, dependencies, constraints and observable completion conditions."
+        },
+        "preferred_tools": [],
+        "memory": [],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        "planning_strategy": "Choose methods appropriate to the assigned goal and available inputs.",
+        "communication": "Publish concise, evidence-linked contributions and explicit unresolved gaps.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "source_task_ids": [],
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "pool_agent_id": "analyst",
+        "version": 1,
+        "role": "Analyst",
+        "capabilities": [
+          "analysis",
+          "comparison",
+          "explanation",
+          "reasoning"
+        ],
+        "prompt": "Analyze the problem with explicit assumptions and supported reasoning.",
+        "skills": {
+          "tradeoff_analysis": "Compare alternatives under stated conditions and test important inferences."
+        },
+        "preferred_tools": [],
+        "memory": [],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        "planning_strategy": "Choose methods appropriate to the assigned goal and available inputs.",
+        "communication": "Publish concise, evidence-linked contributions and explicit unresolved gaps.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "source_task_ids": [],
+        "evidence": []
+      },
+      {
+        "schema_version": "1.0",
+        "pool_agent_id": "generalist",
+        "version": 1,
+        "role": "Generalist",
+        "capabilities": [
+          "general task solving",
+          "specialized tasks"
+        ],
+        "prompt": "Solve the assigned role using public requirements and report limitations.",
+        "skills": {
+          "task_check": "Check the public constraints and the completeness of your contribution."
+        },
+        "preferred_tools": [],
+        "memory": [],
+        "reasoning_strategy": "Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        "planning_strategy": "Choose methods appropriate to the assigned goal and available inputs.",
+        "communication": "Publish concise, evidence-linked contributions and explicit unresolved gaps.",
+        "harness": {
+          "schema_version": "1.0",
+          "harness_id": "rubric_mas",
+          "memory_policy": "full",
+          "memory_window": 8,
+          "tool_policy": "all_allowed"
+        },
+        "source_task_ids": [],
+        "evidence": []
+      }
+    ],
+    "applied_updates": []
+  },
+  "hashes": {
+    "R_global": "a85463f8cff8e369735c93bc4886d492d3ccf56e06e2e84eae2fcbf0a863433e",
+    "R_planned": "8899d5860edbff2211f37487c056f3da0204550eed9d40e889b147b6fb5aa5b7",
+    "TeamSpec": "fd4eefa0c0541057d73d07e2b75b59b9d1ecd6c8881a4e38a8b8619cf23d02a1",
+    "AgentPool": "1d01cd61ab72fde7dc991e043bf08cc2dfde4c6a33ae3d9e6f011093d4665697"
+  }
+}

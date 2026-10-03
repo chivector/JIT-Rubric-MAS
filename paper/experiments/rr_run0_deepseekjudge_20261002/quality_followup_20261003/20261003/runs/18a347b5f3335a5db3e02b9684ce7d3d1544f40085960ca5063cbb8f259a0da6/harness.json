@@ -1,0 +1,15 @@
+{
+  "name": "mas_50ab52cf79424d469728ee9661da9ad5",
+  "path": "C:\\Users\\chizh\\Desktop\\JIT-main\\.runtime\\rr_quality_preflight_20261003\\scripts\\workspaces\\mas_50ab52cf79424d469728ee9661da9ad5",
+  "backend": "native_jit",
+  "team_hash": "6cf1b02d218076c65c4acaff6ef387476b9b50cd22112171481568d3a0a7af09",
+  "task_hash": "fa192d1d2f8d8c6fd513497432f77ee488794cb716b69ec9eef4f245eb9011f5",
+  "code_hash": "3d0fcb6d6bbdf7bb7160a417f78f4d972bf6a979821b7a2b50dc471390ce139a",
+  "sidecar_hash": "36009e9f369a2c5fecfa4a2b62950cc86c543500521e97e679d0f3ca6747e86c",
+  "meta_trajectory": [],
+  "selection": {
+    "strategy": "pooled_agent_reuse",
+    "agent_pool_hash": "22f29154bf15df3869be7a12c3b39127f9f0540179b9b845d9a4816237f9b23e"
+  },
+  "repair_count": 0
+}
