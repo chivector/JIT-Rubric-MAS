@@ -11,6 +11,7 @@ from jit_mas.bridge import JITHarnessSynthesizer
 from jit_mas.budget import BudgetLedger, MeteredModel
 from jit_mas.execution import (
     CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
+    FINAL_ARTIFACT_CONTRACT,
     ResponseProtocolError, TeamExecutor, TeamServices, _SinglePassModel, _parse_response, content_hash,
 )
 from jit_mas.schemas import AgentSpec, PublicTask, RubricGraph, TeamSpec
@@ -109,6 +110,30 @@ def test_diamond_handoff_deduplicates_shared_ancestor(execute_team):
 
     result, _, _ = execute_team(team, respond)
     assert result.answer == "editor"
+
+
+def test_terminal_critic_receives_writing_authority_over_review_only_scope(execute_team):
+    team = chain()
+    terminal = team.agents[-1]
+    terminal.role = "Critic"
+    terminal.task_prompt = "Identify defects only. Do not rewrite the entire answer."
+    original = terminal.model_dump(mode="json")
+
+    def respond(aid, payload, call, messages):
+        if aid == terminal.agent_id:
+            assert messages[0]["content"].endswith(FINAL_ARTIFACT_CONTRACT)
+            assert payload["agent"]["task_prompt"].endswith(FINAL_ARTIFACT_CONTRACT)
+            assert payload["terminal_assignment"] == FINAL_ARTIFACT_CONTRACT
+            assert payload["agent"]["execution_role"] == "final_writer"
+            return {"answer": "The argument requires an explicit independence assumption."}
+        assert payload["agent"]["execution_role"] == "contributor"
+        assert "terminal_assignment" not in payload
+        return {"answer": "The independence assumption needs checking."}
+
+    result, _, budget = execute_team(team, respond)
+    assert result.answer == "The argument requires an explicit independence assumption."
+    assert budget["model_calls"] == 3
+    assert terminal.model_dump(mode="json") == original
 
 
 def test_each_role_receives_its_complete_output_shape_without_a_recall(execute_team):

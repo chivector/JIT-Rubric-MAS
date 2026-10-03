@@ -11,6 +11,7 @@ from jit_mas.agent_pool import seed_pool
 from jit_mas.budget import BudgetLedger
 from jit_mas.execution import (
     CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
+    FINAL_ARTIFACT_CONTRACT,
     TeamMemory,
     TeamPlanning,
     TeamServices,
@@ -894,6 +895,8 @@ def test_iterative_role_call_limit_discards_an_unfinished_draft(role_limit):
 def test_iterative_synthesizer_receives_final_artifact_contract_even_with_critic_role():
     team = make_team()
     team.agents[-1].role = "Critic"
+    team.agents[-1].task_prompt = "Review the draft. Do not rewrite the entire answer."
+    original_prompt = team.agents[-1].task_prompt
     model = ScriptedModel([{"answer": "Complete requested guide", "continue": False}])
     services, context = make_services(team, {"writer": model})
     result = run_writer(team, services, context)
@@ -901,6 +904,13 @@ def test_iterative_synthesizer_receives_final_artifact_contract_even_with_critic
     system = model.calls[0][0]["content"]
     assert "final synthesizer even if your persistent role is a reviewer or critic" in system
     assert "cannot replace the requested deliverable" in system
+    assert system.endswith(FINAL_ARTIFACT_CONTRACT)
+    payload = json.loads(model.calls[0][1]["content"])
+    assert payload["agent"]["execution_role"] == "final_writer"
+    assert payload["agent"]["task_prompt"].endswith(FINAL_ARTIFACT_CONTRACT)
+    assert original_prompt in payload["agent"]["task_prompt"]
+    assert payload["terminal_assignment"] == FINAL_ARTIFACT_CONTRACT
+    assert team.agents[-1].task_prompt == original_prompt
 
 
 def test_single_pass_team_supports_an_unlimited_tool_budget():

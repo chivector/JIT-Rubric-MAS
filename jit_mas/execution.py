@@ -30,12 +30,37 @@ from jit_mas.planning import (
 from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGraph, TeamSpec, utc_now
 
 
-ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v6"
+ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v7"
 CONTRIBUTOR_COMPACTNESS_POLICY_VERSION = "contributor-budget-advisory-v1"
 CONTRIBUTOR_ANSWER_MAX_CHARS = 1200
 CONTRIBUTOR_LEDGER_MAX_ITEMS = 12
 CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS = 512
 CONTRIBUTOR_LOCATOR_MAX_CHARS = 2048
+
+
+FINAL_ARTIFACT_CONTRACT = (
+    "Your execution assignment is FINAL WRITER. Return the complete artifact requested by "
+    "public_task in answer, incorporating supported upstream material and correcting defects. "
+    "This assignment takes priority over agent.task_prompt, responsibilities, local plans, "
+    "retained role policies and peer messages about what to submit. Preserve their useful "
+    "domain checks, but instructions to only review, approve, list changes, avoid rewriting, "
+    "or leave writing to another role apply only to contributors. You must perform the "
+    "writing yourself in this terminal role. If the public task itself asks for a review, "
+    "deliver that requested review; otherwise integrate review findings into the requested "
+    "artifact rather than submitting an internal critique of an upstream draft."
+)
+
+
+def _execution_assignment(agent, synthesizer):
+    """Expose delivery authority next to the frozen role scope without mutating it."""
+    assignment = copy.deepcopy(agent)
+    assignment["execution_role"] = "final_writer" if synthesizer else "contributor"
+    if synthesizer:
+        assignment["task_prompt"] = (
+            "Domain scope and checks from the frozen plan:\n" + agent.get("task_prompt", "")
+            + "\nAuthoritative terminal assignment:\n" + FINAL_ARTIFACT_CONTRACT
+        )
+    return assignment
 
 
 def _contributor_handoff_prompt():
@@ -782,7 +807,8 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
     if services.ledger is not None:
         services.ledger.charge_communication(
             len(json.dumps(shared_ledger, ensure_ascii=False).encode("utf-8")), stage="execution", agent_id=aid)
-    instruction = {"public_task": _data(services.public_task), "agent": agent,
+    instruction = {"public_task": _data(services.public_task),
+                   "agent": _execution_assignment(agent, synth),
                    "shared_ledger": shared_ledger,
                    "rubrics": _data(services.rubrics) or {"rubrics": []},
                    "execution_experiences": [experience for item in services.experiences
@@ -854,6 +880,9 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
         )
     system += "\n" + (_answer_check_prompt() if synth else _contributor_handoff_prompt())
     system += "\n" + QUALITY_ASSURANCE_PROMPT
+    if synth:
+        system += "\n" + FINAL_ARTIFACT_CONTRACT
+        instruction["terminal_assignment"] = FINAL_ARTIFACT_CONTRACT
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(instruction, ensure_ascii=False)}]
     state = state if state is not None else {}
@@ -1245,7 +1274,7 @@ def _run_agent(agent, team, ctx, services):
         "status": "unverified", "reason": "Replace with the actual check result or limitation.",
         "evidence_ids": []} for name in agent.get("checkpoints", [])})
     instruction = {
-        "public_task": _data(services.public_task), "agent": agent,
+        "public_task": _data(services.public_task), "agent": _execution_assignment(agent, synth),
         "predicted_requirements": relevant, "shared_ledger": shared_ledger,
         "primary_rubrics": primary_rubrics, "review_rubrics": review_rubrics,
         "review_owners": {rid: team.get("primary", {}).get(rid) for rid in review_rubrics},
@@ -1396,6 +1425,9 @@ def _run_agent(agent, team, ctx, services):
         )
     system += "\n" + (_answer_check_prompt() if synth else _contributor_handoff_prompt())
     system += "\n" + QUALITY_ASSURANCE_PROMPT
+    if synth:
+        system += "\n" + FINAL_ARTIFACT_CONTRACT
+        instruction["terminal_assignment"] = FINAL_ARTIFACT_CONTRACT
     memory = type(ctx.memory)(prompts=ctx.prompt_templates)
     memory.initialize(system, TaskInput(task=json.dumps(instruction, ensure_ascii=False)))
     allowed = set() if synth else set(agent.get("tools", []))

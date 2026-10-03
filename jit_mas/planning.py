@@ -383,8 +383,12 @@ Give non-synthesizer roles compact, substantive material to produce: relevant fa
 reasoning, examples, tradeoffs and uncertainty, not competing full deliverables. Do not
 assign non-synthesizers a 3000-5000-word or other full-draft length target. Allocate
 non-synthesizer output to compact fact chains and checked intermediate results instead.
-A reviewer should identify consequential defects with supported corrections, not rewrite the whole
-artifact. Make these distinctions explicit in responsibilities and task_prompt. The
+A non-synthesizer reviewer should identify consequential defects with supported corrections,
+not rewrite the whole artifact. If a reviewer is selected as the terminal synthesizer,
+assign complete final writing to that agent explicitly in responsibilities and task_prompt;
+remove any review-only, do-not-rewrite, or leave-writing-to-another-role restriction from
+its submission duties. Preserve its fact-checking expertise. Make these distinctions
+explicit in responsibilities and task_prompt. The
 Writer must address all public task requirements and check consequential factual claims
 and inferences against available evidence and assumptions. Do not require guessed citation
 details: unsupported authors, titles, years, quotations and numerical results must not be
