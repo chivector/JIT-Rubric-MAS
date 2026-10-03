@@ -1,0 +1,240 @@
+{
+  "slot": {
+    "slot_id": "ours:6847465956a0f6376a605355",
+    "task_id": "6847465956a0f6376a605355",
+    "method": "ours",
+    "repeat": 0
+  },
+  "status": "submitted",
+  "submission": {
+    "answer": "# AI in Drug Discovery: A Synthesis Report for Technical Audiences\n\n## 1. Introduction and Scope\n\nArtificial intelligence (AI) has moved from a research curiosity to a practical tool in pharmaceutical R&D. This report synthesizes the current state of AI applications across the drug discovery pipeline, from initial target identification through regulatory approval. It is written for a technical audience (e.g., software engineers, data scientists, computational chemists) who may be unfamiliar with the biological context. All figures and examples are drawn from model general knowledge and are not independently verified; they should be treated as indicative rather than authoritative. Where quantitative claims are made, they are labeled as remembered approximations.\n\n**Key distinction:** This report distinguishes between **AI-assisted** drug discovery (where AI is a tool used by human experts, with humans making final decisions) and **AI-discovered** drugs (where AI autonomously identifies and optimizes a candidate with minimal human intervention). The vast majority of current work is AI-assisted; true end-to-end autonomy remains rare and unproven.\n\n## 2. Biological Primer: Essential Concepts\n\nBefore discussing AI applications, we define the core biological terms used throughout.\n\n- **Protein:** A large molecule composed of amino acid chains, folded into a 3D structure. Proteins perform most cellular functions (e.g., enzymes catalyze reactions, receptors transmit signals). Their function depends critically on their 3D shape.\n- **Target:** A protein (or gene) implicated in a disease. Drugs typically bind to a target to modulate its activity. For example, the protein EGFR is a target in some lung cancers.\n- **Binding affinity:** The strength with which a drug molecule (ligand) binds to its target. Higher affinity generally means the drug is more potent (effective at lower concentrations). It is often quantified as IC50 (concentration inhibiting 50% of target activity) or Kd (dissociation constant).\n- **Hit:** A compound that shows initial activity against a target in a screening assay. Hits are starting points, not drugs.\n- **Lead:** A hit that has been optimized for potency, selectivity, and drug-like properties. Leads are candidates for preclinical testing.\n- **ADMET:** Absorption, Distribution, Metabolism, Excretion, and Toxicity. These properties determine whether a compound can be delivered to the right place at the right concentration and whether it is safe. Poor ADMET is a major cause of clinical failure.\n- **Biomarker:** A measurable biological indicator (e.g., a protein level in blood, a genetic mutation) that correlates with disease state or drug response. Biomarkers guide patient selection and trial design.\n- **SAR (Structure-Activity Relationship):** The relationship between a compound's chemical structure and its biological activity. Medicinal chemists use SAR to guide modifications.\n- **IND (Investigational New Drug):** A regulatory application (in the US, to the FDA) that must be approved before a drug can be tested in humans.\n- **POC (Proof of Concept):** A clinical trial stage (often Phase II) that demonstrates the drug has the intended therapeutic effect in patients.\n\n## 3. AI Applications Across the Drug Discovery Pipeline\n\n### 3.1 Target Discovery\n\n**Goal:** Identify which protein(s) are causally linked to a disease, so that modulating them could have therapeutic benefit.\n\n**AI methods:**\n- **Knowledge graphs:** AI systems integrate heterogeneous data (genomics, proteomics, literature, clinical records) into a graph where nodes are entities (genes, diseases, drugs) and edges are relationships. Algorithms then infer novel disease-gene associations. The **Open Targets** platform (a collaboration between EMBL-EBI, GSK, and others) is a prominent example, integrating evidence from multiple sources to score target-disease associations.\n- **Multi-omics integration:** AI models combine data from genomics (DNA sequence), transcriptomics (RNA expression), proteomics (protein levels), and metabolomics (metabolite levels) to identify coherent disease signatures. Methods like **MOFA+** (Multi-Omics Factor Analysis) use factor analysis to find latent dimensions that explain variation across omics layers.\n- **Causal inference:** Techniques like Mendelian randomization (using genetic variants as instruments) can be combined with machine learning to infer causal, not just correlational, relationships between targets and diseases. This is important because many associations are spurious.\n\n**Key model:** **AlphaFold2** (DeepMind, 2020) and **AlphaFold3** (2024) predict protein 3D structures from amino acid sequences with near-experimental accuracy for many proteins. This is transformative because structure is essential for understanding how a drug might bind. AlphaFold3 extends this to predict protein-ligand complexes, which is directly relevant to drug design.\n\n**Confidence:** High for structure prediction (AlphaFold2/3); medium for causal inference (Mendelian randomization is powerful but has assumptions that can be violated).\n\n### 3.2 Hit Identification\n\n**Goal:** Find initial compounds (hits) that bind to the target. Traditional methods include high-throughput screening (HTS) of large compound libraries, which is expensive and slow.\n\n**AI methods:**\n- **Virtual screening:** AI models (e.g., graph neural networks, GNNs) predict binding affinity of a large library of compounds to a target, ranking them for experimental testing. This reduces the number of compounds that need to be physically tested. **Chemprop** is a widely used GNN-based model for molecular property prediction.\n- **Generative chemistry:** AI models generate novel molecular structures that are predicted to be active. Recurrent neural networks (RNNs) and, more recently, diffusion models can generate molecules with desired properties. These models are trained on large databases of known compounds and their activities.\n\n**Key models:** Chemprop (GNN), REINVENT (AstraZeneca's RNN-based generative model), and diffusion-based generators (e.g., those inspired by image generation).\n\n**Confidence:** High for virtual screening (it is a mature, well-validated approach); medium for generative chemistry (generated molecules often need significant optimization and may be difficult to synthesize).\n\n### 3.3 Lead Optimization\n\n**Goal:** Improve a hit's potency, selectivity (binding to the target but not related proteins), and ADMET properties to make it a viable lead.\n\n**AI methods:**\n- **Reinforcement learning (RL):** RL agents propose molecular modifications and receive rewards for improving desired properties (e.g., higher potency, lower toxicity). **REINVENT** and **MolDQN** are examples. The agent learns a policy for navigating chemical space.\n- **Bayesian optimization / active learning:** These methods iteratively select the most informative compounds to synthesize and test, minimizing the number of experiments needed. This is crucial because synthesis is expensive and time-consuming.\n- **Multi-objective optimization:** AI models balance multiple, often conflicting, objectives (potency vs. solubility vs. metabolic stability). Pareto front methods identify compounds that are not dominated by any other.\n\n**Confidence:** Medium-high. These methods have shown success in academic and industrial settings, but the gap between predicted and actual properties remains a challenge.\n\n### 3.4 Preclinical Development\n\n**Goal:** Assess safety and efficacy in animal models before human trials. This includes predicting toxicity, ADMET, and in vivo efficacy.\n\n**AI methods:**\n- **QSAR (Quantitative Structure-Activity Relationship) models:** These predict toxicity or ADMET properties from molecular structure. Deep learning models like **DeepTox** have improved predictive accuracy over traditional QSAR.\n- **ADMET prediction:** Tools like **ADMET-AI** predict a range of ADMET endpoints (e.g., solubility, permeability, CYP450 inhibition) from structure. These are used to filter out problematic compounds early.\n- **In vivo outcome prediction:** AI models attempt to predict animal or human outcomes from in vitro data. This is the weakest area; the translation from cell-based assays to whole-organism effects is complex and poorly understood.\n\n**Confidence:** Medium for ADMET prediction (useful for filtering, but not definitive); low for in vivo prediction (the biology is too complex for current models).\n\n### 3.5 Clinical Development\n\n**Goal:** Design and run clinical trials efficiently, including patient selection, dose selection, and biomarker discovery.\n\n**AI methods:**\n- **Trial design:** AI models optimize trial protocols (e.g., inclusion/exclusion criteria, endpoints) to increase the probability of success. They can also predict which patients are most likely to respond.\n- **Patient selection:** Natural language processing (NLP) on electronic health records (EHRs) can identify eligible patients and predict their outcomes. **TrialGPT** (a concept model) uses LLMs to match patients to trials.\n- **Biomarker discovery:** AI analyzes multi-omics data from trial participants to identify biomarkers that predict response, enabling enrichment strategies (selecting patients most likely to benefit).\n\n**Real-world example:** IBM Watson for Oncology was an early attempt to use AI for treatment recommendations, but it had limited success and was criticized for inconsistent recommendations. This highlights the difficulty of applying AI to complex clinical decision-making.\n\n**Confidence:** Medium. The potential is high, but real-world impact is debated, and validation in prospective trials is limited.\n\n### 3.6 Regulatory and Post-Market\n\n**Goal:** Monitor drug safety and efficacy after approval, and support regulatory decision-making.\n\n**AI methods:**\n- **Pharmacovigilance:** NLP models analyze adverse event reports (from healthcare providers, patients, and literature) to detect safety signals. This is an active area, but most current systems (e.g., the FDA's Sentinel system) are not AI-first; they use statistical methods.\n- **Real-world evidence (RWE):** AI analyzes large-scale real-world data (EHRs, claims databases) to assess drug effectiveness and safety in broader populations than clinical trials.\n\n**Confidence:** Low-medium. Regulatory AI guidance is still evolving, and there is no clear AI-specific approval pathway. The FDA has issued discussion papers but no final guidance on AI in drug development.\n\n## 4. Latest Technological Advancements\n\n1. **Protein structure prediction:** AlphaFold3 (2024) predicts protein-ligand complexes, which is a major step beyond AlphaFold2's protein-only predictions. This enables more accurate virtual screening and structure-based drug design.\n2. **Foundation models for proteins:** Models like **ESM-2** (Meta) and **ProtGPT2** are trained on large protein sequence databases and learn a \"language\" of proteins. They can predict structure, function, and even generate novel protein sequences. These are analogous to large language models (LLMs) for text.\n3. **Generative chemistry with diffusion models:** Diffusion models, which have revolutionized image generation, are now being applied to molecular generation. They can generate diverse, drug-like molecules with desired properties.\n4. **Multi-omics integration:** Methods like MOFA+ and deep learning approaches that integrate genomics, transcriptomics, proteomics, and metabolomics provide a more holistic view of disease biology, improving target discovery and biomarker identification.\n5. **LLMs for drug discovery:** LLMs (e.g., GPT-4) are being used for literature mining, hypothesis generation, and even molecule design. Their ability to reason over text and generate novel ideas is promising, but their reliability in scientific contexts is still being evaluated.\n\n## 5. Challenges and Limitations\n\n1. **Data quality and availability:** Drug discovery data is sparse (few active compounds per target), biased (toward well-studied targets), and often proprietary. Public datasets (e.g., ChEMBL, PubChem) are valuable but incomplete. This limits model training and generalization.\n2. **Validation:** There are no standardized benchmarks for AI in drug discovery. Different studies use different datasets, metrics, and baselines, making it difficult to compare results. Prospective validation (testing AI predictions in the lab) is rare but essential.\n3. **Interpretability:** Many AI models (especially deep learning) are black boxes. Medicinal chemists and regulators need to understand *why* a model makes a prediction to trust it. Explainable AI (XAI) methods are being developed, but they are not yet standard.\n4. **Regulatory uncertainty:** There is no clear regulatory pathway for AI-discovered drugs. Regulators (FDA, EMA) are developing guidance, but it is not finalized. Questions remain about how to validate AI models and what evidence is needed for approval.\n5. **Integration:** AI tools are often siloed within organizations, not integrated into existing workflows. This limits their impact. Successful adoption requires cultural change and close collaboration between AI experts and biologists/chemists.\n\n## 6. Real-World Adoption: Case Studies\n\nAll examples below are company-reported and should be treated with caution. None of these drugs have been approved by a major regulatory agency based solely on AI discovery.\n\n1. **Insilico Medicine - INS018_055:** An AI-discovered drug candidate for idiopathic pulmonary fibrosis (IPF). It was developed using Insilico's Pharma.AI platform, which includes target discovery, generative chemistry, and preclinical prediction. It entered Phase IIa clinical trials in 2023. This is one of the most prominent examples of an AI-discovered drug reaching clinical trials.\n2. **Exscientia - DSP-1181:** An AI-designed drug for obsessive-compulsive disorder (OCD) that entered Phase I trials in 2020. It was developed in collaboration with Sumitomo Dainippon Pharma. However, the program was later discontinued, highlighting the high failure rate of drug development even with AI.\n3. **Recursion Pharmaceuticals:** Uses a \"phenomics\" approach, where AI analyzes cellular images to identify disease phenotypes and drug effects. They have partnerships with Roche and Bayer. Their platform is more AI-assisted than fully autonomous, with human experts interpreting AI outputs.\n4. **BenevolentAI - Baricitinib repurposing:** In 2020, BenevolentAI used AI to identify baricitinib (an approved rheumatoid arthritis drug) as a potential treatment for COVID-19. The drug was subsequently tested in clinical trials. This is a notable example of AI-assisted drug repurposing.\n\n**Adoption metrics:** It is difficult to quantify adoption precisely. However, most major pharmaceutical companies (e.g., AstraZeneca, Pfizer, Novartis, Merck) have established AI partnerships or internal AI groups. The number of AI-discovered drugs in clinical trials is small (likely fewer than 20 globally as of 2024), and none have been approved. This is a remembered approximation, not a verified statistic.\n\n## 7. AI-Assisted vs. AI-Discovered: A Critical Distinction\n\n| Feature | AI-Assisted | AI-Discovered (Autonomous) |\n|---|---|---|\n| **Role of AI** | Tool for human experts; humans make final decisions | AI drives the process end-to-end; humans oversee but do not direct |\n| **Example** | AlphaFold for structure prediction; Chemprop for virtual screening | Insilico's Pharma.AI (target to lead with minimal human input) |\n| **Human involvement** | High; experts interpret AI outputs and make decisions | Low; AI proposes and selects candidates, humans validate |\n| **Current prevalence** | Dominant; most industrial use is AI-assisted | Rare; few companies claim true autonomy |\n| **Validation** | Easier to validate; humans can check AI outputs | Harder to validate; requires trust in the entire pipeline |\n\n**Key point:** The distinction is a spectrum, not a binary. Most systems are somewhere in between. For example, Recursion's platform uses AI to generate hypotheses, but human scientists design and interpret experiments. Insilico's Pharma.AI is closer to autonomous, but still requires human oversight for regulatory and safety decisions.\n\n## 8. Conclusion and Outlook\n\nAI has made significant contributions to drug discovery, particularly in target discovery (structure prediction), hit identification (virtual screening), and lead optimization (generative chemistry). However, the field is still in its early stages. The most impactful applications are AI-assisted, where AI accelerates and improves human decision-making. True AI-discovered drugs are rare, and none have been approved by major regulators.\n\nThe key challenges are data quality, validation, interpretability, regulatory uncertainty, and integration. Addressing these will require collaboration between AI researchers, biologists, chemists, and regulators. The next few years will be critical: if AI-discovered drugs can demonstrate success in late-stage clinical trials, adoption will accelerate. If not, the field may consolidate around AI-assisted approaches.\n\n**Uncertainty note:** All figures, examples, and confidence levels in this report are from model general knowledge and are not independently verified. The adoption metrics (e.g., number of AI-discovered drugs in trials) are remembered approximations and may be outdated. Regulatory guidance is evolving rapidly. Readers should consult primary sources for the most current information.\n\n**Gaps for peer review:** (1) No verified current (2024-2025) adoption metrics; (2) no confirmed approved AI-discovered drugs; (3) no standardized benchmark results for AI models; (4) regulatory guidance details are not verified. These gaps should be addressed in future work.",
+    "answer_hash": "e9a1215fcede7558de8bcb2b06cc0b70cf520863fc6a9b5e4a09deaf37c86e92",
+    "submitted_at": "2026-10-02T19:11:16.893545+00:00"
+  },
+  "outcome": {
+    "run_key": "6a56d7bf07092df69a4dd5f16ce045149eb187ececbf638edf0ec2deb4bfccfc",
+    "task_id": "6847465956a0f6376a605355",
+    "mode": "evaluate",
+    "repeat": 0,
+    "status": "submitted_unscored",
+    "backend": "native_jit",
+    "software_test_only": false,
+    "resumed": false,
+    "experience_version": 18,
+    "experience_hash": "3788531a07b67a27bbab6bf99cb86c79cf05c8e3773a046075a9e91e5a023b40",
+    "comparison_fingerprint": "e69c2e373e320b9008ede52825489752186339a9d5ff884d8d3264be5ffb3bbc",
+    "answer_hash": "e9a1215fcede7558de8bcb2b06cc0b70cf520863fc6a9b5e4a09deaf37c86e92",
+    "submitted_at": "2026-10-02T19:11:16.893545+00:00",
+    "budget": {
+      "model_calls": 6,
+      "tokens": 67002,
+      "reserved_tokens": 0,
+      "tool_calls": 0,
+      "wall_seconds": 49.63999999999942,
+      "request_queue_idle_seconds": 0.0,
+      "task_timeout": 900.0,
+      "cost": null,
+      "by_stage": {
+        "inference": {
+          "model_calls": 6,
+          "tokens": 67002,
+          "tool_calls": 0,
+          "communication_bytes": 0,
+          "cost": null
+        },
+        "execution": {
+          "model_calls": 0,
+          "tokens": 0,
+          "tool_calls": 0,
+          "communication_bytes": 9415,
+          "cost": null
+        }
+      },
+      "records": [
+        {
+          "call_id": "311be4725bb345cbb9b09fa941134a5a",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "global",
+          "input_tokens": 4280,
+          "output_tokens": 1933,
+          "estimated": false,
+          "wall_seconds": 7.0,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 4137,
+            "sent_input_tokens": 4137,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "15f3abc1c2f2254af14d620146d7aa4e0b60c638d55dd006751a110f7af766aa"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-8e21e778-878f-4a49-90b4-79638652142a",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "b1b49d0e26ed4185a3ad216b8a7623ef",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "analyst_1",
+          "input_tokens": 13159,
+          "output_tokens": 925,
+          "estimated": false,
+          "wall_seconds": 4.953000000008615,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 12693,
+            "sent_input_tokens": 12693,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "1b753a23f14b2c0e7dee2ef37c908cdd91edbe82df9362b015f9aeab5dd8cc0d"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-363bb841-7945-4008-b4d2-e7d8087a3ab8",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "5b8e7721091c460a8c1f1149fd583c88",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "writer_1",
+          "input_tokens": 13999,
+          "output_tokens": 821,
+          "estimated": false,
+          "wall_seconds": 9.828000000008615,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 13546,
+            "sent_input_tokens": 13546,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "5785caaff20f6d7660479cce105c2e4a99c42e12d5bdee72195f52728efbf159"
+          },
+          "request": {
+            "queue_seconds": 4.953000000008615,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-21c36cd1-6b83-4a7b-babd-a14355ea450b",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "a8919c1ea4f44b4090546926900fa341",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "global",
+          "input_tokens": 10826,
+          "output_tokens": 2870,
+          "estimated": false,
+          "wall_seconds": 9.062999999994645,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 10518,
+            "sent_input_tokens": 10518,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "c92b155bd77abd31c4d4d047c6e7e2090f901a7ace7acd628a74c8941b14b36b"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-81d3130b-5499-444b-b4cf-60640bdee564",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "analyst_1",
+          "bytes": 146
+        },
+        {
+          "call_id": "dd3ae6c820fe4675a7862061c0893b7d",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "analyst_1",
+          "input_tokens": 5348,
+          "output_tokens": 1351,
+          "estimated": false,
+          "wall_seconds": 6.421999999991385,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 5217,
+            "sent_input_tokens": 5217,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "c6649391e753e42fa5ae45432d52746a85ba569d03b5bc1f48ab9c455744ecda"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-72c493ef-025f-4d60-8664-d034edde5144",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "writer_1",
+          "bytes": 9269
+        },
+        {
+          "call_id": "c3ed8aba64aa45218126f82dab307abf",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "writer_1",
+          "input_tokens": 7350,
+          "output_tokens": 4140,
+          "estimated": false,
+          "wall_seconds": 17.14100000000326,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 7304,
+            "sent_input_tokens": 7304,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "8e7fbb016b409abed49d55b3205ab296be6af0077c0fb0c277f99fe672aac190"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-f76f4bdd-bec4-40b9-bb93-9c4fa2db8231",
+            "finish_reason": "stop"
+          }
+        }
+      ]
+    },
+    "evaluation": null,
+    "proposals": [],
+    "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v34\\ours\\test\\runs\\6a56d7bf07092df69a4dd5f16ce045149eb187ececbf638edf0ec2deb4bfccfc"
+  }
+}

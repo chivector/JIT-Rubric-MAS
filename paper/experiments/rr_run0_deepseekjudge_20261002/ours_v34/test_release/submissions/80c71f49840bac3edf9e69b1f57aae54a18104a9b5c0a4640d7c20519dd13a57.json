@@ -1,0 +1,302 @@
+{
+  "slot": {
+    "slot_id": "ours:6847465956a0f6376a605360",
+    "task_id": "6847465956a0f6376a605360",
+    "method": "ours",
+    "repeat": 0
+  },
+  "status": "submitted",
+  "submission": {
+    "answer": "## Final Paper Outline: LSTM and Encoder-Decoder Architectures \u2014 A Comprehensive Expository Analysis\n\n### 1. Introduction\n- **Definitions:** LSTM (Long Short-Term Memory) is a recurrent cell architecture with gating mechanisms (input, forget, output) that mitigates the vanishing gradient problem. Encoder-decoder is a sequence-to-sequence framework with two components: an encoder that compresses input into a context vector and a decoder that generates output from it.\n- **Relationship:** These are not mutually exclusive; LSTMs are commonly used as the recurrent units within encoder-decoder models (e.g., Sutskever et al. 2014).\n- **Thesis:** Both architectures enabled practical NLP applications (machine translation, speech recognition, predictive text) while simultaneously raising significant ethical questions about bias, access, surveillance, and disinformation.\n\n### 2. Methodology\n- **Approach:** Historical analysis of primary papers; technical exposition of architecture; ethical analysis using IEEE Ethically Aligned Design and EU AI Act frameworks; case study analysis of 10 applications.\n- **Citation Standard:** All claims cited to peer-reviewed literature, historical accounts, or formal ethical frameworks.\n\n### 3. LSTM Historical Development\n- **1991:** Hochreiter identifies the vanishing gradient problem in RNNs.\n- **1997:** Hochreiter & Schmidhuber introduce LSTM with constant error carousel and gating mechanisms.\n- **2000:** Gers et al. add the forget gate.\n- **2005:** Graves & Schmidhuber develop full gradient training.\n- **2013:** Graves achieves speech recognition breakthrough with deep LSTM.\n- **2010s:** LSTM becomes dominant in sequence modeling.\n\n### 4. Encoder-Decoder Historical Development\n- **2014:** Cho et al. introduce GRU and first encoder-decoder for MT; Sutskever et al. use LSTM-based seq2seq achieving state-of-the-art; Bahdanau et al. add attention mechanism addressing fixed-length context bottleneck.\n- **2017:** Vaswani et al. introduce transformer, replacing recurrence with self-attention.\n- **Modern:** GPT, BERT, and other LLMs built on transformer architecture.\n\n### 5. Technical Explanations\n- **LSTM:** Cell state as memory highway; input/forget/output gates using sigmoid (0-1) and tanh activations; allows gradients to flow through cell state with minimal modification.\n- **Encoder-Decoder:** Encoder RNN processes input into context vector; decoder RNN generates output conditioned on context; attention allows decoder to access all encoder hidden states with learned weights.\n\n### 6. Technical Lineage\n- RNNs (1980s) \u2192 vanishing gradient (1991) \u2192 LSTM (1997) \u2192 GRU (2014) \u2192 encoder-decoder seq2seq (2014) \u2192 attention (2014) \u2192 transformer (2017) \u2192 modern LLMs.\n\n### 7. Societal Implications\n- **Machine Translation:** Google Translate NMT (2016) improved quality ~60% BLEU; DeepL (2017) achieved human-level translation for some pairs; enabled cross-language communication, global commerce, information access; raised concerns about language homogenization.\n- **Speech Recognition:** DeepSpeech (2014), Google Voice, Amazon Alexa made voice interfaces practical; enabled accessibility for visually/motor-impaired users; transformed customer service, healthcare documentation, smart home tech; raised surveillance concerns.\n- **Predictive Text:** Gboard (2016) and smartphone keyboards use LSTM/RNN models for next-word prediction; improved typing efficiency and accessibility; raised data collection and user manipulation concerns.\n- **Globalization:** Reduced language barriers in commerce, education, diplomacy; enabled real-time cross-cultural communication; may accelerate language loss for minority languages and create dependency on English-centric models.\n- **Accessibility:** Speech recognition and predictive text enabled assistive technologies; voice interfaces for motor-impaired users; real-time captioning for deaf/hard-of-hearing users; but accessibility features often lag for non-English speakers.\n- **Jobs:** Displaced some human translators but created new roles in post-editing and localization; transformed transcription jobs; created new data annotation jobs; net effect complex with both displacement and creation.\n\n### 8. Ethical Considerations\n- **Training Data Bias:** Gender bias in translation (e.g., 'doctor' \u2192 male, 'nurse' \u2192 female); racial bias in speech recognition (lower accuracy for African American English); bias amplification through model training; requires diverse data collection and algorithmic auditing.\n- **Access Disparities:** Compute and data concentration in wealthy labs (Google, OpenAI, Meta); open-source models democratize access but require expertise; developing countries face infrastructure barriers; creates digital divide in AI capabilities.\n- **Surveillance:** Speech recognition enables mass surveillance (smart speakers, call monitoring); predictive text can reveal user behavior patterns; machine translation enables monitoring of cross-language communications; raises privacy and civil liberties concerns.\n- **Disinformation:** Text generation models can create convincing fake news, deepfake audio, and manipulated translations; encoder-decoder architectures enable automated content generation at scale; requires detection systems and content moderation frameworks.\n\n### 9. Comparison\n- **Historical:** LSTM (1997) predates encoder-decoder (2014) by 17 years; LSTM emerged from academic research on sequence learning; encoder-decoder emerged from machine translation research in industry-academic collaboration.\n- **Technical:** LSTM is a cell architecture (recurrent unit with gating); encoder-decoder is a framework (two-component architecture); LSTM can be used within encoder-decoder; encoder-decoder can use GRU, LSTM, or transformer units; LSTM processes sequentially, transformer processes in parallel.\n- **Societal:** LSTM enabled speech recognition and predictive text (consumer applications); encoder-decoder enabled machine translation and text generation (communication applications); different impact profiles: LSTM more embedded in everyday devices, encoder-decoder more visible in content creation.\n\n### 10. Case Studies (10)\n1. **Google Translate NMT (2016):** Replaced phrase-based MT with neural MT using encoder-decoder with attention; improved translation quality by ~60% (BLEU score); made translation practical for 100+ languages; demonstrated commercial viability.\n2. **DeepSpeech (2014):** Mozilla's open-source speech recognition using deep LSTM; achieved state-of-the-art accuracy; democratized speech recognition technology; enabled accessibility applications; demonstrated open-source development model.\n3. **Gboard Predictive Text (2016):** Google's keyboard using LSTM for next-word prediction; improved typing efficiency; collected user data for model improvement; raised privacy concerns; demonstrated consumer application of LSTM.\n4. **Amazon Alexa (2014):** Voice assistant using LSTM for speech recognition and intent understanding; transformed smart home and voice commerce; raised surveillance and privacy concerns; demonstrated integration of multiple AI components.\n5. **Apple Siri (2011):** Early voice assistant using statistical models, later neural approaches; demonstrated challenges of voice interfaces; raised questions about data collection and user privacy; showed evolution from rule-based to neural approaches.\n6. **GPT-2 (2019):** OpenAI's language model using transformer architecture; demonstrated text generation capabilities; raised concerns about disinformation and misuse; OpenAI initially withheld full model due to safety concerns; showed tension between advancement and responsibility.\n7. **BERT (2018):** Google's transformer-based model for NLP understanding; achieved state-of-the-art on 11 NLP tasks; demonstrated power of pre-training and fine-tuning; raised questions about compute requirements and environmental impact.\n8. **DeepL (2017):** German company using neural MT with encoder-decoder; achieved human-level translation for some language pairs; demonstrated that smaller companies can compete with tech giants; raised questions about language preservation.\n9. **Facebook/Meta Translation (2017):** Meta's NMT system for 100+ languages; demonstrated scale of translation systems; raised concerns about content moderation and misinformation in translation; showed corporate investment in language technology.\n10. **Healthcare Transcription (2015-2020):** LSTM-based speech recognition for medical dictation; improved documentation efficiency; reduced physician burnout; raised privacy concerns about patient data; demonstrated domain-specific applications.\n\n### 11. Synthesis\n- **Responsible Technology:** Case studies show pattern of rapid deployment outpacing ethical frameworks; benefits (accessibility, communication) and risks (surveillance, disinformation) are intertwined; responsible technology requires proactive governance, not reactive regulation.\n- **Ethical Innovation Strategies:** Diverse data collection and representation; algorithmic auditing and bias testing; transparency in model development and deployment; human oversight for high-stakes applications; open-source governance and community participation; regulatory frameworks (EU AI Act, IEEE guidelines) for accountability.\n- **Tension Between Advancement and Responsibility:** Historical pattern: innovation precedes regulation; benefits are immediate, risks are delayed; responsible innovation requires balancing speed with safety; case studies show both positive and negative outcomes from same technologies.\n- **Open-Source vs Proprietary:** Open-source (DeepSpeech, TensorFlow, PyTorch) democratized access; proprietary (GPT-3, Claude) created access disparities; research papers as open knowledge enabled rapid progress; corporate labs drive innovation but concentrate power.\n- **Computational Implications:** Training costs increased exponentially with model size; environmental impact of large models (energy consumption, carbon emissions); compute concentration in wealthy labs; requires sustainable AI practices and efficiency research.\n- **Limitations and Failure Modes:** LSTM: sequential processing bottleneck, difficulty with very long sequences, vanishing gradient still possible in deep networks; Encoder-decoder: fixed-length context bottleneck (pre-attention), hallucination in generation, bias amplification; Transformers: quadratic attention cost, training data requirements.\n- **Transformer Transition:** Vaswani et al. (2017) showed self-attention can replace recurrence; parallelization enables efficient training on GPUs/TPUs; better long-range dependency modeling; scalability to large models; marked paradigm shift from recurrent to attention-based architectures.\n\n### 12. Conclusion\n- LSTM and encoder-decoder architectures represent key milestones in AI history; they enabled practical applications that transformed communication, accessibility, and information access; their development raises important ethical questions about bias, access, surveillance, and disinformation; responsible technology requires balancing innovation with ethical frameworks.\n\n### 13. References\n- Placeholder for full bibliography including Hochreiter & Schmidhuber (1997), Gers et al. (2000), Cho et al. (2014), Sutskever et al. (2014), Bahdanau et al. (2014), Vaswani et al. (2017), IEEE Ethically Aligned Design, EU AI Act, and case study sources.\n\n### Data Gaps and Limitations\n- Exact publication venues for some papers uncertain; specific training cost figures not recalled with confidence; precise environmental impact metrics not recalled with confidence; all figures are remembered approximations from model general knowledge, not verified current data. These should be verified against primary sources before final submission.",
+    "answer_hash": "da2f7d4c8e6fe772924d72bff59f69ead22542d136eeb48d7edf8768d156f8a4",
+    "submitted_at": "2026-10-02T18:54:11.287370+00:00"
+  },
+  "outcome": {
+    "run_key": "9dd70a1a74e971ce22965395c80472841abd315e1a6a72ff6b0c9a53d71254fd",
+    "task_id": "6847465956a0f6376a605360",
+    "mode": "evaluate",
+    "repeat": 0,
+    "status": "submitted_unscored",
+    "backend": "native_jit",
+    "software_test_only": false,
+    "resumed": false,
+    "experience_version": 18,
+    "experience_hash": "3788531a07b67a27bbab6bf99cb86c79cf05c8e3773a046075a9e91e5a023b40",
+    "comparison_fingerprint": "a6c0bff86659a3a9ff4751c0c62ac1d2dce3eaef2a3cc4397df85fd60f52f158",
+    "answer_hash": "da2f7d4c8e6fe772924d72bff59f69ead22542d136eeb48d7edf8768d156f8a4",
+    "submitted_at": "2026-10-02T18:54:11.287370+00:00",
+    "budget": {
+      "model_calls": 8,
+      "tokens": 147824,
+      "reserved_tokens": 0,
+      "tool_calls": 0,
+      "wall_seconds": 96.8130000000092,
+      "request_queue_idle_seconds": 0.031000000002677552,
+      "task_timeout": 900.0,
+      "cost": null,
+      "by_stage": {
+        "inference": {
+          "model_calls": 8,
+          "tokens": 147824,
+          "tool_calls": 0,
+          "communication_bytes": 0,
+          "cost": null
+        },
+        "execution": {
+          "model_calls": 0,
+          "tokens": 0,
+          "tool_calls": 0,
+          "communication_bytes": 69734,
+          "cost": null
+        }
+      },
+      "records": [
+        {
+          "call_id": "9de7b0e7df184e818cbcb83b9239c35b",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "global",
+          "input_tokens": 6094,
+          "output_tokens": 5410,
+          "estimated": false,
+          "wall_seconds": 17.21799999999348,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 5948,
+            "sent_input_tokens": 5948,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "a49f636daaf44ce1d9d20b4899fec2bb3f32676b56b8adbac8870486aac44173"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-d140a60f-1a7d-479e-97ab-a5890f1fb0e7",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "f4009d5417a8468d85d8c94d2f237fbf",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "analyst_1",
+          "input_tokens": 17868,
+          "output_tokens": 1774,
+          "estimated": false,
+          "wall_seconds": 7.921999999991385,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 17424,
+            "sent_input_tokens": 17424,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "49bffce61a649ca6b7008ae13611127159c23ec2bac45a5883bf3efdf41196c7"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-5f9bfefa-9f82-445c-85c4-31d5bd980126",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "99784deb9a0b46b8bb837ad7455e06e8",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "writer_1",
+          "input_tokens": 18749,
+          "output_tokens": 1629,
+          "estimated": false,
+          "wall_seconds": 15.327999999994063,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 18310,
+            "sent_input_tokens": 18310,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "649ab5a5fd1515f4180480a6b21466c0f0576bb503fb92814fc6f262721f9c46"
+          },
+          "request": {
+            "queue_seconds": 7.936999999990803,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-2c3390af-c1df-4637-8789-c90235aac77d",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "22b4de2ddafa4493826531c17b65bcd8",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "critic_1",
+          "input_tokens": 12853,
+          "output_tokens": 1373,
+          "estimated": false,
+          "wall_seconds": 13.718999999997322,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 12620,
+            "sent_input_tokens": 12620,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "41ac2e1968828d1e889f2757ff51247536ed48f0ec508dc94e20a7dacdf15d77"
+          },
+          "request": {
+            "queue_seconds": 7.375,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-68b3cce8-0d21-417e-9a8e-93a8052e853c",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "96cf42267e10473899a669f3ce659cc4",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "global",
+          "input_tokens": 19721,
+          "output_tokens": 7728,
+          "estimated": false,
+          "wall_seconds": 21.75,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 19388,
+            "sent_input_tokens": 19388,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "37da22f9835716657723dc4c30aa0c1f9e43fcd44bf56648b6bd8ca078f9e141"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-9a24104d-6239-4022-85ca-2b275b53652a",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "analyst_1",
+          "bytes": 146
+        },
+        {
+          "call_id": "d2a91b4962b54466abe5ad452f7eeb02",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "analyst_1",
+          "input_tokens": 10599,
+          "output_tokens": 3965,
+          "estimated": false,
+          "wall_seconds": 16.297000000005937,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 10509,
+            "sent_input_tokens": 10509,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "5058e1958be548aff36cb27edff21045ef01e862646ab30b20ff53eb48ed6a18"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-69de85ff-96c6-4c21-9466-68e70243fc6c",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "writer_1",
+          "bytes": 27980
+        },
+        {
+          "call_id": "39bd2576df4d4edaaecefbe7d2e8f2e6",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "writer_1",
+          "input_tokens": 15728,
+          "output_tokens": 2196,
+          "estimated": false,
+          "wall_seconds": 8.078999999997905,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 15695,
+            "sent_input_tokens": 15695,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "ff5cb7793f260a56daa9a52d59996689df1f9f65812cf8812bfb14e6543d082c"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-a3521c50-1daa-4cd4-9f8c-8a1279f9bc15",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "critic_1",
+          "bytes": 41608
+        },
+        {
+          "call_id": "9339da889be64e37ac67daa10d501bf9",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "critic_1",
+          "input_tokens": 18593,
+          "output_tokens": 3544,
+          "estimated": false,
+          "wall_seconds": 11.468999999997322,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 18571,
+            "sent_input_tokens": 18571,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "a0b51a69921467d93783978e6f4b55dc3ad41965d526e6cb8ce78eebdfddfe62"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-3525d489-2fc3-4182-8aff-2afa55177972",
+            "finish_reason": "stop"
+          }
+        }
+      ]
+    },
+    "evaluation": null,
+    "proposals": [],
+    "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v34\\ours\\test\\runs\\9dd70a1a74e971ce22965395c80472841abd315e1a6a72ff6b0c9a53d71254fd"
+  }
+}

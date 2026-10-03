@@ -1,0 +1,203 @@
+{
+  "slots": [
+    {
+      "slot_id": "ours:6847465956a0f6376a605360",
+      "task_id": "6847465956a0f6376a605360",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:683a58c9a7e7fe4e76958492",
+      "task_id": "683a58c9a7e7fe4e76958492",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605493",
+      "task_id": "6847465956a0f6376a605493",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605476",
+      "task_id": "6847465956a0f6376a605476",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:683a58c9a7e7fe4e7695848b",
+      "task_id": "683a58c9a7e7fe4e7695848b",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a6053ce",
+      "task_id": "6847465956a0f6376a6053ce",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:684397d188c1deceb49af316",
+      "task_id": "684397d188c1deceb49af316",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:684397d188c1deceb49af321",
+      "task_id": "684397d188c1deceb49af321",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605492",
+      "task_id": "6847465956a0f6376a605492",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605366",
+      "task_id": "6847465956a0f6376a605366",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605424",
+      "task_id": "6847465956a0f6376a605424",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:683a58c9a7e7fe4e7695846f",
+      "task_id": "683a58c9a7e7fe4e7695846f",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605348",
+      "task_id": "6847465956a0f6376a605348",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a6054d0",
+      "task_id": "6847465956a0f6376a6054d0",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:684397d188c1deceb49af31c",
+      "task_id": "684397d188c1deceb49af31c",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a6053a0",
+      "task_id": "6847465956a0f6376a6053a0",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a6053d0",
+      "task_id": "6847465956a0f6376a6053d0",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605387",
+      "task_id": "6847465956a0f6376a605387",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:684397d188c1deceb49af32d",
+      "task_id": "684397d188c1deceb49af32d",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605355",
+      "task_id": "6847465956a0f6376a605355",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605407",
+      "task_id": "6847465956a0f6376a605407",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:683a58c9a7e7fe4e76958488",
+      "task_id": "683a58c9a7e7fe4e76958488",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605411",
+      "task_id": "6847465956a0f6376a605411",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605362",
+      "task_id": "6847465956a0f6376a605362",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:684397d188c1deceb49af334",
+      "task_id": "684397d188c1deceb49af334",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605469",
+      "task_id": "6847465956a0f6376a605469",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a6053d8",
+      "task_id": "6847465956a0f6376a6053d8",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:683a58c9a7e7fe4e76958498",
+      "task_id": "683a58c9a7e7fe4e76958498",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a60542a",
+      "task_id": "6847465956a0f6376a60542a",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a6054cd",
+      "task_id": "6847465956a0f6376a6054cd",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605443",
+      "task_id": "6847465956a0f6376a605443",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a605401",
+      "task_id": "6847465956a0f6376a605401",
+      "method": "ours",
+      "repeat": 0
+    },
+    {
+      "slot_id": "ours:6847465956a0f6376a6053c9",
+      "task_id": "6847465956a0f6376a6053c9",
+      "method": "ours",
+      "repeat": 0
+    }
+  ],
+  "inventory_hash": "2d7d5d1131dd5eee9f6bdb04d030a70d0aeb01cb35071ac2c0bf28007e14abd1"
+}

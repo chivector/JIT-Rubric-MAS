@@ -1,0 +1,302 @@
+{
+  "slot": {
+    "slot_id": "ours:683a58c9a7e7fe4e76958488",
+    "task_id": "683a58c9a7e7fe4e76958488",
+    "method": "ours",
+    "repeat": 0
+  },
+  "status": "submitted",
+  "submission": {
+    "answer": "## A Biologically Plausible Model Integrating Engrams and Predictive Coding for Classification\n\n### 1. Core Concepts\n\n**Engram** (memory trace): A sparse ensemble of neurons co-activated during an experience, whose synaptic connections are strengthened, forming a latent memory trace retrievable by partial cues. In the hippocampus, engram cells in CA3 and CA1 are reactivated during recall (Tonegawa et al., 2015 \u2014 remembered approximation, not verified).\n\n**Predictive coding**: A hierarchical generative model where higher cortical layers predict lower-layer activity; the mismatch (prediction error) propagates upward to update internal representations, minimizing free energy (Rao & Ballard, 1999; Friston, 2005 \u2014 remembered approximations).\n\n### 2. Integration Mechanism\n\nBidirectional coupling: (a) Engram retrieval (via partial input) generates a top-down prior that biases cortical predictions; (b) large prediction errors trigger neuromodulatory release (dopamine/ACh) that gates engram consolidation and replay (Lisman & Grace, 2005 \u2014 remembered approximation).\n\n### 3. Network Architecture\n\n- **Cortical hierarchy**: 3 layers \u2014 sensory L1, association L2, readout L3. Each layer has state units r_l and error units e_l.\n- **Hippocampal engram module**: CA3 recurrent network (sparse, ~10% active) and CA1 output, bidirectionally connected to L2.\n- **Error units** at each cortical layer compute prediction errors.\n\n### 4. Mathematical Formulation\n\nFor layer l (l = 1,2,3):\n\n**Prediction**: p_l = f(W_l \u00b7 r_{l-1} + E_l \u00b7 h)\n\n**Error**: e_l = r_l \u2212 p_l\n\n**State update** (continuous dynamics, \u03c4_r dr_l/dt = \u2212r_l + p_l + e_l):\n\n**Engram state**: h = \u03c3(W_h \u00b7 r_2 + b_h), where \u03c3 is a sigmoid; h is a sparse vector (top-k activation).\n\n**Readout**: z = softmax(W_out \u00b7 r_3 + B \u00b7 h); predicted class = argmax(z).\n\n### 5. Learning Rules\n\n**Cortical weights** (Hebbian): \u0394W_l = \u03b7 \u00b7 e_l \u00b7 r_{l-1}^T\n\n**Engram formation** (error-gated Hebbian): \u0394E_l = \u03b7_e \u00b7 g(e) \u00b7 h \u00b7 r_l^T, where g(e) = \u03c3(\u03b1\u00b7||e_l||) is a neuromodulatory gate (0 to 1) increasing with prediction error. Normalize E_l columns to unit norm to prevent unbounded growth.\n\n**Replay**: During offline periods, randomly sample stored engrams h, reactivate associated r_2, and apply the same Hebbian updates to consolidate.\n\n### 6. Classification Demonstration (MNIST)\n\n**Setup**: 10-class MNIST (28\u00d728 grayscale digits), 60,000 training / 10,000 test images. Input x \u2208 R^784; L1 = 400 units, L2 = 200, L3 = 10; engram module = 100 CA3 units (10% active).\n\n**Training**: For each image, run T = 20 iterations of error minimization per layer; update weights with \u03b7 = 0.01, \u03b7_e = 0.005, \u03b1 = 2.0. After each epoch, run 100 replay steps.\n\n**Expected performance** (hypothesized, not empirically validated): ~95\u201397% test accuracy, comparable to a standard 3-layer feedforward network (~98%) but with faster adaptation to novel classes via engram retrieval. This is a projection, not a measured result.\n\n**Example**: Input digit '7' \u2192 L1 activation \u2192 L2 prediction error \u2192 engram retrieval of stored '7' pattern \u2192 top-down bias \u2192 L3 readout z = [0.01, 0.02, ..., 0.85, ...] \u2192 argmax = class 7.\n\n### 7. Biological Grounding\n\n- **Hippocampal engrams**: CA3/CA1 ensembles (Tonegawa et al., 2015 \u2014 unverified).\n- **Cortical predictive coding**: Rao & Ballard (1999); Friston (2005) \u2014 unverified.\n- **Neuromodulatory gating**: Lisman & Grace (2005) \u2014 unverified.\n- **Pattern separation**: Dentate gyrus sparse coding (McNaughton & Morris, 1987 \u2014 unverified).\n\n### 8. Limitations and Extensions\n\n1. **Catastrophic interference**: Engram module may overwrite old associations. *Extension*: Add competitive inhibition in CA3 (winner-take-all) and interleaved replay of old engrams.\n2. **Computational cost**: Iterative error minimization adds O(L\u00b7T) per sample (L=3 layers, T=20 iterations \u2192 60 updates/sample). *Extension*: Use convergence criteria (stop when ||e|| < 0.01) or parallelize layers.\n3. **No empirical validation**: All performance claims are projections. *Extension*: Implement and benchmark on MNIST, CIFAR-10, and continual learning tasks.\n4. **Simplified dynamics**: Continuous-time equations ignore spike timing. *Extension*: Use spiking neuron models (LIF) with STDP.\n5. **Unverified citations**: All neuroscience references are remembered approximations, not independently verified. *Extension*: Consult primary literature before publication.\n\n### 9. Uncertainty Flags\n\n- No empirical accuracy metrics, benchmark results, or parameter tuning details were obtained.\n- The engram\u2013predictive coding coupling is a hypothesized mechanism, not experimentally confirmed.\n- Citations (Tonegawa 2015; Rao & Ballard 1999; Friston 2005; Lisman & Grace 2005) are remembered approximations and may contain inaccuracies.\n- The MNIST performance estimate (95\u201397%) is a projection based on analogous feedforward networks, not a measured result.\n\n### 10. Conclusion\n\nThis model provides a coherent, biologically plausible framework where hippocampal engrams bias cortical predictions and prediction errors gate engram consolidation, enabling classification. The integration is causally linked to the readout via the E_l\u00b7h term. However, empirical validation and refinement of the learning rules are necessary before claiming functional equivalence to biological memory systems.",
+    "answer_hash": "6d2927a678152b482b55d18971652453f87f64034aa2c5c728525a4f3a2614ec",
+    "submitted_at": "2026-10-02T19:13:04.397542+00:00"
+  },
+  "outcome": {
+    "run_key": "e9ac348606539c488979277cdb797e215d73e97fd91c3559b1cb9ad31251000c",
+    "task_id": "683a58c9a7e7fe4e76958488",
+    "mode": "evaluate",
+    "repeat": 0,
+    "status": "submitted_unscored",
+    "backend": "native_jit",
+    "software_test_only": false,
+    "resumed": false,
+    "experience_version": 18,
+    "experience_hash": "3788531a07b67a27bbab6bf99cb86c79cf05c8e3773a046075a9e91e5a023b40",
+    "comparison_fingerprint": "fc4964c8a44d421a89158d4f26d6f5c3be058e8dd2fd54ac5586c93e531a6a1e",
+    "answer_hash": "6d2927a678152b482b55d18971652453f87f64034aa2c5c728525a4f3a2614ec",
+    "submitted_at": "2026-10-02T19:13:04.397542+00:00",
+    "budget": {
+      "model_calls": 8,
+      "tokens": 90866,
+      "reserved_tokens": 0,
+      "tool_calls": 0,
+      "wall_seconds": 58.28100000000268,
+      "request_queue_idle_seconds": 0.0,
+      "task_timeout": 900.0,
+      "cost": null,
+      "by_stage": {
+        "inference": {
+          "model_calls": 8,
+          "tokens": 90866,
+          "tool_calls": 0,
+          "communication_bytes": 0,
+          "cost": null
+        },
+        "execution": {
+          "model_calls": 0,
+          "tokens": 0,
+          "tool_calls": 0,
+          "communication_bytes": 18173,
+          "cost": null
+        }
+      },
+      "records": [
+        {
+          "call_id": "9367a6783acd4a63beb8b514657f394c",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "global",
+          "input_tokens": 4257,
+          "output_tokens": 2446,
+          "estimated": false,
+          "wall_seconds": 8.625,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 4115,
+            "sent_input_tokens": 4115,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "fc75e482f72b3c8b876dd88f08031847a437fa9d7f220fd632ebeeab88f43552"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-f48914ac-50b0-49c5-af23-7f67ab104f88",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "d203ad35b53141449862b38a8deba1b5",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "critic_1",
+          "input_tokens": 8693,
+          "output_tokens": 829,
+          "estimated": false,
+          "wall_seconds": 4.75,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 8446,
+            "sent_input_tokens": 8446,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "c29acf32e49122bb4907fe2b68f4603347b0d7bbe022d5f7d3d4755668c46a67"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-aba3d075-7a81-46af-abce-9d4ffc3ffd6e",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "775c2455c48546c7964acc5daa29359d",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "analyst_1",
+          "input_tokens": 13655,
+          "output_tokens": 1262,
+          "estimated": false,
+          "wall_seconds": 11.171999999991385,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 13187,
+            "sent_input_tokens": 13187,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "ba14a488bd25f4a2f6f5e0b4d4e2da1bf35b50c17acb2908d6ce2b4b98b360c9"
+          },
+          "request": {
+            "queue_seconds": 4.75,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-94bae49d-e48b-4974-b657-06bc5a31494a",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "00b208b87ce947f582ab22136989c454",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "writer_1",
+          "input_tokens": 14501,
+          "output_tokens": 760,
+          "estimated": false,
+          "wall_seconds": 10.453999999997905,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 14048,
+            "sent_input_tokens": 14048,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "6fcabd8a1e7fb346c4f0781259cd0cfc5afefa7a5ab0bc466d59810062456fec"
+          },
+          "request": {
+            "queue_seconds": 6.406999999991967,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-f442b4b1-6950-44f2-8686-ed533c5bf039",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "a97280713b1545b19a8ad42836375175",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "global",
+          "input_tokens": 13126,
+          "output_tokens": 5470,
+          "estimated": false,
+          "wall_seconds": 16.10899999999674,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 12817,
+            "sent_input_tokens": 12817,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "05aae28cf9236aa2f80d07b1a46ef920fdd58960deb936c1749b52485e7074bc"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-1225ccde-6c80-4184-a8a1-128d3d213cb6",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "analyst_1",
+          "bytes": 146
+        },
+        {
+          "call_id": "06b87c7b9f1a4a6bba862c0f020da229",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "analyst_1",
+          "input_tokens": 5935,
+          "output_tokens": 1134,
+          "estimated": false,
+          "wall_seconds": 5.672000000005937,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 5842,
+            "sent_input_tokens": 5842,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "b14c6b695bd0eba29e911ffe488bad45f4c44055dbb0eb372d494447e3ebcc8e"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-8886cfa3-21d0-4407-b57c-c85016c10698",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "critic_1",
+          "bytes": 6777
+        },
+        {
+          "call_id": "d950b1fca1834622ab8006457c7a7752",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "critic_1",
+          "input_tokens": 7083,
+          "output_tokens": 855,
+          "estimated": false,
+          "wall_seconds": 4.312999999994645,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 7020,
+            "sent_input_tokens": 7020,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "cf8f567d28a9c96494e4a64a07b53f3ab807f0c4b5da27343613d011302d7e00"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-154a6ef3-dd7b-4654-96fe-69ba4cd82045",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "writer_1",
+          "bytes": 11250
+        },
+        {
+          "call_id": "399f9e1df7bf4f58921044ca54b00d4c",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "writer_1",
+          "input_tokens": 8963,
+          "output_tokens": 1897,
+          "estimated": false,
+          "wall_seconds": 8.15700000000652,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 8923,
+            "sent_input_tokens": 8923,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "72f19caad0e62f4dcc851b062f52f2667a44f2d5774485930a503044a811dce4"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-ca0a43f9-f55e-49a4-bebb-a25fc323d003",
+            "finish_reason": "stop"
+          }
+        }
+      ]
+    },
+    "evaluation": null,
+    "proposals": [],
+    "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v34\\ours\\test\\runs\\e9ac348606539c488979277cdb797e215d73e97fd91c3559b1cb9ad31251000c"
+  }
+}

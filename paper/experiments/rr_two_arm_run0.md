@@ -1,4 +1,6 @@
-# ResearchRubrics run0 状态与失败记录（无有效两臂比较）
+# ResearchRubrics run0 状态与结果（v34 完成；v35 修复验证）
+
+最新已完成结果：闭卷探索、DeepSeek 自评协议下，v34 的 33/33 TEST 完整，方法均值 `0.4620917543`，Single-Agent v29 均值 `0.4755397708`，配对差 `-0.0134480165`（18 胜、15 负）。封存比较审计通过；方法尚未显示均值优势。v35 独立修复验证已启动无评分预检，状态见末尾；历史失败与已封存答案均保留。
 
 本入口只运行 v5 冻结成员中的 ResearchRubrics，执行 run0 一次；这是 RR 单 benchmark 对比，不是六 benchmark 联合进化实验的完整复现。
 
@@ -86,3 +88,15 @@ v34 已从空经验在新目录 `outputs/rr_jit_mas_run0_deepseekjudge_20261002_
 v34 进度快照（`2026-10-02T16:32:48Z`）：C0 为 10/10 完整、合格，selection utility `0.5146184793591096`；EVO1–5 全部完成，C5 第 1 题因 reviewer 拓扑不满足依赖链而失败、第 2 题进行中。累计 16 个终态槽位中 15 完成、1 失败；576 次落盘模型调用均为 `stop`，没有 `length` 或上下文超限记录。方法进程仍存活，尚无 TEST。只读监控位于 `outputs/rr_v34_monitor_status.json`，每 60 秒更新；封存审计只在完整终态后释放差值。
 
 工作区已增加通用交付物和事实核对提示、独立中断恢复 helper 与封存评分审计；这些改动没有注入正在运行的冻结 v34。提示改进基于公开 VAL 题面和回答检查，覆盖数字的日期/地域/分母/单位/推导、法律适用条件与状态、历史情节事实和具体交付物，不嵌入某一道 VAL 的答案。恢复 helper 只在原进程消失且 TEST 尚未开始时使用，校验同一冻结身份并保留终态失败，不重采样中断槽位。封存审计要求 33 份唯一提交/评分、答案与评分哈希及报告一致、非空且一致的 Judge 身份、无中断标记；闭卷 self-judge 和不同资源预算的限制保持不变。
+
+### v34 完成结果与 v35 修复验证（2026-10-03，北京时间）
+
+v34 于 `2026-10-02T19:56:21Z` 进程正常退出，pilot/report 均为 `completed`，没有中断标记。最终选中 C20（经验版本 18），VAL 10/10 完整，selection utility `0.5349210252`；五个 checkpoint 的完整数依次为 10、9、10、10、10。20 EVO 槽位中 18 个完整评分并成功更新经验；另有一次 checkpoint 未确认的执行失败、一次 Judge 连接失败。C5 另有一个 reviewer 拓扑执行失败，仍满足 9/10 阈值并保留保守缺失计分。
+
+TEST 33 题全部封存并完整评分，答案、评分哈希及 Judge 身份一致，`outputs/compare_rr_v34_v29.json` 的 `comparison_valid=true`、`integrity_ok=true`。方法均值 `0.4620917542763036`，Single-Agent v29 均值 `0.47553977079687665`，配对均值差 `-0.013448016520573093`，18 胜、15 负、0 平。该比较是闭卷探索、DeepSeek V4 Flash 自评；方法单次输出上限 12,288，baseline 为 8,192，预算不同，不能作为原计划共享证据与独立 Judge 条件下的正式优势证据。
+
+截断审计：含 TEST 评分在内共 3,504 条预算模型记录，其中 `stop=3501`、`length=1`、2 条 Judge 连接失败估计记录；唯一截断在 C20 VAL Writer（12,288 输出 tokens），后续纠正完成。TEST 没有截断或失败，没有发现 ContextLimitExceeded。49 次 contributor compactness 告警仅为建议，不自动裁掉合法内容。v34 冻结提交 `2ec11c8` 包含 `ace8471` 的截断纠正修复；统计中的评分调用与执行调用不混为同一口径。
+
+逐题诊断发现交付职责冲突：一个最大输分题把 Critic 选为终端 synthesizer，却保留其“不要重写完整答案”的 task_prompt，最终提交内部审阅报告而非完整回答。这是 TEST 后的实现诊断。修复 `7f01bcf` 在不改写冻结计划的前提下，把权威 terminal assignment 明确放入执行输入和最终 system 指令；允许任意成熟角色承担 synthesis，要求其自行完成 public_task 的交付物，保留事实检查能力，并在规划中消除 review-only 与最终写作的冲突。相关回归 130 项通过。
+
+v35 在新目录 `outputs/rr_jit_mas_run0_deepseekjudge_20261002_v35`、新冻结代码 `.runtime/rr_deepseek_judge_20261002_v35` 启动，空经验、不复用 v34 的 checkpoint，仍按 20 EVO、五次固定 10 VAL、选版后 33 TEST。先运行公开 VAL 输入的无评分预检，不更新正式经验。v29 baseline 保持封存、无需重跑；执行与 Judge 均为 `deepseek-v4-flash-vision`，其余预算沿用 v34。v35 属于已观察 v34 TEST 后的工程修复探索，须同时报告 v34 与 v35，不能表述为新鲜、未接触 TEST 的确认性实验。状态文件为 `outputs/rr_deepseek_method_launch_20261002_v35/launch.json`；只读监控为 `outputs/rr_v35_monitor_status.json`，终态后才释放严格封存差值。

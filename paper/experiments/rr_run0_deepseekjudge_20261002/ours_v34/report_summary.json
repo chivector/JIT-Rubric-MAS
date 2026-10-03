@@ -1,0 +1,466 @@
+{
+  "status": "completed",
+  "started_at": "2026-10-02T15:39:40.158361+00:00",
+  "elapsed_seconds": 13492.968999999997,
+  "selected_checkpoint": "C20",
+  "test": {
+    "completed": 33,
+    "denominator": 33,
+    "scored_denominator": 33,
+    "mean_score": 0.4620917542763036,
+    "all_task_mean": 0.4620917542763036
+  },
+  "test_tasks": [
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605360",
+        "task_id": "6847465956a0f6376a605360",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.6739130434782609,
+      "complete": true,
+      "answer_hash": "da2f7d4c8e6fe772924d72bff59f69ead22542d136eeb48d7edf8768d156f8a4"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:683a58c9a7e7fe4e76958492",
+        "task_id": "683a58c9a7e7fe4e76958492",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.375,
+      "complete": true,
+      "answer_hash": "0db870217fb1b17046628e2eed62c90dd76a30de568a8f09f5f01882ae09f2ff"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605493",
+        "task_id": "6847465956a0f6376a605493",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.8421052631578947,
+      "complete": true,
+      "answer_hash": "65940c897e9cf1e91451872c889f11ea0d8a8d6249a16873b55ee7a722d96edd"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605476",
+        "task_id": "6847465956a0f6376a605476",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.4230769230769231,
+      "complete": true,
+      "answer_hash": "81714c88cfd0865af8063273c7a021334c608560c5ea19ad96fe0647c19f796a"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:683a58c9a7e7fe4e7695848b",
+        "task_id": "683a58c9a7e7fe4e7695848b",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.45614035087719296,
+      "complete": true,
+      "answer_hash": "7561e349d5f09aec628e2d6d774f28c033ce267d307158d0678632674fd4c1b6"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a6053ce",
+        "task_id": "6847465956a0f6376a6053ce",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.6320754716981132,
+      "complete": true,
+      "answer_hash": "f3ac0d18641ddf91cf92f9f08c8b227c6ceee17c9d71e7991cf1a2089530163a"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:684397d188c1deceb49af316",
+        "task_id": "684397d188c1deceb49af316",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.17567567567567569,
+      "complete": true,
+      "answer_hash": "0848c40d242472c33792a3514471e41e05770ae4f64a74e83e400d077742ab6c"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:684397d188c1deceb49af321",
+        "task_id": "684397d188c1deceb49af321",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.5578947368421052,
+      "complete": true,
+      "answer_hash": "d70a29e361d87ae80886e48f7b1b643b924e7b59642699591f200b132dc7d6ce"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605492",
+        "task_id": "6847465956a0f6376a605492",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.52,
+      "complete": true,
+      "answer_hash": "573f4837bb5c26065cbe0fc84f64ed4cfbc9daccaacad7d644ecf133fbafeaf2"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605366",
+        "task_id": "6847465956a0f6376a605366",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.2872340425531915,
+      "complete": true,
+      "answer_hash": "04f68322c54bf9a93043d77ea0eb7cdddd4f8d674c2f01a7393a6ec01e7a48a3"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605424",
+        "task_id": "6847465956a0f6376a605424",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.5142857142857142,
+      "complete": true,
+      "answer_hash": "426209beddc570a1a6416abbe34d4f125528dcf6a87043d9e65b365ea003e214"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:683a58c9a7e7fe4e7695846f",
+        "task_id": "683a58c9a7e7fe4e7695846f",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.7021276595744681,
+      "complete": true,
+      "answer_hash": "9610d5d0f29bcb40e3e6bf87d1ff67914ece0ab2fc4cf176c9772bebd273268d"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605348",
+        "task_id": "6847465956a0f6376a605348",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.5161290322580645,
+      "complete": true,
+      "answer_hash": "1aec0d70cd0678b78e1d8340d486aa682470b4ffca367d694643b80f6dd14552"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a6054d0",
+        "task_id": "6847465956a0f6376a6054d0",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.3865546218487395,
+      "complete": true,
+      "answer_hash": "f7945b1b0aaadeb1a10df2ca889c3771f83b1596fe7dd61c2a7282076b549e9d"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:684397d188c1deceb49af31c",
+        "task_id": "684397d188c1deceb49af31c",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.42857142857142855,
+      "complete": true,
+      "answer_hash": "4644ca03feef719983e613f08fbab257123cf7351b7c12138728061347b817b9"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a6053a0",
+        "task_id": "6847465956a0f6376a6053a0",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.6233766233766234,
+      "complete": true,
+      "answer_hash": "2256904da89f41bb207cd0bf7d7fd7a2f2740ca427f476abbb6bf0a81d5a259a"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a6053d0",
+        "task_id": "6847465956a0f6376a6053d0",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.40298507462686567,
+      "complete": true,
+      "answer_hash": "56426e9f1102a34adbe8e899e0f0f1bdf61ca1156f21efee750691f45b59002a"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605387",
+        "task_id": "6847465956a0f6376a605387",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.07547169811320754,
+      "complete": true,
+      "answer_hash": "fd928e5ba9a29e17759da52a9c8b0bcda461c0d9dfa2c2b36502e8801aae0832"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:684397d188c1deceb49af32d",
+        "task_id": "684397d188c1deceb49af32d",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.5384615384615384,
+      "complete": true,
+      "answer_hash": "48e23405365cefc27a332d73ce3e8ed8594f3b1234774e038290c4d731d16a1b"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605355",
+        "task_id": "6847465956a0f6376a605355",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.43661971830985913,
+      "complete": true,
+      "answer_hash": "e9a1215fcede7558de8bcb2b06cc0b70cf520863fc6a9b5e4a09deaf37c86e92"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605407",
+        "task_id": "6847465956a0f6376a605407",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.5517241379310345,
+      "complete": true,
+      "answer_hash": "49d6912daece4c2a3481f35a761c26b7ae7218f447992fca3c58c6b5b9e1ada4"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:683a58c9a7e7fe4e76958488",
+        "task_id": "683a58c9a7e7fe4e76958488",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.4576271186440678,
+      "complete": true,
+      "answer_hash": "6d2927a678152b482b55d18971652453f87f64034aa2c5c728525a4f3a2614ec"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605411",
+        "task_id": "6847465956a0f6376a605411",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.5070422535211268,
+      "complete": true,
+      "answer_hash": "6c4f5ea95960abb07e9e0325b8fcf086ee1a4459357b2e997de93db0e9ec2f9a"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605362",
+        "task_id": "6847465956a0f6376a605362",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.32894736842105265,
+      "complete": true,
+      "answer_hash": "3b9883b031247b079bda37be34195765eabc5dd39e5e963e8506d4b8eba598eb"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:684397d188c1deceb49af334",
+        "task_id": "684397d188c1deceb49af334",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.4857142857142857,
+      "complete": true,
+      "answer_hash": "6f071a1f9cf215fe786d62feebcfed8161b27db0fcb9f499e348ce0078b620bc"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605469",
+        "task_id": "6847465956a0f6376a605469",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.25609756097560976,
+      "complete": true,
+      "answer_hash": "c9e389740d59c2045e3928f11b4cc884745978e09621af800a8dd7739630f259"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a6053d8",
+        "task_id": "6847465956a0f6376a6053d8",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.34,
+      "complete": true,
+      "answer_hash": "7b4651aae9a6b9803febc785b6fa25d986627987836555156526479a3b6e3aeb"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:683a58c9a7e7fe4e76958498",
+        "task_id": "683a58c9a7e7fe4e76958498",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.5476190476190477,
+      "complete": true,
+      "answer_hash": "6c4068e230383f5dcd86dc9a3cb443c61455fd7316d04903b8242ce1420d5648"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a60542a",
+        "task_id": "6847465956a0f6376a60542a",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.6179775280898876,
+      "complete": true,
+      "answer_hash": "d3385b372cbec4b92faab62260f4df001b22f4daacd6a272923a4bbc1e2c8c76"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a6054cd",
+        "task_id": "6847465956a0f6376a6054cd",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.4583333333333333,
+      "complete": true,
+      "answer_hash": "5a2ca943297423f52b61d4a9447084163d090e794f0dc0c46da012f1f18d7ad8"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605443",
+        "task_id": "6847465956a0f6376a605443",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.5666666666666667,
+      "complete": true,
+      "answer_hash": "719fbd5aaccf4d28b32d2c43ba99cabedbdf363ee73667b6faebc9c52edf7c0a"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a605401",
+        "task_id": "6847465956a0f6376a605401",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.13114754098360656,
+      "complete": true,
+      "answer_hash": "e006402be2453ed67b17853142177a1983e2d8fa04d9da508058dba536b534f8"
+    },
+    {
+      "slot": {
+        "slot_id": "ours:6847465956a0f6376a6053c9",
+        "task_id": "6847465956a0f6376a6053c9",
+        "method": "ours",
+        "repeat": 0
+      },
+      "task_id": null,
+      "official_score": 0.43243243243243246,
+      "complete": true,
+      "answer_hash": "76f535b38cbcf8a92a9b1ae31841349252cca10db898e2ef95ecaffbc7bc3827"
+    }
+  ],
+  "checkpoints": {
+    "C0": {
+      "position": 0,
+      "state_version": 0,
+      "state_hash": "51aa819046cc2a475cd3f4e59273db544e35a0602a07dcfd0b7d65e3d8ee8c6d",
+      "total_evaluations": 10,
+      "complete_evaluations": 10,
+      "eligible": true,
+      "selection_utility": 0.5146184793591096
+    },
+    "C5": {
+      "position": 5,
+      "state_version": 5,
+      "state_hash": "f015a8122108e04715e5ff0a056d453b329d62fc2711cae59d913735378685ba",
+      "total_evaluations": 10,
+      "complete_evaluations": 9,
+      "eligible": true,
+      "selection_utility": 0.49671932842721817
+    },
+    "C10": {
+      "position": 10,
+      "state_version": 10,
+      "state_hash": "445f0ec860cfc3c7a35e1ba224f4ca8ca88bf5b9f812c25175809924dd15b4ec",
+      "total_evaluations": 10,
+      "complete_evaluations": 10,
+      "eligible": true,
+      "selection_utility": 0.5100696873569092
+    },
+    "C15": {
+      "position": 15,
+      "state_version": 14,
+      "state_hash": "954311a240861285bdd16cb741b32deb3969a824e156258e68ecf292dcd520c4",
+      "total_evaluations": 10,
+      "complete_evaluations": 10,
+      "eligible": true,
+      "selection_utility": 0.5225557727006
+    },
+    "C20": {
+      "position": 20,
+      "state_version": 18,
+      "state_hash": "3788531a07b67a27bbab6bf99cb86c79cf05c8e3773a046075a9e91e5a023b40",
+      "total_evaluations": 10,
+      "complete_evaluations": 10,
+      "eligible": true,
+      "selection_utility": 0.5349210252148985
+    }
+  },
+  "source_report_sha256": "30ecf30a27805ddd958595b83adbb219c109198feaa36c3f36331acaad2410f8",
+  "source_output": "outputs/rr_jit_mas_run0_deepseekjudge_20261002_v34",
+  "protocol": "closed_book_exploratory_deepseek_self_judge",
+  "limitations": [
+    "Method output cap 12288 vs baseline 8192.",
+    "Closed book, shared evidence unavailable, same execution and Judge model.",
+    "v35 repairs follow observation of v34 TEST; report both attempts."
+  ]
+}

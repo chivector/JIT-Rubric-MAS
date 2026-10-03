@@ -1,0 +1,416 @@
+{
+  "schema_version": "1.1",
+  "status": "complete",
+  "baseline": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_single_agent_run0_deepseekjudge_20261002_v29",
+  "method": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v34",
+  "protocol": "closed_book_exploratory_deepseek_self_judge",
+  "identity_checks": {
+    "data_sha256": true,
+    "dataset_sha256": true,
+    "joint_manifest_sha256": true,
+    "split_manifest": true,
+    "knowledge_policy": true,
+    "judge_model": true,
+    "judge_endpoint": true,
+    "evaluator_version": true,
+    "returned_judge_model": true,
+    "returned_model_path": true,
+    "actual_data_file_sha256": true
+  },
+  "identity_compatible": true,
+  "integrity_ok": true,
+  "evaluator_versions": {
+    "baseline": [
+      "researchrubrics:2dc80e2d4c38ddd80439517c259d93c6954b193f:34495d16ccb3c0ee409f3dcaa52fd6ed474f04ae25e5e9be3f7710ec783e2520"
+    ],
+    "method": [
+      "researchrubrics:2dc80e2d4c38ddd80439517c259d93c6954b193f:34495d16ccb3c0ee409f3dcaa52fd6ed474f04ae25e5e9be3f7710ec783e2520"
+    ]
+  },
+  "returned_judge_models": {
+    "baseline": [
+      "deepseek-v4-flash-vision"
+    ],
+    "method": [
+      "deepseek-v4-flash-vision"
+    ]
+  },
+  "returned_model_paths": {
+    "baseline": [
+      "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp"
+    ],
+    "method": [
+      "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp"
+    ]
+  },
+  "execution_response_caps": {
+    "baseline": 8192,
+    "method": 12288
+  },
+  "resource_budgets_match": false,
+  "resource_note": "Baseline exec max_tokens=8192; method exec max_tokens=12288. This is an exploratory comparison under the recorded resource budgets.",
+  "answer_hash_audit": {
+    "baseline": {
+      "expected": 33,
+      "found": 33,
+      "errors": []
+    },
+    "method": {
+      "expected": 33,
+      "found": 33,
+      "errors": []
+    }
+  },
+  "row_duplicates": {
+    "baseline": [],
+    "method": []
+  },
+  "baseline_status": "completed",
+  "method_status": "completed",
+  "paired": [
+    {
+      "task_id": "6847465956a0f6376a605360",
+      "baseline": 0.5217391304347826,
+      "ours": 0.6739130434782609,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.15217391304347827
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958492",
+      "baseline": 0.475,
+      "ours": 0.375,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.09999999999999998
+    },
+    {
+      "task_id": "6847465956a0f6376a605493",
+      "baseline": 0.7719298245614035,
+      "ours": 0.8421052631578947,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.07017543859649122
+    },
+    {
+      "task_id": "6847465956a0f6376a605476",
+      "baseline": 0.41025641025641024,
+      "ours": 0.4230769230769231,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.01282051282051283
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e7695848b",
+      "baseline": 0.5614035087719298,
+      "ours": 0.45614035087719296,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.10526315789473684
+    },
+    {
+      "task_id": "6847465956a0f6376a6053ce",
+      "baseline": 0.6792452830188679,
+      "ours": 0.6320754716981132,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.047169811320754707
+    },
+    {
+      "task_id": "684397d188c1deceb49af316",
+      "baseline": 0.12162162162162163,
+      "ours": 0.17567567567567569,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.05405405405405406
+    },
+    {
+      "task_id": "684397d188c1deceb49af321",
+      "baseline": 0.5473684210526316,
+      "ours": 0.5578947368421052,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.010526315789473606
+    },
+    {
+      "task_id": "6847465956a0f6376a605492",
+      "baseline": 0.38,
+      "ours": 0.52,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.14
+    },
+    {
+      "task_id": "6847465956a0f6376a605366",
+      "baseline": 0.44680851063829785,
+      "ours": 0.2872340425531915,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.15957446808510634
+    },
+    {
+      "task_id": "6847465956a0f6376a605424",
+      "baseline": 0.6571428571428571,
+      "ours": 0.5142857142857142,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.1428571428571429
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e7695846f",
+      "baseline": 0.5106382978723404,
+      "ours": 0.7021276595744681,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.19148936170212771
+    },
+    {
+      "task_id": "6847465956a0f6376a605348",
+      "baseline": 0.6129032258064516,
+      "ours": 0.5161290322580645,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.09677419354838712
+    },
+    {
+      "task_id": "6847465956a0f6376a6054d0",
+      "baseline": 0.3445378151260504,
+      "ours": 0.3865546218487395,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.04201680672268909
+    },
+    {
+      "task_id": "684397d188c1deceb49af31c",
+      "baseline": 0.5714285714285714,
+      "ours": 0.42857142857142855,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.14285714285714285
+    },
+    {
+      "task_id": "6847465956a0f6376a6053a0",
+      "baseline": 0.5584415584415584,
+      "ours": 0.6233766233766234,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.06493506493506496
+    },
+    {
+      "task_id": "6847465956a0f6376a6053d0",
+      "baseline": 0.3582089552238806,
+      "ours": 0.40298507462686567,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.04477611940298509
+    },
+    {
+      "task_id": "6847465956a0f6376a605387",
+      "baseline": 0.6981132075471698,
+      "ours": 0.07547169811320754,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.6226415094339622
+    },
+    {
+      "task_id": "684397d188c1deceb49af32d",
+      "baseline": 0.6538461538461539,
+      "ours": 0.5384615384615384,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.11538461538461542
+    },
+    {
+      "task_id": "6847465956a0f6376a605355",
+      "baseline": 0.352112676056338,
+      "ours": 0.43661971830985913,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.08450704225352113
+    },
+    {
+      "task_id": "6847465956a0f6376a605407",
+      "baseline": 0.4482758620689655,
+      "ours": 0.5517241379310345,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.10344827586206895
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958488",
+      "baseline": 0.288135593220339,
+      "ours": 0.4576271186440678,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.1694915254237288
+    },
+    {
+      "task_id": "6847465956a0f6376a605411",
+      "baseline": 0.5211267605633803,
+      "ours": 0.5070422535211268,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.014084507042253502
+    },
+    {
+      "task_id": "6847465956a0f6376a605362",
+      "baseline": 0.4605263157894737,
+      "ours": 0.32894736842105265,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.13157894736842102
+    },
+    {
+      "task_id": "684397d188c1deceb49af334",
+      "baseline": 0.4,
+      "ours": 0.4857142857142857,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.08571428571428569
+    },
+    {
+      "task_id": "6847465956a0f6376a605469",
+      "baseline": 0.2926829268292683,
+      "ours": 0.25609756097560976,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.036585365853658514
+    },
+    {
+      "task_id": "6847465956a0f6376a6053d8",
+      "baseline": 0.6,
+      "ours": 0.34,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.25999999999999995
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e76958498",
+      "baseline": 0.6785714285714286,
+      "ours": 0.5476190476190477,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.13095238095238093
+    },
+    {
+      "task_id": "6847465956a0f6376a60542a",
+      "baseline": 0.4044943820224719,
+      "ours": 0.6179775280898876,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.2134831460674157
+    },
+    {
+      "task_id": "6847465956a0f6376a6054cd",
+      "baseline": 0.3333333333333333,
+      "ours": 0.4583333333333333,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.125
+    },
+    {
+      "task_id": "6847465956a0f6376a605443",
+      "baseline": 0.4,
+      "ours": 0.5666666666666667,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.16666666666666663
+    },
+    {
+      "task_id": "6847465956a0f6376a605401",
+      "baseline": 0.29508196721311475,
+      "ours": 0.13114754098360656,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": -0.16393442622950818
+    },
+    {
+      "task_id": "6847465956a0f6376a6053c9",
+      "baseline": 0.33783783783783783,
+      "ours": 0.43243243243243246,
+      "baseline_complete": true,
+      "ours_complete": true,
+      "answer_hash_match": true,
+      "complete_pair": true,
+      "difference": 0.09459459459459463
+    }
+  ],
+  "completed_pairs": 33,
+  "subset_mean_difference": -0.013448016520573093,
+  "full_mean_difference": -0.013448016520573093,
+  "baseline_full_mean": 0.47553977079687665,
+  "method_full_mean": 0.4620917542763036,
+  "baseline_complete_subset_mean": 0.47553977079687665,
+  "method_complete_subset_mean": 0.4620917542763036,
+  "wins": 18,
+  "ties": 0,
+  "losses": 15,
+  "comparison_valid": true,
+  "paired_comparison_available": true,
+  "advantage_claim_allowed": false,
+  "advantage_claim_note": "Closed-book self-judge results, including differing execution budgets, do not establish the formal shared-evidence independent-judge advantage."
+}

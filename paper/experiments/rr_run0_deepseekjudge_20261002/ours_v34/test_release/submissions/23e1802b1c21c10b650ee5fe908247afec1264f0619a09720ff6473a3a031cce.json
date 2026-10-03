@@ -1,0 +1,240 @@
+{
+  "slot": {
+    "slot_id": "ours:683a58c9a7e7fe4e7695846f",
+    "task_id": "683a58c9a7e7fe4e7695846f",
+    "method": "ours",
+    "repeat": 0
+  },
+  "status": "submitted",
+  "submission": {
+    "answer": "**The Geometry You Learned vs. the Geometry That Wins Competitions**\n\nIf you took a standard American high school geometry course, you probably remember a year of proofs, congruent triangles, and a few circle theorems. You might have learned that the angles in a triangle add to 180\u00b0, that two triangles are congruent if they match up in certain ways (SSS, SAS, ASA, AAS, HL), and that the area of a circle is \u03c0r\u00b2. You may have even proved a few of these results yourself, step by step, using a two-column proof.\n\nBut if you've ever looked at a problem from the AMC (American Mathematics Competitions), the AIME (American Invitational Mathematics Examination), or an Olympiad, you might have felt like you were looking at a different subject entirely. The shapes look familiar, but the tools used to solve them often aren't in the standard curriculum. This post is about that gap: what's different, why it exists, and how competition geometry actually works.\n\n**The Big Difference: Theorems as Objects vs. Theorems as Tools**\n\nIn a typical high school class, the goal is often to *prove* foundational results. You learn the definition of a midpoint, the properties of parallel lines, and then you're asked to show that two triangles are congruent. The theorems themselves are the destination. You're building a logical foundation, and the proofs are the point.\n\nIn competitions, the theorems are the *starting point*. You're expected to know a much larger toolkit of results, and you use them as tools to solve problems that are often multi-step and non-routine. A competition problem rarely says \"prove that these two triangles are congruent.\" Instead, it might give you a complex diagram and ask you to find a length or an angle, and the path to the answer requires you to recognize which of many possible theorems applies, often combining several in unexpected ways.\n\nThis is the core contrast: the curriculum teaches you to build the house; competitions hand you a fully stocked toolbox and ask you to build something you've never seen before.\n\n**Three Competition Tools You Probably Didn't Learn**\n\nHere are three techniques that are staples of competition geometry but are rarely, if ever, covered in a standard high school course. I'll define each one and give a simple example.\n\n**1. Power of a Point**\n\nThis is a powerful theorem about circles. Here's the idea: take a point P and a circle. Draw any line through P that hits the circle at two points, A and B. Now draw another line through P that hits the circle at two points, C and D. The theorem says that the product of the distances from P to the two intersection points is the same for both lines:\n\nPA \u00d7 PB = PC \u00d7 PD\n\nThis works whether P is inside the circle (in which case the lines are chords) or outside the circle (in which case the lines are secants).\n\n*Example:* Suppose P is inside a circle, and two chords AB and CD intersect at P. If PA = 3, PB = 8, and PC = 4, what is PD?\n\nBy Power of a Point, PA \u00d7 PB = PC \u00d7 PD. So 3 \u00d7 8 = 4 \u00d7 PD, which gives 24 = 4 \u00d7 PD, so PD = 6.\n\nThis is a one-step problem once you know the theorem. Without it, you'd have to use similar triangles and a bit of angle chasing, which is doable but much slower.\n\n**2. Ceva's Theorem**\n\nThis theorem deals with lines drawn from the vertices of a triangle to the opposite sides. These lines are called *cevians* (named after the Italian mathematician Giovanni Ceva).\n\nConsider triangle ABC. Let D be a point on side BC, E a point on side CA, and F a point on side AB. Now draw the three cevians AD, BE, and CF. Ceva's Theorem says that these three lines all meet at a single point (they are *concurrent*) if and only if:\n\n(BD/DC) \u00d7 (CE/EA) \u00d7 (AF/FB) = 1\n\n*Example:* Suppose in triangle ABC, D is on BC such that BD/DC = 2, and E is on CA such that CE/EA = 3. If the cevians AD, BE, and CF are concurrent, what must AF/FB be?\n\nBy Ceva's Theorem, (BD/DC) \u00d7 (CE/EA) \u00d7 (AF/FB) = 1. So 2 \u00d7 3 \u00d7 (AF/FB) = 1, which means 6 \u00d7 (AF/FB) = 1, so AF/FB = 1/6.\n\nThis is a classic competition problem. In a standard class, you might not even learn the word \"cevian,\" let alone a theorem that relates the three ratios.\n\n**3. Mass Points**\n\nThis is a clever technique for solving ratio problems in triangles, and it's a favorite in competitions because it turns a geometry problem into a physics problem. The idea is to assign \"masses\" to the vertices of a triangle so that the center of mass of the system corresponds to the point where the cevians meet.\n\nHere's the rule: if a point D divides a segment BC in the ratio m:n, then you assign a mass of n to B and a mass of m to C. (The masses are inversely proportional to the ratio.) The mass at a vertex is the sum of the masses of the points that connect to it.\n\n*Example:* Suppose D divides BC in the ratio 2:3. That means BD/DC = 2/3. So we assign a mass of 3 to B and a mass of 2 to C. Now, if we also know that E divides CA in some ratio, we can assign masses to A and C accordingly, and the mass at A will tell us the ratio along AD.\n\nThis technique is especially powerful when you have multiple cevians and you need to find several ratios at once. It's a great example of how competition math often borrows ideas from other fields (in this case, physics) to solve geometry problems more efficiently.\n\n**A Worked Example: Putting It All Together**\n\nLet's do a full worked example to see how a competition problem might use one of these tools.\n\n*Problem:* In a circle, chords AB and CD intersect at point P inside the circle. Given that PA = 3, PB = 8, and PC = 4, find PD.\n\n*Solution:*\n\n1. **Identify the relevant theorem.** We have two chords intersecting inside a circle. This is a classic setup for Power of a Point.\n\n2. **Apply the theorem.** Power of a Point tells us that PA \u00d7 PB = PC \u00d7 PD.\n\n3. **Substitute the known values.** 3 \u00d7 8 = 4 \u00d7 PD.\n\n4. **Solve for the unknown.** 24 = 4 \u00d7 PD, so PD = 24 / 4 = 6.\n\n5. **State the answer.** PD = 6.\n\nThat's it. The problem is solved in a few lines because we had the right tool. In a standard class, you might not have learned this theorem, and you'd have to find a more roundabout solution using similar triangles and angle chasing.\n\n**Why This Matters (and Why It's Fun)**\n\nThe difference between curriculum geometry and competition geometry isn't about one being \"better\" than the other. The curriculum builds a solid foundation and teaches you to think logically and prove things rigorously. That's essential. Competitions, on the other hand, teach you to think creatively, to recognize patterns, and to build a mental library of powerful tools that you can deploy quickly.\n\nCompetition geometry is like learning to play jazz after learning to read sheet music. You know the scales and the chords (the theorems), but now you have to improvise, combine them in new ways, and find elegant solutions to problems that don't have a single obvious path.\n\nIf you've taken a standard geometry class and you're curious about competitions, I encourage you to explore. Start with some AMC problems\u2014they're more accessible than AIME or Olympiad problems. Look up Power of a Point, Ceva's Theorem, and Mass Points. You might be surprised at how much more fun geometry can be when you have a bigger toolbox.\n\n**A Note on Accuracy**\n\nThis post is based on general knowledge of standard high school geometry curricula and common competition techniques. The specific content of a high school geometry course varies by state and district, and some advanced courses may introduce Power of a Point or Ceva's Theorem. Competition problems also vary in difficulty; AMC problems are generally more accessible than AIME or Olympiad problems. The examples and theorems described here are accurate as stated, but they are not a substitute for a full curriculum or a dedicated competition math course.",
+    "answer_hash": "9610d5d0f29bcb40e3e6bf87d1ff67914ece0ab2fc4cf176c9772bebd273268d",
+    "submitted_at": "2026-10-02T19:03:46.638541+00:00"
+  },
+  "outcome": {
+    "run_key": "301e658955d0639975d92d216261e23a5d5a09c8576a579a89c28225ec56fefa",
+    "task_id": "683a58c9a7e7fe4e7695846f",
+    "mode": "evaluate",
+    "repeat": 0,
+    "status": "submitted_unscored",
+    "backend": "native_jit",
+    "software_test_only": false,
+    "resumed": false,
+    "experience_version": 18,
+    "experience_hash": "3788531a07b67a27bbab6bf99cb86c79cf05c8e3773a046075a9e91e5a023b40",
+    "comparison_fingerprint": "596bc23deb434b27736798c70ce2a8761502b0f81a2228e633cecf5323de75fb",
+    "answer_hash": "9610d5d0f29bcb40e3e6bf87d1ff67914ece0ab2fc4cf176c9772bebd273268d",
+    "submitted_at": "2026-10-02T19:03:46.638541+00:00",
+    "budget": {
+      "model_calls": 6,
+      "tokens": 66634,
+      "reserved_tokens": 0,
+      "tool_calls": 0,
+      "wall_seconds": 41.79700000000594,
+      "request_queue_idle_seconds": 0.0,
+      "task_timeout": 900.0,
+      "cost": null,
+      "by_stage": {
+        "inference": {
+          "model_calls": 6,
+          "tokens": 66634,
+          "tool_calls": 0,
+          "communication_bytes": 0,
+          "cost": null
+        },
+        "execution": {
+          "model_calls": 0,
+          "tokens": 0,
+          "tool_calls": 0,
+          "communication_bytes": 8132,
+          "cost": null
+        }
+      },
+      "records": [
+        {
+          "call_id": "58a4d9a257bc46f6b5865f28fee9d634",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "global",
+          "input_tokens": 4331,
+          "output_tokens": 2107,
+          "estimated": false,
+          "wall_seconds": 7.562000000005355,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 4190,
+            "sent_input_tokens": 4190,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "9da0a9cc79f13d2e36691c41c467895b2514b4c7d1e89b7275809aebf790ea2e"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-36687e23-bd0d-4e59-90bb-1792caa8b591",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "a8e977bbe4344b55be63cdb93d5881c6",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "analyst_1",
+          "input_tokens": 13498,
+          "output_tokens": 953,
+          "estimated": false,
+          "wall_seconds": 5.157000000006519,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 13057,
+            "sent_input_tokens": 13057,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "e535cdf6a52cbf1bb84457dfdaac0592bd0189e396497d836dc8c0aba2e3770c"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-56c7ba6c-6f5a-4464-aa90-d1ddc6cb3682",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "e8d3921abbe747d8a4d58f5b4d87353a",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "writer_1",
+          "input_tokens": 14379,
+          "output_tokens": 919,
+          "estimated": false,
+          "wall_seconds": 10.110000000000582,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 13948,
+            "sent_input_tokens": 13948,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "fdc5ff9234d77b650e2b130fcbdfed912e4c228758fecee886fecf5c76906276"
+          },
+          "request": {
+            "queue_seconds": 5.157000000006519,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-b2c43f8a-23e7-4cff-8a43-46fd2b279457",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "call_id": "d56d5f970f7849289e22e31790f25436",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "global",
+          "input_tokens": 11161,
+          "output_tokens": 3073,
+          "estimated": false,
+          "wall_seconds": 9.547000000005937,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 10918,
+            "sent_input_tokens": 10918,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "09167675fc36f63545034d2955ffe13fa3cb7131f4fec0d8f2a8c5d53aeb0990"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-2408e368-1f0c-4af2-8596-fcd7f3fce25d",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "analyst_1",
+          "bytes": 146
+        },
+        {
+          "call_id": "7150ef6a8fa24e89b3142c8cef321ed1",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "analyst_1",
+          "input_tokens": 5411,
+          "output_tokens": 1063,
+          "estimated": false,
+          "wall_seconds": 4.782000000006519,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 5345,
+            "sent_input_tokens": 5345,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "0fc5a813cf50bf819a3a5a77a6bc8e9ffe65b6b01f74171b33e121bbcf242166"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-ed8fd71b-ccbd-4e0e-a77a-60e3a023c652",
+            "finish_reason": "stop"
+          }
+        },
+        {
+          "kind": "communication",
+          "stage": "execution",
+          "agent_id": "writer_1",
+          "bytes": 7986
+        },
+        {
+          "call_id": "912788ce203a4f7a9b4906292cc0ffb1",
+          "kind": "model",
+          "stage": "inference",
+          "agent_id": "writer_1",
+          "input_tokens": 7386,
+          "output_tokens": 2353,
+          "estimated": false,
+          "wall_seconds": 9.593999999997322,
+          "error": "",
+          "context": {
+            "estimator": "cl100k_base_messages_v1",
+            "context_window": 131072,
+            "margin": 2048,
+            "policy": "oldest_turns",
+            "original_input_tokens": 7373,
+            "sent_input_tokens": 7373,
+            "removed_message_hashes": [],
+            "sent_messages_hash": "aa410333d821ef0586c17a77c6c1bc2ab6240d927cd94a12da61a47d34d6a664"
+          },
+          "request": {
+            "queue_seconds": 0.0,
+            "response_model": "/mnt/data/datas/models/DeepSeek-V4-Flash-Vision-Exp",
+            "system_fingerprint": "vllm-0.28.1rc1.dev137+g5ab628dd1-tp8-ep-0b83e6c7",
+            "response_id": "chatcmpl-b6860203-61ab-4c48-9356-5d6ea3d23765",
+            "finish_reason": "stop"
+          }
+        }
+      ]
+    },
+    "evaluation": null,
+    "proposals": [],
+    "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v34\\ours\\test\\runs\\301e658955d0639975d92d216261e23a5d5a09c8576a579a89c28225ec56fefa"
+  }
+}

@@ -1,5 +1,13 @@
 # ResearchRubrics run0: DeepSeek Judge 交接
 
+## 最新完成结果与继续入口（2026-10-03，北京时间）
+
+v34 已完成 33/33 TEST，严格封存比较通过：方法均值 `0.4620917542763036`，Single-Agent v29 为 `0.47553977079687665`，配对差 `-0.013448016520573093`，18 胜、15 负。完整封存提交与逐 rubric 评分见 `ours_v34/test_release/`，摘要见 `ours_v34/report_summary.json`，比较见 `COMPARISON_v34_v29.json`。v34 选择 C20，空经验启动，20 EVO 中 18 项完整评分。TEST 没有失败或截断；唯一 `length` 出现在 C20 VAL，后续纠正完成。
+
+v35 修复终端 Critic 仍提交 review-only 内容的职责冲突，同时纳入通用交付物与事实核验提示、reviewer 拓扑纠正。修复提交 `7f01bcf`，130 项相关回归通过；公开 VAL 无评分预检已通过（0 Judge 请求、无经验更新），正式运行已启动。它仍从空经验执行 20 EVO、五次固定 10 VAL、选版后 33 TEST，v29 baseline 保持封存。查看本机 `outputs/rr_deepseek_method_launch_20261002_v35/launch.json` 与 `outputs/rr_v35_monitor_status.json`；终态后用 `scripts.compare_rr_sealed_runs` 对 v29/v35 运行严格审计。
+
+这是闭卷、DeepSeek V4 Flash 自评且输出预算不同（方法 12,288 vs baseline 8,192）的探索实验，尚无正式方案优势。v35 是观察 v34 TEST 后的工程修复尝试，应同时呈现 v34 和 v35，不能当作新的未接触 TEST 确认性结果。凭据仍只注入进程环境。下文保留 v30/v31 的历史交接，不代表最新进度。
+
 Single-Agent v29 已完成 33/33 TEST 评分，均值 `0.47553977079687665`。33 份答案均复用原封存文本，原文本由 `baseline_v29/sealed_answer_references.json` 引用；本包保留全部逐题 DeepSeek 原始评分、证据、预算及封存清单。
 
 方法 v30 已人工中断；终态以 `ours_v30/interruption.json` 为准，原 report/pilot/journal 状态保留。已登记 EVO 12/20，状态计数为 `{'failed': 11, 'started': 1}`，没有最终 checkpoint 或 TEST 答案。v30 与 v31 轨迹独立，不能合并成成功实验。
