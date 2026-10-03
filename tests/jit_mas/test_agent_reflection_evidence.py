@@ -201,6 +201,8 @@ def test_reflection_correction_identifies_missing_top_level_counterevidence():
         if len(requests) == 2:
             message = payload["response_correction"]["validation_errors"][0]["message"]
             assert "missing_top_level_evidence_ids=['event:counter']" in message
+            assert "all lesson.evidence and lesson.counterevidence" in messages[0]["content"]
+            assert "final-synthesizer DAG" not in messages[0]["content"]
             response["evidence"].append("event:counter")
         return json.dumps(response)
 

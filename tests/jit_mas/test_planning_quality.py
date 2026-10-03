@@ -160,6 +160,8 @@ def test_terminal_owner_correction_removes_all_optional_upstream_reviews(mode):
         if "response_correction" not in request:
             return json.dumps(invalid)
         assert "primary_owner_id='check'" in str(request["response_correction"])
+        assert "rubric_id='accuracy'" in str(request["response_correction"])
+        assert "rubric_id='clarity'" in str(request["response_correction"])
         assert "audit every actual rubric_id" in messages[0]["content"]
         assert "omit every optional reviewer assignment" in messages[0]["content"]
         fixed = copy.deepcopy(invalid)

@@ -240,7 +240,7 @@ def test_ledger_protocol_correction_retains_both_metered_calls_and_raw_error():
     raw = ScriptedModel([invalid, valid])
     # The contributor compactness guidance is part of the metered prompt; leave
     # enough shared budget for both the malformed response and its correction.
-    ledger = BudgetLedger(max_calls=2, max_tokens=30000, max_tool_calls=0)
+    ledger = BudgetLedger(max_calls=2, max_tokens=40000, max_tool_calls=0)
     model = MeteredModel(raw, ledger, "execution", "searcher", 4096)
     services, context = make_services(team, {"searcher": model})
     services.ledger = ledger
@@ -749,6 +749,94 @@ def test_repeated_invalid_checkpoint_fails_after_one_correction_without_tool_dis
     assert len([event for event in services.events if event["kind"] == "execution_error"]) == 1
     assert not dispatched and "writer" not in services.artifacts
     assert not any(event["kind"] in {"artifact_published", "final_answer"} for event in services.events)
+
+
+@pytest.mark.parametrize("initial_checks", [{}, {"accuracy": False}, {"Accuracy": True}])
+def test_missing_checkpoint_gets_one_honest_model_authored_correction(initial_checks):
+    team = make_team(checkpoints=["accuracy"])
+    invalid = {"answer": "A guide with a claim that requires external verification.",
+               "checkpoints": initial_checks}
+
+    def corrected(messages):
+        assert 'Exact assigned checkpoint keys: ["accuracy"]' in messages[-1]["content"]
+        assert "Do not invent a passed finding" in messages[-1]["content"]
+        return {"answer": "A guide identifying the unsupported claim and its limitation.",
+                "checkpoints": {"accuracy": {"status": "unverified",
+                    "reason": "The input does not provide evidence for the disputed claim.",
+                    "evidence_ids": []}}}
+
+    model = ScriptedModel([invalid, corrected])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.terminated_reason == "final_answer"
+    assert len(model.calls) == len(result.trajectory) == 2
+    assert str(result.trajectory[0].error).startswith("Unconfirmed checkpoints")
+    assert result.trajectory[0].model_output_messages.content == json.dumps(invalid)
+    assert result.metadata["checkpoint_reports"]["accuracy"]["status"] == "unverified"
+    assert result.metadata["checkpoint_reports"]["accuracy"]["independently_verified"] is False
+
+
+def test_repeated_missing_checkpoint_fails_after_one_correction():
+    team = make_team(checkpoints=["accuracy"])
+    invalid = {"answer": "A draft without its assigned check."}
+    model = ScriptedModel([invalid, invalid])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer is None and result.terminated_reason == "error"
+    assert len(model.calls) == 2
+    assert all(str(step.error).startswith("Unconfirmed checkpoints") for step in result.trajectory)
+    assert "writer" not in services.artifacts
+    assert not any(event["kind"] == "final_answer" for event in services.events)
+
+
+def test_missing_checkpoint_does_not_recall_fabricated_evidence():
+    team = make_team(checkpoints=["accuracy"])
+    model = ScriptedModel([{"answer": "An unsupported answer.", "evidence_ids": ["invented"]}])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.answer is None and result.terminated_reason == "error"
+    assert len(model.calls) == 1
+    assert "evidence not observed" in str(result.trajectory[0].error)
+
+
+def test_missing_checkpoint_correction_keeps_configured_role_call_ceiling():
+    team = make_team(checkpoints=["accuracy"])
+    team.agents[-1].max_calls = 1
+    model = ScriptedModel([{"answer": "A draft without its assigned check."}])
+    services, context = make_services(team, {"writer": model})
+    services.model_factory = lambda agent_id: _SinglePassModel(
+        model, services, team.agents[-1].model_dump(mode="json"), team.model_dump(mode="json"))
+    result = run_writer(team, services, context)
+    assert result.answer is None and result.terminated_reason == "error"
+    assert len(model.calls) == services.calls == 1
+    assert "AgentSpec.max_calls exhausted" in str(result.trajectory[-1].error)
+
+
+def test_closed_book_ledger_correction_preserves_knowledge_in_outline():
+    team = make_team(contributors=True)
+    invalid = {"answer": "Remembered mechanisms for the guide.", "ledger": {
+        "requirements": ["Explain the mechanism"], "outline": [],
+        "source_references": ["Remembered report, not retrieved"],
+        "evidence_spans": ["A remembered mechanism and its limitation"]}}
+
+    def corrected(messages):
+        assert "do not convert remembered citations into source objects" in messages[-1]["content"]
+        assert "move useful remembered claims" in messages[-1]["content"]
+        return {"answer": "Remembered mechanisms for the guide.", "ledger": {
+            "requirements": ["Explain the mechanism"],
+            "outline": ["A remembered mechanism and its limitation; report not retrieved."],
+            "source_references": [], "evidence_spans": []}}
+
+    model = ScriptedModel([invalid, corrected])
+    services, context = make_services(team, {"searcher": model},
+                                      knowledge_policy="model_general_knowledge_allowed")
+    result = _run_agent_iterative(team.agents[0].model_dump(mode="json"),
+                                 team.model_dump(mode="json"), context, services)
+    assert result.terminated_reason == "subtask_complete"
+    assert len(model.calls) == 2
+    handoff = services.artifacts["searcher"]["ledger"]
+    assert handoff["outline"] == ["A remembered mechanism and its limitation; report not retrieved."]
+    assert handoff["source_references"] == handoff["evidence_spans"] == []
 
 
 def test_checkpoint_correction_still_requires_every_exact_assigned_checkpoint():

@@ -30,7 +30,7 @@ from jit_mas.planning import (
 from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGraph, TeamSpec, utc_now
 
 
-ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v7"
+ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v8"
 CONTRIBUTOR_COMPACTNESS_POLICY_VERSION = "contributor-budget-advisory-v1"
 CONTRIBUTOR_ANSWER_MAX_CHARS = 1200
 CONTRIBUTOR_LEDGER_MAX_ITEMS = 12
@@ -572,6 +572,7 @@ def _correctable_execution_shape_error(error, response, *, observed_ids, allowed
     prefixes = (
         "Expected a complete JSON object", "Response must be a JSON object",
         "answer must be a nonempty string", "checkpoints must be an object",
+        "Unconfirmed checkpoints: ",
         "A checkpoint must be", "evidence_ids must be a list",
         "tools must be a list of named tool calls", "Tool arguments must encode",
         "Tool arguments must be an object", "continue must be a boolean",
@@ -1154,12 +1155,20 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                     "not_applicable, a nonempty reason string, and an evidence_ids array. Do not use "
                     "prose strings, status=complete, or embedded key-value text. Include all exact "
                     "checkpoint names and a role-appropriate answer when terminating (full deliverable only "
-                    "for the synthesizer; compact summary plus ledger for a contributor). Preserve honest uncertainty. "
+                    "for the synthesizer; compact summary plus ledger for a contributor). "
+                    "Perform any missing checks you can support; otherwise report failed or unverified "
+                    "with a specific reason. Do not invent a passed finding to finish. Preserve honest uncertainty. "
+                    "Exact assigned checkpoint keys: " + json.dumps(agent.get("checkpoints", []), ensure_ascii=False) + ". "
                     "For a contributor, ledger must be an object with requirements and outline as "
                     "lists of nonempty strings, and evidence_spans and source_references as lists. "
                     "Each observed source entry needs nonempty source_id and locator; each evidence "
                     "span needs nonempty text and source_ref matching a declared source_id. "
                     "If no sources were observed, ledger source_references/evidence_spans must be empty arrays. "
+                    + ("This run is closed book: do not convert remembered citations into source objects. "
+                       "Keep source_references=[] and evidence_spans=[]; move useful remembered claims, "
+                       "citation details and limitations into ledger.outline as nonempty strings, "
+                       "retaining the substantive material with its uncertainty. "
+                       if services.knowledge_policy == "model_general_knowledge_allowed" else "") +
                     "For a contributor, put a compact summary in answer and substantive facts, reasoning and "
                     "results in ledger; for the synthesizer, put the complete public deliverable in answer. "
                     "Make the correction yourself; "

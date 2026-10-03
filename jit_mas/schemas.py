@@ -267,6 +267,7 @@ class TeamSpec(Record):
             if owner not in self.coverage.get(rid, []):
                 raise ValueError("Primary owner must be in coverage")
         dependencies = {a.agent_id: set(a.depends_on) for a in self.agents}
+        review_violations = []
         for rid, reviewers in self.reviewers.items():
             owner = self.primary.get(rid)
             if not owner:
@@ -278,14 +279,16 @@ class TeamSpec(Record):
                     previous = set(ancestors)
                     ancestors.update(parent for aid in previous for parent in dependencies[aid])
                 if reviewer == owner or owner not in ancestors:
-                    raise ValueError("Independent reviewer must depend on the primary owner's artifact: "
-                                     f"rubric_id={rid!r}; reviewer_id={reviewer!r}; "
-                                     f"primary_owner_id={owner!r}; "
-                                     f"reviewer_ancestor_ids={sorted(ancestors)}. "
-                                     "Choose an independent downstream reviewer with the primary owner "
-                                     "as an ancestor through depends_on, or omit this optional review "
-                                     "assignment. Do not add a backward dependency or cycle; self-checks "
-                                     "belong in checkpoints, not reviewers.")
+                    review_violations.append(
+                        f"rubric_id={rid!r}; reviewer_id={reviewer!r}; "
+                        f"primary_owner_id={owner!r}; reviewer_ancestor_ids={sorted(ancestors)}")
+        if review_violations:
+            raise ValueError("Independent reviewer must depend on the primary owner's artifact: "
+                             + " | ".join(review_violations) + ". "
+                             "Choose an independent downstream reviewer with the primary owner "
+                             "as an ancestor through depends_on, or omit this optional review "
+                             "assignment. Do not add a backward dependency or cycle; self-checks "
+                             "belong in checkpoints, not reviewers.")
         return self
 
 

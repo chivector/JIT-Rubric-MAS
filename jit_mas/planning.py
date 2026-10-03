@@ -38,6 +38,17 @@ confident knowledge, and distinguish existence from current availability, price
 and suitability; otherwise state the gap and give a verification procedure. Before
 submission remove contradictions, duplicate sections, internal rubric IDs and
 unfinished sentences, and ensure the conclusion follows from evidence/assumptions.
+Use a private coverage map from explicit public requirements to the actual sections,
+tables, examples or calculations in the draft; repair omissions before polishing prose.
+For comparisons, evaluate each option against the same requested dimensions and make
+the tradeoff and recommendation explicit. For plans, give concrete actions, order,
+decision conditions and resource assumptions. Review consequential claims by trying an
+independent derivation, counterexample or alternative explanation; publish the specific
+defect and supported correction, not a blanket approval or vague uncertainty warning.
+Preserve useful facts and calculations through handoffs; compression should remove
+repetition rather than turn substantive findings into headings. Show the requested
+artifact itself in the final answer, with sources and limitations attached to the claims
+they qualify, rather than a list of instructions for someone else to produce it.
 """.strip()
 
 
@@ -123,7 +134,11 @@ def knowledge_policy_prompt(knowledge_policy: str | None) -> str:
             "external research or hypothetical peer activity. If a requested check cannot be verified, "
             "report status=unverified with a reason; if a conditional check was not triggered, report "
             "status=not_applicable with a reason. A reported limitation permits completion. "
-            "Source references and evidence spans may be empty when no source was observed. Cite "
+            "Contributors must publish source_references=[] and evidence_spans=[] in this run; "
+            "remembered citations are not observed sources even when confidently known. Put useful "
+            "remembered facts, citations, derivations and limitations in ledger.outline as strings, "
+            "preserving the substance for the final writer. Never assign a contributor to fill "
+            "source_references or evidence_spans from memory. Cite "
             "evidence IDs only from actual delivered ledger events. Do not invent evidence to satisfy "
             "a checkpoint. Finish when the assigned artifact is complete; do not continue merely to "
             "wait for nonexistent tools or unsolicited future peer requests. Dynamic role selection, "
@@ -186,7 +201,7 @@ class JsonModelCalls:
                 "\nThis is the sole contract correction turn. The response_correction field names "
                 "the exact invalid cross-field assignments in your prior JSON. Fix those assignments "
                 "in the returned object, then recheck every affected dependency and identity. "
-                "Do not merely restate a correction in selection_rationale while retaining invalid fields. "
+                + ("Do not merely restate a correction in selection_rationale while retaining invalid fields. "
                 "For a final-synthesizer DAG violation, final means a terminal node: no selected agent "
                 "may depend on the final synthesizer, and all selected contributors must be its ancestors. "
                 "Use one feasible topology: contributors -> reviewer -> final writer (the reviewer "
@@ -206,7 +221,18 @@ class JsonModelCalls:
                 "self-checks in checkpoints and do not add backward edges. After any dependency "
                 "change, audit every primary and reviewers entry against the resulting ancestor "
                 "sets; changing only selection_rationale or task_prompt is not a fix."
+                   if phase == "reconcile" else "")
                 if correction is not None else "")
+            if correction is not None and phase == "agent_evolve":
+                correction_system += (
+                    "\nFor this agent update, copy immutable identity fields exactly. Compute the "
+                    "union of all lesson.evidence and lesson.counterevidence across every lesson, "
+                    "then include that whole union in the top-level evidence array. Every reference "
+                    "must occur exactly in valid_evidence_ids; remove unsupported references or "
+                    "lessons rather than inventing evidence. Check all lessons, not only the first "
+                    "one named in the validation error. Keep existing policy when evidence is "
+                    "insufficient, and cite actual observations supporting that decision."
+                )
             corrected_system = (instructions + correction_system
                                 + "\nReturn only one JSON object conforming to this JSON Schema:\n"
                                 + json.dumps(response_schema)) if correction is not None else system
