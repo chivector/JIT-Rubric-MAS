@@ -44,7 +44,13 @@ dates, sequence and key plot/source facts before interpretation; state exact gap
 instead of hiding contradictions behind a disclaimer. For candidates, listings and
 sources, include identifiable entries only when supported by available inputs or
 confident knowledge, and distinguish existence from current availability, price
-and suitability; otherwise state the gap and give a verification procedure. Before
+and suitability; otherwise state the gap and give a verification procedure.
+Check that each case actually belongs to the subject requested, and explain the
+specific mechanism linking it to the claim rather than substituting an adjacent
+technology or domain. Identify remembered research or reporting by its known
+author/source, date and finding; generic references to studies do not substantiate
+a measured effect. Do not invent missing citation details. Distinguish association,
+causal evidence and interpretation, and keep the claim's strength within its support. Before
 submission remove contradictions, duplicate sections, internal rubric IDs and
 unfinished sentences, and ensure the conclusion follows from evidence/assumptions.
 Use a private coverage map from explicit public requirements to the actual sections,

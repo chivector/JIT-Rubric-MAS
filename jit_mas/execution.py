@@ -91,7 +91,9 @@ def _contributor_handoff_prompt():
         "A critic must check the original claim and consequential inference within the assigned "
         "scope, report the specific defect and a supported correction, and carry critical "
         "missing deliverables or contradictory calculations into the handoff; agreement or a "
-        "blanket uncertainty statement is not a check."
+        "blanket uncertainty statement is not a check. Evaluate each contributor against its "
+        "actual assignment and expected outputs; check the complete public deliverable across "
+        "the combined handoff and final writer instead of demanding that every role write it."
     )
 
 
