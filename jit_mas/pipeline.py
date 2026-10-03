@@ -634,6 +634,7 @@ class MASPipeline:
                                   excluded_task_ids=self.manifest.validation + self.manifest.test,
                                   knowledge_policy=self.knowledge_policy)
         analyzer.public_planning_context = public_planning_context(task, self.config)
+        analyzer.planning_response_format = self.config.planning_response_format
         if self.config.fixed_team is None:
             try:
                 planned = analyzer.build(task, experience, local_planning=self.config.local_planning)

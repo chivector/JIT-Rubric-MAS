@@ -1,13 +1,19 @@
 # Development pilot configuration
 
-`development_pilot.example.json` contains the representative v16 validated
-development configuration and common budgets. The complete v16 inventory,
-including failures and negative results, is recorded in the experiment history.
-Initial-MAS did not beat both baselines overall; this is not a recommendation of
-a winning configuration. The example matches the used configuration except for
-the endpoint, model alias and exact response-model pin placeholders. Source changes
-need their own registrations and validation. The template is not a completed
-experiment registration and contains no credentials or local data paths.
+`development_pilot.example.json` contains the frozen v17 development candidate
+and common budgets. Its full suite passed, and all 30 fixed benchmark slots
+are sealed: 29 were graded and one Native JIT generation failed. The six-source
+descriptive normalized macro is higher than Direct and lower than Native JIT.
+This is a validated development candidate, not a winning configuration recommendation.
+The complete v16 inventory, including failures and negative results, remains
+recorded separately. Initial-MAS did not beat both baselines overall in v16;
+this example is not a recommendation of a winning configuration. Compared with
+v16, it adds `planning_response_format=json_schema` and
+`public_refinement_guard=true`; sampling parameters and budgets stay the same.
+It matches the actual v17 configuration except for the endpoint, model alias
+and exact response-model pin placeholders. Source changes need their own
+registrations and validation. The template is not a completed experiment
+registration and contains no credentials or local data paths.
 
 Copy the file to your own configuration and set all five model roles to your
 provider's credential-free HTTPS endpoint and model alias. The template uses
@@ -73,7 +79,41 @@ for construction revisions. Public review and ordinary revisions retain the
 configured mode. Optional JSON object construction transport uses the same strict
 local schema and renderer before submission. A requested remote schema does not
 prove that the endpoint enforces it. Invalid outputs fail with their cost recorded,
-without format fallback, JSON-prefix selection or another sample.
+without format fallback, JSON-prefix selection or another sample, except for the
+narrow ordinary-revision candidate guard described below.
+
+`public_refinement_guard=true` can retain the sole initial completed artifact
+after an ordinary revision locally fails JSON/schema validation, or after a
+large multi-part draft collapses to an extremely short single-part revision.
+The structural rule requires at least 1,000 initial non-whitespace characters
+and three punctuation/line chunks, with at most 100 revised non-whitespace
+characters, one revised chunk and a revision-to-draft ratio at most 0.1.
+Eligibility means a nonempty execution `final_answer`; it does not certify
+semantic correctness or satisfaction of all public constraints. A projected
+initial draft or active positional/numeric construction is ineligible. Review
+failures, provider errors, exhausted budgets and typed-construction failures
+continue to fail. Both candidate hashes, raw component failures, selection
+reason and all calls/costs are retained; no evaluator, score comparison, extra
+sample or retry chooses the answer. The library default is off, and the flag
+requires `public_refinement=true`.
+The guard can retain an overlong initial artifact when the task actually calls
+for a correct short revision, and can miss a collapse to 101 characters or two
+chunks. The 0.1 ratio follows mathematically from the 1,000/100 thresholds and
+is not an independent guarantee. Public diagnostic lists and positions can be
+truncated; they are not official checkers, and absent diagnostics do not mean
+a constraint passed or failed.
+
+`planning_response_format=json_schema` requests strict schemas for predict,
+local-plan and reconciliation records; its library default is `json_object`.
+Generated planning annotations have compact length limits, while the original
+task, evidence and final deliverable remain complete. In iterative planning
+with no common call ceiling, generated `max_calls` and `total_max_calls` must
+remain `null`; expected-call estimates do not create execution ceilings.
+Local schema and graph validation still apply if the provider ignores the
+requested schema. If a response ends at `length`, its raw text stays in the
+audit; the existing contract-correction request uses the original inputs and
+failure metadata instead of replaying the truncated tail. This does not add
+a correction attempt or permit a different format/model fallback.
 
 All five role-level `frequency_penalty` values remain `null`; the common provider
 configuration sends no role-level repetition penalty. The component option

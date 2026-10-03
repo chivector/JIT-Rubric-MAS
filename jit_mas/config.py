@@ -60,8 +60,13 @@ class MASConfig(Record):
     task_timeout: float | None = Field(default=None, gt=0)
     max_inflight_requests: int | None = Field(default=None, ge=1)
     local_planning: bool = True
+    # Constrain generated planning records while keeping semantic graph validation.
+    planning_response_format: Literal["json_object", "json_schema"] = "json_object"
     # Two public-only global review/revision calls before submission; same ledger.
     public_refinement: bool = False
+    # Select a valid draft when an ordinary rewrite locally fails or loses its body.
+    # This public-only selection never inspects evaluator scores or rescues execution.
+    public_refinement_guard: bool = False
     public_refinement_response_format: Literal["json_object", "json_schema", "json_schema_review"] = "json_object"
     public_positional_construction: bool = False
     public_positional_draft_guidance: bool = False
@@ -90,6 +95,8 @@ class MASConfig(Record):
 
     @model_validator(mode="after")
     def fixed_team_limits(self):
+        if self.public_refinement_guard and not self.public_refinement:
+            raise ValueError("Public refinement guard requires public_refinement")
         if self.public_positional_draft_projection and not all((
                 self.public_refinement, self.public_positional_construction,
                 self.public_positional_draft_guidance)):

@@ -2,7 +2,9 @@
 
 These calls neither reactivate pool agents nor relax their execution caps. They
 consume the same task ledger as planning, generation and local execution. An
-invalid review/revision fails the attempt; the draft is never a scored fallback.
+invalid review/revision fails the attempt under the default policy. An optional
+public guard can retain an eligible initial artifact after a local revision
+validation failure or catastrophic body loss, without consulting an evaluator.
 """
 
 from __future__ import annotations
@@ -21,6 +23,25 @@ from .schemas import PublicTask, digest, utc_now
 
 PUBLIC_REFINEMENT_VERSION = "public-draft-review-revision-v3"
 PUBLIC_REFINEMENT_IDS = ("public-review", "public-revision")
+PUBLIC_REFINEMENT_GUARD_VERSION = "public-artifact-regression-guard-v1"
+_BODY_LOSS_LIMITS = {
+    "minimum_draft_non_whitespace_characters": 1000,
+    "minimum_draft_punctuation_or_line_chunks": 3,
+    "maximum_revision_non_whitespace_characters": 100,
+    "maximum_revision_punctuation_or_line_chunks": 1,
+    "maximum_revision_to_draft_character_ratio": 0.1,
+}
+
+GUARDED_REVISION_HINT = """Return the complete finished body, even when no repair
+is necessary. A title, acknowledgement or statement that the draft is good
+cannot replace the requested artifact. Before writing, privately allocate the
+available output budget across the complete artifact and JSON escaping/closing
+syntax; state each passage once and stop after the closing brace. Preserve every
+explicit public length and content requirement. The coordinator applies a
+transparent public structural guard and may retain the initial artifact after a
+local response-validation failure or catastrophic body loss. This guard is not
+an evaluator, a quality retry or permission to omit the finished artifact.
+"""
 
 REVIEW_PROMPT = """You are the global component reviewing an actual completed
 draft against the original public task. Return at most eight concrete material
@@ -279,10 +300,42 @@ def public_materials(result, *, synthesizer_id=None):
     return {"contributions": contributions, "tool_observations": evidence}
 
 
+def _guard_eligibility(result, positional_plan, numeric_plan):
+    """Engineering validity only; this does not certify public-task correctness."""
+    projection = result.metadata.get("public_positional_draft_projection", {})
+    if isinstance(projection, dict) and projection.get("active"):
+        reason = "initial_draft_was_projected_before_final_public_construction"
+    elif positional_plan is not None or numeric_plan is not None:
+        reason = "initial_draft_has_no_validated_final_construction_receipt"
+    elif not isinstance(result.answer, str) or not result.answer.strip():
+        reason = "initial_final_artifact_is_not_nonempty_text"
+    else:
+        return {"eligible": True,
+                "basis": "validated_execution_final_answer_only_not_semantic_or_constraint_certification"}
+    return {"eligible": False, "reason": reason}
+
+
+def _catastrophic_body_loss(draft_diagnostics, revision_diagnostics):
+    """A deliberately narrow structural heuristic, never a benchmark checker."""
+    limits = _BODY_LOSS_LIMITS
+    draft_characters = draft_diagnostics["non_whitespace_characters"]
+    revision_characters = revision_diagnostics["non_whitespace_characters"]
+    return (
+        draft_characters >= limits["minimum_draft_non_whitespace_characters"]
+        and draft_diagnostics["punctuation_or_line_chunks"] >=
+            limits["minimum_draft_punctuation_or_line_chunks"]
+        and revision_characters <= limits["maximum_revision_non_whitespace_characters"]
+        and revision_diagnostics["punctuation_or_line_chunks"] <=
+            limits["maximum_revision_punctuation_or_line_chunks"]
+        and revision_characters / draft_characters <=
+            limits["maximum_revision_to_draft_character_ratio"]
+    )
+
+
 def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
                          knowledge_policy=None, synthesizer_id=None,
                          audit_writer: Callable[[dict], None] | None = None):
-    """Replace a valid draft only after both strictly validated global calls.
+    """Review and revise a valid draft, optionally guarding public regressions.
 
     The provider is the existing shared metered provider. Native request policy
     bounds each request by the remaining task deadline. No extra ledger, local
@@ -297,6 +350,7 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
     output_cap = min(execution_spec.max_tokens if execution_spec is not None else 8192, 8192)
     global_spec = config.models.get("global")
     request_timeout = global_spec.timeout if global_spec is not None else config.execution_timeout
+    guarded = config.public_refinement_guard
     positional_plan = None
     numeric_construction_plan = None
     construction_conflict = False
@@ -335,6 +389,16 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
              "public_input": copy.deepcopy(public_input), "public_input_hash": digest(public_input),
              "review": None, "review_hash": None, "revision": None, "revision_hash": None,
              "calls": [], "budget_before": ledger.snapshot()}
+    eligibility = _guard_eligibility(result, positional_plan, numeric_construction_plan)
+    if guarded:
+        audit["version"] = PUBLIC_REFINEMENT_GUARD_VERSION
+        audit["selection_policy"] = "public_structural_guard_without_evaluator_or_retry"
+        audit["public_candidate_guard"] = {
+            "version": PUBLIC_REFINEMENT_GUARD_VERSION,
+            "initial_eligibility": eligibility,
+            "body_loss_limits": copy.deepcopy(_BODY_LOSS_LIMITS),
+            "limitations": "Initial eligibility proves execution termination only. Structural counts do not certify semantic quality or all public constraints.",
+        }
     if config.public_positional_construction:
         audit["public_positional_construction"] = (
             positional_plan.audit() if positional_plan is not None else
@@ -387,6 +451,7 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         record["model_call_options_hash"] = digest(model_call_options)
         audit["calls"].append(record)
         publish()
+        failure_phase = "provider"
         try:
             remaining = ledger.remaining_seconds()
             if remaining is not None and remaining <= 0:
@@ -403,7 +468,9 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
             record["response"] = content
             record["response_hash"] = digest(content)
             record["metered_calls"] = copy.deepcopy(getattr(model, "calls", []))
+            failure_phase = "response_validation"
             parsed = _strict_json(content, schema)
+            failure_phase = "budget_deadline"
             if ledger.remaining_seconds() == 0:
                 raise TimeoutError("Task wall-clock budget exhausted during public refinement")
             record["parsed"] = parsed.model_dump(mode="json")
@@ -412,9 +479,23 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         except BaseException as exc:
             record["status"] = "failed"
             record["error_type"] = type(exc).__name__
+            if guarded:
+                record["failure_phase"] = failure_phase
             raise
         finally:
             publish()
+
+    def select(answer, candidate, reason, *, component_failure=None):
+        audit["answer_hash"] = digest(answer)
+        audit["selected_candidate"] = candidate
+        audit["selection_reason"] = reason
+        audit["selected_public_diagnostics"] = public_output_metrics(task, answer)
+        audit["status"] = ("completed_with_component_failure" if component_failure else "completed")
+        if component_failure:
+            audit["component_failures"] = [component_failure]
+        audit["completed_at"] = utc_now()
+        result.answer = answer
+        return result
 
     try:
         publish()
@@ -449,6 +530,10 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
             revision_instructions += "\n" + prepare_prompt_instruction(numeric_construction_plan)
             revision_payload["public_numeric_construction"] = numeric_construction_plan.audit()
         else:
+            if guarded:
+                revision_instructions = GUARDED_REVISION_HINT + revision_instructions.replace(
+                    "there is no scoring, candidate comparison, fallback\nselection or further quality retry.",
+                    "there is no scoring or further quality retry.")
             revision_instructions += (
                 "\nReturn one JSON object whose only top-level key is answer. Its value "
                 "is the string containing the complete finished artifact. The names "
@@ -456,8 +541,20 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
                 "JSON schema describe validation metadata, not response fields. Do not "
                 "echo that metadata as additional top-level keys."
             )
-        revision = call("public-revision", revision_instructions,
-                        revision_payload, revision_schema)
+        try:
+            revision = call("public-revision", revision_instructions,
+                            revision_payload, revision_schema)
+        except ValueError as exc:
+            failure = audit["calls"][-1]
+            if not (guarded and eligibility["eligible"]
+                    and failure.get("failure_phase") == "response_validation"):
+                raise
+            if ledger.remaining_seconds() == 0:
+                raise TimeoutError("Task wall-clock budget exhausted during public refinement") from exc
+            return select(audit["draft"], "initial_draft", "invalid_local_revision_response",
+                          component_failure={"agent_id": "public-revision", "status": "failed",
+                              "failure_phase": "response_validation", "error_type": type(exc).__name__,
+                              "response_hash": failure.get("response_hash")})
         if positional_plan is not None:
             from .public_word_slots import render
 
@@ -475,6 +572,12 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         audit["revision_hash"] = digest(audit["revision"])
         audit["answer_hash"] = digest(final_answer)
         audit["revision_public_diagnostics"] = public_output_metrics(task, final_answer)
+        if guarded:
+            audit["revision_answer_hash"] = digest(final_answer)
+            if eligibility["eligible"] and _catastrophic_body_loss(
+                    public_input["public_diagnostics"], audit["revision_public_diagnostics"]):
+                return select(audit["draft"], "initial_draft", "catastrophic_revision_body_loss")
+            return select(final_answer, "revision", "validated_revision_without_catastrophic_body_loss")
         audit["status"] = "completed"
         audit["completed_at"] = utc_now()
         result.answer = final_answer

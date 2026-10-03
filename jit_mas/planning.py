@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -128,6 +129,87 @@ class _ReconciliationResponse(Record):
             TypeAdapter(list[LocalPlan]).validate_python(value["local_plans"])
             return {key: item for key, item in value.items() if key != "local_plans"}
         return value
+
+
+PLANNING_SCHEMA_NAMES = {"predict": "MASPredict", "local_plan": "MASLocalPlan",
+                         "reconcile": "MASReconcile"}
+PLANNING_TEXT_LIMITS = {"rationale": 1024, "selection_rationale": 1024,
+                        "task_prompt": 4096}
+
+
+def _constrain_planning_schema(schema: dict, *, uncapped: bool) -> dict:
+    """Constrain generated planning annotations, never the original task/evidence."""
+    result = copy.deepcopy(schema)
+
+    def visit(node):
+        if isinstance(node, dict):
+            for name, field in node.get("properties", {}).items():
+                if name in PLANNING_TEXT_LIMITS and field.get("type") == "string":
+                    field["maxLength"] = min(field.get("maxLength", PLANNING_TEXT_LIMITS[name]),
+                                              PLANNING_TEXT_LIMITS[name])
+                if uncapped and name in {"max_calls", "total_max_calls"}:
+                    field.clear()
+                    field.update({"type": "null", "const": None})
+                    if name not in node.setdefault("required", []):
+                        node["required"].append(name)
+            for child in node.values():
+                visit(child)
+        elif isinstance(node, list):
+            for child in node:
+                visit(child)
+
+    visit(result)
+    return result
+
+
+def _validate_planning_constraints(result: BaseModel, *, uncapped: bool) -> None:
+    """Enforce the optional provider constraints even if a provider ignores them."""
+    def visit(value, path="response"):
+        if isinstance(value, dict):
+            for name, child in value.items():
+                location = path + "." + name
+                if (name in PLANNING_TEXT_LIMITS and isinstance(child, str)
+                        and len(child) > PLANNING_TEXT_LIMITS[name]):
+                    raise ValueError(f"{location} exceeds its planning annotation limit "
+                                     f"of {PLANNING_TEXT_LIMITS[name]} characters")
+                if uncapped and name in {"max_calls", "total_max_calls"} and child is not None:
+                    raise ValueError(f"{location} must be null in uncapped iterative planning; "
+                                     "expected_model_calls estimates do not create call ceilings")
+                visit(child, location)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{path}[{index}]")
+
+    visit(result.model_dump(mode="json"))
+
+
+def _planning_compact_prompt(output_cap: int | None) -> str:
+    cap = (f"The actual planning response ceiling is {output_cap} tokens. "
+           if output_cap is not None else "")
+    return "\nBUDGETED STRUCTURED PLANNING: " + cap + (
+        "Produce one compact plan, not the final deliverable. Privately allocate response space "
+        "to requirements, assignments, dependencies and resource estimates before expanding "
+        "narrative fields; reserve room for every required field and closing JSON. Reference "
+        "stable public source IDs instead of copying source passages. State each distinct "
+        "requirement once and preserve every explicit public deliverable; do not repeat whole "
+        "paragraphs across requirement, task_prompt and rationale fields. The original public "
+        "task and evidence remain authoritative, so role task_prompt should specify scope, "
+        "inputs and expected contribution rather than recopy them. Keep rationale annotations "
+        "within 1024 characters and task_prompt within 4096; these are plan annotations, not "
+        "limits on the requested final artifact or required facts. In uncapped iterative mode, "
+        "emit max_calls=null and total_max_calls=null; estimate expected_model_calls separately "
+        "and keep stopping conditions, token and deadline budgets binding. "
+        "PUBLIC ELIGIBILITY SCOPE: Only conditions stated in the original public question and "
+        "constraints are hard eligibility predicates. Do not turn an unspecified nationality, "
+        "applicant characteristic, finer date certification or live inventory guarantee into a "
+        "new exclusion. Preserve every stated time horizon, geography and condition. Read "
+        "actual facts, headers and qualifiers from public evidence rather than inheriting a "
+        "draft's assertion that a fact is unknown. Distinguish known, contradicted and unknown "
+        "for each required predicate; an unknown is not a proven negative, and an irrelevant "
+        "unknown does not disqualify a supported member. Separate a scheme's existence/scope "
+        "from a particular applicant's complete eligibility, and catalog/distributor evidence "
+        "from verified live stock. Report real unresolved requirements honestly without adding "
+        "unstated guarantees or inventing evidence.")
 
 
 def _pooled_reconciliation_schema(prediction: Prediction, *, max_agents: int) -> dict[str, Any]:
@@ -343,6 +425,21 @@ class JsonModelCalls:
         # Generation-time restrictions supplement, never replace, the record's
         # Pydantic and cross-field validation below.
         response_schema = copy.deepcopy(json_schema) if json_schema is not None else schema.model_json_schema()
+        structured_planning = (phase in PLANNING_SCHEMA_NAMES
+                               and getattr(self, "planning_response_format", "json_object") == "json_schema")
+        uncapped = (structured_planning and getattr(self, "execution_mode", None) == "iterative_shared_ledger"
+                    and getattr(self, "total_max_calls", 16) is None)
+        output_cap = getattr(model, "max_tokens", None)
+        output_cap = output_cap if type(output_cap) is int and output_cap > 0 else None
+        model_options = {}
+        if structured_planning:
+            response_schema = _constrain_planning_schema(response_schema, uncapped=uncapped)
+            model_options["response_format"] = {
+                "type": "json_schema", "json_schema": {
+                    "name": PLANNING_SCHEMA_NAMES[phase], "strict": True, "schema": response_schema}}
+            instructions += _planning_compact_prompt(output_cap)
+            if output_cap is not None:
+                payload = {**payload, "planning_output_budget": {"max_tokens_per_response": output_cap}}
         system = instructions + "\nReturn only one JSON object conforming to this JSON Schema:\n" \
             + json.dumps(response_schema)
         original_payload = {"phase": phase, "agent_id": agent_id, **as_json(payload)}
@@ -426,14 +523,28 @@ class JsonModelCalls:
             messages = [{"role": "system", "content": corrected_system},
                         {"role": "user", "content": json.dumps(request, ensure_ascii=False)}]
             # Transport, authentication and budget failures are not output corrections.
-            response = model(copy.deepcopy(messages))
+            response = model(copy.deepcopy(messages), **copy.deepcopy(model_options))
             content = response if isinstance(response, str) else getattr(response, "content", None)
             record = {"phase": phase, "agent_id": agent_id, "attempt": attempt,
                       "messages": messages, "response": content}
+            finish_metadata = {}
+            if structured_planning:
+                metadata = getattr(model, "last_request_metadata", {})
+                if isinstance(metadata, dict):
+                    finish_metadata = {key: metadata[key] for key in
+                                       ("finish_reason", "response_model", "response_id") if key in metadata}
+                actual_format = copy.deepcopy(model_options["response_format"])
+                record.update(response_format=actual_format,
+                    response_format_hash=hashlib.sha256(json.dumps(
+                        actual_format, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
+                    planning_output_budget={"max_tokens_per_response": output_cap},
+                    finish_metadata=finish_metadata)
             try:
                 if not isinstance(content, str):
                     raise ValueError(f"{phase}: model response must contain JSON text")
                 result = schema.model_validate(json.loads(self._response_json_text(content)))
+                if structured_planning:
+                    _validate_planning_constraints(result, uncapped=uncapped)
                 if validate is not None:
                     validate(result)
             except ValueError as exc:
@@ -446,8 +557,19 @@ class JsonModelCalls:
                     "Return one complete corrected JSON object using the original inputs and "
                     "these validation errors. Do not alter evidence, task constraints or budgets "
                     "to evade validation. This is the only correction attempt.",
-                    "previous_response": content, "validation_errors": errors,
                 }
+                if structured_planning and finish_metadata.get("finish_reason") == "length":
+                    raw = content if isinstance(content, str) else ""
+                    correction.update(previous_response_sha256=hashlib.sha256(raw.encode()).hexdigest(),
+                                      previous_response_characters=len(raw),
+                                      previous_response_finish_metadata=finish_metadata)
+                    correction["instruction"] += (
+                        " The truncated previous text remains in the audit and is intentionally "
+                        "omitted from this request. Regenerate a compact complete plan from all "
+                        "original inputs, not a continuation or repeated copy of the broken tail.")
+                else:
+                    correction["previous_response"] = content
+                correction["validation_errors"] = errors
                 if phase == "reconcile":
                     correction["assignment_audit"] = self._reconciliation_assignment_audit(content)
             else:
@@ -877,6 +999,7 @@ class GlobalAnalyzer(JsonModelCalls):
         self.excluded_task_ids = set(excluded_task_ids)
         self.last_prediction: Prediction | None = None
         self.public_planning_context: dict = {}
+        self.planning_response_format = "json_object"
 
     def _pool_catalogue(self):
         from .agent_pool import catalogue
