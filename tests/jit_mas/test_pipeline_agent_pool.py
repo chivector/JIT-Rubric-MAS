@@ -367,7 +367,10 @@ def test_pool_duplicate_correction_names_participations_without_rebinding(correc
     assert json.loads(analyzer.call_records[0]["response"]) == original
 
 
-@pytest.mark.parametrize("selected_skills, expected", [(None, {"synthesis"}), ([], set())])
+@pytest.mark.parametrize("selected_skills, expected", [
+    (None, {"synthesis", "format_control", "genre_control"}),
+    ([], set()),
+])
 def test_local_skill_selection_preserves_explicit_empty_choice(selected_skills, expected):
     pool = seed_pool()
     candidate = AgentSpec(agent_id="writer", role="Writer", capability="writing",

@@ -267,10 +267,13 @@ def test_next_task_executes_agent_owned_internal_evolution(tmp_path):
         assert profile["harness"]["memory_window"] == 1
         assert profile["harness"]["tool_policy"] == "preferred_first"
         assert profile["preferred_tools"] == ["web_search"]
-        assert payload["agent"]["task_prompt"] == "Current assignment: " + payload["public_task"]["question"]
+        task_prompt = payload["agent"]["task_prompt"]
+        assert task_prompt.startswith("Domain scope and checks from the frozen plan:\nCurrent assignment: "
+                                      + payload["public_task"]["question"])
+        assert "Authoritative terminal assignment:" in task_prompt
         assert "deployment" in payload["agent"]["task_prompt"]
         assert retained_prompt in call["messages"][0]["content"]
-        assert payload["agent"]["task_prompt"] in call["messages"][0]["content"]
+        assert payload["public_task"]["question"] in payload["agent"]["task_prompt"]
     finally:
         store.close()
 

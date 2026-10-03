@@ -226,7 +226,10 @@ Frozen official criteria are required by this version's ResearchRubrics CLI. It 
 model-generated-criteria deployment evaluator or an evaluator-learning loop. It does not implement
 Shapley causal attribution, model parameter training, a learned semantic memory retriever, or a
 production sandbox. The small versioned bank is scope-tagged and capped at retrieval; public
-task operations and role capability filter applicable advice before model prompting. This
+task operations and role capability filter applicable advice before model prompting.
+When the bank exceeds the cap, task-grounded lessons and distinct substantive public
+matches take priority, with recency breaking ties. The selected lessons retain their
+chronological order; private scores and rubric text do not rank them. This
 lexical gate is not a learned semantic retriever. Large-scale memory
 consolidation remains outside this first vertical implementation.
 

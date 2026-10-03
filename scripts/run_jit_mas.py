@@ -14,10 +14,12 @@ from jit_mas.config import MASConfig, NativeModels
 from jit_mas.experience import ExperienceStore
 from jit_mas.pipeline import MASPipeline
 from jit_mas.schemas import PublicTask, SplitManifest
+from jit_mas.benchmarks import ALL_BENCHMARK_NAMES
 
 
 def make_pipeline(config, store, output, *, data=None, splits=None, fixture_models=None,
-                  benchmark="researchrubrics", evidence_dir=None, checker=None, knowledge_policy=None):
+                  benchmark="researchrubrics", evidence_dir=None, checker=None, knowledge_policy=None,
+                  checker_source_root=None):
     from benchmark.adapter.researchrubrics import ResearchRubricsAdapter
     from jit_mas.bridge import JITHarnessSynthesizer
 
@@ -30,9 +32,17 @@ def make_pipeline(config, store, output, *, data=None, splits=None, fixture_mode
         provider = fixture_models or FixtureModels()
         judge_id = "scripted-software-fixture-v1"
     else:
-        provider = NativeModels(config)
         if not data or not splits:
             raise ValueError("native_jit requires --data and --splits")
+        if checker_source_root is not None:
+            if benchmark not in {"ifeval", "ifbench"} or checker is not None:
+                raise ValueError("Checker source is only valid for an instruction benchmark without an injected checker")
+            from jit_mas.instruction_checkers import PinnedInstructionChecker
+
+            checker = PinnedInstructionChecker(checker_source_root, benchmark)
+        if benchmark in {"ifeval", "ifbench"} and checker is None:
+            raise ValueError("IFEval and IFBench require an injected checker or --instruction-checker-source")
+        provider = NativeModels(config)
         from jit_mas.benchmarks import load_benchmark
         dataset = load_benchmark(benchmark, data, available_tools=config.available_tools)
         tasks, private = dataset.tasks, dataset.private_records
@@ -91,10 +101,12 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", required=True, choices=["smoke", "evolve", "evaluate", "stream", "freeze", "rollback"])
     parser.add_argument("--config", help="YAML MASConfig; environment references are expanded")
-    parser.add_argument("--data", help="Local official ResearchRubrics processed_data.jsonl")
+    parser.add_argument("--data", help="Pinned local benchmark dataset file")
     parser.add_argument("--benchmark", default="researchrubrics",
-                        choices=["researchrubrics", "deepsearchqa", "deepresearch_bench_ii"])
+                        choices=ALL_BENCHMARK_NAMES)
     parser.add_argument("--evidence-dir", help="Verified immutable shared public evidence packs")
+    parser.add_argument("--instruction-checker-source",
+                        help="Pinned google-research root for IFEval or IFBench checkout root; prepared resources required")
     parser.add_argument("--splits", help="Explicit task-level SplitManifest JSON")
     parser.add_argument("--state", default="outputs/jit_mas/experience.sqlite")
     parser.add_argument("--output", default="outputs/jit_mas/runs")
@@ -132,7 +144,8 @@ def main(argv=None):
             print(json.dumps({"restored_version": store.rollback(args.version).version}))
             return 0
         pipeline = make_pipeline(config, store, args.output, data=args.data, splits=args.splits,
-                                 benchmark=args.benchmark, evidence_dir=args.evidence_dir)
+                                 benchmark=args.benchmark, evidence_dir=args.evidence_dir,
+                                 checker_source_root=args.instruction_checker_source)
         if args.mode == "smoke":
             evolved = pipeline.run("evolve")
             evaluated = pipeline.run("evaluate", limit=2)

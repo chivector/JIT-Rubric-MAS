@@ -16,20 +16,53 @@ from .schemas import (
 def seed_pool() -> AgentPoolSnapshot:
     roles = {
         "writer": ("Writer", ["writing", "synthesis", "creative-writing"],
-                   "Build a coherent deliverable from the public task and observed evidence.",
-                   {"synthesis": "Resolve conflicting contributions, preserve useful detail and sources."}),
+                   "Build the requested deliverable in its genre, using evidence for factual claims where relevant.",
+                   {"synthesis": "Resolve conflicting contributions, preserve useful detail and sources.",
+                    "format_control": "Check the decoded final answer against explicit language, length, "
+                                      "format, required wording and forbidden-content constraints; "
+                                      "keep protocol metadata and review notes outside the artifact.",
+                    "genre_control": "Follow the requested genre and audience: develop motivated scenes "
+                                     "and continuity for fiction, reasons and relevant counterarguments "
+                                     "within the requested genre and length for argumentative writing, "
+                                     "or concrete benefits and actions for practical copy. "
+                                     "Do not impose research-report conventions on creative work. "
+                                     "When assigned a writing contribution, provide budgeted actual "
+                                     "passages, scenes, dialogue or transitions in existing answer or "
+                                     "outline fields so a downstream reviewer can inspect wording. "
+                                     "Keep passages distinct from review notes and avoid duplicating "
+                                     "the complete long deliverable. As final writer, integrate useful "
+                                     "passages and specific revisions into one coherent artifact. "
+                                     "Fiction may invent within the public premise; actual real-world "
+                                     "factual claims still need appropriate support."}),
         "searcher": ("Searcher", ["search", "source verification", "research", "evidence"],
                      "Retrieve and organize evidence with explicit provenance and uncertainty.",
-                     {"evidence_selection": "Prefer direct sources and distinguish observed facts from inference."}),
+                     {"evidence_selection": "Prefer direct sources and distinguish observed facts from inference.",
+                      "coverage_search": "Map requested facets to sources, check dates and scope, "
+                                         "search gaps and contradictory evidence, and preserve exact "
+                                         "locators. Do not treat a truncated page as evidence of absence."}),
         "critic": ("Critic", ["review", "verification", "criticism"],
                    "Check consequential claims independently and provide supported corrections.",
-                   {"claim_check": "Check assumptions, counterexamples and conflicting evidence before accepting a claim."}),
+                   {"claim_check": "Check assumptions, counterexamples and conflicting evidence before accepting a claim.",
+                    "public_constraint_check": "Inspect the actual artifact against every explicit "
+                                               "public constraint, including counts and format; "
+                                               "identify the defect and a concrete correction. "
+                                               "Keep critique outside the final requested artifact. "
+                                               "Inspect actual upstream passages against the requested genre, "
+                                               "audience and voice. Identify the exact passage, its defect and "
+                                               "effect on continuity or purpose, and a specific revision; do "
+                                               "not merely approve intended style. If no prose is available, "
+                                               "review only the visible plan and do not claim the finished "
+                                               "prose was inspected. Fictional events within the public premise "
+                                               "need no factual citation; real-world claims still need support."}),
         "planner": ("Planner", ["planning", "requirements", "decomposition"],
                     "Turn the public task into feasible requirements and a concrete work plan.",
                     {"decomposition": "Identify required inputs, dependencies, constraints and observable completion conditions."}),
         "analyst": ("Analyst", ["analysis", "comparison", "explanation", "reasoning"],
                     "Analyze the problem with explicit assumptions and supported reasoning.",
-                    {"tradeoff_analysis": "Compare alternatives under stated conditions and test important inferences."}),
+                    {"tradeoff_analysis": "Compare alternatives under stated conditions and test important inferences.",
+                     "set_reasoning": "For exhaustive requests, apply consistent inclusion conditions, "
+                                      "deduplicate aliases, retain all supported distinct members and "
+                                      "separate unresolved gaps from confirmed answers."}),
         "generalist": ("Generalist", ["general task solving", "specialized tasks"],
                        "Solve the assigned role using public requirements and report limitations.",
                        {"task_check": "Check the public constraints and the completeness of your contribution."}),
@@ -37,9 +70,12 @@ def seed_pool() -> AgentPoolSnapshot:
     return AgentPoolSnapshot(profiles=[AgentProfile(
         pool_agent_id=key, role=role, capabilities=capabilities, prompt=prompt,
         skills=skills,
-        reasoning_strategy="Distinguish assumptions, evidence and conclusions; report uncertainty.",
+        reasoning_strategy="Choose reasoning suited to the task's genre. For factual analysis, distinguish "
+                           "assumptions, evidence and conclusions and identify material uncertainty. "
+                           "Invent within the requested premise for fiction.",
         planning_strategy="Choose methods appropriate to the assigned goal and available inputs.",
-        communication="Publish concise, evidence-linked contributions and explicit unresolved gaps.")
+        communication="Publish substantive contributions with sources and unresolved gaps where relevant; "
+                      "keep review notes in the internal handoff and honor the final artifact's format.")
         for key, (role, capabilities, prompt, skills) in roles.items()])
 
 

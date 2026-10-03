@@ -144,6 +144,22 @@ def test_contributor_schema_caps_answer_and_ledger_without_capping_writer(submis
         {"answer": "A" * 1201})
 
 
+@pytest.mark.parametrize("submission", ["contribution", "subtask_complete"])
+def test_closed_book_contributor_schema_preserves_more_coverage(submission):
+    messages = [{"role": "user", "content": json.dumps({
+        "agent": {"checkpoints": []}, "submission": submission,
+        "knowledge_policy": "model_general_knowledge_allowed"})}]
+    validator = Draft202012Validator(pilot._execution_response_schema(messages, max_tokens=8192))
+    empty_ledger = {"requirements": [], "outline": [], "source_references": [], "evidence_spans": []}
+    validator.validate({"answer": "A" * 2400,
+                       "ledger": {**empty_ledger, "requirements": ["x" * 512] * 24,
+                                   "outline": ["y" * 512] * 24}})
+    with pytest.raises(SchemaValidationError):
+        validator.validate({"answer": "A" * 2401})
+    with pytest.raises(SchemaValidationError):
+        validator.validate({"ledger": {**empty_ledger, "requirements": ["x"] * 25}})
+
+
 def _execution_schema_validator():
     messages = [{"role": "user", "content": json.dumps({
         "agent": {"tools": ["search"], "checkpoints": ["accuracy"]},

@@ -361,14 +361,20 @@ def _execution_response_schema(messages, max_tokens=None):
         checkpoint_object["required"] = checkpoint_names
 
     source_ref = {"type": "string", "minLength": 1, "pattern": r"^[^,\s]+$"}
-    # Non-synthesizer roles publish compact material for the Writer.  Keep the
-    # limit in the guided-decoding schema so a long draft cannot be truncated
-    # before its JSON envelope closes.
+    # Non-synthesizer roles publish compact material for the Writer.  Closed-book
+    # runs have no source-reference payload, so give their requirements and outline
+    # enough room to preserve task coverage without letting the JSON envelope exceed
+    # the execution ceiling. Shared-evidence runs retain the original tighter budget
+    # for protocol comparability and to leave room for source spans.
     is_contributor = instruction.get("submission") in {"contribution", "subtask_complete"}
     is_synthesizer = not is_contributor
+    closed_book_contributor = (is_contributor and
+                               instruction.get("knowledge_policy") ==
+                               "model_general_knowledge_allowed")
     ledger_item_limit = 2048 if is_synthesizer else 512
     ledger_locator_limit = 2048
-    ledger_max_items = 64 if is_synthesizer else 12
+    ledger_max_items = (64 if is_synthesizer else
+                        (24 if closed_book_contributor else 12))
     ledger_text = {**text, "maxLength": ledger_item_limit}
     locator = {**text, "maxLength": ledger_locator_limit}
     ledger = {"type": "object", "properties": {
@@ -386,7 +392,12 @@ def _execution_response_schema(messages, max_tokens=None):
     if isinstance(max_tokens, int) and max_tokens > 0:
         answer_schema["maxLength"] = max_tokens * 2
     if is_contributor:
-        answer_schema["maxLength"] = min(answer_schema.get("maxLength", 1200), 1200)
+        # The closed-book branch has no evidence/source arrays (set to zero
+        # below), so its larger answer budget can be spent on substantive facts
+        # and coverage. Keep the shared-evidence cap unchanged.
+        contributor_answer_limit = 2400 if closed_book_contributor else 1200
+        answer_schema["maxLength"] = min(answer_schema.get("maxLength", contributor_answer_limit),
+                                         contributor_answer_limit)
     completion = {"answer": {"anyOf": [answer_schema, {"type": "null"}]}, "evidence_ids": ids,
                   "checkpoints": checkpoint_object,
                   "ledger": {"anyOf": [ledger, {"type": "null"}]},

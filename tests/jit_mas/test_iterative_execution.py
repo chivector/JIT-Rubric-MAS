@@ -11,7 +11,7 @@ from jit_mas.agent_pool import seed_pool
 from jit_mas.budget import BudgetLedger
 from jit_mas.execution import (
     CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
-    FINAL_ARTIFACT_CONTRACT,
+    FINAL_ARTIFACT_CONTRACT, FINAL_SUBMISSION_GATE,
     TeamMemory,
     TeamPlanning,
     TeamServices,
@@ -96,6 +96,52 @@ def test_title_only_public_deliverable_gets_one_quality_correction():
 def test_short_format_public_task_is_not_forced_to_have_a_long_answer():
     task = PublicTask(task_id="short", question="Return only the name of the capital city.")
     assert _completion_quality_error("Paris", task) is None
+
+
+@pytest.mark.parametrize("question,answer", [
+    ("Write a headline for a newspaper article about migratory birds.", "Title: Birds Return Home"),
+    ("Write a three-line poem using Markdown heading lines.", "# Birds rise\n# Wings cross the moon\n# Dawn finds home"),
+    ("Provide a title for a report on materials.", "# Materials for Tomorrow"),
+    ("为关于候鸟迁徙的新闻报道拟一个标题。", "# 候鸟重返故乡"),
+    ("Return only Paris.", "Paris"),
+    ("Name the capital city discussed in the report.", "Paris"),
+    ("只输出北京。", "北京"),
+])
+def test_requested_heading_genre_and_exact_short_answers_remain_valid(question, answer):
+    task = PublicTask(task_id="heading-genre", question=question)
+    assert _completion_quality_error(answer, task) is None
+
+
+@pytest.mark.parametrize("question,answer", [
+    ("Write a report discussing newspaper headlines.", "# Birds Return Home"),
+    ("Write a report and name the assumptions behind its comparison.", "# Materials report"),
+    ("Write a headline and then write a complete report on migratory birds.", "Title: Birds Return Home"),
+    ("Write a headline and a complete report on migratory birds.", "Title: Birds Return Home"),
+    ("撰写一份关于两种材料的研究报告。", "# 材料研究报告"),
+    ("Return only the complete report on materials.", "# Materials report"),
+    ("只输出完整研究报告正文。", "# 材料研究报告"),
+    ("拟一个标题并撰写完整研究报告。", "# 材料研究报告"),
+])
+def test_title_only_response_cannot_replace_a_required_complete_report(question, answer):
+    task = PublicTask(task_id="complete-report", question=question)
+    assert _completion_quality_error(answer, task)
+
+
+@pytest.mark.parametrize("question,source,answer,expected_error", [
+    ("Write a complete materials report.", "The source says to name the material.",
+     "# Materials report", True),
+    ("Return only Paris.", "Write a complete report about the source material.", "Paris", False),
+])
+def test_shared_evidence_source_text_does_not_change_the_requested_output_guard(
+        question, source, answer, expected_error):
+    from jit_mas.evidence import EVIDENCE_QUESTION_HEADER, EVIDENCE_TASK_CONSTRAINT, EVIDENCE_SCOPE, _json
+
+    task_id = "output-evidence-boundary"
+    body = {"task_id": task_id, "scope": EVIDENCE_SCOPE,
+            "sources": [{"source_id": "source", "text": source}]}
+    public = PublicTask(task_id=task_id, question=question + EVIDENCE_QUESTION_HEADER + _json(body),
+                        constraints=[EVIDENCE_TASK_CONSTRAINT])
+    assert bool(_completion_quality_error(answer, public)) is expected_error
 
 
 def test_completion_quality_rejects_status_disclaimer_without_report_body():
@@ -222,9 +268,10 @@ def test_contributor_repairs_source_shape_only_by_returning_new_ledger(bad_ledge
     assert "the synthesizer publishes the complete requested deliverable in answer" in model.calls[0][0]["content"]
     assert "publish evidence_spans=[] and source_references=[]" in model.calls[0][0]["content"]
     assert "FINAL ROLE OVERRIDE" in model.calls[0][0]["content"]
-    assert "answer <=1200" in model.calls[0][0]["content"]
-    assert "at most 12 items" in model.calls[0][0]["content"]
-    assert "<=512 characters per item" in model.calls[0][0]["content"]
+    assert "answer <=2400" in model.calls[0][0]["content"]
+    assert "24 items per list" in model.calls[0][0]["content"]
+    assert "advisory compactness targets, not completeness limits" in model.calls[0][0]["content"]
+    assert "cumulative snapshot" in model.calls[0][0]["content"]
     assert "soft target" in model.calls[0][0]["content"]
     assert "terminate with continue=false" not in model.calls[0][0]["content"]
 
@@ -238,9 +285,10 @@ def test_ledger_protocol_correction_retains_both_metered_calls_and_raw_error():
     valid = {"answer": "Reasoned contribution.", "ledger": {"requirements": [], "outline": [],
         "evidence_spans": [], "source_references": []}}
     raw = ScriptedModel([invalid, valid])
-    # The contributor compactness guidance is part of the metered prompt; leave
-    # enough shared budget for both the malformed response and its correction.
-    ledger = BudgetLedger(max_calls=2, max_tokens=40000, max_tool_calls=0)
+    # This fixture has no provider usage, so UTF-8 bytes conservatively bound the
+    # expanded public-quality prompt on both the malformed and correction calls.
+    # Its budget exercises protocol accounting, not the formal experiment limit.
+    ledger = BudgetLedger(max_calls=2, max_tokens=50000, max_tool_calls=0)
     model = MeteredModel(raw, ledger, "execution", "searcher", 4096)
     services, context = make_services(team, {"searcher": model})
     services.ledger = ledger
@@ -305,6 +353,82 @@ def test_oversized_contributor_still_requires_a_declared_evidence_source():
         assert json.loads(step.model_output_messages.content) == invalid
 
 
+def test_resumed_recent_memory_receives_current_snapshot_and_retracts_invalid_items():
+    team = make_team(contributors=True)
+    pool = seed_pool()
+    team.agents[0] = AgentSpec(**{**team.agents[0].model_dump(mode="json"),
+        "pool_agent_id": "searcher", "pool_agent_version": 1,
+        "harness": AgentHarnessPolicy(memory_policy="recent", memory_window=1)})
+    team.agents[-1] = AgentSpec(**{**team.agents[-1].model_dump(mode="json"),
+        "pool_agent_id": "writer", "pool_agent_version": 1})
+    first_ledger = {"requirements": ["List every qualifying item"],
+                    "outline": ["Alpha qualifies", "Beta qualifies", "Gamma qualifies"],
+                    "evidence_spans": [], "source_references": []}
+    revised_ledger = {"requirements": first_ledger["requirements"],
+                      "outline": ["Alpha qualifies", "Beta qualifies", "Delta qualifies",
+                                  "Gamma is withdrawn because it does not meet the inclusion condition."],
+                      "evidence_spans": [], "source_references": []}
+
+    def initial(messages):
+        assert json.loads(messages[1]["content"])["own_contribution"] is None
+        return {"answer": "Initial qualification results.", "ledger": first_ledger}
+
+    def revise(messages):
+        payload = json.loads(messages[1]["content"])
+        own = payload["own_contribution"]
+        assert own["agent_id"] == "searcher" and own["ledger"] == first_ledger
+        assert own["complete"] is False
+        assert not any(message["role"] == "assistant" for message in messages)
+        assert "cumulative snapshot" in messages[0]["content"]
+        assert "partial delta" in messages[0]["content"]
+        assert "Verify Gamma and include Delta" in messages[-1]["content"]
+        return {"answer": "Corrected qualification results; Gamma is withdrawn.",
+                "ledger": revised_ledger}
+
+    def finalize(messages):
+        refreshed = next(message["content"].rsplit("Updated shared ledger: ", 1)[1]
+                         for message in reversed(messages)
+                         if "Updated shared ledger: " in message.get("content", ""))
+        shared = json.loads(refreshed)
+        contribution = next(item for item in shared["contributions"] if item["agent_id"] == "searcher")
+        assert contribution["ledger"] == revised_ledger
+        assert "Gamma qualifies" not in [item["text"] for item in shared["outline"]]
+        assert shared["tool_evidence"] == []
+        return {"answer": "Alpha, Beta, Delta."}
+
+    searcher = ScriptedModel([initial, revise])
+    writer = ScriptedModel([{"tools": [{"name": "send_message", "arguments": {
+        "recipient": "searcher", "content": "Verify Gamma and include Delta"}}]}, finalize])
+    services, context = make_services(team, {"searcher": searcher, "writer": writer}, pool=pool)
+    result = run_team("List every qualifying item.", context, team, services)
+    assert result.answer == "Alpha, Beta, Delta.", [str(step.error) for sub_run in result.sub_runs
+                                                  for step in sub_run.trajectory]
+    assert len(searcher.calls) == len(writer.calls) == 2
+    assert services.artifacts["searcher"]["ledger"] == revised_ledger
+    publications = [event for event in services.events
+                    if event["kind"] == "artifact_published" and event["agent_id"] == "searcher"]
+    assert len(publications) == 2
+    assert any(event["kind"] == "agent_resumed" and event["agent_id"] == "searcher"
+               for event in services.events)
+
+
+def test_iterative_exact_short_answer_is_submitted_without_padding():
+    team = make_team()
+
+    def complete(messages):
+        assert "not a target answer length" in messages[0]["content"]
+        assert "short answers need no padding" in messages[0]["content"]
+        assert json.loads(messages[1]["content"])["public_task"]["question"] == "Return only Paris."
+        return {"answer": "Paris"}
+
+    model = ScriptedModel([complete])
+    services, context = make_services(team, {"writer": model})
+    services.public_task = PublicTask(task_id="short-output", question="Return only Paris.")
+    result = run_writer(team, services, context)
+    assert result.answer == "Paris" and result.terminated_reason == "final_answer"
+    assert len(model.calls) == 1
+
+
 def test_contributor_shape_correction_preserves_fact_rich_handoff_guidance():
     team = make_team(contributors=True)
     bad = {"answer": "x" * 1201, "ledger": {
@@ -319,15 +443,15 @@ def test_contributor_shape_correction_preserves_fact_rich_handoff_guidance():
                                  team.model_dump(mode="json"), context, services)
     assert result.terminated_reason == "subtask_complete" and len(model.calls) == 2
     correction = model.calls[1][-1]["content"]
-    assert "Keep answer <=1200 characters as a compact summary" in correction
-    assert "at most 12 items" in correction and "<=512 characters" in correction
-    assert "merge overlapping requirements while preserving public-task coverage" in correction
+    assert "original system's advisory compactness and handoff guidance" in correction
+    assert "cumulative current-valid ledger" in correction
+    assert "supported sets and source references" in correction
     assert "Put the substantive contribution body in answer" not in correction
-    for prompt in (model.calls[0][0]["content"], correction):
-        assert "not a section heading alone" in prompt
-        assert "3000-5000-word" in prompt
-        assert "checked intermediate results" in prompt
-        assert "legal or policy obligations" in prompt
+    system = model.calls[0][0]["content"]
+    assert "not a section heading alone" in system
+    assert "3000-5000-word" in system
+    assert "legal or policy obligations" in system
+    assert all("checked intermediate results" in prompt for prompt in (system, correction))
 
 
 def test_truncated_json_correction_does_not_replay_failed_assistant_text():
@@ -380,7 +504,7 @@ def test_truncated_execution_json_gets_one_model_authored_shape_correction():
     assert "Expected a complete JSON object" in str(result.trajectory[0].error)
     system = model.calls[0][0]["content"]
     correction = model.calls[1][-1]["content"]
-    assert "80-85%" in system and "soft planning target" in system
+    assert "80-85%" in system and "not a target answer length" in system
     assert "Never invent a long directory, catalog, numbered sequence" in system
     assert "rewrite one complete JSON response from the original task" in correction
     assert "Preserve the key arguments, calculations, required items" in correction
@@ -448,6 +572,50 @@ def test_unknown_contributor_fields_must_be_repaired_into_the_supported_ledger()
     assert result.terminated_reason == "final_answer"
     assert len(searcher.calls) == 2 and len(writer.calls) == 1
     assert services.artifacts["searcher"]["ledger"] == corrected["ledger"]
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == 1
+
+
+@pytest.mark.parametrize("extra_field", ["entities", "items"])
+def test_unknown_ledger_field_is_repaired_without_silent_content_loss(extra_field):
+    team = make_team(contributors=True)
+    initial = {"requirements": [], "outline": ["A valid supported claim."],
+               "evidence_spans": [], "source_references": []}
+    malformed = {"answer": "Contribution summary.", "ledger": {
+        **initial, extra_field: ["Entity Alpha meets every public qualification condition."]}}
+    corrected = {"answer": "Contribution summary.", "ledger": {
+        **initial, "outline": [*initial["outline"], *malformed["ledger"][extra_field]]}}
+
+    def repair(messages):
+        correction = messages[-1]["content"]
+        assert "Unknown contributor ledger fields: " in correction and extra_field in correction
+        assert "Put substantive content from unsupported ledger keys into outline" in correction
+        assert "Entity Alpha" not in correction
+        assert json.loads(messages[-2]["content"]) == malformed
+        return corrected
+
+    searcher = ScriptedModel([malformed, repair])
+    writer = ScriptedModel([{"answer": "The guide includes the qualification result for Entity Alpha."}])
+    services, context = make_services(team, {"searcher": searcher, "writer": writer})
+    result = run_team("Write a guide.", context, team, services)
+    assert result.terminated_reason == "final_answer"
+    assert len(searcher.calls) == 2 and len(writer.calls) == 1
+    assert services.artifacts["searcher"]["ledger"] == corrected["ledger"]
+    warnings = [event for event in services.events if event["kind"] == "protocol_warning"]
+    assert len(warnings) == 1 and "Entity Alpha" not in warnings[0]["content"]
+
+
+def test_repeated_unknown_ledger_fields_fail_after_the_existing_single_correction():
+    team = make_team(contributors=True)
+    malformed = {"answer": "Contribution summary.", "ledger": {
+        "requirements": [], "outline": [], "evidence_spans": [], "source_references": [],
+        "items": ["Content that must not be silently lost."]}}
+    searcher = ScriptedModel([malformed, malformed, {"answer": "Must never run."}])
+    writer = ScriptedModel([{"answer": "Must never run."}])
+    services, context = make_services(team, {"searcher": searcher, "writer": writer})
+    result = run_team("Write a guide.", context, team, services)
+    assert result.terminated_reason == "error" and result.answer is None
+    assert len(searcher.calls) == 2 and len(writer.calls) == 0
+    assert "searcher" not in services.artifacts
     assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == 1
 
 
@@ -1068,7 +1236,8 @@ def test_iterative_synthesizer_receives_final_artifact_contract_even_with_critic
     system = model.calls[0][0]["content"]
     assert "final synthesizer even if your persistent role is a reviewer or critic" in system
     assert "cannot replace the requested deliverable" in system
-    assert system.endswith(FINAL_ARTIFACT_CONTRACT)
+    assert FINAL_ARTIFACT_CONTRACT in system
+    assert FINAL_SUBMISSION_GATE in system
     payload = json.loads(model.calls[0][1]["content"])
     assert payload["agent"]["execution_role"] == "final_writer"
     assert payload["agent"]["task_prompt"].endswith(FINAL_ARTIFACT_CONTRACT)

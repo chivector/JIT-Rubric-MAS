@@ -31,7 +31,7 @@ from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGrap
 
 
 ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v9"
-CONTRIBUTOR_COMPACTNESS_POLICY_VERSION = "contributor-budget-advisory-v1"
+CONTRIBUTOR_COMPACTNESS_POLICY_VERSION = "contributor-budget-advisory-cumulative-v3"
 EXECUTION_RESPONSE_FIELDS = frozenset({
     "answer", "evidence_ids", "checkpoints", "ledger", "continue", "tools", "think", "reasoning",
 })
@@ -39,6 +39,20 @@ CONTRIBUTOR_ANSWER_MAX_CHARS = 1200
 CONTRIBUTOR_LEDGER_MAX_ITEMS = 12
 CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS = 512
 CONTRIBUTOR_LOCATOR_MAX_CHARS = 2048
+CONTRIBUTION_LEDGER_FIELDS = ("requirements", "outline", "evidence_spans", "source_references")
+
+FIXED_EVIDENCE_CITATION_PROMPT = (
+    "\nFIXED EVIDENCE CITATION RULE: The public task may contain a fixed shared evidence pack. "
+    "Its source_id values (such as search-0, web-0, or query-plan) are public source references, "
+    "not internal execution event IDs. Put those values only in your ledger source_references "
+    "and matching evidence_spans. Keep completion and checkpoint evidence_ids empty unless the "
+    "exact value was received as an internal ledger or tool event ID."
+)
+
+
+def _uses_fixed_evidence(public_task):
+    task = _data(public_task) or {}
+    return "Use only the fixed shared evidence pack; no external tool calls." in task.get("constraints", [])
 
 
 FINAL_ARTIFACT_CONTRACT = (
@@ -59,6 +73,23 @@ FINAL_ARTIFACT_CONTRACT = (
 )
 
 
+FINAL_SUBMISSION_GATE = (
+    "FINAL SUBMISSION GATE: Before returning the terminal JSON, reread the original "
+    "public_task.question and check the decoded answer in this order: deliver the requested "
+    "artifact itself; satisfy every explicit output-only, language, count, length and format "
+    "constraint; preserve every supported requested item without unsupported additions; "
+    "recheck dates, units, denominators, formulas and source locators for consequential "
+    "claims; use the supplied rubric criteria as a private checklist and map each criterion "
+    "to at least one concrete, answer-relevant sentence, table row or explicitly supported "
+    "limitation; retain named entities, quantities, counterexamples and requested format "
+    "objects instead of replacing them with broad thematic summaries; identify any criterion "
+    "still uncovered and repair it when supported by the task or evidence; remove process "
+    "narration, internal rubric IDs and review metadata; and leave enough space for valid "
+    "JSON closure. When an upstream artifact conflicts with the public task, follow the "
+    "public task and repair the conflict before submitting."
+)
+
+
 def _execution_assignment(agent, synthesizer):
     """Expose delivery authority next to the frozen role scope without mutating it."""
     assignment = copy.deepcopy(agent)
@@ -71,15 +102,31 @@ def _execution_assignment(agent, synthesizer):
     return assignment
 
 
-def _contributor_handoff_prompt():
+def _contributor_handoff_prompt(*, closed_book=False):
+    answer_limit = 2400 if closed_book else 1200
+    item_limit = 24 if closed_book else 12
     return (
-        "Keep answer <=1200 characters as a compact summary, not the complete public deliverable. "
+        f"Aim for answer <={answer_limit} characters as a compact summary, not the complete public deliverable. "
         "Put concrete facts, reasoning steps, intermediate results and limitations in the sibling ledger. "
-        "Each ledger list has at most 12 items and each text item <=512 characters; merge overlapping "
-        "requirements while preserving public-task coverage. Every outline item must carry a useful "
+        f"{item_limit} items per list, <=512 characters per text item and <=2048 per source locator are "
+        "advisory compactness targets, not completeness limits. Merge overlapping requirements while "
+        "preserving public-task coverage. Retain every required supported item, necessary derivation "
+        "and source reference within actual token/timeout budgets even above these targets. Every outline item must carry a useful "
         "claim, reasoning step, result or uncertainty, not a section heading alone. Ignore any "
         "3000-5000-word or other full-draft length request in task_prompt or retained role text; "
-        "deliver compact fact chains for synthesis. Source locators may use <=2048 characters. "
+        "deliver compact fact chains for synthesis. "
+        "For writing assignments, also retain budgeted draft passages, scenes, dialogue or "
+        "transitions in answer or outline so a downstream reviewer can inspect actual wording. "
+        "Preserve the passage as text, distinct from review notes, without copying the complete "
+        "long deliverable. Reviewers identify the exact passage, its defect and effect on the "
+        "requested voice, audience or continuity, and a specific revision. When no passage is "
+        "available, review only the visible plan and do not claim the finished prose was inspected. "
+        "Fiction may invent within the public premise; real-world factual claims still require "
+        "appropriate support. "
+        "Each ledger replaces the previous one: return a cumulative snapshot of your current valid "
+        "contribution, not a partial delta. Preserve valid facts, items, derivations and sources from "
+        "own_contribution when supplied; correct or remove superseded claims and explain consequential "
+        "retractions. The runtime does not union old and new claims. "
         "Make each key result explicit once so a downstream writer can reconstruct the requested "
         "artifact from the ledger; include the relevant units, assumptions, formulas or boundary "
         "conditions instead of headings or vague references. Convert long source passages into "
@@ -91,12 +138,10 @@ def _contributor_handoff_prompt():
         "For quantitative or financial work, preserve definitions, assumptions, units, formulas and "
         "checked intermediate results. For regulatory work, distinguish legal or policy obligations "
         "from recommended strategy or prudent risk controls. "
-        "A critic must check the original claim and consequential inference within the assigned "
-        "scope, report the specific defect and a supported correction, and carry critical "
-        "missing deliverables or contradictory calculations into the handoff; agreement or a "
-        "blanket uncertainty statement is not a check. Evaluate each contributor against its "
-        "actual assignment and expected outputs; check the complete public deliverable across "
-        "the combined handoff and final writer instead of demanding that every role write it."
+        "A critic independently checks consequential claims in its assigned scope, reports specific "
+        "defects and supported corrections, and retains missing deliverables and contradictory "
+        "calculations in the handoff. Judge each contributor by its actual assignment; check complete "
+        "public-task coverage across the combined handoff and final writer."
     )
 
 
@@ -109,9 +154,14 @@ def _answer_check_prompt():
         "absolute necessity claims without support. Uncertainty labels do not establish unsupported "
         "numbers, citations or legal assertions. Compress copied source or ledger prose into the "
         "smallest set of actual, answer-relevant claims and recommendations. Never invent a long "
-        "directory, catalog, numbered sequence, or repeated examples to appear comprehensive; use "
-        "representative items and state the scope or uncertainty when a complete enumeration is not "
-        "supported. Remove duplicated claims before adding detail."
+        "directory, catalog, numbered sequence, or repeated examples to appear comprehensive. Use "
+        "representative items only when the public task requests examples or a sample. When it requests "
+        "all qualifying items or a complete list, apply the same stated eligibility conditions to every "
+        "item, deduplicate aliases, retain each supported qualifying item and its distinguishing identity, "
+        "and check both missing items and unsupported additions. State an actual completeness limitation "
+        "without replacing a supported full set with representative items. Remove duplicated claims before "
+        "adding detail. Public-task length, count and output-only constraints determine answer length; "
+        "a short answer must not be padded to consume the output-token allowance."
     )
 
 
@@ -350,11 +400,13 @@ _SUBSTANTIVE_TASK_VERBS = (
     "compare", "conduct", "discuss", "describe", "evaluate", "assess",
     "develop", "advise", "plan", "framework", "essay", "argument",
     "recommend", "compile a list",
+    "撰写", "写作", "报告", "文章", "论文", "解释", "分析", "比较", "评估", "方案", "计划", "论证",
 )
 _SHORT_TASK_MARKERS = (
     "yes/no", "yes or no", "single word", "one word", "one sentence",
-    "single number", "return only", "just the number", "name the",
+    "single number", "just the number",
     "what is the answer", "answer with a number",
+    "一个词", "单个词", "一个字", "单个字", "一句话", "一个数字", "仅数字", "是或否",
 )
 def _requires_substantive_answer(public_task):
     """Return whether the public prompt requests a prose/artifact deliverable.
@@ -362,9 +414,14 @@ def _requires_substantive_answer(public_task):
     This deliberately uses only the public question/constraints and is a conservative guard:
     short factual/format-specific prompts remain free to have short answers.
     """
+    from .evidence import public_instruction_question
+
     task = _data(public_task) or {}
-    question = str(task.get("question", "")).strip().lower()
+    question = public_instruction_question(task).strip().lower()
     constraints = " ".join(str(item) for item in task.get("constraints", [])).lower()
+    if (re.match(r"^(?:please\s+)?name\s+the\b", question)
+            and not re.search(r"\b(?:and|then|also)\s+(?:write|explain|analy[sz]e|discuss|describe)\b", question)):
+        return False
     if not question or any(marker in question or marker in constraints
                            for marker in _SHORT_TASK_MARKERS):
         return False
@@ -372,6 +429,33 @@ def _requires_substantive_answer(public_task):
     # prose artifact; explicit short-format markers above protect prompts that
     # intentionally ask for a name, number, or one-sentence response.
     return any(verb in question for verb in _SUBSTANTIVE_TASK_VERBS)
+
+
+def _heading_output_requested(public_task):
+    from .evidence import public_instruction_question
+
+    task = _data(public_task) or {}
+    question = public_instruction_question(task).strip().lower()
+    constraints = " ".join(str(item) for item in task.get("constraints", [])).lower()
+    request = re.search(
+        r"\b(?:write|create|compose|generate|draft|provide|give|return|suggest|choose)\s+"
+        r"(?:(?:me|a|an|the|one|single|short|concise|catchy|creative|newspaper|suitable|"
+        r"appropriate|effective)\s+)*(?:headline|title|heading)\b", question)
+    additional_prose = re.search(
+        r"\b(?:and|then|also)\s+(?:(?:write|create|compose|generate|draft|provide|give)\s+"
+        r"(?:(?:a|an|the|full|complete|detailed|brief)\s+)*"
+        r"(?:report|essay|article|analysis|plan|framework|summary)\b|"
+        r"(?:explain|analy[sz]e|discuss|describe|evaluate|assess)\b|"
+        r"(?:(?:a|an|the|full|complete|detailed|brief)\s+)*"
+        r"(?:report|essay|article|analysis|plan|framework|summary)\b)", question)
+    chinese_request = re.search(r"(?:撰写|写|拟|生成|提供|给出|返回|输出|推荐|起)[^。！？\n]{0,12}(?:标题|题目)", question)
+    chinese_additional_prose = re.search(
+        r"(?:并|以及|然后|同时|再)[^。！？\n]{0,12}(?:撰写|写|解释|分析|报告|文章|论文|方案|计划)", question)
+    if (request or chinese_request) and not (additional_prose or chinese_additional_prose):
+        return True
+    return (re.search(r"\b(?:poem|poetry|verse|haiku)\b", question) is not None
+            and re.search(r"\b(?:markdown\s+)?heading\s+lines?\b", question + " " + constraints) is not None
+            and not additional_prose)
 
 
 def _completion_quality_error(answer, public_task):
@@ -390,6 +474,7 @@ def _completion_quality_error(answer, public_task):
     text = " ".join(answer.split())
     if not text:
         return "The substantive public deliverable is empty"
+    heading_output_requested = _heading_output_requested(public_task)
 
     def non_content(chunk):
         # Exclude source-status parentheticals from the title test, not from the
@@ -400,7 +485,8 @@ def _completion_quality_error(answer, public_task):
         title = re.match(r"^(?:#{1,6}\s+|(?:title|subject|topic)\s*:)", title_text, re.I)
         # A sentence in the same line as a heading can contain substantive
         # analysis; only reject recognizable headings without sentence prose.
-        if title and not re.search(r"[.!?](?:\s+[A-Z]|\s*$)", title_text.rstrip(".!?")):
+        if (title and not heading_output_requested
+                and not re.search(r"[.!?](?:\s+[A-Z]|\s*$)", title_text.rstrip(".!?"))):
             return True
         statement = re.sub(r"^[*\s]+|[*\s]+$", "", chunk)
         # Match entire status/meta statements rather than a broad 'This report
@@ -522,6 +608,9 @@ def _checkpoint_reports(agent, parsed, observed_ids):
 def _contribution_ledger(value):
     if not isinstance(value, dict):
         raise ResponseProtocolError("Contributors must publish a structured ledger object")
+    unknown_fields = sorted(str(key) for key in value if key not in CONTRIBUTION_LEDGER_FIELDS)
+    if unknown_fields:
+        raise ResponseProtocolError("Unknown contributor ledger fields: " + json.dumps(unknown_fields))
     for key in ("requirements", "outline"):
         if not isinstance(value.get(key), list) or any(
                 not isinstance(item, str) or not item.strip() for item in value[key]):
@@ -544,11 +633,10 @@ def _contribution_ledger(value):
                 or not span["text"].strip() or not isinstance(span.get("source_ref"), str)
                 or span["source_ref"] not in source_ids):
             raise ResponseProtocolError("Each evidence span needs text and a declared source_ref")
-    return copy.deepcopy({key: value[key] for key in
-                          ("requirements", "outline", "evidence_spans", "source_references")})
+    return copy.deepcopy({key: value[key] for key in CONTRIBUTION_LEDGER_FIELDS})
 
 
-def _contributor_compactness_warnings(parsed):
+def _contributor_compactness_warnings(parsed, *, closed_book=False):
     """Measure budget overruns without editing a shape-validated contribution.
 
     Guided schemas may enforce compact output while decoding. JSON Object output
@@ -560,23 +648,25 @@ def _contributor_compactness_warnings(parsed):
         if actual > suggested_max:
             warnings.append({"field": field, "actual": actual, "suggested_max": suggested_max})
 
+    answer_limit = 2400 if closed_book else CONTRIBUTOR_ANSWER_MAX_CHARS
+    item_limit = 24 if closed_book else CONTRIBUTOR_LEDGER_MAX_ITEMS
+    text_limit = CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS
     answer = parsed.get("answer")
     if isinstance(answer, str):
-        measure("answer.characters", len(answer), CONTRIBUTOR_ANSWER_MAX_CHARS)
+        measure("answer.characters", len(answer), answer_limit)
     ledger = parsed.get("ledger")
     if ledger is not None:
         for key in ("requirements", "outline", "source_references", "evidence_spans"):
-            measure(f"ledger.{key}.items", len(ledger[key]), CONTRIBUTOR_LEDGER_MAX_ITEMS)
+            measure(f"ledger.{key}.items", len(ledger[key]), item_limit)
         for key in ("requirements", "outline"):
             for index, item in enumerate(ledger[key]):
-                measure(f"ledger.{key}[{index}].characters", len(item),
-                        CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS)
+                measure(f"ledger.{key}[{index}].characters", len(item), text_limit)
         for index, source in enumerate(ledger["source_references"]):
             measure(f"ledger.source_references[{index}].locator.characters", len(source["locator"]),
                     CONTRIBUTOR_LOCATOR_MAX_CHARS)
         for index, span in enumerate(ledger["evidence_spans"]):
-            measure(f"ledger.evidence_spans[{index}].text.characters", len(span["text"]),
-                    CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS)
+                measure(f"ledger.evidence_spans[{index}].text.characters", len(span["text"]),
+                        text_limit)
     return warnings
 
 
@@ -586,6 +676,7 @@ def _correctable_execution_shape_error(error, response, *, observed_ids, allowed
     prefixes = (
         "Expected a complete JSON object", "Response must be a JSON object",
         "Unknown execution response fields: ",
+        "Unknown contributor ledger fields: ",
         "answer must be a nonempty string", "checkpoints must be an object",
         "Unconfirmed checkpoints: ",
         "A checkpoint must be", "evidence_ids must be a list",
@@ -666,6 +757,7 @@ def _shared_ledger(agent, team, services):
 
 
 def _iterative_public_ledger(services, agent_id=None):
+    """Build the complete current public snapshot, retaining its established shape."""
     result = {"requirements": [], "outline": [], "evidence_spans": [],
               "source_references": [], "contributions": [], "tool_evidence": [],
               "communications": []}
@@ -691,6 +783,42 @@ def _iterative_public_ledger(services, agent_id=None):
     result["communications"] = [event for event in events if event["kind"] == "peer_message"
                                 and (agent_id is None or event.get("recipient") == agent_id)]
     return result
+
+
+def _replace_iterative_ledger_snapshot(messages, ledger, state):
+    """Keep one runtime snapshot in context without removing any other history.
+
+    Only the exact fragment previously inserted here may be removed. Tool/peer
+    observations and correction instructions can share that user message, and
+    their original text must survive. Earlier model inputs remain deep-copied in
+    StepRecord, so replacing a context snapshot does not rewrite the audit trail.
+    """
+    previous = state.get("ledger_snapshot_message")
+    if previous is not None:
+        prefix = state["ledger_snapshot_prefix"]
+        suffix = state["ledger_snapshot_suffix"]
+        for index, message in enumerate(messages[2:], 2):
+            if message is previous:
+                if message["content"] != prefix + suffix:
+                    raise RuntimeError("Runtime ledger snapshot message changed unexpectedly")
+                if prefix:
+                    message["content"] = prefix
+                else:
+                    del messages[index]
+                break
+    content = "Updated shared ledger: " + json.dumps(ledger, ensure_ascii=False)
+    if len(messages) > 2 and messages[-1]["role"] == "user":
+        message = messages[-1]
+        prefix = message["content"]
+        suffix = "\n" + content
+        message["content"] = prefix + suffix
+    else:
+        prefix, suffix = "", content
+        message = {"role": "user", "content": content}
+        messages.append(message)
+    state.update(ledger_snapshot_message=message, ledger_snapshot_prefix=prefix,
+                 ledger_snapshot_suffix=suffix)
+    return content
 
 
 def _ledger_evidence_ids(ledger):
@@ -806,6 +934,8 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
         "deliverable. Follow budget_policy's completion and quality-cost stopping guidance. "
         "budget_estimate is a forecast, not a fixed call or round limit."
     )
+    if _uses_fixed_evidence(services.public_task):
+        system += FIXED_EVIDENCE_CITATION_PROMPT
     if synth:
         system += (
             "\nYou are the final synthesizer even if your persistent role is a reviewer or critic. "
@@ -826,6 +956,7 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
     instruction = {"public_task": _data(services.public_task),
                    "agent": _execution_assignment(agent, synth),
                    "shared_ledger": shared_ledger,
+                   "own_contribution": None,
                    "rubrics": _data(services.rubrics) or {"rubrics": []},
                    "execution_experiences": [experience for item in services.experiences
                         if (experience := _data(item)).get("kind", experience.get("bank", "")) == "execution"
@@ -869,35 +1000,34 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
         system += (
             "\nFINAL ROLE OVERRIDE (takes priority over task_prompt and retained role text): "
             "You are a contributor, never the final Writer. Do not write the complete public "
-            "deliverable even if task_prompt says write or produce it. Keep answer <=1200 "
-            "characters as a compact summary; put detailed material only in the structured "
-            "ledger, with at most 12 items per list and <=512 characters per item; source locators "
-            "may use up to 2048 characters so URLs remain exact. A reviewer should prioritize the "
-            "three to five most consequential findings and concrete corrections, while preserving "
-            "additional omissions needed for correctness, never a rewritten draft. Independently "
-            "verify the source claim and its consequential inference rather than approving it "
-            "because another agent agrees. Target the "
-            "serialized contributor response at about half the per-response output-token budget, "
-            "removing repetition while preserving facts and reasoning. This is a soft target: if a "
-            "valid continuation is needed, continue with an incremental ledger update rather than "
-            "repeating a full draft."
+            "deliverable even if task_prompt says write or produce it. Publish a compact summary plus "
+            "the substantive structured ledger. Compactness guidance is a soft target, not a limit on "
+            "required content. A reviewer should prioritize three to five consequential findings and "
+            "supported corrections while preserving additional omissions needed for correctness. "
+            "own_contribution contains only your latest published artifact, not foreign private history."
         )
     else:
         system += (
             "\nFINAL WRITER OVERRIDE: Return one terminal complete public deliverable and cover each "
-            "explicit public-task requirement. For material claims include a specific mechanism, "
-            "example or calculation when applicable, then state a clear conclusion. Use a format "
+            "explicit public-task requirement. When the public task calls for substantive analysis, "
+            "include a specific mechanism, example or calculation where appropriate and a clear conclusion. "
+            "Exact short formats and output-only instructions take precedence over that presentation advice. Use a format "
             "appropriate to the task; do not repeat drafts, ledger bodies, review narration or "
             "protocol metadata, and leave enough room for valid JSON closure. "
             f"The complete JSON response has a hard ceiling of {output_limit} output tokens. "
-            "Use about 80-85% of that ceiling as a soft planning target, including answer, "
-            "checkpoints and JSON escaping. Preserve every requested item, key argument and "
+            "For a long response, planning below about 80-85% of that ceiling leaves a protocol safety "
+            "margin for checkpoints and JSON escaping; this is not a target answer length. Public-task "
+            "length, count and output-only constraints take precedence, and short answers need no padding. "
+            "Preserve every requested item, key argument and "
             "calculation; reduce duplicated prose and unnecessary lists before shortening substance."
         )
-    system += "\n" + (_answer_check_prompt() if synth else _contributor_handoff_prompt())
+    system += "\n" + (_answer_check_prompt() if synth else
+                          _contributor_handoff_prompt(
+                              closed_book=services.knowledge_policy == "model_general_knowledge_allowed"))
     system += "\n" + QUALITY_ASSURANCE_PROMPT
     if synth:
         system += "\n" + FINAL_ARTIFACT_CONTRACT
+        system += "\n" + FINAL_SUBMISSION_GATE
         instruction["terminal_assignment"] = FINAL_ARTIFACT_CONTRACT
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(instruction, ensure_ascii=False)}]
@@ -946,11 +1076,7 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
         updated_ledger = _iterative_public_ledger(services, aid)
         updated_hash = content_hash(updated_ledger)
         if updated_hash != ledger_hash:
-            update_content = "Updated shared ledger: " + json.dumps(updated_ledger, ensure_ascii=False)
-            if len(messages) > 2 and messages[-1]["role"] == "user":
-                messages[-1]["content"] += "\n" + update_content
-            else:
-                messages.append({"role": "user", "content": update_content})
+            update_content = _replace_iterative_ledger_snapshot(messages, updated_ledger, state)
             observed_ids.update(_ledger_evidence_ids(updated_ledger))
             ledger_hash = updated_hash
             services.event(aid, "shared_ledger_read", {"ledger_hash": ledger_hash},
@@ -958,14 +1084,29 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
             if services.ledger is not None:
                 services.ledger.charge_communication(
                     len(update_content.encode("utf-8")), stage="execution", agent_id=aid)
+        elif state.get("ledger_snapshot_message") is not None:
+            # Recent-memory roles also need the current snapshot on a turn with
+            # no new peer publication. Move it alongside the newest observation
+            # or correction instead of leaving it outside their history window.
+            _replace_iterative_ledger_snapshot(messages, updated_ledger, state)
         observed_ids.update(pending_observation_ids)
         pending_observation_ids.clear()
         state["handled_message_ids"].update(item["event_id"]
                                            for item in updated_ledger["communications"])
+        instruction = json.loads(messages[1]["content"])
+        if state.get("ledger_snapshot_message") is not None:
+            instruction["shared_ledger"] = {
+                "snapshot_policy": "latest-full-runtime-snapshot-v1",
+                "snapshot_location": "The latest user message containing Updated shared ledger: "
+                                     "holds the complete current shared_ledger JSON; read it for "
+                                     "contributions, cumulative ledgers, tool evidence and peer messages.",
+                "snapshot_sha256": updated_hash,
+            }
+        with services.lock:
+            instruction["own_contribution"] = copy.deepcopy(services.artifacts.get(aid))
         if services.ledger is not None:
-            instruction = json.loads(messages[1]["content"])
             instruction["resource_budget"] = services.ledger.resource_context()
-            messages[1]["content"] = json.dumps(instruction, ensure_ascii=False)
+        messages[1]["content"] = json.dumps(instruction, ensure_ascii=False)
         context_messages = _role_messages(messages, persistent)
         external_input_hash = content_hash({"ledger_hash": updated_hash,
                                            "observed_evidence_ids": sorted(observed_ids)})
@@ -1042,7 +1183,8 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                 state["no_progress_correction_given"] = False
             if not synth and merged.get("ledger") is not None:
                 contribution = _contribution_ledger(merged["ledger"])
-                compactness_warnings = _contributor_compactness_warnings(merged)
+                compactness_warnings = _contributor_compactness_warnings(
+                    merged, closed_book=services.knowledge_policy == "model_general_knowledge_allowed")
                 if compactness_warnings:
                     services.event(aid, "compactness_warning", {
                         "policy": CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
@@ -1107,7 +1249,9 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                     "role-appropriate answer (complete deliverable for the synthesizer; compact summary "
                     "plus fact-rich ledger for a contributor), assigned checkpoint reports, and set continue=false. "
                     "Preserve honest limitations; do not declare an incomplete artifact complete. "
-                    + (_answer_check_prompt() if synth else _contributor_handoff_prompt()))
+                    + (_answer_check_prompt() if synth else
+                       _contributor_handoff_prompt(
+                           closed_book=services.knowledge_policy == "model_general_knowledge_allowed")))
                 if continuation_correction:
                     continuation = (
                         "Continuation correction: your response repeated unchanged without new external input. "
@@ -1177,8 +1321,12 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                     "Perform any missing checks you can support; otherwise report failed or unverified "
                     "with a specific reason. Do not invent a passed finding to finish. Preserve honest uncertainty. "
                     "Exact assigned checkpoint keys: " + json.dumps(agent.get("checkpoints", []), ensure_ascii=False) + ". "
-                    "For a contributor, ledger must be an object with requirements and outline as "
-                    "lists of nonempty strings, and evidence_spans and source_references as lists. "
+                    "For a contributor, ledger permits exactly requirements, outline, evidence_spans and "
+                    "source_references. Put substantive content from unsupported ledger keys into outline "
+                    "strings or the role-appropriate answer; do not discard it. requirements and outline "
+                    "are JSON arrays of nonempty strings (for example, \"outline\":[\"Claim and reason.\"]); "
+                    "never put objects, numbers or nested arrays in those two fields. "
+                    "evidence_spans and source_references are lists. "
                     "Each observed source entry needs nonempty source_id and locator; each evidence "
                     "span needs nonempty text and source_ref matching a declared source_id. "
                     "If no sources were observed, ledger source_references/evidence_spans must be empty arrays. "
@@ -1197,7 +1345,11 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                     "reproducing it unchanged. Preserve the key arguments, calculations, required "
                     "items and honest limitations; delete duplicate passages, guessed directories "
                     "and speculative numbered catalogs, then close every JSON field. "
-                    + (_answer_check_prompt() if synth else _contributor_handoff_prompt()) + " "
+                    + (_answer_check_prompt() if synth else
+                       "Apply the original system's advisory compactness and handoff guidance. "
+                       "Return a compact summary and a cumulative current-valid ledger, preserving "
+                       "required facts, checked intermediate results, necessary derivations, complete "
+                       "supported sets and source references. Retract superseded claims explicitly. ") + " "
                     "Exact validation error: " + str(exc))})
                 step.end_time = time.time()
                 step.duration = step.end_time - step.start_time
@@ -1343,32 +1495,29 @@ def _run_agent(agent, team, ctx, services):
         "Express missing input or disputed evidence in the role-appropriate answer, ledger and checkpoint reports. "
         "Never claim unobserved evidence or broadcast private conversations."
     )
+    if _uses_fixed_evidence(services.public_task):
+        system += FIXED_EVIDENCE_CITATION_PROMPT
     if not synth:
         system += (
             "\nFINAL ROLE OVERRIDE (takes priority over task_prompt and retained role text): "
             "You are a contributor, never the final Writer. Do not write the complete public "
-            "deliverable even if task_prompt says write or produce it. Keep answer <=1200 "
-            "characters as a compact summary; put detailed material only in the structured "
-            "ledger, with at most 12 items per list and <=512 characters per item; source locators "
-            "may use up to 2048 characters so URLs remain exact. A reviewer should prioritize the "
-            "three to five most consequential findings and concrete corrections, while preserving "
-            "additional omissions needed for correctness, never a rewritten draft. Independently "
-            "verify the source claim and its consequential inference rather than approving it "
-            "because another agent agrees. Target the "
-            "serialized contributor response at about half the per-response output-token budget, "
-            "removing repetition while preserving facts and reasoning. This is a soft target: if a "
-            "valid continuation is needed, continue with an incremental ledger update rather than "
-            "repeating a full draft."
+            "deliverable even if task_prompt says write or produce it. Publish a compact summary plus "
+            "the substantive structured ledger. Compactness guidance is a soft target, not a limit on "
+            "required content. A reviewer should prioritize three to five consequential findings and "
+            "supported corrections while preserving additional omissions needed for correctness."
         )
     else:
         system += (
             "\nFINAL WRITER OVERRIDE: Return one terminal complete public deliverable and cover each "
-            "explicit public-task requirement. For material claims include a specific mechanism, "
-            "example or calculation when applicable, then state a clear conclusion. Use a format "
+            "explicit public-task requirement. When the public task calls for substantive analysis, "
+            "include a specific mechanism, example or calculation where appropriate and a clear conclusion. "
+            "Exact short formats and output-only instructions take precedence over that presentation advice. Use a format "
             "appropriate to the task; do not repeat drafts, ledger bodies, review narration or "
             "protocol metadata, and leave enough room for valid JSON closure. "
-            "Use about 80-85% of the output-token ceiling as a soft planning target for the complete "
-            "JSON response, including answer, checkpoints and escaping. Preserve every requested "
+            "For a long response, planning below about 80-85% of the output-token ceiling leaves a "
+            "protocol safety margin for checkpoints and escaping; this is not a target answer length. "
+            "Public-task length, count and output-only constraints take precedence, and short answers "
+            "need no padding. Preserve every requested "
             "item, key argument and calculation; reduce duplicated prose and unnecessary lists "
             "before shortening substance."
         )
@@ -1391,10 +1540,9 @@ def _run_agent(agent, team, ctx, services):
     else:
         system += (
             f"\nEach complete JSON response has a hard ceiling of {output_limit} output tokens. "
-            "Target the complete serialized contributor response at about half that budget, "
-            "including answer, ledger, evidence IDs, checkpoints and closing braces. Remove "
-            "repetition first while retaining facts, key derivations and honest limitations; "
-            "this is a soft target and valid continuation remains available."
+            "Remove repetition first while retaining facts, key derivations and honest limitations. "
+            "This single-pass role must "
+            "include its complete substantive contribution in this response."
         )
     system += knowledge_policy_prompt(services.knowledge_policy)
     if primary_rubrics:
@@ -1450,10 +1598,13 @@ def _run_agent(agent, team, ctx, services):
             "for the writer; you will not receive a second model call to read them. Do not cite "
             "those future results as evidence you already observed."
         )
-    system += "\n" + (_answer_check_prompt() if synth else _contributor_handoff_prompt())
+    system += "\n" + (_answer_check_prompt() if synth else
+                          _contributor_handoff_prompt(
+                              closed_book=services.knowledge_policy == "model_general_knowledge_allowed"))
     system += "\n" + QUALITY_ASSURANCE_PROMPT
     if synth:
         system += "\n" + FINAL_ARTIFACT_CONTRACT
+        system += "\n" + FINAL_SUBMISSION_GATE
         instruction["terminal_assignment"] = FINAL_ARTIFACT_CONTRACT
     memory = type(ctx.memory)(prompts=ctx.prompt_templates)
     memory.initialize(system, TaskInput(task=json.dumps(instruction, ensure_ascii=False)))
@@ -1530,7 +1681,8 @@ def _run_agent(agent, team, ctx, services):
             if not synth:
                 if parsed.get("ledger") is not None:
                     contribution = _contribution_ledger(parsed["ledger"])
-                    compactness_warnings = _contributor_compactness_warnings(parsed)
+                    compactness_warnings = _contributor_compactness_warnings(
+                        parsed, closed_book=services.knowledge_policy == "model_general_knowledge_allowed")
                     if compactness_warnings:
                         services.event(aid, "compactness_warning", {
                             "policy": CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,

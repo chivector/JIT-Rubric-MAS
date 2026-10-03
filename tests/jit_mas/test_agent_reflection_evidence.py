@@ -181,7 +181,7 @@ def test_held_out_local_planning_and_execution_receive_lessons_without_feedback_
         assert "PRIVATE_REFERENCE_CANARY" not in json.dumps(payload)
 
 
-def test_reflection_correction_identifies_missing_top_level_counterevidence():
+def test_reflection_evidence_is_normalized_from_lessons():
     from jit_mas.pipeline import MASPipeline
     from jit_mas.planning import JsonModelCalls
     from jit_mas.schemas import AgentEvolutionUpdate
@@ -198,12 +198,6 @@ def test_reflection_correction_identifies_missing_top_level_counterevidence():
     def model(messages):
         payload = json.loads(messages[1]["content"])
         requests.append(payload)
-        if len(requests) == 2:
-            message = payload["response_correction"]["validation_errors"][0]["message"]
-            assert "missing_top_level_evidence_ids=['event:counter']" in message
-            assert "all lesson.evidence and lesson.counterevidence" in messages[0]["content"]
-            assert "final-synthesizer DAG" not in messages[0]["content"]
-            response["evidence"].append("event:counter")
         return json.dumps(response)
 
     profile = SimpleNamespace(pool_agent_id="critic", version=1)
@@ -211,5 +205,5 @@ def test_reflection_correction_identifies_missing_top_level_counterevidence():
         model, "agent_evolve", "Distill an observed lesson.", {}, AgentEvolutionUpdate,
         validate=lambda update: MASPipeline._validate_agent_update(
             update, profile, "task", {"event:support", "event:counter"}, "update"))
-    assert len(requests) == 2
-    assert result.evidence == ["event:support", "event:counter"]
+    assert len(requests) == 1
+    assert result.evidence == ["event:counter", "event:support"]

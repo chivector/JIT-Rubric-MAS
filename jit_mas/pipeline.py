@@ -301,11 +301,12 @@ class MASPipeline:
             if lesson.source_task_ids != [task_id]:
                 raise ValueError(f"Agent memory lesson {lesson.lesson_id} invented source tasks; "
                                  f"expected_source_task_ids={[task_id]}")
-            missing = sorted(set(lesson.evidence + lesson.counterevidence) - set(update.evidence))
-            if missing:
-                raise ValueError(f"Agent memory lesson {lesson.lesson_id} cites evidence absent from update.evidence; "
-                                 f"missing_top_level_evidence_ids={missing}. Include these exact IDs in update.evidence "
-                                 "only if they are in valid_evidence_ids, otherwise correct or remove the lesson.")
+            lesson_ids = set(lesson.evidence + lesson.counterevidence)
+            invalid = sorted(lesson_ids - valid_ids)
+            if invalid:
+                raise ValueError(f"Agent memory lesson {lesson.lesson_id} cites unavailable evidence; "
+                                 f"invalid_evidence_ids={invalid}. Correct or remove the lesson.")
+            update.evidence = sorted(set(update.evidence) | lesson_ids)
 
     def _load_frozen_attribution(self, directory, anchor, source_hash, source_documents,
                                 task, snapshot, initial, planned, team, result, feedback):

@@ -598,6 +598,9 @@ class _InstructionEvaluator(_MeteredEvaluator):
     def __init__(self, *args, checker=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.checker = checker
+        self.checker_identity = copy.deepcopy(getattr(checker, "identity", None))
+        self.evaluator_version = self.name + ":" + digest({
+            "evaluator": self.evaluator_version, "checker_identity": self.checker_identity})
 
     def evaluate(self, prediction: str, ground_truth="", *, private_record=None, **kwargs):
         task_id = self._check_record(ground_truth, private_record)
@@ -605,6 +608,10 @@ class _InstructionEvaluator(_MeteredEvaluator):
         try:
             if not isinstance(prediction, str) or not prediction.strip():
                 raise ValueError("Empty submission")
+            if getattr(self.checker, "identity", None) != self.checker_identity:
+                raise ValueError("Instruction checker identity changed after evaluator initialization")
+            if hasattr(self.checker, "assert_frozen"):
+                self.checker.assert_frozen()
             verdicts = _checker_results(prediction, private_record, self.checker)
             identifiers = private_record["instruction_id_list"]
             for index, (instruction_id, passed) in enumerate(zip(identifiers, verdicts)):
@@ -623,8 +630,8 @@ class _InstructionEvaluator(_MeteredEvaluator):
                           instruction_accuracy=sum(verdicts) / len(verdicts),
                           strict=self.name == "ifeval_strict", checker_source=self.source,
                           adapter_deviations=["pinned author checker", "no checker-guided repair"])
-            if hasattr(self.checker, "identity"):
-                result["checker_identity"] = copy.deepcopy(self.checker.identity)
+            if self.checker_identity is not None:
+                result["checker_identity"] = copy.deepcopy(self.checker_identity)
             return result
         except Exception as exc:
             feedback = [{"rubric_id": task_id + ":checker", "criterion": "Instruction-following checks",

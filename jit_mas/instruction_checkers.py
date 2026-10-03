@@ -43,6 +43,24 @@ def _verify_files(root, files):
             raise ValueError("Pinned author instruction checker source hash mismatch")
 
 
+def _resource_hashes(installed_root):
+    hashes = {}
+    for relative in ("tokenizers/punkt.zip", "tokenizers/punkt_tab.zip", "corpora/stopwords.zip",
+                     "taggers/averaged_perceptron_tagger_eng.zip"):
+        path = Path(installed_root) / ".nltk_data" / relative
+        if not path.is_file():
+            raise ValueError("Prepare and freeze author checker NLTK resources before execution")
+        hashes[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+        with zipfile.ZipFile(path) as archive:
+            for member in archive.infolist():
+                if member.is_dir():
+                    continue
+                extracted = path.parent / member.filename
+                if not extracted.is_file() or extracted.read_bytes() != archive.read(member):
+                    raise ValueError("Author checker extracted NLTK resource differs from its frozen archive")
+    return hashes
+
+
 class PinnedInstructionChecker:
     def __init__(self, source_root, benchmark):
         if benchmark not in {"ifeval", "ifbench"}:
@@ -58,20 +76,7 @@ class PinnedInstructionChecker:
         installed_files = {Path(relative).name: expected for relative, expected in PINNED_FILES.items()
                            if relative.startswith("ifbench/")}
         _verify_files(installed_root, installed_files)
-        resource_hashes = {}
-        for relative in ("tokenizers/punkt.zip", "tokenizers/punkt_tab.zip", "corpora/stopwords.zip",
-                         "taggers/averaged_perceptron_tagger_eng.zip"):
-            path = installed_root / ".nltk_data" / relative
-            if not path.is_file():
-                raise ValueError("Prepare and freeze author checker NLTK resources before execution")
-            resource_hashes[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
-            with zipfile.ZipFile(path) as archive:
-                for member in archive.infolist():
-                    if member.is_dir():
-                        continue
-                    extracted = path.parent / member.filename
-                    if not extracted.is_file() or extracted.read_bytes() != archive.read(member):
-                        raise ValueError("Author checker extracted NLTK resource differs from its frozen archive")
+        resource_hashes = _resource_hashes(installed_root)
         module_name = "_jit_mas_pinned_" + benchmark + "_evaluation_" + revision
         with _CHECKER_LOCK:
             import nltk
@@ -97,6 +102,7 @@ class PinnedInstructionChecker:
                 spec.loader.exec_module(module)
             self.author = sys.modules[module_name]
         self.benchmark = benchmark
+        self.source_root, self.installed_root = root, installed_root
         self.identity = {
             "source": ("https://github.com/google-research/google-research/tree/" + revision
                        + "/instruction_following_eval" if benchmark == "ifeval"
@@ -111,6 +117,20 @@ class PinnedInstructionChecker:
             "langdetect_seed": 0,
             "instruction_random_seed": "SHA256 of instruction record",
         }
+        self._frozen_identity = copy.deepcopy(self.identity)
+
+    def assert_frozen(self):
+        if self.identity != self._frozen_identity:
+            raise ValueError("Instruction checker identity changed after initialization")
+        _verify_files(self.source_root, self.identity["code_sha256"])
+        installed_files = {Path(relative).name: expected for relative, expected in PINNED_FILES.items()
+                           if relative.startswith("ifbench/")}
+        _verify_files(self.installed_root, installed_files)
+        if _resource_hashes(self.installed_root) != self.identity["nltk_resources_sha256"]:
+            raise ValueError("Author checker NLTK resources changed after initialization")
+        if any(importlib.metadata.version(name) != version
+               for name, version in self.identity["dependencies"].items()):
+            raise ValueError("Instruction checker dependencies changed after initialization")
 
     def check_record(self, prediction, private_record):
         record = copy.deepcopy(private_record)

@@ -344,15 +344,38 @@ class ExperienceStore:
 
 def retrieve(snapshot: ExperienceSnapshot, task: PublicTask, *, excluded_task_ids=(),
              before=None, capability=None, limit=24):
-    """Filter public task signals before exposing a small stored bank to the model."""
+    """Select relevant public-task advice, then preserve its chronological order.
+
+    A recency-only cap lets new unscoped advice evict older task-grounded lessons.
+    Rank eligible entries using the same public lexical evidence as the scope gate;
+    scores, private rubrics and source answers do not participate in retrieval.
+    """
+    if limit < 0:
+        raise ValueError("Experience retrieval limit must be nonnegative")
+    if limit == 0:
+        return []
+    task = PublicTask.model_validate(task)
     excluded = set(excluded_task_ids) | {task.task_id}
+    public_terms = _terms(" ".join([task.question, *task.constraints, *task.capabilities]))
     found = []
-    for entry in snapshot.experiences:
+    for index, entry in enumerate(snapshot.experiences):
         if excluded.intersection(entry.source_task_ids):
             continue
         if before and entry.created_at >= before:
             continue
-        if not experience_applicability(entry, task, capability=capability)["matched"]:
+        diagnostic = experience_applicability(entry, task, capability=capability)
+        if not diagnostic["matched"]:
             continue
-        found.append(entry.model_dump(mode="json"))
-    return found[-limit:]
+        # Count distinct substantive matches, rather than repeated wording or the
+        # length of an instruction. Applicable operations outrank generic formats.
+        matched_terms = set().union(
+            *(set(signal["matched_terms"]) for signal in diagnostic["signal_matches"])
+        ) | (_terms(entry.applicability).intersection(public_terms))
+        specific_matches = matched_terms - _GENERAL_TERMS
+        rank = (int(diagnostic["task_grounded"]),
+                len(specific_matches.intersection(_TASK_OPERATIONS)),
+                len(specific_matches), index)
+        found.append((rank, index, entry))
+    selected = sorted(found, key=lambda item: item[0], reverse=True)[:limit]
+    return [entry.model_dump(mode="json") for _, _, entry in
+            sorted(selected, key=lambda item: item[1])]

@@ -11,7 +11,7 @@ from jit_mas.bridge import JITHarnessSynthesizer
 from jit_mas.budget import BudgetLedger, MeteredModel
 from jit_mas.execution import (
     CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
-    FINAL_ARTIFACT_CONTRACT,
+    FINAL_ARTIFACT_CONTRACT, FINAL_SUBMISSION_GATE,
     ResponseProtocolError, TeamExecutor, TeamServices, _SinglePassModel, _parse_response, content_hash,
 )
 from jit_mas.schemas import AgentSpec, PublicTask, RubricGraph, TeamSpec
@@ -22,8 +22,9 @@ from scripts.models.base import ChatMessage
 def execute_team():
     synth = JITHarnessSynthesizer()
 
-    def execute(team, respond, *, tool_calls=0, auto_ledger=True, tools=None):
-        task = PublicTask(task_id="quality-handoff", question="Explain the argument and its assumptions.",
+    def execute(team, respond, *, tool_calls=0, auto_ledger=True, tools=None,
+                question="Explain the argument and its assumptions."):
+        task = PublicTask(task_id="quality-handoff", question=question,
                           tools=list(tools or {}))
         ledger = BudgetLedger(max_calls=20, max_tokens=200_000, max_tool_calls=tool_calls)
         inputs = {}
@@ -121,7 +122,8 @@ def test_terminal_critic_receives_writing_authority_over_review_only_scope(execu
 
     def respond(aid, payload, call, messages):
         if aid == terminal.agent_id:
-            assert messages[0]["content"].endswith(FINAL_ARTIFACT_CONTRACT)
+            assert FINAL_ARTIFACT_CONTRACT in messages[0]["content"]
+            assert FINAL_SUBMISSION_GATE in messages[0]["content"]
             assert payload["agent"]["task_prompt"].endswith(FINAL_ARTIFACT_CONTRACT)
             assert payload["terminal_assignment"] == FINAL_ARTIFACT_CONTRACT
             assert payload["agent"]["execution_role"] == "final_writer"
@@ -152,8 +154,8 @@ def test_each_role_receives_its_complete_output_shape_without_a_recall(execute_t
             assert "ledger is a sibling of answer" in messages[0]["content"]
             assert "FINAL ROLE OVERRIDE" in messages[0]["content"]
             assert "answer <=1200" in messages[0]["content"]
-            assert "at most 12 items" in messages[0]["content"]
-            assert "<=512 characters per item" in messages[0]["content"]
+            assert "advisory compactness targets, not completeness limits" in messages[0]["content"]
+            assert "cumulative snapshot" in messages[0]["content"]
             assert "soft target" in messages[0]["content"]
             assert "Make each key result explicit once" in messages[0]["content"]
             assert "downstream writer can reconstruct the requested artifact" in messages[0]["content"]
@@ -162,7 +164,7 @@ def test_each_role_receives_its_complete_output_shape_without_a_recall(execute_t
             assert set(example["ledger"]) == {"requirements", "outline", "evidence_spans", "source_references"}
             example["ledger"]["outline"] = ["State the assumptions before the conclusion."]
         else:
-            assert "80-85%" in messages[0]["content"] and "soft planning target" in messages[0]["content"]
+            assert "80-85%" in messages[0]["content"] and "not a target answer length" in messages[0]["content"]
             assert "Never invent a long directory, catalog, numbered sequence" in messages[0]["content"]
         example["answer"] = aid + " artifact"
         for check in example["checkpoints"].values():
@@ -173,6 +175,82 @@ def test_each_role_receives_its_complete_output_shape_without_a_recall(execute_t
     assert result.answer == "editor artifact"
     assert budget["model_calls"] == 3 and budget["tool_calls"] == 0
     assert all(len(calls) == 1 for calls in inputs.values())
+
+
+def test_complete_set_and_source_references_survive_compactness_advice(execute_team):
+    team = TeamSpec(agents=[
+        AgentSpec(agent_id="analyst", role="Analyst", capability="qualification analysis", max_calls=1),
+        AgentSpec(agent_id="writer", role="Writer", capability="synthesis", depends_on=["analyst"],
+                  max_calls=1),
+    ], synthesizer_id="writer", total_max_calls=2)
+    items = [f"Entity {ordinal:02d} qualifies under the stated condition." for ordinal in range(24)]
+    sources = [{"source_id": f"source-{ordinal}", "locator": f"Synthetic record {ordinal}"}
+               for ordinal in range(24)]
+    contribution = {"requirements": ["Return every qualifying entity"], "outline": items,
+                    "source_references": sources,
+                    "evidence_spans": [{"text": item, "source_ref": source["source_id"]}
+                                       for item, source in zip(items, sources)]}
+    expected = "; ".join(items)
+
+    def respond(aid, payload, call, messages):
+        assert call == 1
+        if aid == "analyst":
+            assert "advisory compactness targets, not completeness limits" in messages[0]["content"]
+            return {"answer": "Twenty-four qualifying entities are recorded in the ledger.",
+                    "ledger": contribution}
+        shared = payload["shared_ledger"]
+        assert [item["text"] for item in shared["outline"]] == items
+        assert [{key: value for key, value in source.items() if key != "agent_id"}
+                for source in shared["source_references"]] == sources
+        assert "representative items only when the public task requests examples or a sample" in messages[0]["content"]
+        assert "retain each supported qualifying item" in messages[0]["content"]
+        return {"answer": expected}
+
+    result, _, budget = execute_team(team, respond, auto_ledger=False,
+        question="Return the complete list of all qualifying synthetic entities from the supplied material.")
+    assert result.answer == expected and budget["model_calls"] == 2
+    assert any(event["kind"] == "compactness_warning" and event["content"]["content_preserved"]
+               for event in result.metadata["events"])
+
+
+def test_single_pass_exact_short_answer_is_submitted_without_padding(execute_team):
+    team = TeamSpec(agents=[AgentSpec(agent_id="solo", role="Writer", capability="writing", max_calls=1)],
+                    synthesizer_id="solo", total_max_calls=1)
+
+    def respond(_aid, payload, call, messages):
+        assert call == 1 and payload["public_task"]["question"] == "Return only Paris."
+        assert "not a target answer length" in messages[0]["content"]
+        assert "short answers need no padding" in messages[0]["content"]
+        return {"answer": "Paris"}
+
+    result, _, budget = execute_team(team, respond, question="Return only Paris.")
+    assert result.answer == "Paris" and budget["model_calls"] == 1
+
+
+@pytest.mark.parametrize("question,answer", [
+    ("Write a headline for a newspaper article about migratory birds.", "Title: Birds Return Home"),
+    ("Write a three-line poem using Markdown heading lines.", "# Birds rise\n# Wings cross the moon\n# Dawn finds home"),
+])
+def test_single_pass_heading_genre_submits_the_requested_artifact(execute_team, question, answer):
+    team = TeamSpec(agents=[AgentSpec(agent_id="solo", role="Writer", capability="writing", max_calls=1)],
+                    synthesizer_id="solo", total_max_calls=1)
+    result, _, budget = execute_team(team, lambda *_: {"answer": answer}, question=question)
+    assert result.answer == answer and budget["model_calls"] == 1
+
+
+def test_unknown_ledger_fields_fail_single_pass_without_silent_handoff(execute_team):
+    team = chain()
+    invalid = {"requirements": [], "outline": [], "evidence_spans": [], "source_references": [],
+               "entities": ["Entity Alpha meets every qualification condition."]}
+    result, inputs, budget = execute_team(team, lambda *_: {"answer": "Summary.", "ledger": invalid},
+                                         auto_ledger=False)
+    assert result.answer is None and list(inputs) == ["writer"] and budget["model_calls"] == 1
+    assert "writer" not in result.metadata["artifacts"]
+    error = str(result.sub_runs[0].trajectory[0].error)
+    assert "Unknown contributor ledger fields" in error and "entities" in error
+    assert "Entity Alpha" not in error
+    assert not any(event["kind"] in {"protocol_warning", "artifact_published", "final_answer"}
+                   for event in result.metadata["events"])
 
 
 def test_explained_failed_check_is_reported_not_falsely_verified(execute_team):
