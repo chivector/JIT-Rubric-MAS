@@ -28,7 +28,16 @@ deliverable, constraint, audience, format, comparison, time horizon and example;
 assign each to a role and verify each appears in the final artifact. For numbers,
 give period/date, geography, denominator, units and assumptions; recompute derived
 values and keep tables, ranges and prose consistent. Label estimates without using
-uncertainty as a substitute for support. For law or policy, name jurisdiction and
+uncertainty as a substitute for support. For net effects, separate benefit and harm
+contributions, define their signs and subtract weighted harms rather than rewarding
+greater harm. Define whether an aggregate is a sum, mean or normalized score, retain
+the same denominator across comparisons and recompute scenario totals from their
+displayed inputs. Check that increasing harm cannot improve the stated net benefit;
+if inputs cannot support a numerical index, give a qualitative comparison instead.
+Do not invent scoring inputs, weights or sensitivity results to make a qualitative
+judgment appear measured. A hypothetical illustration must be labeled and cannot
+serve as empirical evidence for the conclusion.
+For law or policy, name jurisdiction and
 instrument, scope, effective/pending status and conditions; separate obligations
 from advice, controls and forecasts. For historical or literary work, check names,
 dates, sequence and key plot/source facts before interpretation; state exact gaps
@@ -180,9 +189,18 @@ class JsonModelCalls:
         return [{"type": "contract", "message": str(exc)}]
 
     @staticmethod
+    def _response_json_text(content: str) -> str:
+        stripped = content.strip()
+        if stripped.startswith("```") and stripped.endswith("```"):
+            return "\n".join(stripped.splitlines()[1:-1])
+        return stripped
+
+    @staticmethod
     def _reconciliation_assignment_audit(content: str) -> dict:
+        if not isinstance(content, str):
+            return {}
         try:
-            value = json.loads(content)
+            value = json.loads(JsonModelCalls._response_json_text(content))
         except (ValueError, TypeError):
             return {}
         team = value.get("team") if isinstance(value, dict) else None
@@ -278,10 +296,7 @@ class JsonModelCalls:
             try:
                 if not isinstance(content, str):
                     raise ValueError(f"{phase}: model response must contain JSON text")
-                stripped = content.strip()
-                if stripped.startswith("```") and stripped.endswith("```"):
-                    stripped = "\n".join(stripped.splitlines()[1:-1])
-                result = schema.model_validate(json.loads(stripped))
+                result = schema.model_validate(json.loads(self._response_json_text(content)))
                 if validate is not None:
                     validate(result)
             except ValueError as exc:

@@ -137,7 +137,8 @@ def test_reviewer_correction_identifies_required_primary_artifact_dependency():
 
 
 @pytest.mark.parametrize("mode", ["single_pass", "iterative_shared_ledger"])
-def test_terminal_owner_correction_removes_all_optional_upstream_reviews(mode):
+@pytest.mark.parametrize("fenced", [False, True])
+def test_terminal_owner_correction_removes_all_optional_upstream_reviews(mode, fenced):
     draft = prediction()
     draft.graph.rubrics.append(draft.graph.rubrics[0].model_copy(update={"rubric_id": "clarity"}))
     for candidate in draft.candidates:
@@ -158,7 +159,8 @@ def test_terminal_owner_correction_removes_all_optional_upstream_reviews(mode):
         observed.append(request)
         assert "If primary[rubric_id] == synthesizer_id" in messages[0]["content"]
         if "response_correction" not in request:
-            return json.dumps(invalid)
+            content = json.dumps(invalid)
+            return "```json\n" + content + "\n```" if fenced else content
         assert "primary_owner_id='check'" in str(request["response_correction"])
         assert "rubric_id='accuracy'" in str(request["response_correction"])
         assert "rubric_id='clarity'" in str(request["response_correction"])

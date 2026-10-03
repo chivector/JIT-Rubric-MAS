@@ -47,7 +47,12 @@ FINAL_ARTIFACT_CONTRACT = (
     "or leave writing to another role apply only to contributors. You must perform the "
     "writing yourself in this terminal role. If the public task itself asks for a review, "
     "deliver that requested review; otherwise integrate review findings into the requested "
-    "artifact rather than submitting an internal critique of an upstream draft."
+    "artifact rather than submitting an internal critique of an upstream draft. "
+    "Resolve every consequential upstream defect before publishing: incorporate the supported "
+    "correction, independently rederive a disputed result, or explain the remaining limitation. "
+    "A stylistic rewrite is not a resolution of a flawed formula or unsupported input. Recompute "
+    "all affected totals and conclusions after correcting the underlying calculation; do not "
+    "claim robustness from unchecked scenario numbers."
 )
 
 
