@@ -179,6 +179,33 @@ class JsonModelCalls:
                      "line": exc.lineno, "column": exc.colno}]
         return [{"type": "contract", "message": str(exc)}]
 
+    @staticmethod
+    def _reconciliation_assignment_audit(content: str) -> dict:
+        try:
+            value = json.loads(content)
+        except (ValueError, TypeError):
+            return {}
+        team = value.get("team") if isinstance(value, dict) else None
+        if not isinstance(team, dict):
+            return {}
+        agents = team.get("agents", [])
+        primary = team.get("primary", {})
+        reviewers = team.get("reviewers", {})
+        if not isinstance(agents, list) or not isinstance(primary, dict) or not isinstance(reviewers, dict):
+            return {}
+        synthesizer = team.get("synthesizer_id")
+        assignments = [{"rubric_id": rubric_id, "primary_owner_id": primary.get(rubric_id),
+                        "reviewer_ids": assigned,
+                        "primary_is_final_synthesizer": primary.get(rubric_id) == synthesizer}
+                       for rubric_id, assigned in reviewers.items() if isinstance(assigned, list) and assigned]
+        return {"synthesizer_id": synthesizer,
+                "dependencies": {agent["agent_id"]: agent.get("depends_on", []) for agent in agents
+                                 if isinstance(agent, dict) and isinstance(agent.get("agent_id"), str)},
+                "review_assignments": assignments,
+                "terminal_owner_reviews_to_remove_if_synthesizer_unchanged": [
+                    {"rubric_id": assignment["rubric_id"], "required_reviewers": []}
+                    for assignment in assignments if assignment["primary_is_final_synthesizer"]]}
+
     def ask(self, model: Callable, phase: str, instructions: str, payload: dict,
             schema: type[T], *, agent_id: str = "global",
             validate: Callable[[T], None] | None = None,
@@ -221,6 +248,11 @@ class JsonModelCalls:
                 "self-checks in checkpoints and do not add backward edges. After any dependency "
                 "change, audit every primary and reviewers entry against the resulting ancestor "
                 "sets; changing only selection_rationale or task_prompt is not a fix."
+                " response_correction.assignment_audit names the actual dependencies and reviewer "
+                "fields in your previous response. If you keep the same synthesizer, set every "
+                "listed terminal-owner reviewers field to the required empty list while preserving "
+                "its self-checks. If you change the synthesizer or dependencies, recompute all "
+                "reviewer ancestors and terminal-owner assignments before returning."
                    if phase == "reconcile" else "")
                 if correction is not None else "")
             if correction is not None and phase == "agent_evolve":
@@ -264,6 +296,8 @@ class JsonModelCalls:
                     "to evade validation. This is the only correction attempt.",
                     "previous_response": content, "validation_errors": errors,
                 }
+                if phase == "reconcile":
+                    correction["assignment_audit"] = self._reconciliation_assignment_audit(content)
             else:
                 return result
             finally:

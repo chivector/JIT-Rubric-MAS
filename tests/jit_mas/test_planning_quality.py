@@ -162,6 +162,12 @@ def test_terminal_owner_correction_removes_all_optional_upstream_reviews(mode):
         assert "primary_owner_id='check'" in str(request["response_correction"])
         assert "rubric_id='accuracy'" in str(request["response_correction"])
         assert "rubric_id='clarity'" in str(request["response_correction"])
+        audit = request["response_correction"]["assignment_audit"]
+        assert audit["synthesizer_id"] == "check"
+        assert audit["dependencies"] == {"author": [], "check": ["author"]}
+        assert audit["terminal_owner_reviews_to_remove_if_synthesizer_unchanged"] == [
+            {"rubric_id": "accuracy", "required_reviewers": []},
+            {"rubric_id": "clarity", "required_reviewers": []}]
         assert "audit every actual rubric_id" in messages[0]["content"]
         assert "omit every optional reviewer assignment" in messages[0]["content"]
         fixed = copy.deepcopy(invalid)
