@@ -1,0 +1,30 @@
+{
+  "purpose": "Single public VAL engineering diagnostic; not a full VAL or TEST comparison.",
+  "task_id": "6847465956a0f6376a6053fb",
+  "original_split": "validation",
+  "state_updates_allowed": false,
+  "judge_model": "deepseek-v4-flash-vision",
+  "judge_endpoint": "https://composure-presuming-comrade.ngrok-free.dev/v1",
+  "generation_calls": 0,
+  "judge_attempts": 2,
+  "score_repeats": 1,
+  "answers": [
+    {
+      "tag": "20261003_v2",
+      "source_commit": "eda9ac3f7c9c73a9f6de307fcfccdebc5a4202e7",
+      "submission_path": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_preflight_20261003_v2\\runs\\b7ccf594d0618e915f1226b389119dc194d5496ad29d3bb73534d44602a37099\\submission.json",
+      "answer_hash": "a93798046387e14c200387a27ef2ed7a3442d8574cc346070d642fe40413fd4f",
+      "submission_file_sha256": "cc67a71b90293f89b0774ff0c49397e072d6132d338762031fe787c289a45d7d",
+      "answer_text_sha256": "934e809bbd32b8e0e275088994674956853c3812f884aebea2e524d02d5c9c9c"
+    },
+    {
+      "tag": "20261003_v4",
+      "source_commit": "d92018fc585c905a4aaa6a39fa738ecb1ec30ea4",
+      "submission_path": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_preflight_20261003_v4\\runs\\0d91d76ef594393f3baf3b3376d0cfce316aeae2d6dd37c6c2ebd7a84ff5a753\\submission.json",
+      "answer_hash": "6f82ad3489f9b07f19b58e7709e1e13757c651b7b20d0aa934c48c47f2239bc3",
+      "submission_file_sha256": "a6db9c68d339a701a07ea9527f04ad841a3a006ae23049363843d4bb7f71e109",
+      "answer_text_sha256": "d5cee6fa867f49b02f3aae96686f0bf1af8d05bf80100e733b77939292a0e0a4"
+    }
+  ],
+  "registered_at": "2026-10-03T06:41:57.794793+00:00"
+}

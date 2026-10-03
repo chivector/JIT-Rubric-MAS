@@ -1,0 +1,580 @@
+{
+  "schema_version": "1.0",
+  "observed_at": "2026-10-03T06:45:19.425715+00:00",
+  "method_root": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35",
+  "process": {
+    "launch_file": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_deepseek_method_launch_20261002_v35\\launch.json",
+    "method_pid": 7624,
+    "launched_pid_alive": true,
+    "method_process_alive": true,
+    "actual_method_processes": [
+      {
+        "pid": 7624,
+        "name": "python.exe",
+        "created_at": "2026-10-03T04:13:43.646108+00:00"
+      },
+      {
+        "pid": 23964,
+        "name": "python.exe",
+        "created_at": "2026-10-03T04:13:43.694599+00:00"
+      }
+    ],
+    "launch_status": "method_running",
+    "started_at": "2026-10-03T04:12:27.560398+00:00",
+    "preflight_exit": 0,
+    "code_commit": "7f01bcfaacf73be05c4511241dfc859fcac294ec"
+  },
+  "reports": {
+    "pilot_status": "running",
+    "report_status": "evolving",
+    "report_arm": "ours_evolve_then_test",
+    "generation_status": {},
+    "interruption_present": false,
+    "interruption": null
+  },
+  "process_state": "running",
+  "method_success_verified": false,
+  "terminal_counts": {
+    "total": 57,
+    "complete": 51,
+    "failed": 6
+  },
+  "terminal_runs": [
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C0\\runs\\02ccf0bbf5bb01f6e9cd2c39d7c52077a1373b7a8565badaeabd43576d5a083d",
+      "task_id": "6847465956a0f6376a605391",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C0\\runs\\267b78c034d603482c3c5862e480b859ae8ce6bc3fb17682071078e76a913100",
+      "task_id": "683a58c9a7e7fe4e7695849b",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C0\\runs\\4cef1afce34e8fa45bd5dc8441a19251959140ee70b2296a1586f628be101b57",
+      "task_id": "684397d188c1deceb49af329",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C0\\runs\\6fa96adbf9c6372bf49fd44c0d3682e78b51dbd13f8b554ae3d2894ab9e44495",
+      "task_id": "6847465956a0f6376a6053e8",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C0\\runs\\897846470ba3171ccd03214af45d6385e2693b7ce99d997dd82b72c678546b3f",
+      "task_id": "6847465956a0f6376a6053b5",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C0\\runs\\8b0d0c4fe426e0ab04042bdc1dcb98a690adbd39a09fb0454bb7c42981d8a182",
+      "task_id": "6847465956a0f6376a60542d",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C0\\runs\\9e2ac2c1680b833b7922a37e52a3baf44e6dd4bc1a51668b74050b7e9f488dec",
+      "task_id": "6847465956a0f6376a60535d",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C0\\runs\\cfbb8526ef58ad523c65dafe54b781b5dc28ed9704ba9e85fdea8d023434b1a7",
+      "task_id": "6847465956a0f6376a605441",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C0\\runs\\d2905b6328e3c36ff05339f905f3f4ff8912a243c3ce96c2399210bce39a5fac",
+      "task_id": "684397d188c1deceb49af31d",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C10\\runs\\0a6db194a57b903907a66d0e15f76acf86b273d8a965d08c273e1b7e444b366a",
+      "task_id": "6847465956a0f6376a60535d",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C10\\runs\\415ebd49d7d0f53070960f43d51e07ed277ed5e92560f3b8604969f16da443f0",
+      "task_id": "684397d188c1deceb49af329",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C10\\runs\\74a9a923d61e05520bfd212b4f6ee86753a873a007f0f671337a89828e9b272d",
+      "task_id": "6847465956a0f6376a605441",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C10\\runs\\a726c6d9c30f56a1dedf5e75e92dff397733eb59edaf26c05e556ebf0163edf9",
+      "task_id": "6847465956a0f6376a60542d",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C10\\runs\\bfc7d693080d7ed16c93035d6d5b8bbdf542ea8616cca7b684dcdadef177279b",
+      "task_id": "6847465956a0f6376a605391",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C10\\runs\\dd9db7e9ae0a6f73d7127fdf231c4a2903004031df487c400d478204b0dd5328",
+      "task_id": "683a58c9a7e7fe4e7695849b",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C10\\runs\\f42da11daa788e71f128562581dc73776d7b2e685aede223c6840d0ae6a412f0",
+      "task_id": "6847465956a0f6376a6053fb",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C15\\runs\\059a7915d8f193c450ff99aa6d1bc8c1082a59357f98c094bc1e586274931bd0",
+      "task_id": "684397d188c1deceb49af31d",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C15\\runs\\06f22a785d5129613f8a5f3f81546fd094e5a2a65edc98c4ae3d86da7c105069",
+      "task_id": "6847465956a0f6376a605441",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C15\\runs\\2e41182a9c928c5f2dbe410e37fcba412dc0c8ade51472bd359b89e0c4b62259",
+      "task_id": "6847465956a0f6376a60535d",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C15\\runs\\6c3070f267f0c5c3dca924d295492746bcb0b24b77b28ed03caa239965234050",
+      "task_id": "6847465956a0f6376a6053e8",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C15\\runs\\83da208a84a3ba2829497211dab0f66db545ac0dce3030ffef3c5de60d4b27d8",
+      "task_id": "6847465956a0f6376a6053fb",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C15\\runs\\a893c48a160fb39b2502f23028d63f733b50e78d59628bdbbbcfcd4f5f826b3f",
+      "task_id": "6847465956a0f6376a6053b5",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C15\\runs\\c19740c9d103da4997aa509c9bc6e75d176ff7d692b88e359bd6cb6d831dded6",
+      "task_id": "684397d188c1deceb49af329",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C15\\runs\\dcba4cd577fe207d812638308d33046e9daef02ede9b0adff7d625bd4310aa6f",
+      "task_id": "6847465956a0f6376a605391",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C15\\runs\\e19aa6f022533f5bdfb585cf9453ce228fa1b17caf8194a0fd3a205bde55a73d",
+      "task_id": "683a58c9a7e7fe4e7695849b",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C15\\runs\\e6b7fa0b298b0482967e8b85e1de78e460304e97dd5cc125f2d834bf141c86f1",
+      "task_id": "6847465956a0f6376a60542d",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C5\\runs\\2c3a58b14cc6230008c16c30b0c87655890acf5e8155be2f7b0b60d821a909e9",
+      "task_id": "6847465956a0f6376a6053e8",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C5\\runs\\3ae93fbd4c10b7535eebeab355be6efb71b55da2ee5abbe7913aa6771aedd141",
+      "task_id": "6847465956a0f6376a605391",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C5\\runs\\4b837b7d272d9a147e091f8e1f0217c67fbd65144486e37a3a47d6c5a446c0b5",
+      "task_id": "6847465956a0f6376a605441",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C5\\runs\\a279355467530e54bcb5caa898b4ca757a3f31d3a2139a06749c9cb117b4bf8d",
+      "task_id": "6847465956a0f6376a6053fb",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C5\\runs\\aa14637c850c89b4dd59f294649b0056ea815050b33a346724dc429209ddd280",
+      "task_id": "683a58c9a7e7fe4e7695849b",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C5\\runs\\af4f8e6029fa4123e196608d841e6643e6cf787f558a6ff34f4e1dc835da0020",
+      "task_id": "684397d188c1deceb49af329",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C5\\runs\\ca49e34514b53bf3f0585568b71ea77b921d91f01a5a7ca52339b1d7b8818977",
+      "task_id": "6847465956a0f6376a60542d",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C5\\runs\\cb54372227ab673c24c5572fb0b53351544ebb827cf25e26c10c0dc35df72b91",
+      "task_id": "6847465956a0f6376a6053b5",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C5\\runs\\f758719200fae515619e911e54f73ab54fd93fec327b08eb4514719259951d98",
+      "task_id": "684397d188c1deceb49af31d",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C5\\runs\\f7ca9874562249e720dc28fff765fa28b38b560ad9dcc52e598586afa8b173e3",
+      "task_id": "6847465956a0f6376a60535d",
+      "mode": "validate",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\0622f3b518374c448a46ff66ecc9df386f1bad9691054ba6746e03cb1166f1e2",
+      "task_id": "6847465956a0f6376a60547e",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\08390d986bbeeb837a9e84904b9d4109dc259181fef03ba3be61b7b1f90bca90",
+      "task_id": "684397d188c1deceb49af315",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\0b0c1e92ddf4cf71252613639ab42eeeb0ea0e376911f0bcc89f3334af3163a8",
+      "task_id": "6847465956a0f6376a60543e",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\106a846ed6c9928556dc89b787ff4d002af2f1cfad4f622e05fd20d37f4b1dc8",
+      "task_id": "6847465956a0f6376a605371",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\27be370fbfb59180212e75dcc05ed2d2a42a277dfee793abd503f808a777acf8",
+      "task_id": "6847465956a0f6376a6054a9",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\391c3f2f5bf2a24c864a8fb569ce1d4c7a8335bb5247d0441046a62a4b7b1fe8",
+      "task_id": "6847465956a0f6376a6053f5",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\4965ef577e2c5361fc2b82718b30884d8958969ecd1c35cdf8f01432a58539fe",
+      "task_id": "683a58c9a7e7fe4e7695848e",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\73e66b1d4c97c45a142315172757df378da4cbfc341ccbd3f38a1982b2b0c5bd",
+      "task_id": "6847465956a0f6376a6054c2",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\83543cdfaf2bcfaa14fdf3712dd0915b5d18f0ede026320a56c52916b3d76c35",
+      "task_id": "6847465956a0f6376a60547f",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\9e1a12a4b926ef776f4938e86c172953c1d584661209873e34089f28d0d221e3",
+      "task_id": "683a58c9a7e7fe4e76958478",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\a337adbd723350946df6384fb0b2661d2534614f679c9da83ba61f72d528e0c3",
+      "task_id": "6847465956a0f6376a605478",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\c930c133ea2716579a719ef0ac02045c2518792e95244709e4911a886a8274db",
+      "task_id": "6847465956a0f6376a6053aa",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\cfff0220682c79fe2cfed8923ff4dae7b683e39e5c6c1167326ba8c3466b36e0",
+      "task_id": "6847465956a0f6376a6054ad",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\d4347e1d0209d38fab73249dacb89621f9f413db91dc156a1f46dffc01390f7b",
+      "task_id": "6847465956a0f6376a6054a7",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\d71f8c3e8ea47ffd3469bd15db47966864fbc1bb1071e82c860fffdc2680d0f1",
+      "task_id": "684397d188c1deceb49af31b",
+      "mode": "evolve",
+      "kind": "complete",
+      "status": "complete",
+      "error": null
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C0\\runs\\e69f8d4610eea5d61f30c1b6d19100fb3b9526616c9d9093c7cbef028f81244e",
+      "task_id": "6847465956a0f6376a6053fb",
+      "mode": "validate",
+      "kind": "failure",
+      "status": "failed",
+      "error": "Each source reference needs source_id and locator; Each evidence span needs text and a declared source_ref"
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C10\\runs\\1457654c5c4d43a2c9ad75b8bb8a730cce07955db3592c2d74de93a346667132",
+      "task_id": "6847465956a0f6376a6053b5",
+      "mode": "validate",
+      "kind": "failure",
+      "status": "failed",
+      "error": "APIConnectionError: Connection error."
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C10\\runs\\e6892979f4b851db4a2200359b212d9fe98509b83973891fbc7d8f4a6428996f",
+      "task_id": "6847465956a0f6376a6053e8",
+      "mode": "validate",
+      "kind": "failure",
+      "status": "failed",
+      "error": "APIConnectionError: Connection error."
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C10\\runs\\ea1c8180c242a24b79d7666d9c4bcde50153014234cc9a085db8017cde644dcf",
+      "task_id": "684397d188c1deceb49af31d",
+      "mode": "validate",
+      "kind": "failure",
+      "status": "failed",
+      "error": "1 validation error for _ReconciliationResponse\nteam\n  Value error, Independent reviewer must depend on the primary owner's artifact: rubric_id='r4'; reviewer_id='critic_1'; primary_owner_id='writer_1'; reviewer_ancestor_ids=['analyst_1']. Choose an independent downstream reviewer with the primary owner as an ancestor through depends_on, or omit this optional review assignment. Do not add a backward dependency or cycle; self-checks belong in checkpoints, not reviewers. [type=value_error, input_value={'schema_version': '1.0',...equired deliverables.\"}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\18b8ab869d5e8d0fc933dcf8ab55e15d4936bb4f650d62d1fe8233977c66d2f5",
+      "task_id": "6847465956a0f6376a6053f3",
+      "mode": "evolve",
+      "kind": "failure",
+      "status": "failed",
+      "error": "Unconfirmed checkpoints: [\"Verify all explicit requirements (r1, r2, r3) appear in the final deliverable.\", \"Ensure no contradictions or duplicate sections exist.\", \"Confirm that conclusions follow from evidence and assumptions.\", \"Check that knowledge sources are clearly labeled.\", \"Verify actionable recommendations are included.\"]"
+    },
+    {
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\f3526ddf7200bfa0f0febbcb24d6a8d21bbf172e3faacfbf86b02e637278d1dc",
+      "task_id": "6847465956a0f6376a6053a7",
+      "mode": "evolve",
+      "kind": "failure",
+      "status": "failed",
+      "error": "Agent memory lesson searcher-1 cites evidence absent from update.evidence; missing_top_level_evidence_ids=['feedback:6847465956a0f6376a6053a7:r30:bc08e22a4e17', 'feedback:6847465956a0f6376a6053a7:r31:eb624d0365ac', 'feedback:6847465956a0f6376a6053a7:r34:2390e6d42f72', 'feedback:6847465956a0f6376a6053a7:r36:a5e08fac1512', 'feedback:6847465956a0f6376a6053a7:r37:f5952b88ec02', 'feedback:6847465956a0f6376a6053a7:r5:a88c45e21092']. Include these exact IDs in update.evidence only if they are in valid_evidence_ids, otherwise correct or remove the lesson."
+    }
+  ],
+  "deep_metrics": {
+    "unique_budget_files": 57,
+    "budget_totals": {
+      "model_calls": 1924,
+      "tokens": 18294205,
+      "tool_calls": 0,
+      "wall_seconds": 8866.081999999878
+    },
+    "finish_reasons": {
+      "stop": 1919,
+      "length": 3
+    },
+    "finish_reasons_by_stage": {
+      "inference": {
+        "stop": 386,
+        "length": 3
+      },
+      "evaluation": {
+        "stop": 1363
+      },
+      "update": {
+        "stop": 170
+      }
+    },
+    "length_calls": [
+      {
+        "task_id": "684397d188c1deceb49af329",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C15\\runs\\c19740c9d103da4997aa509c9bc6e75d176ff7d692b88e359bd6cb6d831dded6",
+        "stage": "inference",
+        "agent_id": "critic_1",
+        "call_id": "b52f17ede2f14b50871b33e8286e8d40",
+        "output_tokens": 12288
+      },
+      {
+        "task_id": "683a58c9a7e7fe4e7695849b",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\checkpoints\\C5\\runs\\aa14637c850c89b4dd59f294649b0056ea815050b33a346724dc429209ddd280",
+        "stage": "inference",
+        "agent_id": "critic_1",
+        "call_id": "13ea046ad4d94d558fe6a4bd2b2c8756",
+        "output_tokens": 12288
+      },
+      {
+        "task_id": "6847465956a0f6376a6054a9",
+        "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\27be370fbfb59180212e75dcc05ed2d2a42a277dfee793abd503f808a777acf8",
+        "stage": "inference",
+        "agent_id": "analyst_1",
+        "call_id": "b595ce13caa64676ad938a938cc510b3",
+        "output_tokens": 12288
+      }
+    ],
+    "failure_categories": {
+      "other": 5,
+      "review_topology": 1
+    },
+    "compactness_warning_events": 26,
+    "coverage": "Persisted budget.json once per distinct run directory; unfinished in-memory calls are unavailable."
+  },
+  "latest_stage_files": {
+    "pilot_metadata.json": {
+      "mtime": 1791000824.2086773,
+      "timestamp": "2026-10-03T04:13:44.208677+00:00",
+      "path": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\pilot_metadata.json"
+    },
+    "rr_split.json": {
+      "mtime": 1791000824.1650646,
+      "timestamp": "2026-10-03T04:13:44.165065+00:00",
+      "path": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\rr_split.json"
+    },
+    "ours": {
+      "mtime": 1791009868.1139722,
+      "timestamp": "2026-10-03T06:44:28.113972+00:00",
+      "path": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_jit_mas_run0_deepseekjudge_20261002_v35\\ours\\evolution\\aa7892a387e83eb538c1b1b233126440859f34bf71406852f43f55c21dfa4c94\\harness.json"
+    }
+  },
+  "comparison": {
+    "requested": true,
+    "invoked": false,
+    "path": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\compare_rr_v35_v29.json"
+  },
+  "monitor_deadline_hours": 12
+}

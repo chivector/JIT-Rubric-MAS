@@ -1,0 +1,16 @@
+{
+  "purpose": "Unscored engineering probes on two public VAL inputs; not formal scores.",
+  "original_split": "validation",
+  "task_ids": [
+    "6847465956a0f6376a6053fb"
+  ],
+  "formal_score": null,
+  "state_updates_allowed": false,
+  "judge_requests": 0,
+  "status": "passed",
+  "source_commit": "d92018fc585c905a4aaa6a39fa738ecb1ec30ea4",
+  "execution_model": "deepseek-v4-flash-vision",
+  "output_cap": 12288,
+  "started_at": "2026-10-03T06:34:07.014353+00:00",
+  "ended_at": "2026-10-03T06:35:12.037787+00:00"
+}

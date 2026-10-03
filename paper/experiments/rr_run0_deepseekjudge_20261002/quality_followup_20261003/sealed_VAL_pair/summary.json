@@ -1,0 +1,29 @@
+{
+  "status": "completed",
+  "task_id": "6847465956a0f6376a6053fb",
+  "scope": "single_public_VAL_engineering_pair",
+  "outcomes": [
+    {
+      "tag": "20261003_v2",
+      "answer_hash": "a93798046387e14c200387a27ef2ed7a3442d8574cc346070d642fe40413fd4f",
+      "status": "complete",
+      "complete": true,
+      "score": 0.4298245614035088,
+      "failed_count": 0,
+      "evaluator_version": "researchrubrics:2dc80e2d4c38ddd80439517c259d93c6954b193f:34495d16ccb3c0ee409f3dcaa52fd6ed474f04ae25e5e9be3f7710ec783e2520"
+    },
+    {
+      "tag": "20261003_v4",
+      "answer_hash": "6f82ad3489f9b07f19b58e7709e1e13757c651b7b20d0aa934c48c47f2239bc3",
+      "status": "complete",
+      "complete": true,
+      "score": 0.5175438596491229,
+      "failed_count": 0,
+      "evaluator_version": "researchrubrics:2dc80e2d4c38ddd80439517c259d93c6954b193f:34495d16ccb3c0ee409f3dcaa52fd6ed474f04ae25e5e9be3f7710ec783e2520"
+    }
+  ],
+  "paired_score_difference": 0.08771929824561409,
+  "experience_unchanged": true,
+  "generation_calls": 0,
+  "ended_at": "2026-10-03T06:44:35.876668+00:00"
+}

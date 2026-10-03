@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\Users\chizh\Desktop\JIT-main\outputs\score_rr_quality_pair_20261003.py", line 47, in <module>
+    assert answer_hash == submission["answer_hash"] == summary["outcomes"][0]["answer_hash"]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "judge_requests": 0,
+  "formal_score": null,
+  "experience_unchanged": true,
+  "outcomes": [
+    {
+      "task_id": "6847465956a0f6376a6053fb",
+      "status": "passed",
+      "formal_score": null,
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_preflight_20261003_v2\\runs\\b7ccf594d0618e915f1226b389119dc194d5496ad29d3bb73534d44602a37099",
+      "answer_hash": "a93798046387e14c200387a27ef2ed7a3442d8574cc346070d642fe40413fd4f",
+      "budget": {
+        "model_calls": 8,
+        "tokens": 80630,
+        "wall_seconds": 73.56200000000536
+      },
+      "finish_reasons": [
+        "stop",
+        "stop",
+        "stop",
+        "stop",
+        "stop",
+        "stop",
+        "stop",
+        "stop"
+      ]
+    }
+  ],
+  "ended_at": "2026-10-03T06:24:43.053620+00:00"
+}
