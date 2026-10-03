@@ -16,6 +16,8 @@ v35 修复终端 Critic 仍提交 review-only 内容的职责冲突，同时纳�
 
 v35 已选择 C15 snapshot 13（选中经验版本 13，轨迹最终经验版本为 18）。TEST 当前为 12 题已提交但未评分、4 题失败，尚无 TEST 分数或有效两臂差值。冻结源码 manifest 未改变。最新 EVO20/C20 Writer 的 length 截断经过纠正后完成提交，但恢复成功不证明数学内容语义无损，数学质量仍需独立检查。
 
+2026-10-03T08:24Z 终态：v35 方法臂 33 个 TEST 槽位中 27 个生成提交、6 个生成失败，因 DeepSeek 余额不足全部未评分，report=`incomplete`，不得计算 TEST 均值或两臂差值。新源码在固定 C15 的 VAL7/VAL9 无评分预检均通过（Judge=0、经验 hash 不变）；固定 10 VAL 的新评分诊断因余额不足 10/10 失败，已保留并标记无效。
+
 工作区正在增强 planning `assignment_audit`，把实际 owner/reviewer/dependency 冲突同时纳入诊断和 DAG 覆盖；截至本更新尚无真实新模型验证。该更新只记录状态，不改写历史封存结果、评分身份、预算或冻结运行。
 
 Single-Agent v29 已完成 33/33 TEST 评分，均值 `0.47553977079687665`。33 份答案均复用原封存文本，原文本由 `baseline_v29/sealed_answer_references.json` 引用；本包保留全部逐题 DeepSeek 原始评分、证据、预算及封存清单。
