@@ -287,8 +287,9 @@ def test_ledger_protocol_correction_retains_both_metered_calls_and_raw_error():
     raw = ScriptedModel([invalid, valid])
     # This fixture has no provider usage, so UTF-8 bytes conservatively bound the
     # expanded public-quality prompt on both the malformed and correction calls.
-    # Its budget exercises protocol accounting, not the formal experiment limit.
-    ledger = BudgetLedger(max_calls=2, max_tokens=50000, max_tool_calls=0)
+    # This test exercises accounting rather than a small token-limit boundary;
+    # use the common task envelope so prompt growth cannot block its correction.
+    ledger = BudgetLedger(max_calls=2, max_tokens=2_000_000, max_tool_calls=0)
     model = MeteredModel(raw, ledger, "execution", "searcher", 4096)
     services, context = make_services(team, {"searcher": model})
     services.ledger = ledger

@@ -7,10 +7,23 @@ check feasibility before drafting. Follow explicit instructions and their stated
 precedence; do not silently relax a conflict, invent a requirement or guess a hidden
 checker convention. Use the task's stated units, scope and counting rules. Different
 tasks can define words, sentences, matches or paragraphs differently.
+For a public N-th-sentence/M-th-word requirement, allocate N meaningful sentence slots
+before writing and assign each preceding sentence a distinct content function. Construct
+the target sentence from M indexed word slots. Use only the needed N sentences unless
+another explicit deliverable requires more. Do not repeat a whole sentence or paragraph to
+reach an ordinal or consume the token allowance; preserve explicitly required literal word
+repetitions. Once the requested content and positions are covered, stop the artifact and
+close its required JSON envelope and checkpoint fields.
 Build the required structure first: reserve literal start/end text, required terms
 and paragraph/line/section slots, then allocate words or sentences among those slots
 before filling in substantive content. Include titles, labels and fixed text in counts
 when the instructed scope includes them; never add them merely to make counting easier.
+For exact word counts or sentence-local word positions, privately construct numbered
+word slots under the public counting convention, place constrained literal words in
+their required slots, then fill the remaining slots with coherent content. Remove
+the construction numbering from the artifact unless the user requested it. During
+revision, preserve slot counts in already correct spans and recheck positions after
+any added or removed word; a correct outline does not establish a correct final text.
 Use clear word boundaries and simple sentence punctuation when the requested genre
 permits, avoiding count ambiguity from abbreviations or hyphenation. Preserve required
 literal wording and case while applying any broader style or capitalization rule.

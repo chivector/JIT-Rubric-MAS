@@ -117,6 +117,10 @@ class PinnedInstructionChecker:
             "langdetect_seed": 0,
             "instruction_random_seed": "SHA256 of instruction record",
         }
+        if benchmark == "ifbench":
+            self.identity["input_kwargs_policy"] = (
+                "drop None padding before official loose checker; preserve every non-null argument; "
+                "seed from original record")
         self._frozen_identity = copy.deepcopy(self.identity)
 
     def assert_frozen(self):
@@ -137,9 +141,17 @@ class PinnedInstructionChecker:
         prompt = record.get("prompt")
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("Pinned checker requires the original public prompt")
+        checker_kwargs = record["kwargs"]
+        if self.benchmark == "ifbench":
+            # The author strict path removes schema-wide null padding, while its
+            # loose path forwards kwargs directly to instruction-specific APIs.
+            # Preserve every supplied non-null constraint; do not suppress errors
+            # by filtering arbitrary argument names or mutating the source record.
+            checker_kwargs = [{key: value for key, value in options.items() if value is not None}
+                              for options in checker_kwargs]
         example = self.author.InputExample(
             key=0, instruction_id_list=record["instruction_id_list"],
-            prompt=prompt, kwargs=record["kwargs"])
+            prompt=prompt, kwargs=checker_kwargs)
         checker = (self.author.test_instruction_following_strict if self.benchmark == "ifeval"
                    else self.author.test_instruction_following_loose)
         with _CHECKER_LOCK:
@@ -149,7 +161,7 @@ class PinnedInstructionChecker:
             previous_seed = langdetect.DetectorFactory.seed
             try:
                 random.seed(int(digest({"prompt": prompt, "instruction_id_list": example.instruction_id_list,
-                                        "kwargs": example.kwargs}), 16))
+                                        "kwargs": record["kwargs"]}), 16))
                 langdetect.DetectorFactory.seed = 0
                 result = checker(example, {prompt: prediction})
             finally:

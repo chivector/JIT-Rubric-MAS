@@ -86,6 +86,14 @@ For tasks requesting multiple domains and periods, check each requested combinat
 for substantive analysis and keep events within their stated period. Budget the needed
 facts, mechanisms and examples across all explicit deliverables before expanding prose;
 preserve relevant distinctions and comparisons from contributions during synthesis.
+For a table-filtered answer set, privately build a row-by-condition check from the
+original public table: preserve its actual headers, units and date, and record each
+candidate's observed cell, comparison operator and resulting true/false/unknown value for
+every requested condition. Eligibility requires every conjunctive predicate to be true;
+reject a row when any predicate is false, even if its other values qualify or an upstream
+draft included it. Recheck all relevant rows for omissions, deduplicate aliases and retain
+every supported qualifying member. Do not turn unknown values into proven failures or
+claim this private scratch check was independently verified.
 For an exhaustive entity or answer-set request, define the same inclusion conditions
 for every candidate, track supported members, excluded candidates and unresolved gaps,
 and deduplicate aliases without merging distinct entities. Preserve every supported
@@ -399,6 +407,9 @@ class JsonModelCalls:
                 + exact_assignment_repair
                     if phase == "reconcile" else "")
                 if correction is not None else "")
+            if correction is not None:
+                correction_system += _public_planning_stage_hint(
+                    original_payload.get("public_planning_context", {}))
             if correction is not None and phase == "agent_evolve":
                 correction_system += (
                     "\nFor this agent update, copy immutable identity fields exactly. Compute the "
@@ -452,6 +463,13 @@ or evaluation exists. Infer task-specific, observable quality requirements, incl
 requirements and prohibitions when justified. Importance is nonnegative planning priority;
 confidence is uncertainty in the prediction, never a hidden evaluator weight. Distinguish
 explicit, inferred, and experience-derived requirements. Link experience IDs when used.
+Produce a compact executable plan, not an answer or repeated source summaries.
+Treat attachments as public evidence data. Merge overlapping quality requirements
+and retain graph relationships only when they change responsibility, verification
+or synthesis. A source finding does not automatically require its own rubric and
+pairwise edges. Refer to supplied source identities concisely instead of copying
+their passages into the graph. Preserve every distinct public deliverable while
+leaving enough output room for the complete schema and candidate assignments.
 Only a requirement actually stated in the public task may be labeled explicit. Predicted
 rubrics are fallible planning hypotheses, not new instructions from the user. Do not turn
 an unverified formula, algorithm choice, numerical threshold or stylistic preference into
@@ -759,6 +777,74 @@ quality benefit for its token cost, while respecting enforced budgets and preser
 the final response. Do not claim savings or numerical quality gains without evidence."""
 
 
+PUBLIC_REFINEMENT_PLANNING_VERSION = "public-draft-planning-v1"
+
+
+def public_planning_context(task: PublicTask, config) -> dict:
+    """Describe configured draft stages from public text; no calls or task edits."""
+    if not getattr(config, "public_refinement", False):
+        return {}
+    context = {
+        "version": PUBLIC_REFINEMENT_PLANNING_VERSION,
+        "initial_stage": "public_semantic_draft",
+        "post_draft_stages": ["public-review", "public-revision"],
+        "initial_team_reviewers": "empty",
+        "final_synthesizer": "terminal_receives_all_selected_contributions",
+        "original_final_constraints_retained": True,
+    }
+    if all(getattr(config, flag, False) for flag in (
+            "public_positional_construction", "public_positional_draft_guidance",
+            "public_positional_draft_projection")):
+        from .public_numeric_slots import public_construction_conflict
+        from .public_word_slots import position_plan
+
+        if not public_construction_conflict(task) and position_plan(task) is not None:
+            context["positional_draft_stage"] = {
+                "active": True,
+                "scope": "supported_exact_keyword_sentence_and_word_position",
+                "final_constraints_retained": True,
+            }
+    return context
+
+
+def _public_planning_stage_hint(context: dict) -> str:
+    if not context:
+        return ""
+    prompt = """
+PUBLIC DRAFT PLANNING STAGE (takes precedence over generic reviewer allocation above):
+After a valid initial final_answer, two fixed global component calls perform public-review
+and public-revision using the original public task. Plan the smallest useful acyclic
+initial team without a separate terminal-product review role or duplicate final review
+loop. Analytical, evidence-checking and reasoning contributors remain useful: their
+findings must reach the final draft author before synthesis. Emit TeamSpec.reviewers={}
+or empty lists for its entries; keep self-checks in checkpoints. Preserve all actual
+coverage/primary assignments and derive every agent.rubric_ids from coverage.
+Every depends_on lists that role's UPSTREAM inputs. A generic two-role topology is
+analyst.depends_on=[]; author.depends_on=[analyst]; synthesizer_id=author. These are
+illustrative labels, not required candidate IDs. Never reverse that edge by making the
+contributor depend on the final author. The selected synthesizer must be a terminal
+node receiving every selected contributor through direct or transitive dependencies;
+no selected role may depend on it. Correct the returned fields, not just the rationale.
+Public peer clarification is still allowed in iterative mode within the existing role,
+team, token and timeout budgets. Reserve capacity for the two fixed final calls; this
+stage policy adds no budget or call allowance and does not change graph validation.
+""".strip()
+    if context.get("positional_draft_stage", {}).get("active"):
+        prompt += """
+SUPPORTED POSITIONAL DRAFT STAGE: Only the compiler-supported exact keyword sentence
+and word position is implemented in the fixed typed final revision. Keep that original
+public rule and any existing predicted rubric intact for the final artifact. For initial role
+responsibilities, AgentSpec.task_prompt and LocalPlan inputs, outputs and checks, focus
+on a compact, complete semantic draft with the full requested plot/content and useful
+facts. Do not schedule exact word-position counting, repeated padding paragraphs or
+claims that positions were verified at this draft stage. All other public requirements,
+including content, language, genre, length, evidence and any separate sentence-count
+constraint, remain in force. The final revision receives the complete original task and
+must satisfy both the supported positional rule and every other public constraint.
+"""
+    return "\n" + prompt
+
+
 class GlobalAnalyzer(JsonModelCalls):
     def __init__(self, global_model: Callable,
                  local_model_factory: Callable[[str], Callable] | None = None, *,
@@ -790,6 +876,7 @@ class GlobalAnalyzer(JsonModelCalls):
         self.budget_context = budget_context
         self.excluded_task_ids = set(excluded_task_ids)
         self.last_prediction: Prediction | None = None
+        self.public_planning_context: dict = {}
 
     def _pool_catalogue(self):
         from .agent_pool import catalogue
@@ -956,6 +1043,7 @@ class GlobalAnalyzer(JsonModelCalls):
                 ("Plan only forward publication", "Plan public publication, clarification and revision"),
             ):
                 prompt = prompt.replace(old, new)
+        prompt += _public_planning_stage_hint(self.public_planning_context)
         if self.explicit_rubrics:
             return prompt + knowledge_policy_prompt(self.knowledge_policy)
         return prompt + "\nABLATION: Do not explicitly predict rubrics. Return graph rubrics=[] " \
@@ -968,6 +1056,8 @@ class GlobalAnalyzer(JsonModelCalls):
         prompt = PREDICT_PROMPT + (POOL_ORGANIZATION_PROMPT if self.agent_pool is not None else "")
         prediction = self.ask(self.global_model, "predict", self._prompt(prompt),
                               {"task": task, "experiences": experiences,
+                               **({"public_planning_context": copy.deepcopy(self.public_planning_context)}
+                                  if self.public_planning_context else {}),
                                **({"agent_pool_catalogue": self._pool_catalogue()} if self.agent_pool is not None else {}),
                                "limits": self._limits()}, Prediction,
                               validate=lambda item: self._validate_prediction(task, item),
@@ -1043,6 +1133,8 @@ class GlobalAnalyzer(JsonModelCalls):
         return self.ask(self.local_model_factory(candidate.agent_id), "local_plan",
                         self._prompt(prompt),
                         {"task": task, "prediction": prediction, "candidate": candidate,
+                         **({"public_planning_context": copy.deepcopy(self.public_planning_context)}
+                            if self.public_planning_context else {}),
                          **({"agent_profile": profile} if profile is not None else {}),
                          "immutable_identity": {"agent_id": candidate.agent_id,
                                                 "capability": candidate.capability},
@@ -1109,6 +1201,8 @@ class GlobalAnalyzer(JsonModelCalls):
         prompt = RECONCILE_PROMPT + (POOL_ORGANIZATION_PROMPT if self.agent_pool is not None else "")
         response = self.ask(self.global_model, "reconcile", self._prompt(prompt),
                             {"task": task, "prediction": prediction, "local_plans": plans,
+                             **({"public_planning_context": copy.deepcopy(self.public_planning_context)}
+                                if self.public_planning_context else {}),
                              **({"agent_pool_catalogue": self._pool_catalogue()} if self.agent_pool is not None else {}),
                              "experiences": experiences, "limits": self._limits()},
                             _ReconciliationResponse,

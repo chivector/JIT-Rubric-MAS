@@ -218,16 +218,17 @@ def test_native_final_answer_is_submission_not_external_tool_cost(pipeline, tmp_
     from scripts.kernel.runtime import AgentRuntime
 
     pipeline.config.max_tool_calls = 0
-    original = AgentRuntime.run
 
     def probe(self, *args, **kwargs):
         assert self._execute_tool("final_answer", {"answer": "submitted"}) == "submitted"
-        with pytest.raises(BudgetExceeded):
-            self._execute_tool("web_search", {"query": "not allowed"})
-        return original(self, *args, **kwargs)
+        assert self.model.ledger.snapshot()["tool_calls"] == 0
+        # Let the hard resource stop reach the trusted native boundary.
+        self._execute_tool("web_search", {"query": "not allowed"})
 
     monkeypatch.setattr(AgentRuntime, "run", probe)
-    outcome = submit_method(pipeline, "test-deployment", pipeline.store.snapshot(), method="jit_matched",
-                            repeat=0, output_dir=tmp_path / "native")
-    assert outcome["status"] == "submitted_unscored"
-    assert outcome["budget"]["tool_calls"] == 0
+    with pytest.raises(BudgetExceeded, match="Team tool budget exhausted") as caught:
+        submit_method(pipeline, "test-deployment", pipeline.store.snapshot(), method="jit_matched",
+                      repeat=0, output_dir=tmp_path / "native")
+    assert type(caught.value) is BudgetExceeded
+    assert caught.value.jit_mas_run_failure["error_type"] == "BudgetExceeded"
+    assert caught.value.jit_mas_run_failure["budget"]["tool_calls"] == 0

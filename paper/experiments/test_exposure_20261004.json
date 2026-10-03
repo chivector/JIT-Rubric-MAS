@@ -1,0 +1,197 @@
+{
+  "schema_version": "test-exposure-register-v1",
+  "authorization_date": "2026-10-04",
+  "authorization": "User authorized inspecting selected TEST questions to guide prompts and methods.",
+  "formal_split_manifest": "paper/experiments/joint_task_splits_v5.json",
+  "formal_split_manifest_immutable": true,
+  "clean_confirmation_exclusion_required": true,
+  "selection_policy": "fixed source prefix in frozen task_index TEST order: 2 IFEval, 2 IFBench, 1 DeepResearch Bench II",
+  "tasks": [
+    {
+      "task_id": "ifeval:1203",
+      "benchmark": "ifeval",
+      "source_row": 37,
+      "original_partition": "test",
+      "question_sha256": "d89146b220ad82da33dd63109e83934e3b3a787328c6aec230fc04b90ca83b07",
+      "exposed_material": "selected public prompt and coordinator-only checker/evaluation constraints",
+      "exposure_use": "development inspection and future method iteration; excluded from clean confirmation"
+    },
+    {
+      "task_id": "ifeval:1246",
+      "benchmark": "ifeval",
+      "source_row": 47,
+      "original_partition": "test",
+      "question_sha256": "bad1b31100041e868b8d51393e12de0e0e027642b5d7613741970345e215e236",
+      "exposed_material": "selected public prompt and coordinator-only checker/evaluation constraints",
+      "exposure_use": "development inspection and future method iteration; excluded from clean confirmation"
+    },
+    {
+      "task_id": "ifbench:13",
+      "benchmark": "ifbench",
+      "source_row": 14,
+      "original_partition": "test",
+      "question_sha256": "26ccba39e14e6a5c4c53612249bf715a8bf52763eedf87e313e5cd2635e749e7",
+      "exposed_material": "selected public prompt and coordinator-only checker/evaluation constraints",
+      "exposure_use": "development inspection and future method iteration; excluded from clean confirmation"
+    },
+    {
+      "task_id": "ifbench:22",
+      "benchmark": "ifbench",
+      "source_row": 23,
+      "original_partition": "test",
+      "question_sha256": "291d104bfb9d3df8c8192e1d104bc7fd8850c54a146acad3ccc5de8b8da5e1d9",
+      "exposed_material": "selected public prompt and coordinator-only checker/evaluation constraints",
+      "exposure_use": "development inspection and future method iteration; excluded from clean confirmation"
+    },
+    {
+      "task_id": "deepresearch_bench_ii:1",
+      "benchmark": "deepresearch_bench_ii",
+      "source_row": 1,
+      "original_partition": "test",
+      "question_sha256": "a7785779dcbb075c8fa20a7541f44f8096717c2f208ed61de3075ec0f813b108",
+      "exposed_material": "selected public prompt and coordinator-only checker/evaluation constraints",
+      "exposure_use": "development inspection and future method iteration; excluded from clean confirmation"
+    }
+  ],
+  "campaigns": [
+    {
+      "path": "outputs/development_pilot_20261004_exposed_v3",
+      "registration_hash": "1201b11a5a0f63e312691781ab576ee84c7df268368701fe8ffe4ae9a4bd78ff"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_exposed_v5",
+      "registration_hash": "f5555da90076a6e7efe3d4b405c1def772965b3e31a5055a441ed5d2a4264dab"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_drb_v5",
+      "registration_hash": "a811825f4b7b1b0b57b8ad64d0ea67453548690da92e08add33a6deb4bf830a0"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_exposed_v6",
+      "registration_hash": "f98271c912344292fb483403b0fab3b1163312417dcc23d04d5994670a78862a"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_drb_v6",
+      "registration_hash": "0e0c8f6b41918b55c367a63b46809578ff067c7ea20898b2cb494ea5b19f7e8f"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_exposed_v8",
+      "registration_hash": "f6c9c55828aac58b58d1850ebb594c8d4029492e56f24c914726f048683cff1b"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_drb_evidence_v8",
+      "registration_hash": "72f9e2cae8a859600bbb90dcec0ed3ec6218865a99f6855d105e25752d8a87ac"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_exposed_v9",
+      "registration_hash": "3a3d0b6088764be6f3db985a5d1f5ab38040d33209012feaf6c489983cd52ede"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_drb_evidence_v9",
+      "registration_hash": "fd3ab67ccf1384bae7ccfc6573059f07b6a2526a17a295141bc8f5a9d03e4c16"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_exposed_v10",
+      "registration_hash": "ffebb51b4d70513cb25763e8efca0dbb302f56b901be16991e8008d660ac2270"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_ifbench_v11",
+      "registration_hash": "281eeff32ffb41bcd77e6ab11a3b98ecce7815315883480c37f2c65daa2b1b8f"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_ifbench_v12",
+      "registration_hash": "a4fb54ecdbeb165315d5022360d93eb785f289063eca9303f5302a323c6e78e6"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_exposed_v14",
+      "registration_hash": "31f64200b1768de4edb73d77ccd189c994f6399d55ec39ef1ce2221ca19b4038"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_dsqa_evidence_v14",
+      "registration_hash": "2447fd52b234c8ab0eac88afab99ac599fbca768b298a6e48f679d8d07badcaf"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_rr_evidence_v14",
+      "registration_hash": "2ac1248589b46b30b150f8609db81a1c8894265c43373da7524320a06439cbcb"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_drb_evidence_v14",
+      "registration_hash": "a4b918c52f0f404359d0269eadaca5b42e7cf86c863a9234336e6ac146666d8c"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_writing_v14",
+      "registration_hash": "1c0fe32f0e13028e476b5c7325e1358730ae7e2137d9f32647b5898a868bf2ca"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_rr_evidence_v15",
+      "registration_hash": "d17cf2652f572aaace7a7b8232ed0d8c27d8c72e6b5ea1e39ecef571db420849"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_writing_v15",
+      "registration_hash": "936cbf6b80c9647fdc692d05bd28fc0b439b26e95e1d787d43778c7cee548d8b"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_exposed_v16",
+      "registration_hash": "790f23fccda97ba1f05b76b837113acdc33497458a16b7ea413bd98b7c80c34f"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_dsqa_evidence_v16",
+      "registration_hash": "96d7ad328a0651c7d6912fb501dfe7e8b0b68f32e6d0e68d2f5792beb968d810"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_rr_evidence_v16",
+      "registration_hash": "550e64d9f19eb94afafd9c286f9dc864ca50423ab0c03c86ebb60fe5e9a1d789"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_drb_evidence_v16",
+      "registration_hash": "11aab29df404853dc340d54820f813b9fc284e8f652a776c56ccb42d404c45de"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_writing_v16",
+      "registration_hash": "44c8edecbfd9cedb8ffa4c8282393c3926c0522b64f306b435b28e1874acfc8f"
+    }
+  ],
+  "supplemental_exposure_events": [
+    {
+      "event_id": "v9_baseline_runtime_incidental_legacy_evaluation_search_20261004",
+      "event_type": "incidental_legacy_evaluation_search",
+      "reported_date": "2026-10-04",
+      "agent": "/root/baseline_runtime",
+      "iteration_context": "v9_source_and_config_already_frozen",
+      "original_search_command": "rg -n \"sha256|v5|evidence|manifest|formal\" .runtime/final_v8* .runtime/final_v7* paper/experiments -g '*.json' -g '*.md'",
+      "original_result_exit_code": 1,
+      "original_result_reported_token_count": 6387091,
+      "original_result_truncated": true,
+      "known_additional_legacy_task_ids": [
+        "6847465956a0f6376a605476"
+      ],
+      "known_benchmark": "researchrubrics",
+      "partition_evidence": "Legacy path contains test_release; immutable manifest membership was not reread to establish this event",
+      "actual_visible_legacy_file": "paper/experiments/rr_run0_deepseekjudge_20261002/ours_v34/test_release/evaluations/9cf8e23c5b2c28701dda165674b89370e35347b0f5556f7d966fefa51abd63e2.json",
+      "visible_material": "Fragments of legacy private rubric in an evaluation artifact; no fragment text copied here",
+      "all_actual_visible_task_ids_range": "unknown: original tool result was heavily truncated",
+      "matched_path_reconstruction_count": 289,
+      "matched_path_reconstruction_file": ".runtime/final_v9_incidental_matched_paths_baseline_runtime.txt",
+      "matched_path_reconstruction_sha256": "28ae636fbed1f1d5e0e965a6016e46a3c9356482524fab48d7209e2f2ce4f33b",
+      "matched_path_count_is_not_visible_task_count": true,
+      "metadata_audit_file": ".runtime/final_v9_incidental_exposure_baseline_runtime.json",
+      "metadata_audit_sha256": "c24f33047d688e1efc397ec9901130f66406a8d2832a166f4ebc25c609ebfc03",
+      "source_and_config_modified_after_event": false,
+      "used_for_v9_prompt_task_scoring_or_answer_selection": false,
+      "private_rubric_in_v9_actor_inputs": false,
+      "coordinator_read_specific_rubric_text": false,
+      "api_calls_for_incident_audit": 0,
+      "private_content_copied_into_public_ledger": false,
+      "future_clean_confirmation_policy": {
+        "exclude_known_task_ids": [
+          "6847465956a0f6376a605476"
+        ],
+        "unknown_range_audit_required": true,
+        "do_not_claim_remaining_historical_test_tasks_unexposed": true,
+        "immutable_formal_manifest_modified": false
+      },
+      "handling": "Parent notified immediately; no use for prompt changes, benchmark/task selection, scoring or answer selection; frozen v9 retains identity. Future manifest checks use byte hashing only."
+    }
+  ],
+  "tasks_scope": "Explicit fixed selected development TEST tasks only; supplemental incidents are separate and total exposure range may be unknown"
+}

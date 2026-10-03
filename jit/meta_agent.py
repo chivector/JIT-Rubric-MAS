@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ast
+import builtins
 import importlib.resources
 import json
 import os
@@ -9,6 +11,7 @@ import random
 import re
 import signal
 import sys
+import symtable
 import threading
 import time
 import traceback
@@ -52,6 +55,104 @@ def _load_meta_prompts() -> Dict[str, str]:
 
 PROMPTS = _load_meta_prompts()
 VALIDATION_RUNTIME_TIMEOUT_SECONDS = 60 * 60
+
+
+def _unbound_global_names(source: str, filename: str) -> List[str]:
+    """Find undeclared global references without importing generated code.
+
+    Python's symbol table distinguishes parameters, local variables and closure
+    cells from globals. Module bindings are collected before walking scopes so
+    later helper definitions are allowed. This is a name-binding check, not a
+    proof that every branch initializes its variables before use.
+    """
+    module = symtable.symtable(source, filename, "exec")
+    bound = {symbol.get_name() for symbol in module.get_symbols()
+             if symbol.is_imported() or symbol.is_assigned() or symbol.is_namespace()}
+    available = bound | set(vars(builtins)) | {
+        "__name__", "__file__", "__package__", "__doc__", "__spec__", "__loader__",
+        "__cached__", "__builtins__", "__annotations__",
+    }
+    missing = set()
+
+    def visit(scope):
+        for symbol in scope.get_symbols():
+            if (symbol.is_global() and symbol.is_referenced() and not symbol.is_assigned()
+                    and symbol.get_name() not in available):
+                missing.add(symbol.get_name())
+        for child in scope.get_children():
+            visit(child)
+
+    visit(module)
+    return sorted(missing)
+
+
+def _repair_json_string_misuse(source: str, filename: str) -> List[int]:
+    """Find a narrow proven JSON-string/object mismatch without executing code.
+
+    Only direct imported repair_json assignments immediately consumed by an
+    isinstance(dict/list) branch are considered. Shadowed bindings, dynamic
+    options and branches that decode the string are conservatively ignored.
+    """
+    tree = ast.parse(source, filename)
+    functions, modules, shadowed = set(), set(), set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            for item in node.names:
+                name = item.asname or item.name
+                if node.module == "json_repair" and item.name == "repair_json":
+                    functions.add(name)
+                else:
+                    shadowed.add(name)
+        elif isinstance(node, ast.Import):
+            for item in node.names:
+                name = item.asname or item.name.split(".")[0]
+                if item.name == "json_repair":
+                    modules.add(name)
+                else:
+                    shadowed.add(name)
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            shadowed.add(node.id)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            shadowed.add(node.name)
+        elif isinstance(node, ast.arg):
+            shadowed.add(node.arg)
+    functions -= shadowed
+    modules -= shadowed
+    if {"isinstance", "dict", "list"} & shadowed:
+        return []
+    findings = set()
+    for node in ast.walk(tree):
+        for _, block in ast.iter_fields(node):
+            if not isinstance(block, list) or not block or not all(isinstance(x, ast.stmt) for x in block):
+                continue
+            for assignment, guard in zip(block, block[1:]):
+                if not (isinstance(assignment, ast.Assign) and len(assignment.targets) == 1
+                        and isinstance(assignment.targets[0], ast.Name) and isinstance(assignment.value, ast.Call)
+                        and isinstance(guard, ast.If)):
+                    continue
+                call, variable, test = assignment.value, assignment.targets[0].id, guard.test
+                direct = isinstance(call.func, ast.Name) and call.func.id in functions
+                qualified = (isinstance(call.func, ast.Attribute) and call.func.attr == "repair_json"
+                             and isinstance(call.func.value, ast.Name) and call.func.value.id in modules)
+                if not (direct or qualified) or any(kw.arg is None for kw in call.keywords):
+                    continue
+                option = next((kw.value for kw in call.keywords if kw.arg == "return_objects"),
+                              call.args[1] if len(call.args) > 1 else ast.Constant(False))
+                if not (isinstance(option, ast.Constant) and option.value is False):
+                    continue
+                if not (isinstance(test, ast.Call) and isinstance(test.func, ast.Name)
+                        and test.func.id == "isinstance" and len(test.args) == 2
+                        and isinstance(test.args[0], ast.Name) and test.args[0].id == variable):
+                    continue
+                expected = test.args[1].elts if isinstance(test.args[1], ast.Tuple) else [test.args[1]]
+                if not expected or not all(isinstance(x, ast.Name) and x.id in {"dict", "list"} for x in expected):
+                    continue
+                # A legitimate string fallback may decode it in the else branch.
+                if any(isinstance(x, ast.Call) and ((isinstance(x.func, ast.Attribute) and x.func.attr == "loads")
+                       or (isinstance(x.func, ast.Name) and x.func.id == "loads")) for x in ast.walk(guard)):
+                    continue
+                findings.add(call.lineno)
+    return sorted(findings)
 
 # The originality/innovation wording of prompt.yaml swapped for fit-to-task
 # wording -- byte-identical port of build_merged_desc.TRANSFORMS, the list the
@@ -819,7 +920,7 @@ class MetaReActAgent:
         }
 
     def _static_harness_checks(self) -> str:
-        """Deterministic syntax report fed to the reviewer as ground truth."""
+        """Deterministic syntax and name-binding report without code execution."""
         findings: List[str] = []
         for filename in WORKSPACE_FILES:
             file_path = self.workspace_dir / filename
@@ -827,7 +928,12 @@ class MetaReActAgent:
                 findings.append(f"{filename}: FILE MISSING")
                 continue
             try:
-                compile(file_path.read_text(encoding="utf-8"), filename, "exec")
+                source = file_path.read_text(encoding="utf-8")
+                compile(source, filename, "exec")
+                for name in _unbound_global_names(source, filename):
+                    findings.append(f"{filename}: unbound global name '{name}'; explicitly import or define it in this module")
+                for line in _repair_json_string_misuse(source, filename):
+                    findings.append(f"{filename}:{line}: repair_json defaults to a JSON string but the next branch consumes dict/list; use return_objects=True or json.loads(repair_json(...))")
             except SyntaxError as exc:
                 findings.append(f"{filename}: SyntaxError: {exc}")
         prompt_path = self.workspace_dir / WORKSPACE_PROMPT_FILE
@@ -852,7 +958,7 @@ class MetaReActAgent:
                 findings.append(f"{WORKSPACE_PROMPT_FILE}: YAML parse error: {exc}")
         if findings:
             return "\n".join(findings)
-        return "No static errors detected (all Python modules compile; prompt.yaml parses with required keys)."
+        return "No static errors detected (all Python modules compile with bound global names; prompt.yaml parses with required keys)."
 
     def _review_harness_expert(
         self,

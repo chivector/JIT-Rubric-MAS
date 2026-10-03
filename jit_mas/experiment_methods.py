@@ -20,7 +20,7 @@ from scripts.models.base import ChatMessage
 from scripts.tools.registry import ToolRegistry
 
 from .bridge import SEED_DIR, SynthesizedHarness, seed_response
-from .budget import BudgetLedger, MeteredModel
+from .budget import BudgetExceeded, BudgetLedger, MeteredModel
 from .checkpoints import CheckpointIntegrityError
 from .execution import TeamExecutor, content_hash
 from .experience import retrieve
@@ -294,14 +294,38 @@ class _UpstreamFixture:
         return {"input_token_count": 100, "output_token_count": 100}
 
 
+class _NativeResourceStop(BaseException):
+    """Escape generated Exception retries only for exhausted shared resources."""
+
+    def __init__(self, error):
+        super().__init__(str(error))
+        self.error = error
+
+
 class _DeadlineModel:
-    def __init__(self, model, timeout):
+    def __init__(self, model, timeout, *, ledger=None, on_settled=None):
         self.model, self.deadline = model, time.monotonic() + timeout
+        self.ledger, self.on_settled = ledger, on_settled
+
+    def expired(self):
+        return (time.monotonic() >= self.deadline or
+                (self.ledger is not None and self.ledger.remaining_seconds() == 0))
 
     def __call__(self, *args, **kwargs):
-        if time.monotonic() > self.deadline:
-            raise TimeoutError("Native control task deadline exceeded")
-        return self.model(*args, **kwargs)
+        try:
+            if self.expired():
+                raise _NativeResourceStop(TimeoutError("Native control task deadline exceeded"))
+            try:
+                return self.model(*args, **kwargs)
+            except BudgetExceeded as exc:
+                raise _NativeResourceStop(exc) from exc
+            except Exception as exc:
+                if self.expired():
+                    raise _NativeResourceStop(TimeoutError("Native control task deadline exceeded")) from exc
+                raise
+        finally:
+            if self.on_settled is not None:
+                self.on_settled()
 
     def __getattr__(self, name):
         return getattr(self.model, name)
@@ -325,6 +349,63 @@ def _native_client_policy(files):
                 if name in {"exec", "eval", "__import__", "OpenAI", "AsyncOpenAI", "OpenAIServerModel", "AgentRuntime"}:
                     findings.append(f"{filename}: {name} bypasses the injected metered runtime")
     return "\n".join(sorted(set(findings)))
+
+
+def _native_final_tool_receipt(registry, arguments, ledger, receipts):
+    """Preserve AgentRuntime._execute_tool behavior while observing actual success."""
+    event = {"event_id": f"native-final-tool:{len(receipts) + 1}",
+             "tool_name": "final_answer", "arguments": copy.deepcopy(arguments),
+             "model_calls_at_submission": ledger.snapshot()["model_calls"]}
+    try:
+        tool = registry.get("final_answer")
+        value = tool(**arguments) if isinstance(arguments, dict) else tool(arguments)
+        observation = str(value)
+        event.update(success=True, answer=observation, observation=observation)
+    except Exception as exc:
+        observation = f"Error executing tool 'final_answer': {str(exc)}"
+        event.update(success=False, error_type=type(exc).__name__, observation=observation)
+    receipts.append(event)
+    return observation
+
+
+def _normalize_native_final_termination(result, receipts, current_model_calls):
+    """Normalize the observed alias only when trusted tool and terminal trace agree.
+
+    The runtime receipt records a successful registered tool invocation, not a
+    test of the answer's meaning. Explicit non-tool terminal paths retain their
+    original behavior. No draft, candidate or answer text is selected or edited.
+    """
+    original = result.terminated_reason
+    last = receipts[-1] if receipts else {}
+    answer = result.answer
+    args = last.get("arguments")
+    valid = (last.get("success") is True and isinstance(answer, str) and bool(answer.strip())
+             and isinstance(args, dict) and set(args) == {"answer"}
+             and args["answer"] == answer == last.get("answer") == last.get("observation")
+             and last.get("model_calls_at_submission") == current_model_calls)
+
+    def value(row, key):
+        return row.get(key) if isinstance(row, dict) else getattr(row, key, None)
+
+    steps = result.trajectory
+    step = steps[-1] if steps else None
+    calls = value(step, "tool_calls") or []
+    tool = calls[-1] if calls else None
+    valid = bool(valid and step is not None and value(step, "error") is None
+                 and value(step, "action_output") == answer
+                 and value(step, "observations") == answer
+                 and value(tool, "name") == "final_answer"
+                 and value(tool, "arguments") == args)
+    normalized = original == "final_answer_called" and valid
+    result.metadata["native_terminal"] = {
+        "version": "confirmed-native-final-tool-v1", "original_terminated_reason": original,
+        "verified_final_tool_submission": valid, "normalized": normalized,
+        "rule": "observed final_answer_called alias; registered tool succeeded; answer and last terminal trace match; no later model calls",
+        "tool_receipts": copy.deepcopy(receipts),
+    }
+    if normalized:
+        result.terminated_reason = "final_answer"
+    return result
 
 
 def _native_jit(pipeline, task, ledger, run_dir):
@@ -382,14 +463,32 @@ def _native_jit(pipeline, task, ledger, run_dir):
             write_json(run_dir / "model_calls.json", {"generation": meta.calls, "execution": execution.calls})
     files = {filename: (agent.workspace_dir / filename).read_text(encoding="utf-8")
              for filename in SECTION_TAG_TO_FILE.values()}
+    # Upstream harnesses use integer max_steps in range/comparisons. When the
+    # common call cap is absent, derive this interface bound from the existing
+    # token envelope rather than silently adding an arbitrary step/call cap.
+    # The injected metered model and deadline remain the actual resource guards.
+    max_steps = config.max_model_calls if config.max_model_calls is not None else config.max_total_tokens
+    runtime_budget = {"model_call_cap": config.max_model_calls, "max_total_tokens": config.max_total_tokens,
+                      "task_timeout": config.task_timeout, "execution_timeout": config.execution_timeout,
+                      "max_steps_interface": max_steps,
+                      "max_steps_origin": "configured_model_call_cap" if config.max_model_calls is not None
+                                          else "derived_from_existing_token_envelope",
+                      "independent_step_cap": False,
+                      "resource_guards": "shared metered token/time ledger and execution deadline"}
     write_json(run_dir / "harness.json", {"kind": "upstream_MetaReActAgent", "name": name,
                "path": str(agent.workspace_dir), "files": {key: digest(value) for key, value in files.items()},
-               "meta_trajectory": generated.meta_agent_trajectory, "repairs": repairs})
+               "meta_trajectory": generated.meta_agent_trajectory, "repairs": repairs,
+               "runtime_budget": runtime_budget})
     if loaded is None:
         raise RuntimeError("Native loader did not produce a validated harness")
     runtime = AgentRuntime.__new__(AgentRuntime)
     runtime.config = {"harness": name, "execution": {"model_call_budget": config.max_model_calls}}
-    runtime.model = _DeadlineModel(execution, config.execution_timeout)
+    def persist_execution_audit():
+        write_json(run_dir / "model_calls.json", {"generation": meta.calls, "execution": execution.calls})
+        write_json(run_dir / "budget.json", ledger.snapshot())
+
+    runtime.model = _DeadlineModel(execution, config.execution_timeout, ledger=ledger,
+                                   on_settled=persist_execution_audit)
     runtime.tool_registry = registry
     runtime.memory, runtime.planning = loaded["memory"], loaded["planning"]
     runtime.action, runtime.tool_policy = loaded["action"], loaded["tool_policy"]
@@ -398,23 +497,31 @@ def _native_jit(pipeline, task, ledger, run_dir):
     if hasattr(runtime.memory, "set_model"):
         runtime.memory.set_model(runtime.model)
     runtime.logger = AgentLogger(level=LogLevel.OFF)
-    runtime.max_steps = config.max_model_calls
+    runtime.max_steps = max_steps
     runtime.trace_dir, runtime._run_counter = "", 0
     original_tool = runtime._execute_tool
-    started = time.monotonic()
+    final_tool_receipts = []
 
     def execute_tool(name, arguments):
-        if time.monotonic() - started > config.execution_timeout:
-            raise TimeoutError("Native control task deadline exceeded")
-        if name != "final_answer":
+        if runtime.model.expired():
+            raise _NativeResourceStop(TimeoutError("Native control task deadline exceeded"))
+        if name == "final_answer":
+            return _native_final_tool_receipt(registry, arguments, ledger, final_tool_receipts)
+        try:
             ledger.charge_tool("inference", "native-executor", name)
+        except BudgetExceeded as exc:
+            raise _NativeResourceStop(exc) from exc
         return original_tool(name, arguments)
 
     runtime._execute_tool = execute_tool
     try:
-        return runtime.run(adapter.format_task({}))
+        result = runtime.run(adapter.format_task({}))
+        return _normalize_native_final_termination(result, final_tool_receipts,
+                                                   ledger.snapshot()["model_calls"])
+    except _NativeResourceStop as exc:
+        raise exc.error from exc
     finally:
-        write_json(run_dir / "model_calls.json", {"generation": meta.calls, "execution": execution.calls})
+        persist_execution_audit()
 
 
 def submit_method(pipeline, task_id, snapshot: ExperienceSnapshot, *, method, repeat, output_dir, shared_dir=None):

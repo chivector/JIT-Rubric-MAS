@@ -183,7 +183,9 @@ def test_live_client_json_mode_and_limits_are_scoped_to_json_stages(
     assert reserved_limits == [(stage, options["max_tokens"]) for stage, options in requests]
     for stage, options in requests:
         assert options["max_tokens"] == (1024 if stage == "execution" else expected_limits[stage])
-        if stage in {"connectivity", "planning", "attribution", "evaluation"}:
+        # The MAS execution protocol requires a JSON object at the call site;
+        # the execution provider default remains usable for natural-text calls.
+        if stage in {"connectivity", "planning", "attribution", "evaluation", "execution"}:
             assert options["response_format"] == {"type": "json_object"}
         else:
             assert "response_format" not in options

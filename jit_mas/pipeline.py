@@ -11,7 +11,8 @@ from .attribution import RubricAttributor, _compact_duplicate_event_content
 from .budget import BudgetLedger
 from .config import MASConfig
 from .experience import ExperienceStore, retrieve
-from .planning import GlobalAnalyzer, JsonModelCalls, knowledge_policy_prompt
+from .planning import (GlobalAnalyzer, JsonModelCalls, knowledge_policy_prompt,
+                       public_planning_context)
 from .schemas import (AgentEvolutionUpdate, EvaluationFeedback, ExperienceSnapshot, PlannedTeam, Prediction,
                       PublicTask, RubricFeedback, RubricGraph, SplitManifest, digest, utc_now)
 
@@ -632,6 +633,7 @@ class MASPipeline:
                                   budget_context=ledger.resource_context,
                                   excluded_task_ids=self.manifest.validation + self.manifest.test,
                                   knowledge_policy=self.knowledge_policy)
+        analyzer.public_planning_context = public_planning_context(task, self.config)
         if self.config.fixed_team is None:
             try:
                 planned = analyzer.build(task, experience, local_planning=self.config.local_planning)
@@ -661,6 +663,14 @@ class MASPipeline:
                                 ledger=ledger, timeout_seconds=self.config.execution_timeout,
                                 unsafe_local=self.config.unsafe_local,
                                 knowledge_policy=self.knowledge_policy)
+        if self.config.public_positional_draft_guidance:
+            from .execution import compile_public_positional_draft_plan
+
+            executor.public_positional_draft_guidance_requested = True
+            executor.public_positional_draft_plan = compile_public_positional_draft_plan(
+                task, self.config)
+            executor.public_positional_draft_projection_requested = (
+                self.config.public_positional_draft_projection)
         # JIT repair is limited to failures before any role call, never quality feedback.
         result = synth.execute_with_repair(executor, task, planned.team, artifact,
                                            rubrics=planned.graph, experiences=experience)
@@ -677,6 +687,21 @@ class MASPipeline:
         if result.terminated_reason != "final_answer" or result.answer is None:
             write_json(run_dir / "budget.json", ledger.snapshot())
             raise RuntimeError("Team did not submit a final answer; official evaluation was not invoked")
+        if self.config.public_refinement:
+            from .public_refinement import PUBLIC_REFINEMENT_IDS, refine_public_answer
+
+            write_json(run_dir / "execution_draft.json", result.full_dict())
+            try:
+                refine_public_answer(task, result, self.models, ledger, self.config,
+                    knowledge_policy=self.knowledge_policy, synthesizer_id=planned.team.synthesizer_id,
+                    audit_writer=lambda value: write_json(run_dir / "public_refinement.json", value))
+            finally:
+                # Preserve failures and charged calls before allowing submission.
+                write_json(run_dir / "execution.json", result.full_dict())
+                call_trace["public_refinement_calls"] = [row for row in ledger.snapshot()["records"]
+                    if row.get("kind") == "model" and row.get("stage") == "inference"
+                    and row.get("agent_id") in PUBLIC_REFINEMENT_IDS]
+                write_json(run_dir / "call_trace.json", call_trace)
         submission = {"answer": result.answer, "answer_hash": digest(result.answer), "submitted_at": utc_now()}
         write_json(run_dir / "submission.json", submission)
         if defer_evaluation:

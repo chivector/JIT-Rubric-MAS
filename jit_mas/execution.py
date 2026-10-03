@@ -74,7 +74,30 @@ FINAL_ARTIFACT_CONTRACT = (
 
 
 FINAL_SUBMISSION_GATE = (
-    "FINAL SUBMISSION GATE: Before returning the terminal JSON, reread the original "
+    "FINAL SUBMISSION GATE: Establish a compact private output brief from the actual "
+    "public delivery request: artifact, audience, voice, language, length unit and target, "
+    "and required content. Separate supplied background, quoted examples and templates "
+    "from instructions for the artifact you must deliver. Explicit output instructions "
+    "take priority over inferred requirements and upstream plans. When no output language "
+    "is specified, follow the language of the actual delivery request; a platform, "
+    "audience or style label and an upstream draft in another language do not authorize "
+    "switching languages. A requested persona may narrate subjective experiences within "
+    "the requested script, but does not authorize fabricated measurements, clinical "
+    "results or technological evidence. For factual and research deliverables, preserve "
+    "supported publication titles, authors or source names, dates, findings, units and "
+    "assumptions from contributions alongside the claims they support, when the output "
+    "format permits attribution. Retain each reference's uncertainty and provenance: a "
+    "remembered reference is not newly retrieved evidence, but its available identity "
+    "should not disappear during synthesis. Never invent missing citation details or "
+    "quantitative findings. Distinguish experimental outcomes from projections, stating "
+    "the population, horizon and funding assumptions behind a sourced policy forecast. "
+    "Allocate the requested length across required "
+    "parts before drafting and check the actual decoded artifact after edits. For an "
+    "approximate length, aim near the stated target in its stated units; the token "
+    "ceiling is not an answer-length target. Merge repetition and shorten incidental "
+    "examples while preserving every explicit deliverable. Keep the brief and counting "
+    "notes outside answer, and do not claim a deterministic check without performing it. "
+    "Before returning the terminal JSON, reread the original "
     "public_task.question and check the decoded answer in this order: deliver the requested "
     "artifact itself; satisfy every explicit output-only, language, count, length and format "
     "constraint; preserve every supported requested item without unsupported additions; "
@@ -88,6 +111,147 @@ FINAL_SUBMISSION_GATE = (
     "JSON closure. When an upstream artifact conflicts with the public task, follow the "
     "public task and repair the conflict before submitting."
 )
+
+
+PUBLIC_POSITIONAL_DRAFT_GUIDANCE_VERSION = "public-positional-internal-draft-v1"
+PUBLIC_POSITIONAL_DRAFT_PROJECTION_VERSION = "public-positional-task-projection-v1"
+PUBLIC_POSITIONAL_DRAFT_GUIDANCE_PROMPT = (
+    "\nPUBLIC POSITIONAL CONTENT DRAFT STAGE: This execution answer is internal content, "
+    "not the final public submission. The already configured fixed public review and typed "
+    "word-slot revision follow this completed draft and implement the supported public "
+    "sentence and word position. This changes this stage's presentation task only; every "
+    "public final-output constraint still applies to the final revision. Contributors "
+    "preserve compact substantive material for the whole requested plot or content. The "
+    "synthesizer returns one compact coherent content draft with the complete plot, causal "
+    "progression, required examples and supported facts; a title, outline or promise is "
+    "not a complete draft. Do not repeat paragraphs, sentences or draft copies to simulate "
+    "an exact word slot, and do not claim the final position has been verified. Preserve "
+    "meaningful requested repetition where it is itself a public requirement. Retain "
+    "the role's exact JSON completion shape, substantive ledger and checkpoint honesty, "
+    "leave space for JSON closure, and do not add calls or wait for another agent to "
+    "perform this content task. The fixed final typed revision must still satisfy the "
+    "position rule and all other public content, language, length and format constraints."
+)
+
+
+def compile_public_positional_draft_plan(public_task, config):
+    """Select the optional draft stage from public text only; no model/tool calls."""
+    if not all(getattr(config, flag, False) for flag in (
+            "public_positional_draft_guidance", "public_refinement",
+            "public_positional_construction")):
+        return None
+    from .public_numeric_slots import public_construction_conflict
+    from .public_word_slots import position_plan
+
+    if public_construction_conflict(public_task):
+        return None
+    return position_plan(public_task)
+
+
+def _independent_public_position_span(text, span):
+    """Use the same conservative public scope as final word-slot construction."""
+    from .public_word_slots import independent_positive_position_span
+
+    return independent_positive_position_span(text, span)
+
+
+def project_public_positional_draft_task(public_task, plan):
+    """Delete only verified compiler spans in an actor's independent public-task copy."""
+    original = _data(public_task)
+    projected = copy.deepcopy(original)
+    audit = {
+        "version": PUBLIC_POSITIONAL_DRAFT_PROJECTION_VERSION,
+        "active": False, "final_constraints_retained": True,
+        "original_task_hash": content_hash(original),
+        "projected_task_hash": content_hash(original), "span_hashes": [],
+        "scope": "Actor public_task.question and public_task.constraints only",
+        "reason": "No single supported conflict-free public positional rule",
+    }
+    if plan is None:
+        return projected, audit
+    try:
+        from .public_numeric_slots import public_construction_conflict
+        from .public_word_slots import position_plan
+
+        if (not isinstance(original, dict) or not isinstance(original.get("question"), str)
+                or not isinstance(original.get("constraints", []), list)
+                or not all(isinstance(item, str) for item in original.get("constraints", []))):
+            raise ValueError("Invalid public question/constraints")
+        if public_construction_conflict(public_task):
+            raise ValueError("Conflicting public construction rules")
+        expected = position_plan(public_task)
+        if expected is None:
+            raise ValueError("The original public task has no supported positional rule")
+        spans = tuple(plan.matched_public_spans)
+        if (not spans or (plan.keyword, plan.sentence_index, plan.word_index) !=
+                (expected.keyword, expected.sentence_index, expected.word_index)
+                or spans != expected.matched_public_spans):
+            raise ValueError("The positional plan differs from the original public compiler result")
+        grouped = {}
+        for span in spans:
+            if not isinstance(span.source, str):
+                raise ValueError("Invalid public span source")
+            if span.source == "question":
+                text = original["question"]
+                index = None
+            else:
+                match = re.fullmatch(r"constraints\[(0|[1-9][0-9]*)\]", span.source)
+                if match is None:
+                    raise ValueError("The span source is not an explicit public task field")
+                index = int(match.group(1))
+                text = original.get("constraints", [])[index]
+            if (type(span.start) is not int or type(span.end) is not int
+                    or not 0 <= span.start < span.end <= len(text)
+                    or not isinstance(span.text, str) or text[span.start:span.end] != span.text):
+                raise ValueError("The public span range or original text differs")
+            if not _independent_public_position_span(text, span):
+                raise ValueError("The positional span is not an independent positive public instruction")
+            grouped.setdefault((span.source, index), []).append(span)
+        span_hashes = []
+        for (source, index), field_spans in grouped.items():
+            ordered = sorted(field_spans, key=lambda span: span.start)
+            if any(left.end > right.start for left, right in zip(ordered, ordered[1:])):
+                raise ValueError("The compiler spans overlap")
+            text = original["question"] if index is None else original["constraints"][index]
+            for span in reversed(ordered):
+                text = text[:span.start] + text[span.end:]
+                span_hashes.append({"source": source, "start": span.start, "end": span.end,
+                    "text_sha256": hashlib.sha256(span.text.encode("utf-8")).hexdigest()})
+            if index is None:
+                projected["question"] = text
+            else:
+                projected["constraints"][index] = text
+        if not any(character.isalnum() for character in projected["question"]):
+            raise ValueError("The projected question has no remaining substantive public request")
+        audit.update(active=True, projected_task_hash=content_hash(projected),
+                     span_hashes=span_hashes, reason=None)
+        return projected, audit
+    except Exception as exc:
+        audit["reason"] = f"Projection declined: {type(exc).__name__}"
+        return copy.deepcopy(original), audit
+
+
+def _apply_public_positional_draft_guidance(system, instruction, services):
+    plan = getattr(services, "public_positional_draft_plan", None)
+    projection = None
+    if getattr(services, "public_positional_draft_projection_requested", False):
+        projected, audit = project_public_positional_draft_task(services.public_task, plan)
+        services.public_positional_draft_projection_audit = audit
+        if audit["active"]:
+            instruction["public_task"] = projected
+            projection = audit
+    if plan is None:
+        return system
+    instruction["public_positional_draft_guidance"] = {
+        "version": PUBLIC_POSITIONAL_DRAFT_GUIDANCE_VERSION,
+        "stage": "internal_content_draft", "public_position_plan": plan.audit(),
+        "final_constraints_retained": True,
+    }
+    if projection is not None:
+        instruction["public_positional_draft_guidance"].pop("public_position_plan")
+        instruction["public_positional_draft_guidance"]["projection_hash"] = (
+            projection["projected_task_hash"])
+    return system + PUBLIC_POSITIONAL_DRAFT_GUIDANCE_PROMPT
 
 
 def _execution_assignment(agent, synthesizer):
@@ -108,8 +272,38 @@ def _contributor_handoff_prompt(*, closed_book=False):
     return (
         f"Aim for answer <={answer_limit} characters as a compact summary, not the complete public deliverable. "
         "Put concrete facts, reasoning steps, intermediate results and limitations in the sibling ledger. "
+        "Your output ledger is your own contribution, not a copy of the read-only shared_ledger "
+        "aggregate. It permits exactly requirements, outline, evidence_spans and source_references; "
+        "never include shared_ledger's contributions, tool_evidence or communications keys. "
+        "requirements and outline are arrays of nonempty strings. An observed source reference is "
+        "{source_id: nonempty string, locator: nonempty string}; each evidence span is "
+        "{text: nonempty string, source_ref: the exact source_id declared in your own "
+        "source_references}. Do not replace source_ref with source_id, evidence_id or an event ID. "
+        "Exactly one source_references entry per distinct stable source_id in your contribution. "
+        "When one observed dossier or fixed-pack source contains multiple URLs or locations, "
+        "combine its relevant observed locators into that one entry's locator string; multiple "
+        "evidence_spans may reuse its source_ref. Do not duplicate an ID for each URL or rename "
+        "fixed-pack IDs to hide duplication. Preserve every supported span and actual locator "
+        "while consolidating duplicate entries yourself before returning. "
+        "These descriptions specify field shapes, not actual sources to invent. When no source "
+        "was observed, retain substantive remembered material in outline and leave both evidence "
+        "lists empty. "
         f"{item_limit} items per list, <=512 characters per text item and <=2048 per source locator are "
-        "advisory compactness targets, not completeness limits. Merge overlapping requirements while "
+        "advisory compactness targets, not completeness limits. Before generating, privately divide "
+        "the actual output_budget.max_tokens_per_response among answer, checkpoints and all four "
+        "ledger fields, including JSON escaping overhead. Reserve room for every required "
+        "source_references entry and its observed locators, then for the final JSON brackets and "
+        "braces, before expanding outline. Use brief honest checkpoint decisions and reasons, "
+        "not a restatement of the analysis or source material. Keep factual and analytical "
+        "outline entries as short atomic fact chains or necessary derivation steps, not complete "
+        "paragraphs, another full draft or a retelling of the source packet. Retain each distinct "
+        "required fact or result once in its appropriate substantive ledger entry, with the names, "
+        "dates, numbers, units, assumptions and qualifiers needed to interpret it. Stable source "
+        "IDs may recur where the schema requires links; do not repeat whole explanations across "
+        "answer, outline, evidence_spans and checkpoint reasons. Compress connective prose and "
+        "duplicate explanations before sacrificing requested facts or provenance. These allocations "
+        "are drafting guidance, not truncation rules, omitted fields or permission to exceed the "
+        "existing token, timeout or call limits. Merge overlapping requirements while "
         "preserving public-task coverage. Retain every required supported item, necessary derivation "
         "and source reference within actual token/timeout budgets even above these targets. Every outline item must carry a useful "
         "claim, reasoning step, result or uncertainty, not a section heading alone. Ignore any "
@@ -158,7 +352,12 @@ def _answer_check_prompt():
         "representative items only when the public task requests examples or a sample. When it requests "
         "all qualifying items or a complete list, apply the same stated eligibility conditions to every "
         "item, deduplicate aliases, retain each supported qualifying item and its distinguishing identity, "
-        "and check both missing items and unsupported additions. State an actual completeness limitation "
+        "and privately organize candidates by every requested condition. Apply joint conditions "
+        "conjunctively, preserve inclusive or strict comparison operators and the requested as-of date, "
+        "and distinguish an unknown fact from a condition known to fail. For tabular evidence, map "
+        "values by the actual column names, units and denominators, not by guessed column order; "
+        "inspect every relevant row before claiming a complete filtered set. "
+        "Check both missing items and unsupported additions. State an actual completeness limitation "
         "without replacing a supported full set with representative items. Remove duplicated claims before "
         "adding detail. Public-task length, count and output-only constraints determine answer length; "
         "a short answer must not be padded to consume the output-token allowance."
@@ -1029,6 +1228,7 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
         system += "\n" + FINAL_ARTIFACT_CONTRACT
         system += "\n" + FINAL_SUBMISSION_GATE
         instruction["terminal_assignment"] = FINAL_ARTIFACT_CONTRACT
+    system = _apply_public_positional_draft_guidance(system, instruction, services)
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(instruction, ensure_ascii=False)}]
     state = state if state is not None else {}
@@ -1115,7 +1315,8 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
         try:
             response = _bounded_call(model, min(services.timeout_seconds, remaining), context_messages,
                                      deadline_remaining=services.remaining_seconds,
-                                     max_tokens=output_limit)
+                                     max_tokens=output_limit,
+                                     response_format={"type": "json_object"})
             step.model_output_messages = response
             usage = model.get_token_counts() if hasattr(model, "get_token_counts") else {}
             step.input_token_count = int(usage.get("input_token_count", 0))
@@ -1329,6 +1530,12 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                     "evidence_spans and source_references are lists. "
                     "Each observed source entry needs nonempty source_id and locator; each evidence "
                     "span needs nonempty text and source_ref matching a declared source_id. "
+                    "Exactly one source_references entry per distinct stable source_id in your contribution. "
+                    "When one observed dossier or fixed-pack source contains multiple URLs or locations, "
+                    "combine its relevant observed locators into that one entry's locator string; multiple "
+                    "evidence_spans may reuse its source_ref. Do not duplicate an ID for each URL or rename "
+                    "fixed-pack IDs to hide duplication. Preserve every supported span and actual locator "
+                    "while consolidating duplicate entries yourself before returning. "
                     "If no sources were observed, ledger source_references/evidence_spans must be empty arrays. "
                     + ("This run is closed book: do not convert remembered citations into source objects. "
                        "Keep source_references=[] and evidence_spans=[]; move useful remembered claims, "
@@ -1606,6 +1813,7 @@ def _run_agent(agent, team, ctx, services):
         system += "\n" + FINAL_ARTIFACT_CONTRACT
         system += "\n" + FINAL_SUBMISSION_GATE
         instruction["terminal_assignment"] = FINAL_ARTIFACT_CONTRACT
+    system = _apply_public_positional_draft_guidance(system, instruction, services)
     memory = type(ctx.memory)(prompts=ctx.prompt_templates)
     memory.initialize(system, TaskInput(task=json.dumps(instruction, ensure_ascii=False)))
     allowed = set() if synth else set(agent.get("tools", []))
@@ -1641,7 +1849,8 @@ def _run_agent(agent, team, ctx, services):
         observations = []
         try:
             response = _bounded_call(model, services.timeout_seconds, messages,
-                                     max_tokens=output_limit)
+                                     max_tokens=output_limit,
+                                     response_format={"type": "json_object"})
             step.model_output_messages = response
             usage = model.get_token_counts() if hasattr(model, "get_token_counts") else {}
             step.input_token_count = int(usage.get("input_token_count", 0))
@@ -2089,6 +2298,9 @@ class TeamExecutor:
                                 self.ledger, self.timeout_seconds,
                                 execution_mode=team_data.get("execution_mode", "single_pass"),
                                 agent_pool=agent_pool, knowledge_policy=self.knowledge_policy)
+        services.public_positional_draft_plan = getattr(self, "public_positional_draft_plan", None)
+        services.public_positional_draft_projection_requested = getattr(
+            self, "public_positional_draft_projection_requested", False)
         agents_by_id = {agent["agent_id"]: agent for agent in team_data["agents"]}
 
         def single_pass_model(agent_id):
@@ -2140,6 +2352,18 @@ class TeamExecutor:
                                 "harness_hash": artifact.code_hash,
                                 "unsafe_local": artifact.backend == "native_jit",
                                 "software_test_only": artifact.backend == "scripted"})
+        if getattr(self, "public_positional_draft_guidance_requested", False):
+            plan = services.public_positional_draft_plan
+            result.metadata["public_positional_draft_guidance"] = {
+                "version": PUBLIC_POSITIONAL_DRAFT_GUIDANCE_VERSION,
+                "active": plan is not None, "final_constraints_retained": True,
+                "public_position_plan": plan.audit() if plan is not None else None,
+                "reason": None if plan is not None else
+                    "No single supported conflict-free public positional rule",
+            }
+        if getattr(self, "public_positional_draft_projection_requested", False):
+            result.metadata["public_positional_draft_projection"] = copy.deepcopy(
+                services.public_positional_draft_projection_audit)
         if self.knowledge_policy is not None:
             result.metadata["knowledge_policy"] = self.knowledge_policy
         if services.agent_pool is not None:

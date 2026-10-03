@@ -19,6 +19,7 @@ class ModelConfig(Record):
     max_tokens: int = Field(default=4096, ge=1)
     timeout: float = Field(default=120, gt=0)
     temperature: float = 0
+    frequency_penalty: float | None = Field(default=None, ge=-2, le=2)
     thinking: Literal["enabled", "disabled"] | None = None
     reasoning_effort: Literal["none", "low", "high", "max"] | None = None
     context_window: int | None = Field(default=None, ge=1)
@@ -59,6 +60,16 @@ class MASConfig(Record):
     task_timeout: float | None = Field(default=None, gt=0)
     max_inflight_requests: int | None = Field(default=None, ge=1)
     local_planning: bool = True
+    # Two public-only global review/revision calls before submission; same ledger.
+    public_refinement: bool = False
+    public_refinement_response_format: Literal["json_object", "json_schema", "json_schema_review"] = "json_object"
+    public_positional_construction: bool = False
+    public_positional_draft_guidance: bool = False
+    public_positional_draft_projection: bool = False
+    public_numeric_construction: bool = False
+    public_numeric_construction_layout: Literal["array", "named_objects", "template"] = "array"
+    public_construction_response_format: Literal["json_schema", "json_object"] = "json_schema"
+    public_revision_frequency_penalty: float | None = Field(default=None, ge=-2, le=2)
     # These rounds reconcile plans before execution, never rerun task contributors.
     local_rounds: int = Field(default=1, ge=1, le=3)
     local_attribution: bool = True
@@ -79,6 +90,23 @@ class MASConfig(Record):
 
     @model_validator(mode="after")
     def fixed_team_limits(self):
+        if self.public_positional_draft_projection and not all((
+                self.public_refinement, self.public_positional_construction,
+                self.public_positional_draft_guidance)):
+            raise ValueError("Public positional draft projection requires public_refinement, "
+                             "public_positional_construction and public_positional_draft_guidance")
+        if self.public_positional_draft_guidance and (
+                not self.public_refinement or not self.public_positional_construction):
+            raise ValueError("Public positional draft guidance requires public_refinement "
+                             "and public_positional_construction")
+        if self.public_positional_construction and (
+                not self.public_refinement or self.public_refinement_response_format not in {
+                    "json_schema", "json_schema_review"}):
+            raise ValueError("Public positional construction requires public_refinement and json_schema or json_schema_review output")
+        if self.public_numeric_construction and (
+                not self.public_refinement or self.public_refinement_response_format not in {
+                    "json_schema", "json_schema_review"}):
+            raise ValueError("Public numeric construction requires public_refinement and json_schema or json_schema_review output")
         team = self.fixed_team
         if team and (len(team.agents) > self.max_agents or team.max_parallel > self.max_parallel
                      or (self.team_max_calls is not None
@@ -108,6 +136,13 @@ class NativeModels:
 
         cfg = self.config.models[role]
         options = {}
+        if role in {"global", "local"}:
+            # Planning always returns a structured record. Execution shares its
+            # provider with direct-answer and native harness calls, so its JSON
+            # format is requested only at the strict protocol call sites.
+            options["response_format"] = {"type": "json_object"}
+        if cfg.frequency_penalty is not None:
+            options["frequency_penalty"] = cfg.frequency_penalty
         if cfg.thinking is not None:
             options["extra_body"] = {"thinking": {"type": cfg.thinking}}
         if cfg.reasoning_effort is not None:

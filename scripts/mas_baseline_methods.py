@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 from pathlib import Path
 import re
 import time
@@ -113,20 +114,29 @@ def _response_fields(response):
 def run_direct(task, private, models, evaluator_factory, outdir, limits, *, defer_evaluation=False):
     """One metered answer, immutable submission, then the shared official evaluator.
 
-    limits contains max_calls/max_tokens and optional output_tokens (default 8192).
+    limits contains max_calls/max_tokens and optional output_tokens (default 8192)
+    and timeout_seconds. A null max_calls uses the common token/time envelope;
+    direct execution still consists of exactly one answer call.
     The provider must return metered, credential-safe models, as LiveModels does.
     """
     public = _public_task(task)
     max_calls, max_tokens = limits["max_calls"], limits["max_tokens"]
     output_tokens = limits.get("output_tokens", 8192)
+    if (max_calls is not None and (type(max_calls) is not int or max_calls <= 0)):
+        raise ValueError("max_calls must be a positive integer or None")
     if any(isinstance(value, bool) or not isinstance(value, int) or value <= 0
-           for value in (max_calls, max_tokens, output_tokens)) or output_tokens > 8192:
+           for value in (max_tokens, output_tokens)) or output_tokens > 8192:
         raise ValueError("Positive integer limits are required; direct output is capped at 8192 tokens")
+    timeout_seconds = limits.get("timeout_seconds")
+    if timeout_seconds is not None and (type(timeout_seconds) not in (int, float)
+                                       or not math.isfinite(timeout_seconds) or timeout_seconds <= 0):
+        raise ValueError("timeout_seconds must be finite and positive or None")
     output = Path(outdir)
     output.mkdir(parents=True, exist_ok=True)
     if any(output.iterdir()):
         raise ValueError("Direct comparison requires an empty output directory; no reruns")
-    ledger = BudgetLedger(max_calls=max_calls, max_tokens=max_tokens, max_tool_calls=0)
+    ledger = BudgetLedger(max_calls=max_calls, max_tokens=max_tokens, max_tool_calls=0,
+                          timeout_seconds=timeout_seconds)
     step = StepRecord(step_number=1, model_input_messages=direct_messages(public), start_time=time.time())
     execution = RunResult(trajectory=[step], terminated_reason="error", metadata={"method": "direct_single"})
     trace = {"task_id": public.task_id, "method": "direct_single", "execution_calls": [], "evaluator_calls": []}
