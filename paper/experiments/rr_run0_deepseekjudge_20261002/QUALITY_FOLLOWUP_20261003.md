@@ -64,3 +64,11 @@ v35 是观察 v34 TEST 后的探索修复，且当前为闭卷、DeepSeek 自评
 - `export_rr_quality_followup_20261003.py`：保留完整预检/评分、校验导出内容、生成包 manifest；进度快照一旦写入不再覆盖。
 
 正式 v35 完成后，继续使用 `scripts.compare_rr_sealed_runs` 与封存的 v29 比较。新提示若进入未来完整方法运行，必须使用新的冻结源码和独立输出目录，并披露它是在既有 TEST 观察之后的修复尝试。
+
+## 最新状态更新（2026-10-03T07:38Z 进度快照）
+
+固定 10 VAL 的 C15 质量诊断最终仅有 8/10 题达到可用完整状态，状态为 failed/inconclusive，未产生有效整体提升结论。原 C15 selection utility 为 `0.5366494909781279`；`0.42758920` 仅为把缺失题按零计入后的无效统计，不应与原 utility 或完整 VAL 均值比较，也不能冒充方法改善。
+
+v35 已选择 C15 snapshot 13（选中经验版本 13，轨迹最终经验版本为 18）。TEST 当前为 12 个提交未评分、4 个失败，尚无 TEST 评分或两臂比较。冻结源码 manifest 保持不变。EVO20/C20 Writer 的最新 length 截断在纠正后恢复为完整提交；这只说明协议恢复成功，不能证明数学内容没有语义损失，仍需独立质量审阅。
+
+工作区正在增强 planning 的 `assignment_audit`，使具体 owner/reviewer/dependency 冲突同时覆盖诊断字段和 DAG；截至本更新尚无真实新模型运行验证。该状态段不修改历史实验、评分、预算、Judge 身份或冻结代码。

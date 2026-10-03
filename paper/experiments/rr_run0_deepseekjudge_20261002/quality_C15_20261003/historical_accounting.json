@@ -1,0 +1,7 @@
+{
+  "model_calls": 324,
+  "tokens": 2091367,
+  "tool_calls": 0,
+  "wall_seconds": 1276.280999999959,
+  "cost": null
+}

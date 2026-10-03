@@ -10,6 +10,14 @@ v35 修复终端 Critic 仍提交 review-only 内容的职责冲突，同时纳�
 
 这是闭卷、DeepSeek V4 Flash 自评且输出预算不同（方法 12,288 vs baseline 8,192）的探索实验，尚无正式方案优势。v35 是观察 v34 TEST 后的工程修复尝试，应同时呈现 v34 和 v35，不能当作新的未接触 TEST 确认性结果。凭据仍只注入进程环境。下文保留 v30/v31 的历史交接，不代表最新进度。
 
+## 最新状态更新（2026-10-03T07:38Z 进度快照）
+
+固定 10 VAL 的 C15 质量诊断最终仅有 8/10 题达到可用完整状态，结果为 failed/inconclusive，不能给出有效整体提升结论。原 C15 selection utility 为 `0.5366494909781279`；诊断过程中出现的 `0.42758920` 仅是把缺失题按零计入的无效统计，不得与原 utility 或完整 VAL 均值比较，也不得冒充整体改善。
+
+v35 已选择 C15 snapshot 13（选中经验版本 13，轨迹最终经验版本为 18）。TEST 当前为 12 题已提交但未评分、4 题失败，尚无 TEST 分数或有效两臂差值。冻结源码 manifest 未改变。最新 EVO20/C20 Writer 的 length 截断经过纠正后完成提交，但恢复成功不证明数学内容语义无损，数学质量仍需独立检查。
+
+工作区正在增强 planning `assignment_audit`，把实际 owner/reviewer/dependency 冲突同时纳入诊断和 DAG 覆盖；截至本更新尚无真实新模型验证。该更新只记录状态，不改写历史封存结果、评分身份、预算或冻结运行。
+
 Single-Agent v29 已完成 33/33 TEST 评分，均值 `0.47553977079687665`。33 份答案均复用原封存文本，原文本由 `baseline_v29/sealed_answer_references.json` 引用；本包保留全部逐题 DeepSeek 原始评分、证据、预算及封存清单。
 
 方法 v30 已人工中断；终态以 `ours_v30/interruption.json` 为准，原 report/pilot/journal 状态保留。已登记 EVO 12/20，状态计数为 `{'failed': 11, 'started': 1}`，没有最终 checkpoint 或 TEST 答案。v30 与 v31 轨迹独立，不能合并成成功实验。

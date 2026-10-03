@@ -1,0 +1,290 @@
+{
+  "status": "inconclusive",
+  "scope": "fixed_ten_public_VAL_engineering_diagnostic",
+  "state_hash": "5a73a2314e9617832d82630637dc0e020a47cf93a85d0c3a93e840eac9145ad3",
+  "tasks": [
+    {
+      "task_id": "6847465956a0f6376a605391",
+      "complete": true,
+      "score": 0.4823529411764706,
+      "official_score": 0.4823529411764706,
+      "selection_utility": 0.5555555555555556,
+      "theoretical_bounds": [
+        -0.16470588235294117,
+        1.0
+      ],
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_C15_20261003\\runs\\f5c3a32c1ba22a58a4ffcf82da9d6e4096646d8c05a0a06bec2ac557893a50bc",
+      "answer_hash": "7cd7844c820c407a3cc7855140699303fdb675953fec703f311090a5d153d0a9",
+      "status": "complete",
+      "evaluator_version": "researchrubrics:2dc80e2d4c38ddd80439517c259d93c6954b193f:34495d16ccb3c0ee409f3dcaa52fd6ed474f04ae25e5e9be3f7710ec783e2520"
+    },
+    {
+      "task_id": "6847465956a0f6376a60535d",
+      "complete": true,
+      "score": 0.7746478873239436,
+      "official_score": 0.7746478873239436,
+      "selection_utility": 0.7948717948717947,
+      "theoretical_bounds": [
+        -0.09859154929577464,
+        1.0
+      ],
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_C15_20261003\\runs\\edcd274fa320758840fe3b34c30084a1ea790f98f91be4950b0d63fa008153dd",
+      "answer_hash": "ad447f926d4b342c40dee0ec026ce660c83ca71974c00a6cbaad289f55001def",
+      "status": "complete",
+      "evaluator_version": "researchrubrics:2dc80e2d4c38ddd80439517c259d93c6954b193f:34495d16ccb3c0ee409f3dcaa52fd6ed474f04ae25e5e9be3f7710ec783e2520"
+    },
+    {
+      "task_id": "684397d188c1deceb49af31d",
+      "complete": true,
+      "score": 0.42105263157894735,
+      "official_score": 0.42105263157894735,
+      "selection_utility": 0.5164835164835165,
+      "theoretical_bounds": [
+        -0.19736842105263158,
+        1.0
+      ],
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_C15_20261003\\runs\\913a14541558ecc0304800fcf8b4bacebd1da393ed15a1362fb5a611a4c96386",
+      "answer_hash": "8d5804cdb77822b2bd57701b256da74437763c48f548703f706a4bd50ee8a042",
+      "status": "complete",
+      "evaluator_version": "researchrubrics:2dc80e2d4c38ddd80439517c259d93c6954b193f:34495d16ccb3c0ee409f3dcaa52fd6ed474f04ae25e5e9be3f7710ec783e2520"
+    },
+    {
+      "task_id": "6847465956a0f6376a6053e8",
+      "complete": true,
+      "score": 0.3617021276595745,
+      "official_score": 0.3617021276595745,
+      "selection_utility": 0.4230769230769231,
+      "theoretical_bounds": [
+        -0.10638297872340426,
+        1.0
+      ],
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_C15_20261003\\runs\\3ffbe849c137076100ca90c46ed21f2783dbebf28b8aaabf1ea054d0be77aa42",
+      "answer_hash": "865b3533ed43b36beb7f81bffa9f6b1a52cfbaec66ce7ca7608d08e3cf24e242",
+      "status": "complete",
+      "evaluator_version": "researchrubrics:2dc80e2d4c38ddd80439517c259d93c6954b193f:34495d16ccb3c0ee409f3dcaa52fd6ed474f04ae25e5e9be3f7710ec783e2520"
+    },
+    {
+      "task_id": "6847465956a0f6376a6053b5",
+      "complete": true,
+      "score": 0.7166666666666667,
+      "official_score": 0.7166666666666667,
+      "selection_utility": 0.7424242424242423,
+      "theoretical_bounds": [
+        -0.1,
+        1.0
+      ],
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_C15_20261003\\runs\\6a88abda282f9be2118af8f68ca72e940b439cab4731bc56158090ce10eee8a7",
+      "answer_hash": "6afb7cf04e42703d74518e3f8fde3f146695cf691e18f229a08603bf78b14bc7",
+      "status": "complete",
+      "evaluator_version": "researchrubrics:2dc80e2d4c38ddd80439517c259d93c6954b193f:34495d16ccb3c0ee409f3dcaa52fd6ed474f04ae25e5e9be3f7710ec783e2520"
+    },
+    {
+      "task_id": "684397d188c1deceb49af329",
+      "complete": true,
+      "score": 0.4027777777777778,
+      "official_score": 0.4027777777777778,
+      "selection_utility": 0.45569620253164556,
+      "theoretical_bounds": [
+        -0.09722222222222222,
+        1.0
+      ],
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_C15_20261003\\runs\\b5fd4f0ec6b9d28f442fc03f36f077062eecc9bddd85ca13542e77797c083138",
+      "answer_hash": "7769e9c2ea9a5670af5d6925b0405d7a3bdd7c0ddf197ef34bc2842012efa168",
+      "status": "complete",
+      "evaluator_version": "researchrubrics:2dc80e2d4c38ddd80439517c259d93c6954b193f:34495d16ccb3c0ee409f3dcaa52fd6ed474f04ae25e5e9be3f7710ec783e2520"
+    },
+    {
+      "task_id": "6847465956a0f6376a605441",
+      "complete": false,
+      "score": null,
+      "official_score": null,
+      "selection_utility": 0.0,
+      "theoretical_bounds": [
+        -0.07547169811320754,
+        1.0
+      ],
+      "status": "failed",
+      "error_type": "ValueError",
+      "error": "Final synthesizer must depend on every contributing agent: synthesizer_id='writer_1'; ancestors=['analyst_1']; missing_contributor_ids=['critic_1']; edges_upstream_to_downstream=[('analyst_1', 'critic_1'), ('analyst_1', 'writer_1')]; terminal_candidates=['critic_1', 'writer_1']. Each agent executes once in DAG order. Select an existing downstream agent and connect every missing contributor without a cycle, or merge responsibilities and remove redundant agents. Changing only the synthesizer_id may be insufficient; never add backward edges to an upstream writer that already feeds its reviewers.",
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_C15_20261003\\runs\\05ed45eb29bb1d552e19b399eb57778ecbd3348e2f8e8a69375a5c1bea7a573d"
+    },
+    {
+      "task_id": "6847465956a0f6376a60542d",
+      "complete": true,
+      "score": 0.25,
+      "official_score": 0.25,
+      "selection_utility": 0.2835820895522388,
+      "theoretical_bounds": [
+        -0.046875,
+        1.0
+      ],
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_C15_20261003\\runs\\1a02e1af33b8f2789488df6b1d00c7db328e2edea1eb1691363619a9c65536cd",
+      "answer_hash": "040b7ccd9f5fc64876c74ef125539006cae3a10e032eaa81e26bf1766dd75e1b",
+      "status": "complete",
+      "evaluator_version": "researchrubrics:2dc80e2d4c38ddd80439517c259d93c6954b193f:34495d16ccb3c0ee409f3dcaa52fd6ed474f04ae25e5e9be3f7710ec783e2520"
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e7695849b",
+      "complete": false,
+      "score": null,
+      "official_score": null,
+      "selection_utility": 0.0,
+      "theoretical_bounds": [
+        -0.09876543209876543,
+        1.0
+      ],
+      "status": "failed",
+      "error_type": "ValueError",
+      "error": "Agent assignments disagree with rubric coverage: critic_1.rubric_ids must be ['r17', 'r18']",
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_C15_20261003\\runs\\30f6db1e1a6780ec2e49263f09ce75e64eaff71d928399854d8084f0bd13d13a"
+    },
+    {
+      "task_id": "6847465956a0f6376a6053fb",
+      "complete": true,
+      "score": 0.4824561403508772,
+      "official_score": 0.4824561403508772,
+      "selection_utility": 0.5042016806722689,
+      "theoretical_bounds": [
+        -0.043859649122807015,
+        1.0
+      ],
+      "run_dir": "C:\\Users\\chizh\\Desktop\\JIT-main\\outputs\\rr_quality_C15_20261003\\runs\\b684f5b2d9b86f83c0f975b886903355ea98c9a9a0386a97337bac4969bf64d2",
+      "answer_hash": "063ca98f740438b8d54e5044a0c461b66831c338f78a3ad609b41f618dfe68bc",
+      "status": "complete",
+      "evaluator_version": "researchrubrics:2dc80e2d4c38ddd80439517c259d93c6954b193f:34495d16ccb3c0ee409f3dcaa52fd6ed474f04ae25e5e9be3f7710ec783e2520"
+    }
+  ],
+  "attempted_tasks": 10,
+  "validation": {
+    "slots": 10,
+    "complete_evaluations": 8,
+    "minimum_complete": 9,
+    "eligible": false,
+    "selection_utility": 0.4275892005168186,
+    "official_scores": {
+      "6847465956a0f6376a605391": 0.4823529411764706,
+      "6847465956a0f6376a60535d": 0.7746478873239436,
+      "684397d188c1deceb49af31d": 0.42105263157894735,
+      "6847465956a0f6376a6053e8": 0.3617021276595745,
+      "6847465956a0f6376a6053b5": 0.7166666666666667,
+      "684397d188c1deceb49af329": 0.4027777777777778,
+      "6847465956a0f6376a605441": null,
+      "6847465956a0f6376a60542d": 0.25,
+      "683a58c9a7e7fe4e7695849b": null,
+      "6847465956a0f6376a6053fb": 0.4824561403508772
+    }
+  },
+  "valid_summary": false,
+  "valid_selection_utility": null,
+  "historical_summary": {
+    "slots": 10,
+    "complete_evaluations": 10,
+    "minimum_complete": 9,
+    "eligible": true,
+    "selection_utility": 0.5366494909781279,
+    "official_scores": {
+      "6847465956a0f6376a605391": 0.4823529411764706,
+      "6847465956a0f6376a60535d": 0.6901408450704225,
+      "684397d188c1deceb49af31d": 0.39473684210526316,
+      "6847465956a0f6376a6053e8": 0.2127659574468085,
+      "6847465956a0f6376a6053b5": 0.9,
+      "684397d188c1deceb49af329": 0.3888888888888889,
+      "6847465956a0f6376a605441": 0.3867924528301887,
+      "6847465956a0f6376a60542d": 0.328125,
+      "683a58c9a7e7fe4e7695849b": 0.6049382716049383,
+      "6847465956a0f6376a6053fb": 0.5087719298245614
+    }
+  },
+  "paired": [
+    {
+      "task_id": "6847465956a0f6376a605391",
+      "historical_score": 0.4823529411764706,
+      "diagnostic_score": 0.4823529411764706,
+      "complete_pair": true,
+      "difference": 0.0
+    },
+    {
+      "task_id": "6847465956a0f6376a60535d",
+      "historical_score": 0.6901408450704225,
+      "diagnostic_score": 0.7746478873239436,
+      "complete_pair": true,
+      "difference": 0.08450704225352113
+    },
+    {
+      "task_id": "684397d188c1deceb49af31d",
+      "historical_score": 0.39473684210526316,
+      "diagnostic_score": 0.42105263157894735,
+      "complete_pair": true,
+      "difference": 0.02631578947368418
+    },
+    {
+      "task_id": "6847465956a0f6376a6053e8",
+      "historical_score": 0.2127659574468085,
+      "diagnostic_score": 0.3617021276595745,
+      "complete_pair": true,
+      "difference": 0.14893617021276598
+    },
+    {
+      "task_id": "6847465956a0f6376a6053b5",
+      "historical_score": 0.9,
+      "diagnostic_score": 0.7166666666666667,
+      "complete_pair": true,
+      "difference": -0.18333333333333335
+    },
+    {
+      "task_id": "684397d188c1deceb49af329",
+      "historical_score": 0.3888888888888889,
+      "diagnostic_score": 0.4027777777777778,
+      "complete_pair": true,
+      "difference": 0.013888888888888895
+    },
+    {
+      "task_id": "6847465956a0f6376a605441",
+      "historical_score": 0.3867924528301887,
+      "diagnostic_score": null,
+      "complete_pair": false,
+      "difference": null
+    },
+    {
+      "task_id": "6847465956a0f6376a60542d",
+      "historical_score": 0.328125,
+      "diagnostic_score": 0.25,
+      "complete_pair": true,
+      "difference": -0.078125
+    },
+    {
+      "task_id": "683a58c9a7e7fe4e7695849b",
+      "historical_score": 0.6049382716049383,
+      "diagnostic_score": null,
+      "complete_pair": false,
+      "difference": null
+    },
+    {
+      "task_id": "6847465956a0f6376a6053fb",
+      "historical_score": 0.5087719298245614,
+      "diagnostic_score": 0.4824561403508772,
+      "complete_pair": true,
+      "difference": -0.026315789473684237
+    }
+  ],
+  "complete_pairs": 8,
+  "mean_score_difference_complete_pairs": null,
+  "mean_score_difference_all_ten": null,
+  "selection_utility_difference": null,
+  "accounting": {
+    "model_calls": 281.0,
+    "tokens": 1813701.0,
+    "tool_calls": 0.0,
+    "wall_seconds": 1291.3450000000012,
+    "unknown_budget_slots": 0,
+    "cost": null
+  },
+  "finish_reasons": {
+    "stop": 281
+  },
+  "length_calls": [],
+  "source_and_frozen_integrity_verified": true,
+  "experience_unchanged": true,
+  "test_calls": 0,
+  "updated_at": "2026-10-03T07:29:48.844148+00:00"
+}

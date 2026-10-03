@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "seed": 20261001,
+  "evolution": [],
+  "validation": [
+    "6847465956a0f6376a605391",
+    "6847465956a0f6376a60535d",
+    "684397d188c1deceb49af31d",
+    "6847465956a0f6376a6053e8",
+    "6847465956a0f6376a6053b5",
+    "684397d188c1deceb49af329",
+    "6847465956a0f6376a605441",
+    "6847465956a0f6376a60542d",
+    "683a58c9a7e7fe4e7695849b",
+    "6847465956a0f6376a6053fb"
+  ],
+  "test": [],
+  "stream": [],
+  "deduplication": "task_id and normalized public question SHA256"
+}
