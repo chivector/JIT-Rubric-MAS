@@ -387,6 +387,82 @@ def test_truncated_execution_json_gets_one_model_authored_shape_correction():
     assert "delete duplicate passages, guessed directories" in correction
 
 
+@pytest.mark.parametrize("tool_name", [None, "final_answer", "complete"])
+def test_unknown_prose_fields_require_one_model_authored_complete_answer(tool_name):
+    team = make_team(checkpoints=["accuracy"])
+    broken = {"answer": "The report explains ", "a quoted phrase": "and its implications.",
+              "checkpoints": {"accuracy": True}}
+    malformed = ({"tools": [{"name": tool_name, "arguments": broken}]}
+                 if tool_name else broken)
+    complete = {"answer": 'The report explains "a quoted phrase" and its implications.',
+                "checkpoints": {"accuracy": True}, "continue": False}
+
+    def corrected(messages):
+        assert json.loads(messages[-2]["content"]) == malformed
+        assert "Unknown execution response fields" in messages[-1]["content"]
+        assert "never split its prose across invented JSON keys" in messages[-1]["content"]
+        assert "Escape quotes inside the answer string" in messages[-1]["content"]
+        assert "writer" not in services.artifacts
+        return complete
+
+    model = ScriptedModel([malformed, corrected])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.terminated_reason == "final_answer" and result.answer == complete["answer"]
+    assert len(model.calls) == len(result.trajectory) == 2
+    assert json.loads(result.trajectory[0].model_output_messages.content) == malformed
+    assert "Unknown execution response fields" in str(result.trajectory[0].error)
+    assert result.trajectory[1].error is None
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == 1
+    assert len([event for event in services.events if event["kind"] == "artifact_published"]) == 1
+
+
+def test_repeated_unknown_prose_fields_fail_without_submission_or_tool_dispatch():
+    team = make_team(tools=["search"])
+    malformed = {"answer": "The report explains ", "a quoted phrase": "and its implications.",
+                 "tools": [{"name": "search", "arguments": {"query": "must not dispatch"}}]}
+    model = ScriptedModel([malformed, malformed, {"answer": "Must never run."}])
+    dispatched = []
+    services, context = make_services(team, {"writer": model},
+                                      tools={"search": lambda query: dispatched.append(query)})
+    result = run_writer(team, services, context)
+    assert result.terminated_reason == "error" and result.answer is None
+    assert len(model.calls) == len(result.trajectory) == 2
+    assert not dispatched and "writer" not in services.artifacts
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == 1
+    assert not any(event["kind"] in {"artifact_published", "final_answer"} for event in services.events)
+
+
+def test_unknown_contributor_fields_must_be_repaired_into_the_supported_ledger():
+    team = make_team(contributors=True)
+    ledger = {"requirements": [], "outline": ["Useful facts and checked assumptions."],
+              "evidence_spans": [], "source_references": []}
+    malformed = {"answer": "Contribution summary.", "ledger": ledger,
+                 "unexpected_body": "Further useful facts."}
+    corrected = {"answer": "Contribution summary.", "ledger": {
+        **ledger, "outline": [*ledger["outline"], "Further useful facts."]}}
+    searcher = ScriptedModel([malformed, corrected])
+    writer = ScriptedModel([{"answer": "The complete guide incorporates the contributed facts."}])
+    services, context = make_services(team, {"searcher": searcher, "writer": writer})
+    result = run_team("Write a guide.", context, team, services)
+    assert result.terminated_reason == "final_answer"
+    assert len(searcher.calls) == 2 and len(writer.calls) == 1
+    assert services.artifacts["searcher"]["ledger"] == corrected["ledger"]
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == 1
+
+
+def test_unknown_prose_fields_cannot_hide_fabricated_evidence_from_correction():
+    team = make_team()
+    malformed = {"answer": "The report explains ", "a quoted phrase": "and its implications.",
+                 "evidence_ids": ["invented-event"]}
+    model = ScriptedModel([malformed, {"answer": "Must never run."}])
+    services, context = make_services(team, {"writer": model})
+    result = run_writer(team, services, context)
+    assert result.terminated_reason == "error" and result.answer is None
+    assert len(model.calls) == 1
+    assert not [event for event in services.events if event["kind"] == "protocol_warning"]
+
+
 def test_fabricated_evidence_id_does_not_receive_ledger_shape_correction():
     team = make_team(contributors=True)
     malformed = {"answer": "Research contribution", "continue": False,

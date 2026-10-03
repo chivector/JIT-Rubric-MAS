@@ -30,8 +30,11 @@ from jit_mas.planning import (
 from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGraph, TeamSpec, utc_now
 
 
-ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v8"
+ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v9"
 CONTRIBUTOR_COMPACTNESS_POLICY_VERSION = "contributor-budget-advisory-v1"
+EXECUTION_RESPONSE_FIELDS = frozenset({
+    "answer", "evidence_ids", "checkpoints", "ledger", "continue", "tools", "think", "reasoning",
+})
 CONTRIBUTOR_ANSWER_MAX_CHARS = 1200
 CONTRIBUTOR_LEDGER_MAX_ITEMS = 12
 CONTRIBUTOR_LEDGER_TEXT_MAX_CHARS = 512
@@ -424,6 +427,10 @@ def _completion_quality_error(answer, public_task):
 
 
 def _validate_completion_fields(parsed):
+    unknown_fields = set(parsed) - EXECUTION_RESPONSE_FIELDS
+    if unknown_fields:
+        raise ResponseProtocolError(
+            "Unknown execution response fields: " + json.dumps(sorted(unknown_fields)))
     if parsed.get("answer") is not None and (
             not isinstance(parsed["answer"], str) or not parsed["answer"].strip()):
         raise ResponseProtocolError("answer must be a nonempty string")
@@ -578,6 +585,7 @@ def _correctable_execution_shape_error(error, response, *, observed_ids, allowed
     """Permit one model-authored shape repair without recalling an authority violation."""
     prefixes = (
         "Expected a complete JSON object", "Response must be a JSON object",
+        "Unknown execution response fields: ",
         "answer must be a nonempty string", "checkpoints must be an object",
         "Unconfirmed checkpoints: ",
         "A checkpoint must be", "evidence_ids must be a list",
@@ -1157,7 +1165,10 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                     messages.append({"role": "assistant", "content": getattr(response, "content", str(response))})
                 messages.append({"role": "user", "content": (
                     "Protocol correction: your previous JSON did not satisfy the execution contract. "
-                    "Return exactly one JSON object. Every assigned checkpoint value must be either "
+                    "Return exactly one JSON object with only these top-level fields: "
+                    + json.dumps(sorted(EXECUTION_RESPONSE_FIELDS)) + ". "
+                    "Keep the complete deliverable in answer, never split its prose across invented JSON keys. "
+                    "Escape quotes inside the answer string. Every assigned checkpoint value must be either "
                     "true or an object with status set to completed, passed, failed, unverified, or "
                     "not_applicable, a nonempty reason string, and an evidence_ids array. Do not use "
                     "prose strings, status=complete, or embedded key-value text. Include all exact "

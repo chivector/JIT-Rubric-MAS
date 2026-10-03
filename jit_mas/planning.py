@@ -50,11 +50,18 @@ specific mechanism linking it to the claim rather than substituting an adjacent
 technology or domain. Identify remembered research or reporting by its known
 author/source, date and finding; generic references to studies do not substantiate
 a measured effect. Do not invent missing citation details. Distinguish association,
-causal evidence and interpretation, and keep the claim's strength within its support. Before
+causal evidence and interpretation, and keep the claim's strength within its support.
+When review finds an unsupported number or attribution, remove it, replace it with a
+supported claim, or present it only as an explicitly requested hypothetical input;
+adding an unverified label does not repair its use as evidence for a conclusion. Before
 submission remove contradictions, duplicate sections, internal rubric IDs and
 unfinished sentences, and ensure the conclusion follows from evidence/assumptions.
 Use a private coverage map from explicit public requirements to the actual sections,
 tables, examples or calculations in the draft; repair omissions before polishing prose.
+For tasks requesting multiple domains and periods, check each requested combination
+for substantive analysis and keep events within their stated period. Budget the needed
+facts, mechanisms and examples across all explicit deliverables before expanding prose;
+preserve relevant distinctions and comparisons from contributions during synthesis.
 For comparisons, evaluate each option against the same requested dimensions and make
 the tradeoff and recommendation explicit. For plans, give concrete actions, order,
 decision conditions and resource assumptions. Review consequential claims by trying an
@@ -213,18 +220,74 @@ class JsonModelCalls:
         if not isinstance(team, dict):
             return {}
         agents = team.get("agents", [])
+        coverage = team.get("coverage", {})
         primary = team.get("primary", {})
         reviewers = team.get("reviewers", {})
-        if not isinstance(agents, list) or not isinstance(primary, dict) or not isinstance(reviewers, dict):
+        if (not isinstance(agents, list) or not isinstance(coverage, dict)
+                or not isinstance(primary, dict) or not isinstance(reviewers, dict)):
             return {}
+        selected = {agent["agent_id"]: agent for agent in agents
+                    if isinstance(agent, dict) and isinstance(agent.get("agent_id"), str)}
+        dependencies = {agent_id: agent.get("depends_on", []) for agent_id, agent in selected.items()}
+        valid_dependencies = {agent_id: {parent for parent in parents if isinstance(parent, str)}
+                              if isinstance(parents, list) else set()
+                              for agent_id, parents in dependencies.items()}
+
+        def ancestor_ids(agent_id):
+            ancestors = set()
+            pending = list(valid_dependencies.get(agent_id, set()))
+            while pending:
+                parent = pending.pop()
+                if parent not in ancestors:
+                    ancestors.add(parent)
+                    pending.extend(valid_dependencies.get(parent, set()))
+            return ancestors
+
+        ancestors = {agent_id: ancestor_ids(agent_id) for agent_id in selected}
         synthesizer = team.get("synthesizer_id")
+        synthesizer_ancestors = ancestors.get(synthesizer, set()) if isinstance(synthesizer, str) else set()
+        expected_assignments = {agent_id: {rubric_id for rubric_id, owners in coverage.items()
+                                          if isinstance(owners, list) and agent_id in owners}
+                                for agent_id in selected}
+        agent_assignments = []
+        for agent_id, agent in selected.items():
+            actual = agent.get("rubric_ids", [])
+            actual_ids = {rubric_id for rubric_id in actual if isinstance(rubric_id, str)} \
+                if isinstance(actual, list) else set()
+            expected = expected_assignments[agent_id]
+            agent_assignments.append({"agent_id": agent_id, "actual_rubric_ids": actual,
+                                      "coverage_rubric_ids": sorted(expected),
+                                      "missing_rubric_ids": sorted(expected - actual_ids),
+                                      "extra_rubric_ids": sorted(actual_ids - expected)})
         assignments = [{"rubric_id": rubric_id, "primary_owner_id": primary.get(rubric_id),
                         "reviewer_ids": assigned,
-                        "primary_is_final_synthesizer": primary.get(rubric_id) == synthesizer}
+                        "primary_is_final_synthesizer": primary.get(rubric_id) == synthesizer,
+                        "reviewer_checks": [{"reviewer_id": reviewer,
+                            "ancestor_ids": sorted(ancestors.get(reviewer, set())),
+                            "unknown_reviewer": reviewer not in selected,
+                            "self_review": reviewer == primary.get(rubric_id),
+                            "primary_missing_from_ancestors": not isinstance(primary.get(rubric_id), str)
+                                or primary[rubric_id] not in ancestors.get(reviewer, set())}
+                            for reviewer in assigned if isinstance(reviewer, str)]}
                        for rubric_id, assigned in reviewers.items() if isinstance(assigned, list) and assigned]
         return {"synthesizer_id": synthesizer,
-                "dependencies": {agent["agent_id"]: agent.get("depends_on", []) for agent in agents
-                                 if isinstance(agent, dict) and isinstance(agent.get("agent_id"), str)},
+                "dependencies": dependencies,
+                "unknown_dependencies": {agent_id: sorted(parents - set(selected))
+                                         for agent_id, parents in valid_dependencies.items()
+                                         if parents - set(selected)},
+                "invalid_dependency_fields": [agent_id for agent_id, parents in dependencies.items()
+                                              if not isinstance(parents, list)
+                                              or any(not isinstance(parent, str) for parent in parents)],
+                "cyclic_agent_ids": sorted(agent_id for agent_id in selected
+                                           if agent_id in ancestors[agent_id]),
+                "agent_assignments": agent_assignments,
+                "synthesizer_ancestor_ids": sorted(synthesizer_ancestors),
+                "missing_contributor_ids": sorted(set(selected) - {synthesizer}
+                                                  - synthesizer_ancestors)
+                    if isinstance(synthesizer, str) else sorted(selected),
+                "synthesizer_downstream_agent_ids": sorted(agent_id for agent_id in selected
+                    if isinstance(synthesizer, str) and synthesizer in ancestors[agent_id]),
+                "terminal_candidates": sorted(set(selected) - set().union(*valid_dependencies.values())),
                 "review_assignments": assignments,
                 "terminal_owner_reviews_to_remove_if_synthesizer_unchanged": [
                     {"rubric_id": assignment["rubric_id"], "required_reviewers": []}
@@ -277,6 +340,13 @@ class JsonModelCalls:
                 "listed terminal-owner reviewers field to the required empty list while preserving "
                 "its self-checks. If you change the synthesizer or dependencies, recompute all "
                 "reviewer ancestors and terminal-owner assignments before returning."
+                " Also fix every agent_assignments mismatch: agent.rubric_ids must equal the "
+                "coverage_rubric_ids derived from the returned team.coverage, even for reviewers. "
+                "Reviewers do not automatically gain coverage assignments. The first validation "
+                "error can hide further conflicts, so simultaneously resolve all missing_contributor_ids, "
+                "synthesizer_downstream_agent_ids, unknown_dependencies, cyclic_agent_ids and "
+                "reviewer_checks. Recompute this audit after changing coverage or topology; the "
+                "returned synthesizer must be terminal and receive every selected contribution."
                    if phase == "reconcile" else "")
                 if correction is not None else "")
             if correction is not None and phase == "agent_evolve":

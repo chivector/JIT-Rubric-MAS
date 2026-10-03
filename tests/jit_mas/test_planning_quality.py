@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from jit_mas.planning import GlobalAnalyzer
+from jit_mas.planning import GlobalAnalyzer, JsonModelCalls
 from jit_mas.schemas import LocalPlan, Prediction, PublicTask
 
 
@@ -183,6 +183,78 @@ def test_terminal_owner_correction_removes_all_optional_upstream_reviews(mode, f
     assert result.team.reviewers == {"accuracy": [], "clarity": []}
     assert result.team.agents[1].depends_on == ["author"]
     assert len(observed) == 2
+
+
+@pytest.mark.parametrize("repeat_invalid", [False, True])
+def test_reconciliation_correction_exposes_hidden_coverage_and_synthesizer_conflicts(repeat_invalid):
+    draft = prediction()
+    draft.graph.rubrics.append(draft.graph.rubrics[0].model_copy(update={"rubric_id": "clarity"}))
+    invalid = {"graph": draft.graph.model_dump(mode="json"), "team": {
+        "agents": [agent.model_dump(mode="json") for agent in draft.candidates],
+        "synthesizer_id": "author", "coverage": {"accuracy": ["author"], "clarity": ["check"]},
+        "primary": {"accuracy": "author", "clarity": "check"},
+        "reviewers": {"accuracy": ["check"], "clarity": ["check"]},
+    }}
+    original = copy.deepcopy(invalid)
+    requests = []
+
+    def model(messages):
+        request = json.loads(messages[1]["content"])
+        requests.append(request)
+        if len(requests) == 1:
+            return json.dumps(invalid)
+        correction = request["response_correction"]
+        assert json.loads(correction["previous_response"]) == original
+        audit = correction["assignment_audit"]
+        assert audit["agent_assignments"][1] == {
+            "agent_id": "check", "actual_rubric_ids": ["accuracy"],
+            "coverage_rubric_ids": ["clarity"], "missing_rubric_ids": ["clarity"],
+            "extra_rubric_ids": ["accuracy"],
+        }
+        assert audit["synthesizer_ancestor_ids"] == []
+        assert audit["missing_contributor_ids"] == ["check"]
+        assert audit["synthesizer_downstream_agent_ids"] == ["check"]
+        assert audit["terminal_candidates"] == ["check"]
+        assert audit["review_assignments"][1]["reviewer_checks"][0]["self_review"] is True
+        assert "first validation error can hide further conflicts" in messages[0]["content"]
+        if repeat_invalid:
+            return json.dumps(invalid)
+        fixed = copy.deepcopy(invalid)
+        fixed["team"]["agents"][0]["depends_on"] = ["check"]
+        fixed["team"]["agents"][1]["depends_on"] = []
+        fixed["team"]["agents"][1]["rubric_ids"] = ["clarity"]
+        fixed["team"]["reviewers"] = {"accuracy": [], "clarity": ["author"]}
+        return json.dumps(fixed)
+
+    analyzer = GlobalAnalyzer(model)
+    if repeat_invalid:
+        with pytest.raises(ValueError, match="Independent reviewer"):
+            analyzer.reconcile(PublicTask(task_id="t", question="Explain accurately"), draft, [])
+    else:
+        result = analyzer.reconcile(PublicTask(task_id="t", question="Explain accurately"), draft, [])
+        assert result.team.synthesizer_id == "author"
+        assert result.team.agents[0].depends_on == ["check"]
+        assert result.team.agents[1].rubric_ids == ["clarity"]
+    assert len(requests) == len(analyzer.call_records) == 2
+    assert invalid == original
+
+
+def test_reconciliation_audit_handles_cycles_unknown_dependencies_and_malformed_fields():
+    invalid = {"team": {"agents": [
+        {"agent_id": "author", "depends_on": ["check", "unknown"]},
+        {"agent_id": "check", "depends_on": ["author"]},
+        {"agent_id": "broken", "depends_on": {"bad": "field"}},
+        {"agent_id": "mixed", "depends_on": ["author", {}]},
+    ], "coverage": {}, "primary": {"accuracy": []},
+        "reviewers": {"accuracy": ["check", {}]}, "synthesizer_id": ["author"]}}
+    original = copy.deepcopy(invalid)
+    audit = JsonModelCalls._reconciliation_assignment_audit(json.dumps(invalid))
+    assert audit["unknown_dependencies"] == {"author": ["unknown"]}
+    assert audit["cyclic_agent_ids"] == ["author", "check"]
+    assert audit["invalid_dependency_fields"] == ["broken", "mixed"]
+    assert audit["missing_contributor_ids"] == ["author", "broken", "check", "mixed"]
+    assert audit["review_assignments"][0]["reviewer_checks"][0]["primary_missing_from_ancestors"] is True
+    assert invalid == original
 
 
 def test_missing_producer_can_be_proposed_as_a_gap_without_inventing_dependency():

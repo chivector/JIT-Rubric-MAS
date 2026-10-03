@@ -32,6 +32,28 @@ def test_complete_json_and_fenced_json_remain_supported():
     assert _parse_response("```json\n" + json.dumps(response) + "\n```") == response
 
 
+@pytest.mark.parametrize("payload", [
+    {"answer": "The narrative ends with ", "a quoted phrase": "the rest of the narrative."},
+    {"tools": [{"name": "final_answer", "arguments": {
+        "answer": "The narrative ends with ", "a quoted phrase": "the rest of the narrative."}}]},
+    {"tools": [{"name": "complete", "arguments": {
+        "answer": "Contribution summary.", "unexpected_body": "Further useful facts."}}]},
+])
+def test_unknown_fields_cannot_silently_drop_substantive_completion_content(payload):
+    with pytest.raises(ResponseProtocolError, match="Unknown execution response fields"):
+        _parse_response(ChatMessage(role="assistant", content=json.dumps(payload)))
+
+
+def test_documented_and_legacy_private_execution_fields_remain_supported():
+    response = {"answer": "Complete.", "checkpoints": {}, "evidence_ids": [],
+                "ledger": None, "continue": False, "tools": [],
+                "think": {"assumption": "private"}, "reasoning": "Retained private context."}
+    assert _parse_response(response) == response
+    completion = {key: value for key, value in response.items() if key != "tools"}
+    tool_response = {"tools": [{"name": "final_answer", "arguments": completion}]}
+    assert _parse_response(tool_response) == tool_response
+
+
 @pytest.fixture
 def execution_case():
     task = PublicTask(task_id="output-budget", question="Write a self-contained technical guide.")
