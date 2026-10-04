@@ -23,6 +23,7 @@ from .schemas import PublicTask, digest, utc_now
 
 BUILDER_VERSION = "public-shared-evidence-v1"
 CANDIDATE_SELECTION_POLICY = "rank-then-query-round-robin-v1"
+PREVALIDATED_RENDERER = "prevalidated-structure-v1"
 RENDERER_IDENTITY = {
     "version": "public-relevance-contiguous-windows-v2",
     "selection_inputs": ["public_task.question", "public_task.constraints", "queries"],
@@ -547,6 +548,101 @@ def _validate_pack(pack, task):
     return pack
 
 
+def _validate_prevalidated_pack(pack, task):
+    """Validate a canonically-rendered pack without replaying window ranking.
+
+    The deterministic evidence builder already materializes ``body`` and
+    ``rendered``.  Frozen manifests may register those bytes as
+    ``prevalidated-structure-v1`` after preparation has checked the canonical
+    renderer.  Runtime validation still verifies every identity/hash, exact
+    source slice, non-overlapping span, JSON rendering, and tokenizer count;
+    it only avoids the quadratic ranking/re-encoding replay.
+    """
+    if not isinstance(pack, dict) or pack.get("version") != BUILDER_VERSION:
+        raise ValueError("Unknown evidence pack version")
+    public = _public_task(task)
+    if pack.get("task_id") != task.task_id or pack.get("task_sha256") != digest(public):
+        raise ValueError("Evidence pack does not match the public task")
+    if pack.get("pack_sha256") != digest({key: value for key, value in pack.items() if key != "pack_sha256"}):
+        raise ValueError("Evidence pack content hash mismatch")
+    sources = pack.get("sources")
+    if not isinstance(sources, list):
+        raise ValueError("Evidence sources must be a list")
+    expected_hashes = {row["source_id"]: _sha(row["text"]) for row in sources}
+    if pack.get("source_hashes") != expected_hashes:
+        raise ValueError("Evidence source hash mismatch")
+    encoding, identity = _tokenizer()
+    if pack.get("tokenizer") != identity:
+        raise ValueError("Evidence tokenizer identity changed")
+    config = EvidenceConfig(**pack["config"])
+    if pack.get("renderer_identity") != RENDERER_IDENTITY:
+        raise ValueError("Unknown evidence renderer identity")
+    builder = pack.get("builder_identity") or {}
+    if (builder.get("renderer_identity") != RENDERER_IDENTITY
+            or builder.get("candidate_selection_policy") != CANDIDATE_SELECTION_POLICY):
+        raise ValueError("Evidence renderer identity mismatch")
+    if pack.get("status") != "complete":
+        raise ValueError("Query-planning failure is not a complete evidence pack")
+    body = pack.get("body")
+    rendered = pack.get("rendered")
+    if not isinstance(body, dict) or not isinstance(rendered, str) or _json(body) != rendered:
+        raise ValueError("Evidence body/rendered JSON mismatch")
+    expected_documents = []
+    for source in sources:
+        expected_documents.append(
+            {key: value for key, value in source.items() if key != "text"}
+            | {"source_sha256": _sha(source["text"]), "segments": [],
+               "truncated": bool(source["text"])}
+        )
+    documents = body.get("sources")
+    if body.get("task_id") != task.task_id or not isinstance(documents, list) or len(documents) != len(sources):
+        raise ValueError("Evidence body source inventory mismatch")
+    for source, expected, document in zip(sources, expected_documents, documents):
+        if not isinstance(document, dict):
+            raise ValueError("Evidence body source is not an object")
+        for key, value in expected.items():
+            if key not in {"segments", "truncated"} and document.get(key) != value:
+                raise ValueError("Evidence body source metadata mismatch")
+        segments = document.get("segments")
+        if not isinstance(segments, list):
+            raise ValueError("Evidence source segments must be a list")
+        previous_end = -1
+        covered = 0
+        for segment in segments:
+            if not isinstance(segment, dict):
+                raise ValueError("Evidence source segment is not an object")
+            start, end = segment.get("span_start"), segment.get("span_end")
+            text = source["text"]
+            if (not isinstance(start, int) or isinstance(start, bool)
+                    or not isinstance(end, int) or isinstance(end, bool)
+                    or not 0 <= start < end <= len(text) or start <= previous_end
+                    or segment.get("text") != text[start:end]
+                    or segment.get("source_sha256") != expected["source_sha256"]):
+                raise ValueError("Evidence source segment does not match its source slice")
+            previous_end = end
+            covered += end - start
+        if document.get("truncated") is not (covered < len(source["text"])):
+            raise ValueError("Evidence source truncation flag mismatch")
+    if len(body.get("sources", [])) != len(expected_documents):
+        raise ValueError("Evidence body source count mismatch")
+    expected_tokens = len(encoding.encode(rendered, disallowed_special=()))
+    if pack.get("token_count") != expected_tokens or expected_tokens > config.max_pack_tokens:
+        raise ValueError("Evidence rendered token count mismatch")
+    return pack
+
+
+@lru_cache(maxsize=512)
+def _validated_prevalidated_cache(path_string: str, task_json: str, file_sha256: str):
+    """Cache the structural validation for a registered prevalidated pack."""
+    path = Path(path_string)
+    raw = path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != file_sha256:
+        raise ValueError("Evidence archive file hash changed during validation")
+    task = PublicTask.model_validate_json(task_json)
+    pack = json.loads(raw.decode("utf-8"))
+    return _validate_prevalidated_pack(pack, task)
+
+
 @lru_cache(maxsize=512)
 def _validated_pack_cache(path_string: str, task_json: str, file_sha256: str):
     """Validate one immutable pack once per exact file/task identity.
@@ -596,6 +692,11 @@ def load_evidence_pack(path, task: PublicTask):
 
 def apply_evidence_pack(task: PublicTask, pack):
     _validate_pack(pack, task)
+    return _attach_evidence_pack(task, pack)
+
+
+def _attach_evidence_pack(task: PublicTask, pack):
+    """Attach a pack whose caller has already completed its validation."""
     question = task.question + EVIDENCE_QUESTION_HEADER + pack["rendered"]
     return task.model_copy(update={"question": question, "attachments": [], "tools": [], "capabilities": [],
                                    "constraints": task.constraints + [EVIDENCE_TASK_CONSTRAINT]})
@@ -610,7 +711,8 @@ def build_evidence_manifest(tasks: Mapping[str, PublicTask], pack_dir):
         pack = load_evidence_pack(path, task)
         entries[task_id] = {"file": path.name, "file_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                             "task_sha256": pack["task_sha256"], "pack_sha256": pack["pack_sha256"]}
-    manifest = {"version": BUILDER_VERSION, "count": len(entries), "tasks": entries}
+    manifest = {"version": BUILDER_VERSION, "count": len(entries),
+                "renderer_validation": PREVALIDATED_RENDERER, "tasks": entries}
     manifest["manifest_sha256"] = digest(manifest)
     _immutable_json(Path(pack_dir) / "manifest.json", manifest)
     return manifest
@@ -626,14 +728,21 @@ def load_evidence_tasks(tasks: Mapping[str, PublicTask], pack_dir, expected_coun
     if manifest.get("manifest_sha256") != digest({key: value for key, value in manifest.items()
                                                   if key != "manifest_sha256"}):
         raise ValueError("Evidence manifest hash mismatch")
+    prevalidated = manifest.get("renderer_validation") == PREVALIDATED_RENDERER
     result = {}
     for task_id, task in tasks.items():
         entry = manifest["tasks"][task_id]
         path = evidence_pack_path(directory, task_id)
         if entry.get("file") != path.name or entry.get("file_sha256") != hashlib.sha256(path.read_bytes()).hexdigest():
             raise ValueError("Evidence archive file hash mismatch")
-        pack = load_evidence_pack(path, task)
+        if prevalidated:
+            raw = path.read_bytes()
+            file_sha256 = hashlib.sha256(raw).hexdigest()
+            task_json = task.model_dump_json()
+            pack = copy.deepcopy(_validated_prevalidated_cache(str(path.resolve()), task_json, file_sha256))
+        else:
+            pack = load_evidence_pack(path, task)
         if (entry.get("task_sha256"), entry.get("pack_sha256")) != (pack["task_sha256"], pack["pack_sha256"]):
             raise ValueError("Evidence manifest entry hash mismatch")
-        result[task_id] = apply_evidence_pack(task, pack)
+        result[task_id] = _attach_evidence_pack(task, pack) if prevalidated else apply_evidence_pack(task, pack)
     return result
