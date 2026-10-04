@@ -120,7 +120,8 @@ class BenchmarkDataset:
                 for key, private in self.private_records.items()}
 
     def evaluator(self, judge, *, judge_id="", judge_api_base="", judge_max_tokens=4096,
-                  judge_timeout=180, checker=None):
+                  judge_timeout=180, checker=None, judge_factory=None,
+                  max_parallel_judgments=1):
         kwargs = dict(judge=judge, judge_id=judge_id, judge_api_base=judge_api_base,
                       judge_max_tokens=judge_max_tokens, judge_timeout=judge_timeout)
         if self.name == "researchrubrics":
@@ -128,7 +129,9 @@ class BenchmarkDataset:
             # complete held-out report into an unusable checkpoint.  Retry
             # once at the adapter boundary; the retry is still metered and
             # remains part of the immutable run record.
-            return ResearchRubricsAdapter(**kwargs, max_attempts=2)
+            return ResearchRubricsAdapter(**kwargs, max_attempts=2,
+                                          judge_factory=judge_factory,
+                                          max_parallel_judgments=max_parallel_judgments)
         adapter = {"deepsearchqa": DeepSearchQAEvaluator,
                    "deepresearch_bench_ii": DeepResearchBenchIIEvaluator,
                    "writingbench": WritingBenchEvaluator,
