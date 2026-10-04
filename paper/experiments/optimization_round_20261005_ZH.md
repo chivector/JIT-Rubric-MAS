@@ -5,8 +5,8 @@
 ## 代码与运行身份
 
 - 远端：`https://github.com/chivector/JIT-Rubric-MAS.git`，分支 `main`。
-- 最新提交：`bd8e21e`（在 `cd1f637`、`6399efc`、`1ec0b89` 基础上继续优化）。
-- 正式 bundle：`.runtime/formal_v5_assets_20261004/bundle_best/bundle.json`，`formal_ready=true`。
+- 最新提交：`fef5450`（在 `bd8e21e`、`cd1f637`、`6399efc`、`3df6d2c`、`9405db9` 基础上继续优化）。
+- 正式候选 bundle：`.runtime/formal_v5_assets_20261004/bundle_stable/bundle.json`，`formal_ready=true`；该 bundle 绑定稳定传输配置（judge 并发上限 2、judge timeout 120 s）。
 - 冻结协议：`paper/experiments/joint_protocol_v5.json`；六个 benchmark，EVO=60/run，VAL=30/run，TEST=273/run，三次 run，checkpoint 为 C0/C15/C30/C45/C60。
 - 形式化槽位总数：EVO/VAL 630；TEST release 1,911。TEST 必须在 EVO/VAL 形成完整 `evo_val_report.json` 后执行。
 
@@ -17,6 +17,8 @@
 3. 在规划和 public refinement 中加入“证据包只有 retrieval-failure 时”的受控策略：保留有用的通用知识，但逐项标记为 GK/待验证，不伪造数字、引文、日期、URL 或来源归属。
 4. 对市场进入类任务加入覆盖清单：技术/产品护城河、竞品与合作伙伴、监管工具、组织角色、专利/商业秘密、供应链取舍、退出选项、alternative-protein 方向和验证来源计划。
 5. 保留完整的冻结输入、provider preflight、checker、checkpoint snapshot、状态哈希和 TestRelease 接线，禁止在已登记运行中替换输入或重采样。
+6. 将 judge 传输层改为显式 `httpx.Client(trust_env=...)`，避免 Windows 系统代理被隐式注入；在同一进程内把 judge rubric 并发限制为 2，并为 ResearchRubrics 保留一次瞬时失败重试。
+7. 强化 EVO/VAL resume：VAL 只读取登记时的不可变 checkpoint，live state 与 durable prefix 不一致时 fail closed；无 eligible checkpoint 时记录 inconclusive 而不是伪造选择。
 
 ## 可复核结果
 
@@ -27,17 +29,18 @@
 | Ours 单任务保守答案诊断 | GPT-5.6-Sol | complete | **0.447059** | 25 rubrics；用于定位“缺少可执行细节”的失败原因 |
 | Ours 单任务增强答案诊断 | GPT-5.6-Sol | complete | **0.717647** | 25 rubrics，61/85 加权得分；加入市场/监管/组织/IP/退出/替代蛋白等具体覆盖 |
 | v5 `joint_run_best` EVO/VAL | GPT-5.6-Sol | incomplete | — | C0 首槽曾被中断，恢复后标为 `InterruptedWithoutDurableOutcome`；第二槽在 judge 超时后仍无结果 |
+| v5 `joint_run_stable` 已完成槽 | GPT-5.6-Sol | partial | **0.517647 / 0.873239 / 0.188235** | 3 个 ResearchRubrics VAL 槽完整落盘；另有 2 个 failed、1 个 started、624 个 pending，未形成 checkpoint 选择或正式均值 |
 | v5 TEST Release | GPT-5.6-Sol | not started | — | 由于没有完整 `evo_val_report.json` 和可选 checkpoint，按协议禁止启动 |
 
 历史分数和单任务诊断仅用于优化方向与回归对照，不能宣称为本轮六 benchmark 的正式 TEST 均值，也不能据此宣称 Ours 已全面超过 baseline。
 
 ## 当前正式日志状态
 
-`joint_run_best/evo_val_journal.json` 的最后可复核计数为：`pending=628, failed=1, started=1`。失败槽是恢复前中断的首个 ResearchRubrics VAL 槽；第二个槽的 actor submission 已落盘，但 judge 调用在 60 秒 timeout 和一次 retry 后仍未完成。日志和 immutable C0 snapshot 均保留，后续可在同一 bundle 上恢复；恢复时必须先解决 judge 网关稳定性，再继续执行，不能把 started 槽当作 complete。
+`joint_run_best/evo_val_journal.json` 的最后可复核计数为：`pending=628, failed=1, started=1`。更新后的 `joint_run_stable/evo_val_journal.json` 计数为：`complete=3, failed=2, pending=624, started=1`；三个完整槽的原始 score 依次为 `0.5176470588`、`0.8732394366`、`0.1882352941`。其中第三槽之后出现 pooled candidate 缺少精确 persistent identity/version 的契约错误，第四个正在规划的槽因 actor 网关连接错误中断。上述槽位只作为 partial formal audit，不构成 benchmark 均值、checkpoint 选择或 TEST 结果。
 
 ## 验证
 
-- 聚焦回归：`114 passed`。
+- 聚焦回归：`138 passed`（含 transport、ResearchRubrics retry、checkpoint freeze/resume 与 inconclusive 选择测试）。
 - 之前完整测试：`2647 passed, 1 warning, 60 subtests passed`。
 - `scripts/run_joint_test_release.py` 已通过 `py_compile` 和 CLI/协议测试，但尚未执行 TEST，因为正式 EVO/VAL 前置条件未满足。
 
