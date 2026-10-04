@@ -121,6 +121,12 @@ class JointTestReleaseRunner:
             raise ValueError("Joint bundle is not formal-ready; complete data/evidence/checker/provider preflight first")
         self.executor.check(require_provider=True)
         self.executor.assert_frozen()
+        registration_path = self.campaign / "registration.json"
+        if registration_path.is_file():
+            registration = _read(registration_path)
+            expected_runner = registration.get("test_runner_sha256")
+            if expected_runner and expected_runner != file_hash(Path(__file__)):
+                raise CheckpointIntegrityError("TEST release runner changed after registration")
         self.materials = self.executor._identity["materials"]
         self.config = self.executor.config
 
@@ -158,6 +164,7 @@ class JointTestReleaseRunner:
         release = TestRelease(self.campaign, slots)
         registration = {"schema": "joint-test-release-v5", "bundle_sha256": file_hash(self.bundle_path),
                         "evo_val_dir": str(self.evo_val_dir), "registration_sha256": digest(release.inventory),
+                        "test_runner_sha256": file_hash(Path(__file__)),
                         "slot_count": len(slots), "selected_checkpoints": selected,
                         "test_feedback_released": False, "test_resampling": False,
                         "selection_uses_test": False}
