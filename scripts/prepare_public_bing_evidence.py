@@ -162,8 +162,8 @@ def _search(query: str) -> dict[str, Any]:
     if "unhcr" in q and ("asylum" in q or "refugee" in q or "2010" in q):
         seeds.extend([
             ("UNHCR Statistical Yearbook 2010", "https://www.unhcr.org/us/publications/unhcr-statistical-yearbook-2010-10th-edition"),
-            ("UNHCR Refugee Statistics API", "https://api.unhcr.org/docs/refugee-statistics.html"),
             ("UNHCR G7 asylum-seeker records 2010", "https://api.unhcr.org/population/v1/population/?year=2010&coa=CAN,USA,GBR,FRA,DEU,ITA,JPN&coo_all=true&limit=1000"),
+            ("UNHCR Refugee Statistics API", "https://api.unhcr.org/docs/refugee-statistics.html"),
         ])
     existing = {row["url"] for row in rows}
     seed_rows = []
