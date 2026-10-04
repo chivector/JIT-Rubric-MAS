@@ -6,7 +6,7 @@
 
 - 远端：`https://github.com/chivector/JIT-Rubric-MAS.git`，分支 `main`。
 - 最新提交：`a7d772d`（在 `fef5450`、`bd8e21e`、`cd1f637`、`6399efc`、`3df6d2c`、`9405db9` 基础上继续优化）。
-- 现有正式候选 bundle：`.runtime/formal_v5_assets_20261004/bundle_stable/bundle.json`，`formal_ready=true`；该 bundle 绑定稳定传输配置（judge 并发上限 2、judge timeout 120 s），对应 `a7d772d` 之前的代码身份。`a7d772d` 的 pool identity 修复已提交；正式续跑必须重新登记新 bundle 和新 output，不能混用旧 journal。
+- 最新正式候选 bundle：`.runtime/formal_v5_assets_20261004/bundle_poolfix/bundle.json`，`formal_ready=true`；该 bundle 绑定稳定传输配置（judge 并发上限 2、judge timeout 120 s）并在 pool identity 修复后重新登记。`joint_run_stable` 是修复前 bundle 的 partial audit，不能与新 bundle 混用；正式续跑必须使用新 output。
 - 冻结协议：`paper/experiments/joint_protocol_v5.json`；六个 benchmark，EVO=60/run，VAL=30/run，TEST=273/run，三次 run，checkpoint 为 C0/C15/C30/C45/C60。
 - 形式化槽位总数：EVO/VAL 630；TEST release 1,911。TEST 必须在 EVO/VAL 形成完整 `evo_val_report.json` 后执行。
 
