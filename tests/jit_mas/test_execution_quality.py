@@ -11,7 +11,7 @@ from jit_mas.bridge import JITHarnessSynthesizer
 from jit_mas.budget import BudgetLedger, MeteredModel
 from jit_mas.execution import (
     CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
-    FINAL_ARTIFACT_CONTRACT, FINAL_SUBMISSION_GATE,
+    FINAL_ARTIFACT_CONTRACT, FINAL_QUALITY_SPINE, FINAL_SUBMISSION_GATE,
     ResponseProtocolError, TeamExecutor, TeamServices, _SinglePassModel, _parse_response, content_hash,
 )
 from jit_mas.schemas import AgentSpec, PublicTask, RubricGraph, TeamSpec
@@ -124,6 +124,7 @@ def test_terminal_critic_receives_writing_authority_over_review_only_scope(execu
         if aid == terminal.agent_id:
             assert FINAL_ARTIFACT_CONTRACT in messages[0]["content"]
             assert FINAL_SUBMISSION_GATE in messages[0]["content"]
+            assert FINAL_QUALITY_SPINE in messages[0]["content"]
             assert payload["agent"]["task_prompt"].endswith(FINAL_ARTIFACT_CONTRACT)
             assert payload["terminal_assignment"] == FINAL_ARTIFACT_CONTRACT
             assert payload["agent"]["execution_role"] == "final_writer"

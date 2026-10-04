@@ -27,7 +27,7 @@ from jit_mas.experience import experience_applicability
 from jit_mas.planning import (
     QUALITY_ASSURANCE_PROMPT, knowledge_policy_prompt, knowledge_policy_role_adaptation,
 )
-from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGraph, TeamSpec, utc_now
+from jit_mas.schemas import AgentPoolSnapshot, AgentSpec, PublicTask, RubricGraph, TeamSpec, digest, utc_now
 
 
 ITERATIVE_CONTINUATION_POLICY_VERSION = "explicit-user-no-progress-final-deliverable-v9"
@@ -110,6 +110,22 @@ FINAL_SUBMISSION_GATE = (
     "narration, internal rubric IDs and review metadata; and leave enough space for valid "
     "JSON closure. When an upstream artifact conflicts with the public task, follow the "
     "public task and repair the conflict before submitting."
+)
+
+
+FINAL_QUALITY_SPINE = (
+    "FINAL QUALITY SPINE: Before emitting the terminal JSON, run this short private audit. "
+    "First, put the requested artifact itself in answer, using the requested language, genre, "
+    "audience, format and length. Second, map every explicit deliverable and constraint to a "
+    "concrete sentence, item, table row or other output location; preserve distinct requested "
+    "examples and members. Third, check each consequential claim against its available support, "
+    "keeping dates, units, assumptions and uncertainty local, and recompute derived numbers. "
+    "Fourth, make requested comparisons, mechanisms, recommendations or actions explicit when "
+    "the task calls for them. Remove process narration, internal metadata and duplicate prose, "
+    "For a long-form or source-shaped artifact, preserve meaningful headings, paragraph breaks, "
+    "lists, tables, quotations and section order; do not flatten, summarize or silently shorten "
+    "a complete draft merely to save formatting tokens. Then reread the complete answer and "
+    "leave enough room for valid JSON closure."
 )
 
 
@@ -258,12 +274,39 @@ def _apply_public_membership_guidance(system, instruction, services):
     """Opt-in original-condition observations; no rubric/schema/call mutation."""
     if not getattr(services, "public_membership_observations_requested", False):
         return system
-    from .public_membership import build_public_membership_observations
+    from .public_membership import build_public_membership_observations, public_membership_model_input
 
     shared = instruction.get("shared_ledger", {})
     materials = {"contributions": shared.get("contributions", [])} if isinstance(shared, dict) else {}
-    instruction["public_membership_observations"] = build_public_membership_observations(
-        services.public_task, materials)
+    observations = build_public_membership_observations(services.public_task, materials)
+    input_format = getattr(services, "public_membership_input_format", "full")
+    projected = public_membership_model_input(observations, input_format)
+    if input_format == "compact":
+        # Persist before the request, so a failed model call cannot erase its basis.
+        # Rich audit data is never placed in the shared ledger or model messages.
+        audit = {"input_format": input_format, "full_observation_hash": digest(observations),
+                 "model_input_hash": digest(projected), "observations": observations}
+        lock = getattr(services, "lock", None)
+        if lock is None:
+            lock = threading.Lock()
+            services.lock = lock
+        with lock:
+            if not hasattr(services, "public_membership_execution_audits"):
+                services.public_membership_execution_audits = {}
+            services.public_membership_execution_audits[audit["full_observation_hash"]] = audit
+            writer = getattr(services, "public_membership_audit_writer", None)
+            if writer is not None:
+                writer(copy.deepcopy(list(services.public_membership_execution_audits.values())))
+    instruction["public_membership_observations"] = projected
+    compact_hint = (
+        "\nRead compact tables through row_fields and threshold_ids, checking all original "
+        "rows and conditions. Confirm the original condition and supplied scope before "
+        "using a FALSE cell to exclude a member. Do not treat UNKNOWN or an upstream "
+        "PASS as a verified eligibility decision. An entity may be mentioned as excluded "
+        "or quoted. If the request is a set, state its affirmative members clearly once; "
+        "include excluded-candidate analysis only when requested. Keep supported uncertainty "
+        "without adding a new requirement or inventing members."
+    ) if input_format == "compact" else ""
     return system + (
         "\nORIGINAL PUBLIC CONDITIONS: public_membership_observations preserves the "
         "original request and finite source-bound numerical comparisons. For a qualified "
@@ -279,7 +322,7 @@ def _apply_public_membership_guidance(system, instruction, services):
         "takes priority over paraphrased conditions. These observations do not prove "
         "semantic membership or certify a complete answer. Do not expose the sidecar "
         "or its internal hashes in the requested artifact."
-    )
+    ) + compact_hint
 
 
 def _execution_assignment(agent, synthesizer):
@@ -532,9 +575,14 @@ class TeamServices:
     agent_pool: AgentPoolSnapshot | None = None
     knowledge_policy: str | None = None
     task_seconds_at_start: float | None = field(init=False, default=None)
+    public_positional_draft_projection_audit: dict = field(init=False)
 
     def __post_init__(self):
         knowledge_policy_prompt(self.knowledge_policy)
+        # Role initialization can fail before its prompt builder runs. Retain an
+        # inactive audit so final metadata never masks that primary execution error.
+        _, self.public_positional_draft_projection_audit = project_public_positional_draft_task(
+            self.public_task, None)
         if self.ledger is not None and callable(getattr(self.ledger, "remaining_seconds", None)):
             self.task_seconds_at_start = self.ledger.remaining_seconds()
 
@@ -1258,6 +1306,8 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
         instruction["terminal_assignment"] = FINAL_ARTIFACT_CONTRACT
     system = _apply_public_membership_guidance(system, instruction, services)
     system = _apply_public_positional_draft_guidance(system, instruction, services)
+    if synth:
+        system += "\n" + FINAL_QUALITY_SPINE
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(instruction, ensure_ascii=False)}]
     state = state if state is not None else {}
@@ -1844,6 +1894,8 @@ def _run_agent(agent, team, ctx, services):
         instruction["terminal_assignment"] = FINAL_ARTIFACT_CONTRACT
     system = _apply_public_membership_guidance(system, instruction, services)
     system = _apply_public_positional_draft_guidance(system, instruction, services)
+    if synth:
+        system += "\n" + FINAL_QUALITY_SPINE
     memory = type(ctx.memory)(prompts=ctx.prompt_templates)
     memory.initialize(system, TaskInput(task=json.dumps(instruction, ensure_ascii=False)))
     allowed = set() if synth else set(agent.get("tools", []))
@@ -2333,6 +2385,8 @@ class TeamExecutor:
             self, "public_positional_draft_projection_requested", False)
         services.public_membership_observations_requested = getattr(
             self, "public_membership_observations_requested", False)
+        services.public_membership_input_format = getattr(self, "public_membership_input_format", "full")
+        services.public_membership_audit_writer = getattr(self, "public_membership_audit_writer", None)
         agents_by_id = {agent["agent_id"]: agent for agent in team_data["agents"]}
 
         def single_pass_model(agent_id):
@@ -2396,6 +2450,9 @@ class TeamExecutor:
         if getattr(self, "public_positional_draft_projection_requested", False):
             result.metadata["public_positional_draft_projection"] = copy.deepcopy(
                 services.public_positional_draft_projection_audit)
+        if getattr(services, "public_membership_execution_audits", None):
+            result.metadata["public_membership_execution_audits"] = copy.deepcopy(
+                list(services.public_membership_execution_audits.values()))
         if self.knowledge_policy is not None:
             result.metadata["knowledge_policy"] = self.knowledge_policy
         if services.agent_pool is not None:

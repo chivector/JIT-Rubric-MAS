@@ -1,10 +1,12 @@
-"""Two fixed, public-only global component calls before task submission.
+"""Two public-only global components before task submission.
 
 These calls neither reactivate pool agents nor relax their execution caps. They
 consume the same task ledger as planning, generation and local execution. An
 invalid review/revision fails the attempt under the default policy. An optional
 public guard can retain an eligible initial artifact after a local revision
 validation failure or catastrophic body loss, without consulting an evaluator.
+An opt-in typed-response validation repair permits at most one additional call
+under the same task ledger, output cap and strict construction contract.
 """
 
 from __future__ import annotations
@@ -12,9 +14,10 @@ from __future__ import annotations
 import copy
 import json
 import re
-from typing import Callable
+from typing import Callable, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (BaseModel, ConfigDict, Field, ValidationError, create_model,
+                      field_validator, model_validator)
 
 from .planning import knowledge_policy_prompt
 from .output_contract import PUBLIC_CONSTRAINT_CONSTRUCTION_PROMPT
@@ -25,6 +28,15 @@ from .schemas import PublicTask, digest, utc_now
 PUBLIC_REFINEMENT_VERSION = "public-draft-review-revision-v3"
 PUBLIC_REFINEMENT_IDS = ("public-review", "public-revision")
 PUBLIC_REFINEMENT_GUARD_VERSION = "public-artifact-regression-guard-v4"
+PUBLIC_CONSTRUCTION_REPAIR_VERSION = "public-typed-validation-repair-v1"
+CONSTRUCTION_REPAIR_HINT = """\nThe previous construction response failed local
+validation. Repair that response once using the identical construction schema
+and original public task, review and evidence. Preserve already valid fields
+and supported facts; do not invent facts to fill a missing marker. Use the
+reported validation errors and deterministic marker counts to correct the
+construction contract. Return only the complete corrected JSON response
+instance. This is a bounded protocol repair, with no evaluator or score.
+"""
 _BODY_LOSS_LIMITS = {
     "minimum_draft_non_whitespace_characters": 1000,
     "minimum_draft_punctuation_or_line_chunks": 3,
@@ -110,6 +122,49 @@ comparison or claimed original-task quote. Those observations establish only
 printed arithmetic/substring presence; verify the condition, scope, units and
 source meaning directly. Inferred rubrics are advisory, not new hard filters.
 Do not add unsupported certainty or replace a complete answer with broad caution.
+"""
+
+PUBLIC_MEMBERSHIP_ATTENTION_HINT = """\nPUBLIC ATTENTION CHECKS FIRST:
+public_membership_attention.items is a short source-ordered queue of bound
+FALSE arithmetic observations whose entity literal occurs in the draft. Each
+is a reason to inspect, not a proven answer defect or an automatic exclusion.
+For EVERY queued attention_id, return exactly one attention_checks entry.
+Read the original condition and supplied source directly; original_scope is
+matches, does_not_match or unknown. Inspect the draft's actual mention context;
+draft_use is affirmative_inclusion, quotation, exclusion or unknown. A literal
+mention, source hash, year agreement or exact quote cannot prove scope or an
+affirmative membership claim. Do not manufacture a nationality, cohort, stock
+guarantee or other hard condition from an inferred rubric.
+Use short exact task_quote from its original condition. For draft_quote, COPY
+THE ITEM'S draft_literal_span.text EXACTLY, including its original case. Return
+only this already-located literal, not a sentence, paraphrase or restyled quote.
+draft_context_span supplies exact original reading context, including Markdown;
+inspect the complete draft for other mentions and cross-line qualifications.
+Never remove formatting or normalize text to manufacture an exact quote.
+The literal quote is a location anchor, not proof of affirmative membership.
+source_quote must copy the queued observed cell
+or an exact substring of its original row that covers that cell's actual span.
+Quote presence will be checked only as text, not entailment.
+If original_scope=matches AND draft_use=affirmative_inclusion, disposition must
+be issue and issue_index must reference a source-backed issues entry (zero-based).
+Its public_basis must include all three exact quotes. issue_index binds the
+issue to the queued condition/source anchors in a separate public audit; do not
+duplicate machine IDs in the prose basis. One issue may cover multiple queue
+items when its basis covers each.
+If scope does_not_match or the use is quotation/exclusion, use no_issue unless
+scope or use remains unknown; then use unknown. These two dispositions have
+issue_index=null. Give a short public reason for each disposition. Do not invent
+an objection or use UNKNOWN as a proven failure. Check remaining FALSE cells,
+UNKNOWN conditions and supported omissions using the full matrix; the capped
+queue cannot certify exhaustive review. Keep the ordinary issues limit of eight.
+"""
+
+PUBLIC_MEMBERSHIP_ATTENTION_REVISION_HINT = """\nResolve the public attention
+review against the original request, source and actual draft use. Apply only
+supported issues and preserve all supported qualifying members. Conditional
+FALSE and literal presence alone do not justify deletion; no_issue and unknown
+dispositions are not new exclusion rules. Keep unresolved scope precise. Do not
+publish queue IDs, review records or process notes in the final artifact.
 """
 
 REVIEW_PROMPT = """You are the global component reviewing an actual completed
@@ -287,6 +342,115 @@ class PublicReview(_StrictRecord):
     issues: list[PublicIssue] = Field(max_length=8)
 
 
+class PublicMembershipAttentionCheck(_StrictRecord):
+    attention_id: str = Field(min_length=1)
+    original_scope: Literal["matches", "does_not_match", "unknown"]
+    draft_use: Literal["affirmative_inclusion", "quotation", "exclusion", "unknown"]
+    disposition: Literal["issue", "no_issue", "unknown"]
+    task_quote: str = Field(min_length=1, max_length=512)
+    source_quote: str = Field(min_length=1, max_length=512)
+    draft_quote: str = Field(min_length=1, max_length=512)
+    issue_index: int | None = Field(ge=0, le=7)
+    reason: str = Field(min_length=1, max_length=512)
+
+    @field_validator("task_quote", "source_quote", "draft_quote", "reason")
+    @classmethod
+    def meaningful_text(cls, value):
+        if not value.strip():
+            raise ValueError("Attention check text must contain non-whitespace content")
+        return value
+
+
+def _attention_source_quote_span(item, quote):
+    """Find an exact original-row quote covering the observed cell offsets."""
+    row, cell = item["row_span"], item["observation"]["cell_span"]
+    start = row["text"].find(quote)
+    while start >= 0:
+        absolute_start, absolute_end = row["start"] + start, row["start"] + start + len(quote)
+        if (absolute_start <= cell["start"] and absolute_end >= cell["end"]
+                and quote.strip()):
+            return {"source": row["source"], "start": absolute_start, "end": absolute_end,
+                    "text_hash": digest(quote)}
+        start = row["text"].find(quote, start + 1)
+    return None
+
+
+def _membership_attention_review_schema(queue, draft):
+    """Validate coverage and public quote links, never semantic entailment.
+
+    Semantic scope/use classifications are explicitly model judgments. No
+    deterministic membership decision follows from this protocol validation.
+    Failure remains a failed review, with no additional call or draft rescue.
+    """
+    items = {item["attention_id"]: item for item in queue["items"]}
+    if not items or len(items) != len(queue["items"]):
+        raise ValueError("Attention review requires a nonempty queue of unique IDs")
+    check_model = create_model("PublicMembershipAttentionItem",
+        __base__=PublicMembershipAttentionCheck,
+        attention_id=(Literal[tuple(items)], ...),
+        draft_quote=(Literal[tuple(dict.fromkeys(
+            item["draft_literal_span"]["text"] for item in items.values()))], ...))
+
+    def validate_attention(self):
+        ids = [check.attention_id for check in self.attention_checks]
+        if len(set(ids)) != len(ids) or set(ids) != set(items):
+            raise ValueError("Every queued attention ID must be handled exactly once")
+        for check in self.attention_checks:
+            item = items[check.attention_id]
+            if check.task_quote not in item["original_condition_span"]["text"]:
+                raise ValueError("Attention task quote must occur in its original public condition")
+            if _attention_source_quote_span(item, check.source_quote) is None:
+                raise ValueError("Attention source quote must be exact original-row text covering its observed cell span")
+            literal = item["draft_literal_span"]
+            if (check.draft_quote != literal["text"]
+                    or draft[literal["start"]:literal["end"]] != check.draft_quote):
+                raise ValueError("Attention draft quote must copy its item's exact located literal")
+            requires_issue = (check.original_scope == "matches"
+                              and check.draft_use == "affirmative_inclusion")
+            uncertain = (check.original_scope == "unknown" or check.draft_use == "unknown")
+            expected = "issue" if requires_issue else "unknown" if uncertain else "no_issue"
+            if check.disposition != expected:
+                raise ValueError("Attention disposition must follow its explicit scope/use judgment")
+            if requires_issue:
+                if check.issue_index is None or check.issue_index >= len(self.issues):
+                    raise ValueError("An affirmative source-scope contradiction requires a linked issue")
+                basis = self.issues[check.issue_index].public_basis
+                if not all(quote in basis for quote in (
+                        check.task_quote, check.source_quote, check.draft_quote)):
+                    raise ValueError("Linked attention issue must retain its public source/quote basis")
+            elif check.issue_index is not None:
+                raise ValueError("A no-issue or unknown attention check cannot link an issue")
+        return self
+
+    return create_model("PublicMembershipAttentionReview", __base__=PublicReview,
+        attention_checks=(list[check_model], Field(min_length=len(items), max_length=len(items))),
+        __validators__={"validate_attention": model_validator(mode="after")(validate_attention)})
+
+
+def _membership_attention_review_links(queue, review, draft):
+    """Receipt for validated quote offsets and issue links, not scope proof."""
+    items = {item["attention_id"]: item for item in queue["items"]}
+    links = []
+    for check in review["attention_checks"]:
+        item = items[check["attention_id"]]
+        task_span = item["original_condition_span"]
+        task_start = task_span["start"] + task_span["text"].index(check["task_quote"])
+        draft_start = item["draft_literal_span"]["start"]
+        links.append({"attention_id": check["attention_id"], "issue_index": check["issue_index"],
+            "condition_id": item["condition_id"], "threshold_id": item["threshold_id"],
+            "source": copy.deepcopy(item["source"]),
+            "task_quote_span": {"source": task_span["source"], "start": task_start,
+                "end": task_start + len(check["task_quote"]), "text_hash": digest(check["task_quote"])},
+            "source_quote_span": _attention_source_quote_span(item, check["source_quote"]),
+            "observed_cell_span": copy.deepcopy(item["observation"]["cell_span"]),
+            "draft_quote_span": {"source": "draft", "start": draft_start,
+                "end": draft_start + len(check["draft_quote"]), "text_hash": digest(check["draft_quote"])},
+            "original_scope_judgment": check["original_scope"], "draft_use_judgment": check["draft_use"],
+            "disposition": check["disposition"], "semantic_membership_verified": False})
+    return {"links": links, "quote_link_presence_validated": True,
+            "semantic_scope_verified": False, "affirmative_membership_verified": False}
+
+
 class PublicRevision(_StrictRecord):
     answer: str = Field(min_length=1)
 
@@ -317,6 +481,42 @@ def _strict_json(content, schema):
     if not isinstance(value, dict):
         raise ValueError("Public refinement response must be one JSON object")
     return schema.model_validate(value)
+
+
+def _local_validation_errors(exc):
+    if isinstance(exc, ValidationError):
+        return exc.errors(include_url=False, include_context=False, include_input=False)
+    if isinstance(exc, json.JSONDecodeError):
+        return [{"loc": [], "type": "json_invalid", "msg": exc.msg}]
+    return [{"loc": [], "type": "value_error", "msg": str(exc)}]
+
+
+def _construction_marker_counts(content, plan):
+    keys = getattr(plan, "marker_keys", None)
+    if keys is None:
+        return None
+
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("Ambiguous duplicate key")
+            result[key] = value
+        return result
+
+    try:
+        value = json.loads(content, object_pairs_hook=unique_object)
+    except (ValueError, TypeError):
+        return None
+    template = value.get("answer_template") if isinstance(value, dict) else None
+    if not isinstance(template, str):
+        return None
+    counts = [{"marker": f"<{key}>", "count": template.count(f"<{key}>")}
+              for key in keys]
+    return {"basis": "literal counts in the previous raw answer_template; not a validation result",
+            "required_marker_counts": counts,
+            "missing_markers": [row["marker"] for row in counts if row["count"] == 0],
+            "duplicate_markers": [row["marker"] for row in counts if row["count"] > 1]}
 
 
 def _select_text_fields(row, names):
@@ -464,7 +664,8 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
 
     The provider is the existing shared metered provider. Native request policy
     bounds each request by the remaining task deadline. No extra ledger, local
-    execution call, pool identity, retry or evaluator is introduced here.
+    execution call, pool identity or evaluator is introduced here. The optional
+    typed local-validation repair uses this same provider and ledger once.
     """
     if result.terminated_reason != "final_answer" or result.answer is None:
         raise ValueError("Public refinement requires a valid final-answer draft")
@@ -496,6 +697,9 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
             from .public_numeric_slots import numeric_plan
 
             numeric_construction_plan = numeric_plan(task, layout=config.public_numeric_construction_layout)
+    typed_construction = positional_plan is not None or numeric_construction_plan is not None
+    validation_repair_limit = (config.public_construction_validation_retries
+                               if typed_construction else 0)
     public_input = {
         # Opaque task IDs and benchmark routing fields have no purpose in review.
         "public_task": task.model_dump(mode="json", exclude={"schema_version", "task_id"}),
@@ -505,11 +709,26 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         "public_diagnostics": (public_output_metrics(task, result.answer)
                                if isinstance(result.answer, str) else None),
     }
+    membership_input_audit = None
+    attention_queue = None
     if config.public_membership_observations:
-        from .public_membership import build_public_membership_observations
+        from .public_membership import build_public_membership_observations, public_membership_model_input
 
-        public_input["public_membership_observations"] = build_public_membership_observations(
-            task, public_input["public_materials"], result.answer)
+        observations = build_public_membership_observations(task, public_input["public_materials"], result.answer)
+        projected = public_membership_model_input(observations, config.public_membership_input_format)
+        public_input["public_membership_observations"] = projected
+        if config.public_membership_input_format == "compact":
+            membership_input_audit = {"input_format": "compact", "observations": observations,
+                                      "full_observation_hash": digest(observations),
+                                      "model_input_hash": digest(projected)}
+        if config.public_membership_attention_checks:
+            from .public_membership import public_membership_attention_queue
+
+            attention_queue = public_membership_attention_queue(observations, result.answer)
+            if attention_queue["items"]:
+                # Place the small inspection queue before the larger public inputs.
+                public_input = {"public_membership_attention": attention_queue, **public_input}
+    attention_active = attention_queue is not None and bool(attention_queue["items"])
     literal_plan = None
     literal_initial_diagnostics = None
     title_scope = None
@@ -536,6 +755,14 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
              "public_input": copy.deepcopy(public_input), "public_input_hash": digest(public_input),
              "review": None, "review_hash": None, "revision": None, "revision_hash": None,
              "calls": [], "budget_before": ledger.snapshot()}
+    if membership_input_audit is not None:
+        audit["public_membership_input_audit"] = membership_input_audit
+    if config.public_membership_attention_checks:
+        audit["public_membership_attention_checks"] = {
+            "active": attention_active, "queue": copy.deepcopy(attention_queue),
+            "queue_hash": digest(attention_queue),
+            "validation_scope": "Complete queued-ID coverage, disposition consistency and public quote/link presence only; not semantic scope, affirmative membership or full eligibility verification",
+        }
     eligibility = _guard_eligibility(result, positional_plan, numeric_construction_plan)
     if guarded:
         audit["version"] = PUBLIC_REFINEMENT_GUARD_VERSION
@@ -566,6 +793,15 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
             numeric_construction_plan.audit() if numeric_construction_plan is not None else
             {"active": False, "reason": ("Mixed public numeric and positional rules" if
              construction_conflict else "No single supported public numeric rule")})
+    if config.public_construction_validation_retries:
+        audit["public_construction_validation_repair"] = {
+            "version": PUBLIC_CONSTRUCTION_REPAIR_VERSION,
+            "configured_maximum_extra_calls": config.public_construction_validation_retries,
+            "active": typed_construction, "maximum_component_calls": 2 + validation_repair_limit,
+            "repair_attempts": 0,
+            "eligibility": "Only typed public-revision local response validation ValueError; no review/provider/deadline/renderer/patch/budget rescue",
+        }
+        audit["organization"] += "; at most one additional typed local-validation repair call"
 
     def publish():
         audit["budget_after"] = ledger.snapshot()
@@ -577,7 +813,11 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         if audit_writer is not None:
             audit_writer(copy.deepcopy(audit))
 
-    def call(agent_id, instructions, payload, schema):
+    validation_exception = None
+
+    def call(agent_id, instructions, payload, schema, *, attempt=1):
+        nonlocal validation_exception
+        validation_exception = None
         response_format = {"type": "json_object"}
         schema_mode = config.public_refinement_response_format
         if schema_mode == "json_schema" or (schema_mode == "json_schema_review" and (
@@ -596,7 +836,7 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
                      + "\nReturn a JSON response instance that conforms to this schema; do not return the schema itself:\n" + json.dumps(schema.model_json_schema())},
                     {"role": "user", "content": json.dumps({"phase": agent_id, **payload},
                                                              ensure_ascii=False, allow_nan=False)}]
-        record = {"agent_id": agent_id, "role": "global", "stage": "inference",
+        record = {"agent_id": agent_id, "role": "global", "stage": "inference", "attempt": attempt,
                   "status": "started", "messages": copy.deepcopy(messages),
                   "input_hash": digest(messages), "output_cap": output_cap,
                   "response_format": copy.deepcopy(response_format),
@@ -636,8 +876,11 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         except BaseException as exc:
             record["status"] = "failed"
             record["error_type"] = type(exc).__name__
-            if guarded:
+            if guarded or config.public_construction_validation_retries or attention_active:
                 record["failure_phase"] = failure_phase
+            if failure_phase == "response_validation" and isinstance(exc, ValueError):
+                validation_exception = exc
+                record["validation_errors"] = _local_validation_errors(exc)
             raise
         finally:
             publish()
@@ -647,20 +890,41 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         audit["selected_candidate"] = candidate
         audit["selection_reason"] = reason
         audit["selected_public_diagnostics"] = public_output_metrics(task, answer)
-        audit["status"] = ("completed_with_component_failure" if component_failure else "completed")
         if component_failure:
-            audit["component_failures"] = [component_failure]
+            audit.setdefault("component_failures", []).append(component_failure)
+        audit["status"] = ("completed_with_component_failure" if audit.get("component_failures")
+                           else "completed")
         audit["completed_at"] = utc_now()
         result.answer = answer
         return result
 
+    compact_membership_hint = (
+        "\nPUBLIC CONDITION MATRIX: Read each table using row_fields and threshold_ids. "
+        "Inspect every original row against every original hard condition; compare literal "
+        "values, operators, units and declared dates rather than trusting contributor PASS. "
+        "A FALSE result is a contradiction only if the source scope actually matches that "
+        "original condition. UNKNOWN requires checking the supplied source and retaining "
+        "material uncertainty, not inventing another exclusion condition or a new guarantee. "
+        "An entity mention can be a quotation or an exclusion, not an affirmative inclusion. "
+        "For a requested set, review the actual affirmative members for invalid inclusions "
+        "and supported omissions. Keep the final selected set explicit and list its members "
+        "once; add excluded-candidate tables only when the user requests that analysis. "
+        "Local numeric PASS does not establish complete membership. Do not insert unsupported "
+        "members to fill the list, and do not change an already correct list without evidence."
+    ) if membership_input_audit is not None else ""
     try:
         publish()
-        review = call("public-review", REVIEW_PROMPT + (GROUNDED_PUBLIC_REVIEW_HINT if guarded else "")
-                      + (PUBLIC_LITERAL_HINT if literal_plan else ""),
-                      public_input, PublicReview)
+        review_schema = (_membership_attention_review_schema(attention_queue, audit["draft"])
+                         if attention_active else PublicReview)
+        review = call("public-review", (PUBLIC_MEMBERSHIP_ATTENTION_HINT if attention_active else "")
+                      + REVIEW_PROMPT + (GROUNDED_PUBLIC_REVIEW_HINT if guarded else "")
+                      + (PUBLIC_LITERAL_HINT if literal_plan else "") + compact_membership_hint,
+                      public_input, review_schema)
         audit["review"] = review.model_dump(mode="json")
         audit["review_hash"] = digest(audit["review"])
+        if attention_active:
+            audit["public_membership_attention_checks"]["review_links"] = (
+                _membership_attention_review_links(attention_queue, audit["review"], audit["draft"]))
         audit["status"] = "reviewed"
         publish()
         revision_schema = PublicRevision
@@ -713,20 +977,51 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
                     "JSON schema describe validation metadata, not response fields. Do not "
                     "echo that metadata as additional top-level keys."
                 )
-        try:
-            revision = call("public-revision", revision_instructions,
-                            revision_payload, revision_schema)
-        except ValueError as exc:
-            failure = audit["calls"][-1]
-            if not (guarded and eligibility["eligible"]
-                    and failure.get("failure_phase") == "response_validation"):
-                raise
-            if ledger.remaining_seconds() == 0:
-                raise TimeoutError("Task wall-clock budget exhausted during public refinement") from exc
-            return select(audit["draft"], "initial_draft", "invalid_local_revision_response",
-                          component_failure={"agent_id": "public-revision", "status": "failed",
-                              "failure_phase": "response_validation", "error_type": type(exc).__name__,
-                              "response_hash": failure.get("response_hash")})
+        revision_instructions += compact_membership_hint
+        if attention_active:
+            revision_instructions += PUBLIC_MEMBERSHIP_ATTENTION_REVISION_HINT
+        attempt_payload = revision_payload
+        for attempt in range(1, 2 + validation_repair_limit):
+            try:
+                revision = call("public-revision", revision_instructions + (
+                    CONSTRUCTION_REPAIR_HINT if attempt > 1 else ""),
+                    attempt_payload, revision_schema, attempt=attempt)
+                break
+            except ValueError as exc:
+                failure = audit["calls"][-1]
+                local_failure = (failure.get("failure_phase") == "response_validation"
+                                 and validation_exception is exc)
+                if validation_repair_limit and local_failure:
+                    audit.setdefault("component_failures", []).append({
+                        "agent_id": "public-revision", "attempt": attempt, "status": "failed",
+                        "failure_phase": "response_validation", "error_type": type(exc).__name__,
+                        "response_hash": failure.get("response_hash"),
+                        "validation_errors": copy.deepcopy(failure["validation_errors"])})
+                    if attempt <= validation_repair_limit:
+                        if ledger.remaining_seconds() == 0:
+                            raise TimeoutError("Task wall-clock budget exhausted before construction repair") from exc
+                        repair = {"version": PUBLIC_CONSTRUCTION_REPAIR_VERSION,
+                                  "previous_attempt": attempt,
+                                  "previous_response": failure.get("response"),
+                                  "previous_response_hash": failure.get("response_hash"),
+                                  "validation_errors": copy.deepcopy(failure["validation_errors"])}
+                        counts = _construction_marker_counts(failure.get("response"),
+                                                            numeric_construction_plan)
+                        if counts is not None:
+                            repair["marker_counts"] = counts
+                        attempt_payload = {**revision_payload,
+                                           "public_construction_validation_repair": repair}
+                        audit["public_construction_validation_repair"]["repair_attempts"] += 1
+                        publish()
+                        continue
+                if not (guarded and eligibility["eligible"] and local_failure):
+                    raise
+                if ledger.remaining_seconds() == 0:
+                    raise TimeoutError("Task wall-clock budget exhausted during public refinement") from exc
+                return select(audit["draft"], "initial_draft", "invalid_local_revision_response",
+                              component_failure={"agent_id": "public-revision", "status": "failed",
+                                  "failure_phase": "response_validation", "error_type": type(exc).__name__,
+                                  "response_hash": failure.get("response_hash")})
         audit["revision"] = revision.model_dump(mode="json")
         audit["revision_hash"] = digest(audit["revision"])
         if positional_plan is not None:
@@ -788,7 +1083,8 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
                     public_input["public_diagnostics"], audit["revision_public_diagnostics"]):
                 return select(audit["draft"], "initial_draft", "catastrophic_revision_body_loss")
             return select(final_answer, "revision", "validated_revision_without_catastrophic_body_loss")
-        audit["status"] = "completed"
+        audit["status"] = ("completed_with_component_failure" if audit.get("component_failures")
+                           else "completed")
         audit["completed_at"] = utc_now()
         result.answer = final_answer
         return result

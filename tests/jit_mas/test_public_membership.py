@@ -2,11 +2,12 @@
 
 import hashlib
 import json
+import copy
 
 import pytest
 
 from jit_mas.evidence import EVIDENCE_QUESTION_HEADER, EVIDENCE_SCOPE, EVIDENCE_TASK_CONSTRAINT
-from jit_mas.public_membership import build_public_membership_observations
+from jit_mas.public_membership import build_public_membership_observations, public_membership_model_input
 from jit_mas.schemas import PublicTask, digest
 
 
@@ -268,3 +269,196 @@ def test_invalid_public_input_is_rejected_without_reading_other_fields():
         build_public_membership_observations(object())
     with pytest.raises(TypeError):
         build_public_membership_observations({"question": 2, "private": "DO_NOT_READ"})
+
+
+def matrix_rows(table):
+    return [dict(zip(table["row_fields"], row)) for row in table["rows"]]
+
+
+def test_default_and_explicit_full_model_input_are_unchanged_independent_snapshots():
+    full = observe()
+    original = copy.deepcopy(full)
+    default = public_membership_model_input(full)
+    explicit = public_membership_model_input(full, "full")
+    assert default == explicit == original and default is not full
+    default["table_observations"][0]["rows"][0]["checks"][0]["observed_value"] = "999"
+    explicit["hard_conditions"][0]["original_span"]["text"] = "Different request"
+    assert full == original
+    assert "full_observation_hash" not in public_membership_model_input(full)
+
+
+def test_compact_preserves_all_rows_rules_truth_and_source_scope_with_an_audit_hash():
+    full = observe()
+    compact = public_membership_model_input(full, "compact")
+    assert compact["full_observation_hash"] == digest(full)
+    assert compact["observation_version"] == full["version"]
+    table, = compact["table_observations"]
+    rows = matrix_rows(table)
+    assert [row["entity"] for row in rows] == [row["entity"] for row in full["table_observations"][0]["rows"]]
+    assert [row["arithmetic_truth"] for row in rows] == [[False], [True], [True]]
+    assert [row["observed_values"] for row in rows] == [["2.7"], ["2.8"], ["2.9"]]
+    assert len({row["row_id"] for row in rows}) == 3
+    assert table["threshold_ids"] == [threshold["threshold_id"] for threshold in full["numeric_thresholds"]]
+    assert table["scope"] == full["table_observations"][0]["scope"]
+    for key in ("source_id", "declared_source_sha256", "declared_date", "segment_hash", "headers", "truncated", "incomplete"):
+        assert table[key] == full["table_observations"][0][key]
+    assert table["coverage"] == {"observed_rows": 3, "observed_checks": 3, "all_observed_rows_retained": True}
+    assert all(row["source_span"] == [original["row_span"]["start"], original["row_span"]["end"]]
+               for row, original in zip(rows, full["table_observations"][0]["rows"]))
+    assert compact["membership_status"] == "unknown" and compact["independently_verified"] is False
+    assert "not complete eligibility" in compact["matrix_convention"]
+    assert "not an affirmative inclusion" in compact["matrix_convention"]
+
+
+def test_compact_rule_and_claim_anchors_keep_original_offsets_without_duplicate_text():
+    public = public_task()
+    materials = {"contributions": [{"ledger": {"outline": ["Birch: score 2.7; PASS"],
+        "source_references": [{"source_id": "web0", "locator": "https://example.org/table"}]}}]}
+    full = build_public_membership_observations(public, materials)
+    compact = public_membership_model_input(full, "compact")
+    for name in ("hard_conditions", "numeric_thresholds"):
+        for original, projected in zip(full[name], compact[name]):
+            assert projected["original_span"] == {key: value for key, value in original["original_span"].items() if key != "text"}
+            assert projected["condition_id"] == original["condition_id"]
+    claim, = compact["upstream_claims"]
+    assert "text" not in claim["claim_span"]
+    assert claim["labels"] == ["PASS"] and claim["status"] == "unknown"
+    assert claim["declared_source_references"] == full["upstream_claims"][0]["declared_source_references"]
+    assert "condition_text" not in compact["numeric_thresholds"][0]
+    assert "text" not in compact["original_request"]
+
+
+def test_compact_preserves_unbound_rules_and_unknown_source_cells_without_false_failures():
+    question = ("For 2023, list entities with score at least 2.8 points, "
+                "and had subject benchmark at least 70%.")
+    text = "score uses points. All _pct columns use percent units.\nentity,score,subject_benchmark_7_pct\nBirch,NaN,80"
+    full = observe(question=question, text=text)
+    compact = public_membership_model_input(full, "compact")
+    table, = compact["table_observations"]
+    row, = matrix_rows(table)
+    assert len(table["threshold_ids"]) == 2
+    assert row["arithmetic_truth"] == [None, None] and row["observed_values"] == ["NaN", None]
+    assert row["numeric_status"] == "unknown"
+    assert [binding["status"] for binding in table["bindings"]] == ["bound", "unknown"]
+    assert table["bindings"][1]["reason"] == full["table_observations"][0]["bindings"][1]["reason"]
+    unknown, = table["unknown_cells"]
+    assert unknown["row_id"] == row["row_id"] and unknown["threshold_id"] == table["threshold_ids"][0]
+    assert unknown["reason"] == "unsupported_source_cell_decimal"
+    assert unknown["cell_span"]["text_hash"] == full["table_observations"][0]["rows"][0]["checks"][0]["cell_span"]["text_hash"]
+
+
+@pytest.mark.parametrize("changes", [{"date": "2024 cohort"}, {"question": "As of June 2023, list entities whose score is at least 2.8 points."},
+                                     {"text": "score uses kg.\nentity,score\nBirch,2.7"}])
+def test_compact_does_not_upgrade_unknown_date_or_unit_bindings(changes):
+    full = observe(**changes)
+    compact = public_membership_model_input(full, "compact")
+    table, = compact["table_observations"]
+    assert table["bindings"][0]["status"] == "unknown"
+    assert table["bindings"][0]["reason"] == full["table_observations"][0]["bindings"][0]["reason"]
+    assert all(row["arithmetic_truth"] == [None] and row["observed_values"] == [None] for row in matrix_rows(table))
+
+
+def test_compact_retains_header_unit_fragments_that_have_no_offset_fields():
+    compact = public_membership_model_input(observe(text="entity,score (points)\nBirch,2.7"), "compact")
+    binding, = compact["table_observations"][0]["bindings"]
+    assert binding["status"] == "bound"
+    assert binding["unit_evidence"] == [{"source": "header", "text": "(points)"}]
+
+
+def test_compact_preserves_duplicate_entities_and_mentions_in_excluded_text_without_deciding_membership():
+    full = build_public_membership_observations(public_task(text="score uses points.\nentity,score\nBirch,2.7\nBirch,2.9"),
+                                                draft="Excluded entity: Birch. Its name is mentioned, not included.")
+    compact = public_membership_model_input(full, "compact")
+    table, = compact["table_observations"]
+    rows = matrix_rows(table)
+    assert len(rows) == 2 and rows[0]["entity"] == rows[1]["entity"] == "Birch"
+    assert rows[0]["row_id"] != rows[1]["row_id"]
+    assert [row["arithmetic_truth"] for row in rows] == [[False], [True]]
+    assert all(row["entity_literal_present_in_draft"] for row in rows)
+    assert compact["membership_status"] == "unknown" and table["membership_status"] == "unknown"
+    assert not any("eligible" in field or "included" in field for field in table["row_fields"])
+
+
+def test_compact_preserves_existing_truncation_limits_and_is_an_independent_snapshot():
+    text = "score uses points.\nentity,score\n" + "\n".join(f"Item{i},2.7" for i in range(129))
+    full = observe(text=text)
+    original = copy.deepcopy(full)
+    compact = public_membership_model_input(full, "compact")
+    assert compact["truncated"] is True and compact["limits"] == full["limits"]
+    assert len(compact["table_observations"][0]["rows"]) == 128
+    compact["table_observations"][0]["rows"][0][3][0] = "999"
+    compact["table_observations"][0]["scope"]["requested_years"].append("2099")
+    assert full == original
+
+
+def test_compact_preserves_semantic_only_conditions_without_new_requirements_or_evidence():
+    full = observe(question="Find locations.\n1. Main language is Spanish.\n2. Both specified products can be purchased locally.", text=None)
+    compact = public_membership_model_input(full, "compact")
+    assert compact["table_observations"] == [] and compact["numeric_thresholds"] == []
+    assert compact["fixed_pack_status"] == "unknown"
+    assert [condition["condition_id"] for condition in compact["hard_conditions"]] == [condition["condition_id"] for condition in full["hard_conditions"]]
+    assert all(condition["status"] == "unknown" for condition in compact["hard_conditions"])
+    assert compact["limitations"] == full["limitations"]
+
+
+@pytest.mark.parametrize("bad_format", ["short", "", None, True])
+def test_model_input_rejects_unknown_formats_without_changing_the_snapshot(bad_format):
+    full = observe()
+    original = copy.deepcopy(full)
+    with pytest.raises(ValueError):
+        public_membership_model_input(full, bad_format)
+    assert full == original
+
+
+def test_compact_rejects_unknown_versions_extra_body_fields_and_non_object_inputs():
+    full = observe()
+    with pytest.raises(ValueError):
+        public_membership_model_input(full | {"version": "future-unknown-schema"}, "compact")
+
+    class UnreadBody:
+        def __deepcopy__(self, memo):
+            raise AssertionError("Unexpected body was read")
+
+        def __repr__(self):
+            raise AssertionError("Unexpected body was displayed")
+
+    with pytest.raises(ValueError):
+        public_membership_model_input(full | {"unexpected_body": UnreadBody()}, "compact")
+    with pytest.raises(TypeError):
+        public_membership_model_input("raw metadata", "compact")
+
+
+@pytest.mark.parametrize("corruption", ["duplicate_rule", "duplicate_check", "unknown_check", "inconsistent_truth", "verified_row"])
+def test_compact_never_silently_drops_or_reinterprets_corrupted_observation_ids(corruption):
+    full = observe()
+    row = full["table_observations"][0]["rows"][0]
+    if corruption == "duplicate_rule":
+        full["numeric_thresholds"].append(copy.deepcopy(full["numeric_thresholds"][0]))
+    elif corruption == "duplicate_check":
+        row["checks"].append(copy.deepcopy(row["checks"][0]))
+    elif corruption == "unknown_check":
+        row["checks"][0]["threshold_id"] = "MISSING.N1"
+    elif corruption == "inconsistent_truth":
+        row["checks"][0]["arithmetic_truth"] = True
+    else:
+        row["membership_status"] = "verified"
+    with pytest.raises(ValueError):
+        public_membership_model_input(full, "compact")
+
+
+def test_large_rectangular_compaction_reduces_repeated_audit_fields_without_pruning_rows():
+    question = ("For 2023, identify entities with an estimated at least 90% of their grads tested, "
+                "which had a composite average score of at least 2.8, and had at least 70% meet the subject benchmark.")
+    text = ("All _pct columns use percent units; average_composite_score uses example score points.\n"
+            "entity,estimated_graduates_tested_pct,average_composite_score,subject_benchmark_7_pct\n"
+            + "\n".join(f"Item{i},92,2.7,75" for i in range(52)))
+    full = observe(question=question, text=text)
+    compact = public_membership_model_input(full, "compact")
+    size = lambda value: len(json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":")))
+    assert size(compact) < size(full) * 0.35
+    table, = compact["table_observations"]
+    rows = matrix_rows(table)
+    assert len(rows) == 52 and table["coverage"]["observed_checks"] == 104
+    assert all(row["arithmetic_truth"] == [True, False, None] for row in rows)
+    assert table["bindings"][2]["status"] == "unknown"
+    assert compact["full_observation_hash"] == digest(full)

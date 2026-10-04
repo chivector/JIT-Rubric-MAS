@@ -9,6 +9,7 @@ or decide the final answer set. Contributor PASS labels remain unverified claims
 from __future__ import annotations
 
 import csv
+import copy
 import json
 import re
 from decimal import Decimal, InvalidOperation
@@ -18,6 +19,10 @@ from .schemas import PublicTask, digest
 
 
 PUBLIC_MEMBERSHIP_VERSION = "public-membership-observations-v1"
+PUBLIC_MEMBERSHIP_COMPACT_VERSION = "public-membership-input-compact-v1"
+PUBLIC_MEMBERSHIP_ATTENTION_VERSION = "public-membership-attention-v1"
+MAX_ATTENTION_CHECKS = 16
+MAX_ATTENTION_CONTEXT_CHARACTERS_PER_SIDE = 256
 MAX_CONDITIONS = 32
 MAX_THRESHOLDS = 32
 MAX_TABLES = 4
@@ -473,3 +478,215 @@ def build_public_membership_observations(task, public_materials=None, draft=None
             "limits": {"conditions": MAX_CONDITIONS, "thresholds": MAX_THRESHOLDS, "tables": MAX_TABLES, "rows_per_table": MAX_ROWS,
                        "claims": MAX_CLAIMS, "decimal_characters": MAX_DECIMAL_CHARACTERS},
             "limitations": _LIMITATIONS}
+
+
+def _membership_input_anchor(span):
+    """Raw offsets and the audit hash replace a repeated source-text copy."""
+    result = {key: copy.deepcopy(span[key]) for key in ("source", "start", "end", "text_hash")
+              if key in span}
+    # Header unit fragments currently have source/text without offset fields.
+    if "start" not in span or "end" not in span:
+        if "text" in span:
+            result["text"] = copy.deepcopy(span["text"])
+    return result
+
+
+def public_membership_model_input(observations, input_format="full"):
+    """Project a rich public observation snapshot for the existing model calls.
+
+    ``full`` returns an independent, unchanged copy. ``compact`` retains every
+    already-observed row, rule, arithmetic result and UNKNOWN; it neither reruns
+    the compiler nor infers an answer set. Save the rich snapshot in the audit
+    before requesting a model: ``full_observation_hash`` identifies that snapshot,
+    while model-input hashes must be taken over the actual projected payload.
+    Original public task, pack and contributor material remain model inputs.
+    """
+    if input_format not in {"full", "compact"}:
+        raise ValueError("Public membership input format must be full or compact")
+    if not isinstance(observations, dict):
+        raise TypeError("Membership input projection requires a public observation object")
+    if input_format == "full":
+        return copy.deepcopy(observations)
+    expected_keys = {
+        "version", "original_request", "original_constraints", "hard_conditions",
+        "numeric_thresholds", "fixed_pack_status", "fixed_pack_hash", "table_observations",
+        "upstream_claims", "draft_hash", "membership_status", "independently_verified",
+        "truncated", "limits", "limitations",
+    }
+    if set(observations) != expected_keys or observations["version"] != PUBLIC_MEMBERSHIP_VERSION:
+        raise ValueError("Compact input requires the supported rich public-membership builder output")
+    thresholds = observations["numeric_thresholds"]
+    threshold_ids = [threshold["threshold_id"] for threshold in thresholds]
+    if len(set(threshold_ids)) != len(threshold_ids):
+        raise ValueError("Compact input cannot map duplicate public threshold IDs")
+    compact_thresholds = []
+    for threshold in thresholds:
+        compact_thresholds.append({key: copy.deepcopy(value) for key, value in threshold.items()
+                                   if key not in {"condition_text", "original_span"}} | {
+            "original_span": _membership_input_anchor(threshold["original_span"])})
+    compact_conditions = [{key: copy.deepcopy(value) for key, value in condition.items()
+                           if key != "original_span"} | {
+                               "original_span": _membership_input_anchor(condition["original_span"])}
+                          for condition in observations["hard_conditions"]]
+    tables = []
+    for table_index, table in enumerate(observations["table_observations"], 1):
+        table_id = f"T{table_index:03}"
+        bindings = []
+        for binding in table["bindings"]:
+            bindings.append({key: copy.deepcopy(value) for key, value in binding.items()
+                             if key not in {"unit_evidence", "binding_basis"}} | {
+                                 "unit_evidence": [_membership_input_anchor(span)
+                                                   for span in binding["unit_evidence"]]})
+        binding_ids = [binding["threshold_id"] for binding in bindings]
+        if binding_ids != threshold_ids:
+            raise ValueError("Compact input cannot drop, reorder or invent table threshold bindings")
+        rows, unknown_cells = [], []
+        for row_index, row in enumerate(table["rows"], 1):
+            row_id = f"{table_id}.R{row_index:03}"
+            check_ids = [check["threshold_id"] for check in row["checks"]]
+            if len(set(check_ids)) != len(check_ids) or not set(check_ids) <= set(threshold_ids):
+                raise ValueError("Compact input cannot map duplicate or unknown row check IDs")
+            checks = {check["threshold_id"]: check for check in row["checks"]}
+            values, truths = [], []
+            for threshold_id in threshold_ids:
+                check = checks.get(threshold_id)
+                if check is None:
+                    values.append(None)
+                    truths.append(None)
+                    continue
+                value, truth, status = check["observed_value"], check["arithmetic_truth"], check["status"]
+                if (truth is not None and type(truth) is not bool) or status != (
+                        "unknown" if truth is None else "pass" if truth else "fail"):
+                    raise ValueError("Compact input cannot reinterpret an inconsistent arithmetic check")
+                values.append(copy.deepcopy(value))
+                truths.append(truth)
+                if status == "unknown":
+                    unknown_cells.append({"row_id": row_id, "threshold_id": threshold_id,
+                                          "reason": check["reason"],
+                                          "cell_span": _membership_input_anchor(check["cell_span"])})
+            if row["membership_status"] != "unknown":
+                raise ValueError("Compact public observations cannot assert verified row membership")
+            rows.append([row_id, row["entity"], [row["row_span"]["start"], row["row_span"]["end"]],
+                         values, truths, row["numeric_status"], row["entity_literal_present_in_draft"]])
+        tables.append({key: copy.deepcopy(value) for key, value in table.items()
+                       if key not in {"rows", "bindings", "header_span"}} | {
+            "table_id": table_id,
+            "header_span": _membership_input_anchor(table["header_span"]),
+            "bindings": bindings, "threshold_ids": list(threshold_ids),
+            "row_fields": ["row_id", "entity", "source_span", "observed_values", "arithmetic_truth",
+                           "numeric_status", "entity_literal_present_in_draft"],
+            "rows": rows, "unknown_cells": unknown_cells,
+            "coverage": {"observed_rows": len(table["rows"]),
+                         "observed_checks": sum(len(row["checks"]) for row in table["rows"]),
+                         "all_observed_rows_retained": True}})
+    claims = [{key: copy.deepcopy(value) for key, value in claim.items() if key != "claim_span"} | {
+        "claim_span": _membership_input_anchor(claim["claim_span"])} for claim in observations["upstream_claims"]]
+    return {key: copy.deepcopy(observations[key]) for key in (
+        "fixed_pack_status", "fixed_pack_hash", "draft_hash", "membership_status", "independently_verified",
+        "truncated", "limits", "limitations")} | {
+        "version": PUBLIC_MEMBERSHIP_COMPACT_VERSION,
+        "observation_version": observations["version"], "full_observation_hash": digest(observations),
+        "original_request": _membership_input_anchor(observations["original_request"]),
+        "original_constraints": [_membership_input_anchor(span) for span in observations["original_constraints"]],
+        "hard_conditions": compact_conditions, "numeric_thresholds": compact_thresholds,
+        "table_observations": tables, "upstream_claims": claims,
+        "matrix_convention": (
+            "Each row array follows row_fields. observed_values/arithmetic_truth follow threshold_ids; "
+            "null truth is UNKNOWN, including an unbound rule or unsupported cell. Missing checks do not "
+            "fabricate observed values. TRUE/FALSE are only supplied-source arithmetic within the recorded "
+            "field/unit/declared-date scope, not complete eligibility or independently verified history. "
+            "All row membership remains UNKNOWN. An exact entity mention is a reason to inspect context, "
+            "not an affirmative inclusion claim. Source spans are zero-based Unicode offsets with exclusive "
+            "ends in the supplied segment; table/row IDs index the full hashed audit in original order. "
+            "Original instruction/source/material span text stays in the original public inputs and rich audit. "
+            "No entity, alias or final answer set is inferred by this projection."
+        )}
+
+
+def public_membership_attention_queue(observations, draft):
+    """Focus existing public review on conditional FALSE observations.
+
+    Only a bound FALSE cell and an actual literal draft mention enter this
+    source-ordered queue. Mention context and original instruction scope remain
+    for the reviewer to inspect: no candidate is automatically excluded. The
+    full matrix/audit remain authoritative and retain UNKNOWN and unqueued rows.
+    The finite queue cap bounds the additional review response, not coverage of
+    the original task. Declared-date agreement is not historical verification.
+    """
+    # Reuse the projection's identity, check/ID and UNKNOWN integrity validation;
+    # never compile new conditions or reinterpret the builder's arithmetic.
+    public_membership_model_input(observations, "compact")
+    if not isinstance(draft, str) or observations["draft_hash"] != digest(draft):
+        raise ValueError("Attention checks require the original observed draft snapshot")
+    thresholds = {row["threshold_id"]: row for row in observations["numeric_thresholds"]}
+    conditions = {row["condition_id"]: row for row in observations["hard_conditions"]}
+    items = []
+    for table_index, table in enumerate(observations["table_observations"], 1):
+        if table["scope"]["status"] != "bound" or table["incomplete"]:
+            continue
+        bindings = {row["threshold_id"]: row for row in table["bindings"]}
+        for row_index, row in enumerate(table["rows"], 1):
+            if not row["entity_literal_present_in_draft"]:
+                continue
+            mention = re.search(r"(?<!\w)" + re.escape(row["entity"]) + r"(?!\w)",
+                                draft, re.IGNORECASE)
+            if mention is None:
+                continue
+            line_start = draft.rfind("\n", 0, mention.start()) + 1
+            line_end = draft.find("\n", mention.end())
+            line_end = len(draft) if line_end < 0 else line_end
+            context_start = max(line_start, mention.start() - MAX_ATTENTION_CONTEXT_CHARACTERS_PER_SIDE)
+            context_end = min(line_end, mention.end() + MAX_ATTENTION_CONTEXT_CHARACTERS_PER_SIDE)
+            row_id = f"T{table_index:03}.R{row_index:03}"
+            for check in row["checks"]:
+                binding = bindings[check["threshold_id"]]
+                threshold = thresholds[check["threshold_id"]]
+                if (binding["status"] != "bound" or threshold["supported"] is not True
+                        or check["arithmetic_truth"] is not False or check["status"] != "fail"):
+                    continue
+                items.append({
+                    "attention_id": f"{row_id}.{check['threshold_id']}",
+                    "row_id": row_id, "entity": row["entity"],
+                    "condition_id": threshold["condition_id"],
+                    "threshold_id": check["threshold_id"],
+                    "original_condition_span": copy.deepcopy(conditions[threshold["condition_id"]]["original_span"]),
+                    "numeric_bound_span": copy.deepcopy(threshold["original_span"]),
+                    "source": {key: copy.deepcopy(table[key]) for key in (
+                        "source_id", "declared_source_sha256", "declared_date", "locator",
+                        "segment_hash", "segment_index")},
+                    "source_scope": copy.deepcopy(table["scope"]),
+                    "row_span": copy.deepcopy(row["row_span"]),
+                    "entity_cell_span": copy.deepcopy(row["entity_cell_span"]),
+                    "binding": copy.deepcopy(binding), "observation": copy.deepcopy(check),
+                    "draft_literal_span": _span("draft", draft, mention.start(), mention.end()),
+                    "draft_context_span": _span("draft", draft, context_start, context_end),
+                    "draft_context_truncated": context_start > line_start or context_end < line_end,
+                    "membership_status": "unknown",
+                })
+    queued = items[:MAX_ATTENTION_CHECKS]
+    return {
+        "version": PUBLIC_MEMBERSHIP_ATTENTION_VERSION,
+        "full_observation_hash": digest(observations), "draft_hash": digest(draft),
+        "original_request": _membership_input_anchor(observations["original_request"]),
+        "original_constraints": [_membership_input_anchor(span)
+                                 for span in observations["original_constraints"]],
+        "fixed_pack_hash": observations["fixed_pack_hash"], "items": queued,
+        "draft_context_convention": (
+            "Exact original-line text with at most 256 Unicode characters on either side "
+            "of the first literal mention; the complete literal is retained. Context is a "
+            "reading aid only. Inspect the complete draft for scope, other mentions or "
+            "cross-line qualifications; a context window does not certify membership."
+        ),
+        "coverage": {"total_eligible_checks": len(items), "queued_checks": len(queued),
+                     "maximum_queued_checks": MAX_ATTENTION_CHECKS,
+                     "truncated": len(items) > len(queued),
+                     "unqueued_attention_ids": [item["attention_id"] for item in items[len(queued):]],
+                     "full_matrix_retained": True, "complete_membership_verified": False},
+        "limitations": (
+            "FALSE is arithmetic conditional on supplied field/unit/declared-date/source scope. "
+            "A literal mention may be a quotation, exclusion, alias collision or unrelated use. "
+            "Original scope and affirmative inclusion require public-context review; quote "
+            "presence does not prove either. UNKNOWN is not failure. The capped queue does "
+            "not certify exhaustive review, source truth, date applicability or membership."
+        ),
+    }

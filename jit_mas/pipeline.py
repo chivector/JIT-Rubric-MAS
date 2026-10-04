@@ -665,6 +665,11 @@ class MASPipeline:
                                 unsafe_local=self.config.unsafe_local,
                                 knowledge_policy=self.knowledge_policy)
         executor.public_membership_observations_requested = self.config.public_membership_observations
+        executor.public_membership_input_format = self.config.public_membership_input_format
+        if self.config.public_membership_observations and self.config.public_membership_input_format == "compact":
+            executor.public_membership_audit_writer = lambda records: write_json(
+                run_dir / "public_membership_execution_audit.json",
+                {"version": "public-membership-input-audit-v1", "records": records})
         if self.config.public_positional_draft_guidance:
             from .execution import compile_public_positional_draft_plan
 

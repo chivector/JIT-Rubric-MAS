@@ -2363,7 +2363,7 @@ v18与v19都保留为各自完整固定批次：Initial-MAS的IFEval为1.0→1.0
 
 候选选择在评分前完成，不根据judge分数选稿；计数或结构guard只是有限的公开工程保护，不是语义正确证明。实际未触发的分支不能据分数改善解释为已发生救回。若存在component failure，原response、异常与预算仍保留，不能声称全部组件调用成功。
 
-曝光台账同步为 **5 selected TEST IDs / 44 campaign references / 1 legacy incident**，只新增本轮五个实际注册引用；已知额外历史RR ID和unknown可见范围仍保留，不作全局只有五题曝光或剩余历史TEST干净声明。正式v5八文件、原共同证据和模型配置不修改。
+曝光台账同步为 **5 selected TEST IDs / 49 campaign references / 1 legacy incident**，只新增本轮五个实际注册引用；已知额外历史RR ID和unknown可见范围仍保留，不作全局只有五题曝光或剩余历史TEST干净声明。正式v5八文件、原共同证据和模型配置不修改。
 
 全条件typed membership及最终集合认证仍未实现：筛选任务应把原题hard conditions与inferred rubric建议分离，并用原始观测、单位、scope重算数值比较，未知证据保持UNKNOWN；本轮注册patch修订使已验证空issues只允许空edits，本地保留完整原稿；漏审缺陷也会保留。非空issues的合法patch只保证编辑区间外原文保真，不能认证最小修改或全部布局保留；旧full模式的纯CR/LF窄guard仍保留，近似字数不变成隐含精确CJK阈值。只实现了有限原题span/table observations sidecar，完整语义predicate合同仍未实现，不能将有限算式/substring观测称为membership已由程序验证。
 
@@ -2378,3 +2378,118 @@ IFBench 数值构建失败：JSON object 及 transported schema 的字段/类型
 八项 ordinary 修订有七项 patch applied、一项 applicability 失败并保留初稿；两项 typed 构建保留原有协议。Applied patch 共 20 个 edit 条目、其中四项空 edit 列表；条目数不等于实际修复次数。DSQA 数值集合项的一条 edit 原文与替换文相同，最终完全未改，公开 7 项的两个有限数值比较全部 PASS，但其他条件及全集仍 UNKNOWN。语义集合项采用 11 候选 × 6 条件表，24 YES、6 NO、33 UNKNOWN、3 AMBIGUOUS，明确提交“固定包下无可确认合格成员”；原材料自身声明历史和覆盖缺口，不能简单归因提示词，也不能强行把 UNKNOWN 转为 PASS。数值侧车的另三列 UNKNOWN 来自有限 header binder，不能直接解释为原始数据缺失。匿名结构/充分性工件 `.runtime/v20_public_dsqa_set_diagnosis_writing_quality.json`，SHA256 `43931450aed46f47d60522dafdcd289352b76ab8cad509d6b6cdddc69ade6096`。
 
 WritingBench 两项初稿分别 2,460 / 857 字符，提交为 2,978 / 857 字符；第二项通过空 edits 保留完整初稿，本轮没有复现 v19 的 802→73 字符压缩。但本轮均值仍低于 Direct，不能把结构保留等同质量提升。DRB 的无效 patch 保留 3,516 字符初稿并记录组件失败，实际得分为 0.5；没有把失败修订当作成功修复。下一候选采用一次明确预算上限的 typed 本地校验反馈，以及完整观察审计关联的 compact 输入；它们尚需独立注册重跑，不能据软件测试宣称 benchmark 提升。
+
+## v21注册、验证与独立预检边界
+
+五组 v21 campaign 已在任何生成前统一注册，共30固定槽，仍是 v20 的同10道开发题。实际新增配置只有 `public_membership_input_format=compact` 和 `public_construction_validation_retries=1`；原题、共享证据、checker、采样参数、评分顺序和共同预算不变。runtime `d7b30a52777504c15286774a44c5539dad88f1b8fafc1e8f6555507e957d783e`，runner `2a9e9e26f5987b45062f3b970542880c7c58e8de6e557d17f7a289cf571b3afc`，配置 SHA256 `dd1db5b3e529c93f026df5848c44e79ec10e96a7f0c7ff68ef0f21f61c3a1177`。注册差异审计 `.runtime/final_v21_registration_binding_root.json`，各组 parent registration 的字节身份亦核验；没有跨轮选择分数或重采失败题。
+
+除两个配置字段外，另预注册了三臂及评价共同采用的运行策略 `MODULAR_AGENT_API_FAILURE_ACTION=raise`，普通 provider 故障保留为异常而非连续故障后 `SystemExit(1)`；SDK retry=0、transport attempts=1，不增加模型请求重试。controller 最多一次恢复既有 native no-resample 流程，保留已生成/评分工件并把已开始无结果评价视作 interrupted，不能重新judge。策略工件 `.runtime/v21_shared_operational_policy_preregistered.json` SHA256 `e75a78caa8239faf2f38857ed20e873e2b292bc13861a799addab96b55b5f40e`。这是额外的共享运行策略变化，不能声称本轮仅有两个配置变量变化或确定已解释 v20 的中断；v20 实际根因仍 UNKNOWN。
+
+隔离目录的首次完整检查实际失败（2532 passed、1 failed、5 errors）：六个 pinned checker 检查缺失对应固定源码目录，日志及失败身份仍保留，没有把该检查称为通过。候选转回拥有固定 checker 的主工作区后，实际完整验证 **2539 passed、60 subtests、1 warning、391.09 秒**；八个变动 Python source/test 文件 compile 通过，全程模型请求0且源码/测试字节身份未改变。完整测试日志 SHA256 `82d9f2d190baa52d07afe98e2ff5922a3d80a2ed0c13bacb05abf57bdb8f0a2e`。额外真实离线 executor failure 测试验证 API 请求失败前完整 rich observation 已写入独立审计文件；没有触及私有评分。
+
+compact 输入保留原 rows、bound thresholds 和完整源锚，rich observations 独立审计并由 digest 关联。固定公开数值包的观察输入由68,225降到18,501字符（约72.88%），该数不是整个 prompt 的压缩率。数值 FALSE 只是原始 scope 对齐后才成立的矛盾线索，UNKNOWN 仍未知、local PASS 不认证全部资格。typed revision 本地跨字段校验失败时才最多增加一次明确计费的构建修复请求，普通 patch、review、provider 故障不获得这个重试机会。
+
+独立 live synthetic 预检 **4 calls / 19,054 tokens** 另计，不属于30 benchmark槽；工件 `.runtime/public_refinement_v21_preflight_20261004/preflight.json` SHA256 `59a56a2b70c38d6f1a9d6b1a39fc6e2b77ad050efb9a264c605f494822f0e8a3`。两项输入/审计协议有效，**compact-table 的语义修复失败**：明确 FALSE 的错误成员仍被保留，review 返回空 issues，revision 合法空 edits；不能称这一预检证明质量提高。名为 typed-template 的另一 synthetic 实际 numeric/positional construction 均 inactive、revision 使用普通 patch、validation repair inactive；该名称不证明已覆盖 typed live 分支。typed 构建和修复的分支保证仅来自离线 fixture 测试。本轮正式任务结果要等各组 sealed 后才汇总。
+
+## v21停止后续调度：三组封存、九槽未启动
+
+注册时共有五组30槽。确认运行时缺陷后只停止controller的新组调度，没有终止其已运行的native child；停止时RR已经启动，不能把它误记为未启动。exposed、DSQA、RR三组正常终结并封存；DRB与WritingBench的9槽从未启动。**本轮是故意中止的不完整候选，不是六来源完整实验，不计算六来源宏均值。**保留21个终态槽全部真实分数、失败和费用，其余9槽保持not_started，不冒称失败零分。没有补采本轮失败，也没有复评已经开始的评价。
+
+21个终态槽中 **13槽完整评分、8项生成失败、0项已记录评价异常类型**。本方法已运行的7槽全生成失败，不能把该软件故障解释为已观察的答案质量0分。
+
+两项IFEval公开失败诊断显示，规划schema合法且generated role/team calls=null；初始harness均复用已有trusted pool seed。每例三次pre-role执行都报同一缺失audit字段，两个meta请求是execution_exception_repair。此前“随机初次代码生成失败/共享任务预算耗尽”的推测被纠正：这两例费用分别101,263 / 84,433 tokens，活动时间分别91.594 / 85.094秒，未耗尽2m/900总上限。v20源码同样未前置初始化该字段，故是已有潜在缺陷，不能称v21删除初始化造成回归；它可能遮盖更早角色初始化失败，修好字段仍须验证真实执行路径。
+
+| Benchmark | task ID | 方法 | native score | generation / evaluation |
+|---|---|---|---:|---|
+| ifeval | ifeval:1203 | direct | 1.0 | submitted / completed |
+| ifeval | ifeval:1203 | ours | `null` | failed / submission_failed |
+| ifeval | ifeval:1203 | native_jit | `null` | failed / submission_failed |
+| ifeval | ifeval:1246 | direct | 1.0 | submitted / completed |
+| ifeval | ifeval:1246 | ours | `null` | failed / submission_failed |
+| ifeval | ifeval:1246 | native_jit | 1.0 | submitted / completed |
+| ifbench | ifbench:13 | direct | 0.0 | submitted / completed |
+| ifbench | ifbench:13 | ours | `null` | failed / submission_failed |
+| ifbench | ifbench:13 | native_jit | 0.0 | submitted / completed |
+| ifbench | ifbench:22 | direct | 1.0 | submitted / completed |
+| ifbench | ifbench:22 | ours | `null` | failed / submission_failed |
+| ifbench | ifbench:22 | native_jit | 0.0 | submitted / completed |
+| deepsearchqa | deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c | direct | 0.9333333333333333 | submitted / completed |
+| deepsearchqa | deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c | ours | `null` | failed / submission_failed |
+| deepsearchqa | deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c | native_jit | 1.0 | submitted / completed |
+| deepsearchqa | deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c | direct | 0.6666666666666666 | submitted / completed |
+| deepsearchqa | deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c | ours | `null` | failed / submission_failed |
+| deepsearchqa | deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c | native_jit | 0.0 | submitted / completed |
+| researchrubrics | 6847465956a0f6376a6054a7 | direct | 0.4 | submitted / completed |
+| researchrubrics | 6847465956a0f6376a6054a7 | ours | `null` | failed / submission_failed |
+| researchrubrics | 6847465956a0f6376a6054a7 | native_jit | 0.475 | submitted / completed |
+
+已记录费用 **132 calls / 1,289,842 tokens**，生成 72 / 1,132,941、评价 60 / 156,901；unknown slots=0，美元费用null。v21独立synthetic 4 / 19,054另计。
+
+部分轮次 metadata `.runtime/v21_partial_metadata_rollup_root.json` SHA256 `dbb1a8c3551ff17d8a52f8af3552bb2e261eacee98cbfd66af990928b25f7b6c`；只读三个sealed summary元数据，未读private evaluator/rubric/reference或评分正文。停止controller记录 `.runtime/v21_controller_cancel_new_scheduling_root.json` 保留已运行子进程，后两组未伪造seal。曝光台账仅新增实际五份注册引用，更新为5 selected TEST IDs /49 campaign references /1 legacy incident，历史unknown边界保留。
+
+隔离v22候选的首次严格attention live synthetic也实际失败：5 calls /36,074 tokens，三个review被过窄原条件/cell引用边界拒绝，一项无队列ordinary完成。三份原响应虽引用了合法原题与表行，但引用范围校验不接受，不能称这三项已完成修订。之后源码修复对这三份既有响应仅作离线重新校验、全部通过，原失败审计保持不变，未生成revision或分数；下一次新身份live预检另计。
+
+## v22软件候选收尾：未注册、未做benchmark复测
+
+用户明确要求收尾，因此不再注册v22正式三十槽，也不扩展新benchmark实验。当前最新完整benchmark比较仍是v20；本节只记录v22软件候选、离线验证和已完成的公开synthetic请求，新增v22 benchmark复测数为**0**，不生成v22 registration、seal、主指标或曝光引用。
+
+v21保留为部分运行负记录：**21 terminal / 13 graded / 8 generation failures / 9 unstarted**，**132已记录calls / 1,289,842tokens**，不是完整三十槽对比。ledger维持**49 campaign references**。缺失field属于legacy潜在初始化问题，不证明v21删除初始化，也可能遮盖更早的role初始化错误；原失败和未知根因不由候选修复替换。
+
+v22候选已复制到主工作区，runtime `24b4caf82273f20402431b38553433f10587e7282434bb8296dec7633f0b73de`，runner `2a9e9e26f5987b45062f3b970542880c7c58e8de6e557d17f7a289cf571b3afc`；**10 Python source/test files**的转移hash已核对。最终实际full pytest为**2,614 passed / 60 subtests / 1 warnings**，**10** changed Python files compile通过，source identity前后不变。这些软件检查和有限synthetic结果不能证明六个benchmark全部领先或稳定提分。
+
+`public_membership_input_format=compact`、`public_construction_validation_retries=1`和`public_membership_attention_checks=true`是当前软件候选配置。attention保留完整条件观测和rich审计，严格source引用与schema检查只验证本地协议和引用存在性，不认证scope、历史事实或完整集合。UNKNOWN不变成PASS，引用或排除项不会仅凭出现FALSE被自动删掉。既有typed局部校验窄重试仍使用原预算；v21预注册时三臂共享API action=raise操作策略不增加重试。v22没有执行新的三臂benchmark比较。
+
+| v22 synthetic receipt | calls | tokens | SHA256 |
+|---|---:|---:|---|
+| `.runtime/public_refinement_v22_attention_preflight_20261004/preflight.json` | 5 | 36,074 | `ca20ca729658c501366e073e41569146ad87ece6de2d23a94dd3982785b21714` |
+| `.runtime/public_refinement_v22_attention_fixed_preflight_20261004/preflight.json` | 8 | 57,799 | `24b22f19f5f96828bb2e2590eb0cd77d84e8ee747533978d75c8c5a2ea7a5136` |
+| `.runtime/public_refinement_v22_numeric_preflight_20261004/preflight.json` | 4 | 22,658 | `bfd4dc2698f258fe31fd1c2ed8083ac47fbf42de8cc709988bebb7e0179d0eb6` |
+| `.runtime/full_pooled_pipeline_v22_preflight_20261004/preflight.json` | 14 | 155,222 | `a5cc903fd659c4b6a18542ee8ac686d2ea57f91284bf055ace8ef62c8632f18a` |
+| `.runtime/full_pooled_pipeline_v22b_preflight_20261004/preflight.json` | 8 | 80,695 | `f3b3ca148b1633bff7fbb9bd4afe9c2c4b9b3eb794f7664dba7f2645fb4ad67d` |
+
+五批已持久化预算合计 **39calls / 352,448tokens**，evaluator calls=0；按case budget取数（包括outcome/failure嵌套预算），不遗漏失败收费，不把成功重试覆盖旧失败。positional原7calls / 80,182tokens已经包含在首批pooled的14calls中；offline attestation新增调用为0，不能再加一次。
+
+| receipt | synthetic case | original helper status | actual pipeline status | error type | calls / tokens |
+|---|---|---|---|---|---|
+| 1 | false-inclusion | failed | no completed pipeline outcome | ValidationError | 1 / 8,288 |
+| 1 | correct-exclusion | failed | no completed pipeline outcome | ValidationError | 1 / 8,181 |
+| 1 | reversed-false-inclusion | failed | no completed pipeline outcome | ValidationError | 1 / 8,090 |
+| 1 | supported-omission-no-queue | completed | no completed pipeline outcome | none | 2 / 11,515 |
+| 2 | false-inclusion | completed | no completed pipeline outcome | none | 2 / 15,134 |
+| 2 | correct-exclusion | completed | no completed pipeline outcome | none | 2 / 15,062 |
+| 2 | reversed-false-inclusion | completed | no completed pipeline outcome | none | 2 / 16,061 |
+| 2 | supported-omission-no-queue | completed | no completed pipeline outcome | none | 2 / 11,542 |
+| 3 | numeric-template-3 | completed | no completed pipeline outcome | none | 2 / 10,470 |
+| 3 | numeric-template-15 | completed | no completed pipeline outcome | none | 2 / 12,188 |
+| 4 | ordinary-table | failed | no completed pipeline outcome | ValidationError | 7 / 75,040 |
+| 4 | supported-positional | failed | submitted_unscored | AssertionError | 7 / 80,182 |
+| 5 | ordinary-table | completed | submitted_unscored | none | 8 / 80,695 |
+
+首批attention真实失败的**5calls / 36,074tokens**保留。修复后四个有限synthetic预期输出均实际观察到，对应**8calls / 57,799tokens**；这不是benchmark语义认证或clean TEST结果。numeric预检确实启用typed construction，两个渲染计数为3和15且与计划一致；两者validation repair active但attempts均为0，不能声称live验证了错误后的重试。
+
+首批pooled ordinary-table确实在refinement本地校验失败，原helper记录ValidationError保留。同批positional的真实pipeline已经submitted_unscored，complete与submission保存成功；随后helper使用了错误hash规范而报AssertionError。新的offline attestation以execution content hash校验，确认渲染、submission、complete与refinement hashes一致，API/evaluator调用均为0、未重采样。原receipt的failed/AssertionError元数据和原收费不修改；不能将该helper错误说成pipeline提交失败。
+
+后续v22b ordinary-table按最新实际receipt为completed、pipeline submitted_unscored，refinement完成，预算**8calls / 80,695tokens**、evaluator calls=0，source与已转移候选身份一致。这证明该公开synthetic路径完成；不代表新benchmark评分或一般语义正确认证。
+
+公共有限检查：`.runtime/v22_attention_fixed_semantic_review_root.json` SHA256 `5bf9658c6269c87e65214dd779f48366fa36a030376ffb9b36b5e5203bbe067c`；`.runtime/v22_numeric_live_finite_review_root.json` SHA256 `ae88e6c5baaf3579d4fbda5d8e87c5976ab451bccdeb673886cb70022f499da8`；positional offline attestation SHA256 `670ec9bdd0741dd1eb18394183686e8e7c1b011aea301e54ec782b2cff4cb091`。最终验证记录 `.runtime/final_v22_wrapup_validation_root.json` SHA256 `b1e70cb5a2a061f8f039542859c5b057655dc650ffe464336deeb4e5cf6d02eb`，转移记录 SHA256 `640d35675dcd7ed7d92060e8adc1522d02e2a3ad7f257bd33f8bc575b70e5c4a`。本helper没有读取benchmark评分正文、private rubric或参考答案。
+
+## GPT-5.6-sol独立judge重评分与最终版本保留
+
+2026-10-04 根据新实验要求，对已经封存的 v19 开发 release 做了一个**只评分、不生成**的独立重评分 attempt。judge 请求使用 `gpt-5.6-sol`，endpoint 和请求身份在新 attempt 的 `config.json` 中冻结；返回的 serving model 为 `gpt-5.6-sol-2026-07-09`。执行模型、题目成员、答案、经验状态和原 release 均没有改变。IFEval/IFBench 继续使用封存注册的 pinned author checker；ResearchRubrics、DeepSearchQA、DeepResearch Bench II 和 WritingBench 是适配到同一 judge envelope 的开发诊断评分，不应解释为官方独立 leaderboard 结果。
+
+v19 不是 clean formal TEST：它的 registration 明确标记为 `exposed_TEST_development_only`，四个 IFEval/IFBench 题目已经在提示词和 checker 约束层面暴露，不能和未暴露题目合并为盲测胜出。新 attempt 仍只复制 sealed submission，并把每个 evaluation 的预算、错误和完成状态独立落盘；没有按分数挑题、补生成或删除失败。
+
+中转网关持续出现空响应与 HTTP 502 后，协调器主动中止了本次 attempt。metadata-only 统计为 **30 个槽位中 29 个有 evaluation 文件、19 个 complete、9 个 evaluation_incomplete、1 个 submission_failed、1 个未启动**，持久化评分预算为 **98 model calls / 964,754 tokens**。这一覆盖不产生全量均值；空响应、HTTP 502 和超时按固定重试上限保留，不能把 incomplete 当零分，也不能从这批 partial attempt 选择一个有利版本。原 v19 release、旧 GPT-5.6 partial attempt 和全部答案 hash 继续只读保留。停止记录为 `.runtime/independent_gpt56_dev_v19_retry_partial_root_20261004.json`；该记录只包含槽位状态、错误类型和预算标量，没有评分正文或答案。
+
+版本整理采用两个明确层级：
+
+- **论文主版本：v20 complete uniform development release。** 五个 campaign 的固定槽位、失败和成本已经封存，当前它仍是最新的完整六来源统一比较；主表只引用这套完整记录，保留缺失分数为 `null`，不以失败零分伪造完整来源均值。
+- **工程高分诊断：v19 exposed development release。** 它可以作为提示词和方法迭代的历史案例保存，不能写成 clean TEST 或 formal superiority。v19 的局部高分不与 v20、RR 旧 judge、GPT-5.6 partial attempt 拼接，也不用于重新选择论文版本。
+
+v5 联合实验注册本身仍是 `SUBSET_PROTOCOL_FROZEN_NOT_RUN`：2,541 个名义 task-artifact slots 没有完整联合运行结果。`scripts/build_paper_experiment_inventory.py` 的 metadata-only inventory 只读取 protocol、registration、summary、inventory/seal 和成本标量；默认不设置推荐版本，显式 `--recommended-version v20` 也只会生成“development reference / formal_winner=false”的投影。这保证高分开发版本不会被误写成正式实验胜出。
+
+新的评分恢复工具和审计测试还固定了以下边界：evaluation 结果必须另行 hash-seal；已开始但无结果的槽位默认不可覆盖；要恢复必须建立新 attempt、显式列出 retry slot 并保留原预算；serving model identity 作为注册项精确匹配；transport retry 次数写入配置且只重试传输失败。旧评分目录不直接修改，四个适配 benchmark 的诊断结果也不和官方 checker 结果混为一个排行榜。
+
+随后为唯一缺失槽位建立了独立 v2 attempt，注册 hash 为 `5e3805e652379fdd9ec253389715498677dab5b7af2ab329cd38b6eeeefe3da1`。它显式恢复旧中断预算、使用 1,000,000-token task envelope 和 16,384 输出上限，最终 **1/1 complete，33 model calls / 237,150 tokens**，并以 final evaluation seal 封存；这只是一个新 attempt 的单槽恢复，不能把不同 attempt 的部分分数拼成 v19 全量均值。整个 v19 仍没有统一 GPT-5.6-sol 全量结果，因此论文主版本继续保留 v20。
+
+为后续正式执行补齐了 `scripts/run_joint_experiment.py`。它把 v5 的 2,541 个名义槽位写入可恢复的 append-only 注册，并在 claim、finish、选择、封存前检查 actor/judge 配置、代码身份、公开 evidence 绑定和 provider 预检；它不会生成答案、调用模型或把未评分提交写成零分。离线注册与状态检查已经通过，当前 180 个 EVO、450 个 VAL、1,911 个 TEST 槽位仍是 pending，因此本轮没有把它记为 benchmark 结果，也没有把它与 v20 或 v19 的开发记录合并。

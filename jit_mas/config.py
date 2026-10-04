@@ -69,6 +69,11 @@ class MASConfig(Record):
     public_refinement_guard: bool = False
     public_revision_mode: Literal["full", "patch"] = "full"
     public_membership_observations: bool = False
+    public_membership_input_format: Literal["full", "compact"] = "full"
+    # Surface conditional numeric contradictions for explicit public review.
+    # Lexical mentions are attention cues, never certified answer membership.
+    public_membership_attention_checks: bool = False
+    public_construction_validation_retries: int = Field(default=0, ge=0, le=1)
     public_refinement_response_format: Literal["json_object", "json_schema", "json_schema_review"] = "json_object"
     public_positional_construction: bool = False
     public_positional_draft_guidance: bool = False
@@ -97,6 +102,10 @@ class MASConfig(Record):
 
     @model_validator(mode="after")
     def fixed_team_limits(self):
+        if self.public_membership_attention_checks and not (
+                self.public_refinement and self.public_membership_observations):
+            raise ValueError("Public membership attention checks require public_refinement "
+                             "and public_membership_observations")
         if self.public_revision_mode == "patch" and not self.public_refinement:
             raise ValueError("Public patch revision requires public_refinement")
         if self.public_refinement_guard and not self.public_refinement:

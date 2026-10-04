@@ -1,25 +1,42 @@
 # Development pilot configuration
 
-`development_pilot.example.json` retains the v19 model parameters and common budgets
-and opts into the registered v20 patch and membership-observation settings. All five v20
-campaigns are sealed: 30 fixed slots, 25 graded, 2 generation failures
-0 recorded evaluation exception types and 3 incomplete evaluations
-without an exception type. Initial-MAS graded 7 of 10. The single
-full suite passed with 2,467 tests and 60 subtests. The six-source descriptive
-normalized failure-zero macro is Direct 0.5119798628, Initial-MAS
-0.4685185185 and Native JIT 0.5476313523. This is a small exposed
-development inventory with serving-model diagnostic judges for four sources;
-it does not establish a clean held-out or uniform benchmark win. Actual
-calls, tokens and failures are retained in the experiment record.
+`development_pilot.example.json` now describes the v22 software candidate,
+with compact membership input, one bounded typed-validation retry and public
+membership attention checks enabled. v22 was not registered and ran zero new
+benchmark tasks. The latest complete benchmark comparison remains v20.
+The partial v21 run remains a negative record: 21 terminal slots, 13 graded,
+8 generation failures and 9 unstarted; 132 recorded calls / 1,289,842 tokens.
+The exposure ledger remains at 49 campaign references.
+The final software suite passed 2,614 tests and 60 subtests,
+with 1 warnings; 10 changed Python files compiled.
+Five v22 synthetic receipts total 39 calls / 352,448 tokens,
+including every original failed run. The positional saved-output attestation
+used zero additional calls; its original 7 calls / 80,182 tokens are already
+inside the first pooled receipt. Finite synthetic outputs and protocol checks
+do not establish benchmark superiority or certify general semantics.
 
 v17 introduced `planning_response_format=json_schema` and
-`public_refinement_guard=true` relative to v16. v20 retains the v19 model roles,
+`public_refinement_guard=true` relative to v16. v22 retains the prior model roles,
 sampling parameters and common budgets, and opts into `public_revision_mode=patch`
-and `public_membership_observations=true`. The template matches the actual v20
+and `public_membership_observations=true`. The template matches the current v22 candidate
 configuration except for endpoint, model alias and response-model placeholders.
 Each source version needs its own registration and validation. The template
 is not a completed experiment registration and contains no credentials or local
 data paths.
+
+The current software candidate sets `public_membership_input_format=compact`,
+`public_construction_validation_retries=1` and
+`public_membership_attention_checks=true`; the library defaults remain
+`full`, `0` and `false`. The bounded attention queue retains the complete
+matrix and rich audit; strict source quotation and schema checks do not
+certify applicability or final membership. Typed repair uses remaining
+original budget, keeps rejected output and cost, and covers only eligible
+local response validation, not provider/review/deadline/renderer/patch/budget
+failures. The two numeric live fixtures activated repair but needed zero
+repair attempts; retry-on-error coverage is offline. API action=raise was a
+shared operational policy for all three arms in v21 preregistration, adding
+no retry; v22 has no new three-arm benchmark run. Legacy diagnostics and original
+failed receipts stay preserved; v20 failure root cause remains UNKNOWN.
 
 Copy the file to your own configuration and set all five model roles to your
 provider's credential-free HTTPS endpoint and model alias. The template uses
@@ -94,11 +111,13 @@ The template sets `public_construction_response_format=json_schema` explicitly
 for construction revisions. Public review and ordinary revisions retain the
 configured mode. Optional JSON object construction transport uses the same strict
 local schema and renderer before submission. A requested remote schema does not
-prove that the endpoint enforces it. Invalid outputs fail with their cost recorded,
-without format fallback, JSON-prefix selection or another sample, except for the
-narrow ordinary-revision candidate guard described below.
+prove that the endpoint enforces it. Invalid outputs retain their cost. The active typed construction path alone
+permits at most one extra call for local response validation failure. Ordinary
+revision retains the narrow candidate guard. Provider, review, deadline, renderer,
+patch and budget errors receive no new repair retry; there is no format fallback
+or JSON-prefix selection.
 
-`public_refinement_guard=true` enables guard v4 in the v20 source. It can retain
+`public_refinement_guard=true` enables guard v4 in the v22 candidate source. It can retain
 the sole initial completed artifact after ordinary revision locally fails
 JSON/schema validation, after supported structural body loss, or after a
 sufficiently established regression of finite public literal minima. The
@@ -164,18 +183,21 @@ Finite recognized single-line/paragraph, code, CSV, heading and other layout
 requirements conservatively disable this branch or make its scope unknown.
 Other whitespace or content changes do not qualify. Its language coverage is
 limited, and it does not infer overall writing quality. Review and revision
-remain two fixed calls with full candidate and cost records.
+normally use two calls with full candidate and cost records; active typed
+construction alone may add at most one eligible local-validation repair call.
 
 Eligibility means a nonempty execution `final_answer`; it does not certify
 semantic correctness or satisfaction of all public constraints. A projected
 initial draft or active positional/numeric construction is ineligible. Review
-failures, provider errors, exhausted budgets and typed-construction failures
-continue to fail. Both candidate hashes, raw component failures, selection
+failures, provider errors and exhausted budgets continue to fail. This ordinary
+candidate guard does not rescue typed construction; only its separate narrow
+local-validation repair can add one call. Both candidate hashes, raw component failures, selection
 reason and all calls/costs are retained; no evaluator, score comparison, extra
 sample or retry chooses the answer. The library default is off, and the flag
 requires `public_refinement=true`.
-Both public review and revision remain the same two model calls; compilation
-and candidate checks add no model API, grader call or quality resampling.
+Ordinary public review and revision retain the same two model calls; compilation
+and candidate checks add no model API, grader call or quality resampling. Only
+the configured typed local-validation repair can add one public-revision call.
 The guard can still retain an overlong initial artifact when the task calls
 for a correct short revision. The prior short-prose branch can still miss
 101 characters or two chunks; the heading branch recognizes only its finite
@@ -201,8 +223,13 @@ Active positional and numeric construction retain their existing typed schemas.
 Without an enabled guard, patch application errors fail. With an enabled guard,
 eligible ordinary initial artifacts can be retained after patch application
 errors, with the validated raw response, revision hashes, failure phase and cost
-recorded. Provider, review, deadline and typed-construction errors remain failures.
-Two calls remain fixed, including empty reviews. No score selects the edits.
+recorded. Provider, review and deadline errors remain failures. Typed construction is
+outside the ordinary-patch guard and has only the separate narrow
+local-validation repair described above.
+Ordinary review and patch revision normally use two calls, including empty
+reviews. Active typed construction alone can add at most one local-validation
+repair call within the original budget; provider, review, deadline, renderer,
+patch and budget failures receive no new retry. No score selects the edits.
 
 `public_membership_observations=true` adds original public condition spans and
 limited numerical table observations to existing contributor/writer and review

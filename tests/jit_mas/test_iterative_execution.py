@@ -11,7 +11,7 @@ from jit_mas.agent_pool import seed_pool
 from jit_mas.budget import BudgetLedger
 from jit_mas.execution import (
     CONTRIBUTOR_COMPACTNESS_POLICY_VERSION,
-    FINAL_ARTIFACT_CONTRACT, FINAL_SUBMISSION_GATE,
+    FINAL_ARTIFACT_CONTRACT, FINAL_QUALITY_SPINE, FINAL_SUBMISSION_GATE,
     TeamMemory,
     TeamPlanning,
     TeamServices,
@@ -1239,6 +1239,7 @@ def test_iterative_synthesizer_receives_final_artifact_contract_even_with_critic
     assert "cannot replace the requested deliverable" in system
     assert FINAL_ARTIFACT_CONTRACT in system
     assert FINAL_SUBMISSION_GATE in system
+    assert FINAL_QUALITY_SPINE in system
     payload = json.loads(model.calls[0][1]["content"])
     assert payload["agent"]["execution_role"] == "final_writer"
     assert payload["agent"]["task_prompt"].endswith(FINAL_ARTIFACT_CONTRACT)
