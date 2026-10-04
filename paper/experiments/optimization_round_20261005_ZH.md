@@ -5,7 +5,7 @@
 ## 代码与运行身份
 
 - 远端：`https://github.com/chivector/JIT-Rubric-MAS.git`，分支 `main`。
-- 最新提交：`fef5450`（在 `bd8e21e`、`cd1f637`、`6399efc`、`3df6d2c`、`9405db9` 基础上继续优化）。
+- 最新提交：`a7d772d`（在 `fef5450`、`bd8e21e`、`cd1f637`、`6399efc`、`3df6d2c`、`9405db9` 基础上继续优化）。
 - 正式候选 bundle：`.runtime/formal_v5_assets_20261004/bundle_stable/bundle.json`，`formal_ready=true`；该 bundle 绑定稳定传输配置（judge 并发上限 2、judge timeout 120 s）。
 - 冻结协议：`paper/experiments/joint_protocol_v5.json`；六个 benchmark，EVO=60/run，VAL=30/run，TEST=273/run，三次 run，checkpoint 为 C0/C15/C30/C45/C60。
 - 形式化槽位总数：EVO/VAL 630；TEST release 1,911。TEST 必须在 EVO/VAL 形成完整 `evo_val_report.json` 后执行。
@@ -19,6 +19,7 @@
 5. 保留完整的冻结输入、provider preflight、checker、checkpoint snapshot、状态哈希和 TestRelease 接线，禁止在已登记运行中替换输入或重采样。
 6. 将 judge 传输层改为显式 `httpx.Client(trust_env=...)`，避免 Windows 系统代理被隐式注入；在同一进程内把 judge rubric 并发限制为 2，并为 ResearchRubrics 保留一次瞬时失败重试。
 7. 强化 EVO/VAL resume：VAL 只读取登记时的不可变 checkpoint，live state 与 durable prefix 不一致时 fail closed；无 eligible checkpoint 时记录 inconclusive 而不是伪造选择。
+8. 针对正式运行中观察到的 pooled candidate identity/version 漂移，在结构化输出的唯一 correction turn 中加入 catalogue 原样复制和 immutable identity 约束；该修复已通过 agent-pool 回归测试。
 
 ## 可复核结果
 
