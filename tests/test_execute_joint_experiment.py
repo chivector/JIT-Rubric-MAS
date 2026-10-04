@@ -246,3 +246,12 @@ def test_mid_c30_unresolved_prefix_fails_closed(tmp_path):
             executor._assert_live_prefix(document, live, 0)
     finally:
         live.close()
+
+
+def test_run_without_eligible_checkpoint_is_reported_inconclusive(tmp_path):
+    executor = JointExecutor(_bundle(tmp_path), tmp_path / "run")
+    executor.check()
+    document = executor._load_or_init()
+    record = executor._select_run(document, 0)
+    assert record["status"] == "inconclusive"
+    assert record["selected"] is None
