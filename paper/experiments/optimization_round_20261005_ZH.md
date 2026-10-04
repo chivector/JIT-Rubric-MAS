@@ -41,7 +41,7 @@
 
 ## 验证
 
-- 聚焦回归：`138 passed`（含 transport、ResearchRubrics retry、checkpoint freeze/resume 与 inconclusive 选择测试）。
+- 聚焦回归：`358 passed`（含 transport、ResearchRubrics retry、checkpoint freeze/resume、inconclusive 选择、planning/public-refinement 与 agent-pool identity 修复测试）。
 - 之前完整测试：`2647 passed, 1 warning, 60 subtests passed`。
 - `scripts/run_joint_test_release.py` 已通过 `py_compile` 和 CLI/协议测试，但尚未执行 TEST，因为正式 EVO/VAL 前置条件未满足。
 
