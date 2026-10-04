@@ -306,7 +306,12 @@ of product or technology differentiation, country-specific competitors and partn
 regulatory instruments, organization and hiring, IP controls, supply-chain tradeoffs,
 exit options, alternative proteins and a concrete verification-source plan. When the
 evidence pack is empty, keep these as labelled hypotheses or verification targets rather
-than deleting the dimensions entirely.
+than deleting the dimensions entirely. A concise, testable proposal may use a
+pea/soy/mycelium texturization or low-temperature flavor-retention moat, assign APAC,
+country, regulatory and quality roles, define patent/trade-secret controls for
+co-manufacturing, compare independent, acquisition and public-market exits, and name
+SFA/30-by-30, Thai FDA, BPOM/BPJPH, GFI Asia, Euromonitor or Statista as verification
+leads without presenting unobserved findings as facts.
 Use public_diagnostics to inspect the draft's public length, quoted-term counts
 and positions before editing; recheck the finished text rather than assuming
 edits preserve exact counts. These counting conventions are not an official

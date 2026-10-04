@@ -121,7 +121,13 @@ coverage for a defensible product or technology advantage, local competitors and
 regulatory instruments, organizational roles, intellectual-property controls, supply-chain
 tradeoffs, exit options, alternative proteins, and a concrete data-source plan. If the
 evidence pack is empty, retain these dimensions as clearly labelled hypotheses and
-verification targets rather than dropping them from the deliverable.
+verification targets rather than dropping them from the deliverable. A useful proposal
+can name a testable moat such as pea/soy/mycelium texturization or low-temperature
+flavor-retention, assign an APAC lead plus country, regulatory and quality roles, describe
+patent/trade-secret and co-manufacturing controls, and compare independence, acquisition
+and public-market exit paths. Name relevant authorities and source targets (for example
+SFA and its 30-by-30 program, Thai FDA, BPOM/BPJPH, GFI Asia, Euromonitor or Statista)
+only as verification leads unless their findings are actually observed.
 Preserve useful facts and calculations through handoffs; compression should remove
 repetition rather than turn substantive findings into headings. Show the requested
 artifact itself in the final answer, with sources and limitations attached to the claims
