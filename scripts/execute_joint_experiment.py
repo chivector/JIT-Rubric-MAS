@@ -13,6 +13,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
+import os
 from pathlib import Path
 import threading
 import time
@@ -245,15 +246,48 @@ class JointExecutor:
                 return row
             row.update({"status": "started", "started_at": time.time(), "attempts": 1})
             write_json(self._journal(), doc)
-        try:
-            result = callback()
-            status = "complete" if result.get("complete", True) else "incomplete"
-        except Exception as exc:  # preserve failure/null and consume the slot
-            result = {"error_type": type(exc).__name__, "score": None, "complete": False}
-            status = "failed"
+        # A VAL callback is read-only, so transient provider/parser failures
+        # can be retried without changing the frozen checkpoint or consuming a
+        # new task position.  EVO remains single-shot because a callback may
+        # have partially mutated the live experience store before raising.
+        retry_limit = 1
+        if doc["slots"][slot_id].get("kind") == "validation":
+            try:
+                retry_limit = max(1, int(os.environ.get("JIT_MAS_SLOT_ATTEMPTS", "1")))
+            except ValueError:
+                retry_limit = 1
+        retryable = (ValueError, TimeoutError, ConnectionError)
+        errors = []
+        result = None
+        status = "failed"
+        for attempt in range(1, retry_limit + 1):
+            try:
+                result = callback()
+                status = "complete" if result.get("complete", True) else "incomplete"
+                break
+            except Exception as exc:
+                can_retry = (isinstance(exc, retryable)
+                             or (doc["slots"][slot_id].get("kind") == "validation"
+                                 and type(exc).__name__ in {"ValidationError", "JSONDecodeError"}))
+                if not can_retry:
+                    errors.append({"attempt": attempt, "error_type": type(exc).__name__})
+                    result = {"error_type": type(exc).__name__, "score": None, "complete": False}
+                    break
+                errors.append({"attempt": attempt, "error_type": type(exc).__name__})
+                if attempt < retry_limit:
+                    with self._journal_lock:
+                        doc["slots"][slot_id]["attempts"] = attempt + 1
+                        doc["slots"][slot_id]["retry_errors"] = list(errors)
+                        write_json(self._journal(), doc)
+                    continue
+                result = {"error_type": type(exc).__name__, "score": None, "complete": False}
+        if result is None:
+            result = {"error_type": "UnknownSlotFailure", "score": None, "complete": False}
         with self._journal_lock:
             row = doc["slots"][slot_id]
             row.update({"status": status, "result": result, "result_sha256": digest(result), "finished_at": time.time()})
+            if errors:
+                row["retry_errors"] = errors
             write_json(self._journal(), doc)
             return row
 

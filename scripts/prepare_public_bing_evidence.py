@@ -150,7 +150,10 @@ def _search(query: str) -> dict[str, Any]:
     q = query.casefold()
     seeds = []
     if "world factbook" in q or "military expenditure" in q or "military spending" in q:
-        seeds.append(("CIA World Factbook", "https://www.cia.gov/the-world-factbook/"))
+        seeds.extend([
+            ("CIA World Factbook", "https://www.cia.gov/the-world-factbook/"),
+            ("World Bank military expenditure indicator", "https://api.worldbank.org/v2/country/CAN;USA;GBR;FRA;DEU;ITA;JPN/indicator/MS.MIL.XPND.GD.ZS?date=2023&format=json"),
+        ])
     if "world happiness" in q or "perceptions of corruption" in q:
         seeds.extend([
             ("World Happiness Report 2023", "https://worldhappiness.report/ed/2023/"),
@@ -160,12 +163,16 @@ def _search(query: str) -> dict[str, Any]:
         seeds.extend([
             ("UNHCR Statistical Yearbook 2010", "https://www.unhcr.org/us/publications/unhcr-statistical-yearbook-2010-10th-edition"),
             ("UNHCR Refugee Statistics API", "https://api.unhcr.org/docs/refugee-statistics.html"),
+            ("UNHCR G7 asylum-seeker records 2010", "https://api.unhcr.org/population/v1/population/?year=2010&coa=CAN,USA,GBR,FRA,DEU,ITA,JPN&coo_all=true&limit=1000"),
         ])
     existing = {row["url"] for row in rows}
+    seed_rows = []
     for title, url in seeds:
         if url not in existing:
-            rows.append({"url": url, "title": title, "date": ""})
-    return {"results": rows}
+            seed_rows.append({"url": url, "title": title, "date": ""})
+    # Put authoritative seeds first so the bounded evidence budget does not
+    # spend all page slots on localized/irrelevant RSS results.
+    return {"results": seed_rows + rows}
 
 
 def _crawl(url: str) -> dict[str, Any]:
