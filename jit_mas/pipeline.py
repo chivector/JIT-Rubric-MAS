@@ -664,6 +664,7 @@ class MASPipeline:
                                 ledger=ledger, timeout_seconds=self.config.execution_timeout,
                                 unsafe_local=self.config.unsafe_local,
                                 knowledge_policy=self.knowledge_policy)
+        executor.public_membership_observations_requested = self.config.public_membership_observations
         if self.config.public_positional_draft_guidance:
             from .execution import compile_public_positional_draft_plan
 

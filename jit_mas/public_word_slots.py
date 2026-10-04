@@ -3,8 +3,9 @@
 Only question/constraints are inspected. One explicit, fully matched literal
 word-position rule can activate; IDs, evaluator records and scores are unused.
 This is an optional construction aid, not an official sentence/word checker.
-Target-sentence words are ASCII letters only; sentence slots forbid internal
-terminal punctuation/newlines and abbreviations. Other public constraints,
+Target-sentence words use a finite single-token Treebank-compatible ASCII subset;
+sentence slots forbid internal terminal punctuation/newlines and abbreviations.
+Other public constraints,
 genre, completeness, facts and naturalness still need ordinary review.
 """
 
@@ -50,7 +51,44 @@ _REVERSE_SCAN = re.compile(
     r"sentence\s+(?:must|should)\s+be\s+", re.IGNORECASE
 )
 _POSITION_HINT = re.compile(r"\bword\b.*\bsentence\b|\bsentence\b.*\bword\b", re.IGNORECASE)
-_ASCII_WORD = Annotated[str, Field(strict=True, pattern=r"^[A-Za-z]+$")]
+# These are the letter-only compounds split by the general Treebank/MacIntyre
+# contraction table. Its other contractions contain apostrophes and are already
+# outside the ASCII-letter protocol. Do not import an evaluator or tokenizer:
+# runtime validation and the transported schema share this finite convention.
+_TREEBANK_ASCII_COMPOUNDS = frozenset({"cannot", "gimme", "gonna", "gotta", "lemme", "wanna"})
+_WORD_TOKEN_CONVENTION = "finite-treebank-ascii-single-token-v1"
+
+
+def _single_token_ascii_pattern() -> str:
+    """Positive regex for ASCII words excluding the finite compound family.
+
+    A trie avoids lookaround, backreferences and inline flags, so the same
+    case-insensitive exclusion works in Pydantic's Rust regex and JSON Schema.
+    Longer words containing a compound as a substring are not excluded.
+    """
+    trie = {}
+    for word in sorted(_TREEBANK_ASCII_COMPOUNDS):
+        node = trie
+        for letter in word:
+            node = node.setdefault(letter, {})
+        node[""] = True
+
+    def suffix(node, *, root=False):
+        letters = sorted(key for key in node if key)
+        other = "".join(letter for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+                        if letter.lower() not in letters)
+        branches = [f"[{other}][A-Za-z]*"] if other else []
+        branches.extend(f"[{letter.upper()}{letter}]" + suffix(node[letter]) for letter in letters)
+        if not root and "" not in node:
+            branches.append("")
+        return "(?:" + "|".join(branches) + ")"
+
+    return "^" + suffix(trie, root=True) + "$"
+
+
+_SINGLE_TOKEN_ASCII_PATTERN = _single_token_ascii_pattern()
+_SINGLE_TOKEN_ASCII_WORD = re.compile(_SINGLE_TOKEN_ASCII_PATTERN)
+_ASCII_WORD = Annotated[str, Field(strict=True, pattern=_SINGLE_TOKEN_ASCII_PATTERN)]
 # No empty sentence, surrounding whitespace, internal terminator or line break.
 # Unicode terminal punctuation is excluded too, to avoid chunk disagreements.
 _SENTENCE = Annotated[str, Field(strict=True, pattern=(
@@ -140,18 +178,30 @@ class WordPositionPlan:
 
     def audit(self) -> dict:
         return {
-            "version": "public-word-position-slots-v1",
+            "version": "public-word-position-slots-v2",
             "keyword": self.keyword,
             "sentence_index_1_based": self.sentence_index,
             "word_index_1_based": self.word_index,
             "matched_public_spans": [vars(span).copy() for span in self.matched_public_spans],
             "applicability": (
                 "One explicit matched standalone positive English literal-position rule only; target words "
-                "are ASCII-letter tokens separated by single spaces. Sentence slots "
+                "are single Treebank words within the finite ASCII-letter convention, "
+                "separated by single spaces. Sentence slots "
                 "have one final . ! or ?, no internal terminators/newlines or abbreviations. "
                 "This convention is not an official checker. Other constraints and facts "
                 "are not established by the slot schema."
             ),
+            "word_token_convention": {
+                "version": _WORD_TOKEN_CONVENTION,
+                "excluded_ascii_compounds_case_insensitive": sorted(_TREEBANK_ASCII_COMPOUNDS),
+                "schema_pattern": _SINGLE_TOKEN_ASCII_PATTERN,
+                "runtime_dependency": "Python regex and Pydantic only; no NLTK/checker or downloads",
+                "coverage": (
+                    "ASCII letters only, excluding the letter-only general Treebank contraction family. "
+                    "Apostrophe, hyphen, digit and non-ASCII words are outside this convention. "
+                    "It does not establish sentence boundaries or other public constraints."
+                ),
+            },
             "limits": {"sentence_position": MAX_SENTENCE_POSITION,
                        "word_position": MAX_WORD_POSITION},
         }
@@ -208,6 +258,9 @@ def position_plan(task) -> WordPositionPlan | None:
             groups = match.groupdict()
             keyword = next(value for key, value in groups.items()
                            if key.endswith("literal") and value is not None)
+            if _SINGLE_TOKEN_ASCII_WORD.fullmatch(keyword) is None:
+                # Never change a requested literal to obtain a renderable plan.
+                return None
             sentence, word = _ordinal(groups["sentence"]), _ordinal(groups["word"])
             if not (1 <= sentence <= MAX_SENTENCE_POSITION and 1 <= word <= MAX_WORD_POSITION):
                 return None
@@ -251,7 +304,12 @@ def prepare_prompt_instruction(plan: WordPositionPlan) -> str:
         "newlines, abbreviations or surrounding whitespace. Each word slot contains only "
         "A-Z or a-z, without punctuation, digits or spaces. Never use straight or curly "
         "apostrophes, apostrophe possessives, contractions or hyphenated words in "
-        "prefix_words or suffix_words. Express possession with an of phrase and spell "
+        "prefix_words or suffix_words. The alphabetic compounds "
+        + ", ".join(sorted(_TREEBANK_ASCII_COMPOUNDS))
+        + " are also excluded in every capitalization: a general Treebank tokenizer "
+        "splits each into two words even without apostrophes. Write full component words "
+        "as separate slots and recount the arrays; the renderer never repairs an invalid "
+        "word or changes the requested literal. Express possession with an of phrase and spell "
         "contracted words in full, rebuilding the prefix to its required length. In "
         "preceding_sentences and following_sentences, spell names and titles in full "
         "instead of using dotted abbreviations: write Doctor or Professor in full. "

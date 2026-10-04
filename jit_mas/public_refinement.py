@@ -24,7 +24,7 @@ from .schemas import PublicTask, digest, utc_now
 
 PUBLIC_REFINEMENT_VERSION = "public-draft-review-revision-v3"
 PUBLIC_REFINEMENT_IDS = ("public-review", "public-revision")
-PUBLIC_REFINEMENT_GUARD_VERSION = "public-artifact-regression-guard-v3"
+PUBLIC_REFINEMENT_GUARD_VERSION = "public-artifact-regression-guard-v4"
 _BODY_LOSS_LIMITS = {
     "minimum_draft_non_whitespace_characters": 1000,
     "minimum_draft_punctuation_or_line_chunks": 3,
@@ -505,6 +505,11 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         "public_diagnostics": (public_output_metrics(task, result.answer)
                                if isinstance(result.answer, str) else None),
     }
+    if config.public_membership_observations:
+        from .public_membership import build_public_membership_observations
+
+        public_input["public_membership_observations"] = build_public_membership_observations(
+            task, public_input["public_materials"], result.answer)
     literal_plan = None
     literal_initial_diagnostics = None
     title_scope = None
@@ -690,17 +695,24 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
             revision_instructions += "\n" + prepare_prompt_instruction(numeric_construction_plan)
             revision_payload["public_numeric_construction"] = numeric_construction_plan.audit()
         else:
-            if guarded:
-                revision_instructions = GUARDED_REVISION_HINT + revision_instructions.replace(
-                    "there is no scoring, candidate comparison, fallback\nselection or further quality retry.",
-                    "there is no scoring or further quality retry.")
-            revision_instructions += (
-                "\nReturn one JSON object whose only top-level key is answer. Its value "
-                "is the string containing the complete finished artifact. The names "
-                "properties, required, type and additionalProperties in the supplied "
-                "JSON schema describe validation metadata, not response fields. Do not "
-                "echo that metadata as additional top-level keys."
-            )
+            if config.public_revision_mode == "patch":
+                from .public_text_patches import PATCH_REVISION_PROMPT, PublicPatchRevision
+
+                revision_schema = PublicPatchRevision
+                revision_instructions = PATCH_REVISION_PROMPT + (PUBLIC_LITERAL_HINT if literal_plan else "")
+                audit["public_patch_revision"] = {"version": "public-exact-text-patches-v1", "status": "requested"}
+            else:
+                if guarded:
+                    revision_instructions = GUARDED_REVISION_HINT + revision_instructions.replace(
+                        "there is no scoring, candidate comparison, fallback\nselection or further quality retry.",
+                        "there is no scoring or further quality retry.")
+                revision_instructions += (
+                    "\nReturn one JSON object whose only top-level key is answer. Its value "
+                    "is the string containing the complete finished artifact. The names "
+                    "properties, required, type and additionalProperties in the supplied "
+                    "JSON schema describe validation metadata, not response fields. Do not "
+                    "echo that metadata as additional top-level keys."
+                )
         try:
             revision = call("public-revision", revision_instructions,
                             revision_payload, revision_schema)
@@ -715,6 +727,8 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
                           component_failure={"agent_id": "public-revision", "status": "failed",
                               "failure_phase": "response_validation", "error_type": type(exc).__name__,
                               "response_hash": failure.get("response_hash")})
+        audit["revision"] = revision.model_dump(mode="json")
+        audit["revision_hash"] = digest(audit["revision"])
         if positional_plan is not None:
             from .public_word_slots import render
 
@@ -726,10 +740,27 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
                 from .public_numeric_slots import render
 
             final_answer = render(revision)
+        elif config.public_revision_mode == "patch":
+            from .public_text_patches import apply_public_text_patches
+
+            try:
+                final_answer, patch_receipt = apply_public_text_patches(audit["draft"], revision, audit["review"])
+            except ValueError as exc:
+                audit["public_patch_revision"].update(status="failed", error_type=type(exc).__name__,
+                    failure_phase="patch_application", error=str(exc))
+                if not (guarded and eligibility["eligible"]):
+                    raise
+                if ledger.remaining_seconds() == 0:
+                    raise TimeoutError("Task wall-clock budget exhausted during patch application") from exc
+                return select(audit["draft"], "initial_draft", "invalid_public_patch_application",
+                    component_failure={"agent_id": "public-revision", "status": "failed",
+                        "failure_phase": "patch_application", "error_type": type(exc).__name__,
+                        "response_hash": audit["calls"][-1].get("response_hash")})
+            audit["public_patch_revision"] = patch_receipt
+            if ledger.remaining_seconds() == 0:
+                raise TimeoutError("Task wall-clock budget exhausted during patch application")
         else:
             final_answer = revision.answer
-        audit["revision"] = revision.model_dump(mode="json")
-        audit["revision_hash"] = digest(audit["revision"])
         audit["answer_hash"] = digest(final_answer)
         audit["revision_public_diagnostics"] = public_output_metrics(task, final_answer)
         if guarded:

@@ -1,23 +1,25 @@
 # Development pilot configuration
 
-`development_pilot.example.json` retains the same parameters and common budgets
-used in v17 and registered for the v19 public guard candidate. All five v19
-campaigns are sealed: 30 fixed slots, 29 graded, 1 generation failures
-and 0 evaluation failures. Initial-MAS completed 10 of 10. The single
-full suite passed with 2,282 tests and 60 subtests. The six-source descriptive
-normalized failure-zero macro is Direct 0.5546392824, Initial-MAS
-0.6255243272 and Native JIT 0.5349074817. This is a small exposed
+`development_pilot.example.json` retains the v19 model parameters and common budgets
+and opts into the registered v20 patch and membership-observation settings. All five v20
+campaigns are sealed: 30 fixed slots, 25 graded, 2 generation failures
+0 recorded evaluation exception types and 3 incomplete evaluations
+without an exception type. Initial-MAS graded 7 of 10. The single
+full suite passed with 2,467 tests and 60 subtests. The six-source descriptive
+normalized failure-zero macro is Direct 0.5119798628, Initial-MAS
+0.4685185185 and Native JIT 0.5476313523. This is a small exposed
 development inventory with serving-model diagnostic judges for four sources;
 it does not establish a clean held-out or uniform benchmark win. Actual
 calls, tokens and failures are retained in the experiment record.
 
 v17 introduced `planning_response_format=json_schema` and
-`public_refinement_guard=true` relative to v16; v18 and v19 retain those settings and
-changes the guard implementation without adding flags, sampling changes or
-budgets. This file matches the actual v19 configuration except for the endpoint,
-model alias and exact response-model pin placeholders. Every source version
-needs its own registrations and validation. The template is not a completed
-experiment registration and contains no credentials or local data paths.
+`public_refinement_guard=true` relative to v16. v20 retains the v19 model roles,
+sampling parameters and common budgets, and opts into `public_revision_mode=patch`
+and `public_membership_observations=true`. The template matches the actual v20
+configuration except for endpoint, model alias and response-model placeholders.
+Each source version needs its own registration and validation. The template
+is not a completed experiment registration and contains no credentials or local
+data paths.
 
 Copy the file to your own configuration and set all five model roles to your
 provider's credential-free HTTPS endpoint and model alias. The template uses
@@ -58,6 +60,16 @@ still require evaluation. Mixed positional and
 numeric requirements conservatively retain ordinary revision. No private
 checker parameters enter these construction prompts.
 
+The word-slot protocol is `public-word-position-slots-v2`. Target slots must
+contain ASCII letters and avoid the entire finite Treebank compound family
+`cannot`, `gimme`, `gonna`, `gotta`, `lemme`, `wanna`, including mixed case.
+These can be split into multiple words by a general tokenizer. The same positive
+finite-trie pattern governs the two array schemas and local validation. An
+unsupported keyword makes compilation decline; the original task remains in
+force. No runtime NLTK import, resource download, word substitution or extra
+sample is added. This convention still does not certify every sentence boundary,
+tokenizer, grammatical requirement or task result.
+
 `public_positional_draft_guidance=true` asks intermediate contributors and the
 synthesizer to retain compact complete content while leaving the supported exact
 sentence/word position to the already configured final construction stage. Its
@@ -86,7 +98,7 @@ prove that the endpoint enforces it. Invalid outputs fail with their cost record
 without format fallback, JSON-prefix selection or another sample, except for the
 narrow ordinary-revision candidate guard described below.
 
-`public_refinement_guard=true` enables guard v3 in the v19 source. It can retain
+`public_refinement_guard=true` enables guard v4 in the v20 source. It can retain
 the sole initial completed artifact after ordinary revision locally fails
 JSON/schema validation, after supported structural body loss, or after a
 sufficiently established regression of finite public literal minima. The
@@ -141,11 +153,11 @@ remain unknown and valid evidence corrections are not discarded merely because
 they lack a task quote. Inferred rubrics and upstream PASS labels remain fallible
 planning material rather than new hard task requirements.
 
-For validated empty review issues, ordinary prose revision is instructed to
+In full revision mode, validated empty review issues instruct ordinary revision to
 copy the draft character for character while preserving escaped JSON newlines.
 This instruction does not certify the initial draft; a missed issue can leave a
 bad draft unchanged. Typed construction still produces its required fields.
-A narrow additional candidate check retains an eligible ordinary initial draft
+The existing full-rewrite layout check retains an eligible ordinary initial draft
 only when the validated review has no issues, it has at least two blank-line paragraphs, the revised artifact is one
 nonempty line, and revision equals initial with only CR/LF characters removed.
 Finite recognized single-line/paragraph, code, CSV, heading and other layout
@@ -172,6 +184,45 @@ and is not an independent guarantee. Public diagnostic lists and positions can
 be truncated; they are not official checkers, and absent diagnostics do not
 mean a constraint passed or failed. The literal compiler counts the complete
 decoded artifact separately, without certifying semantic correctness.
+
+`public_revision_mode=patch` changes only ordinary public revision. Its library
+default remains `full`. The existing second component call returns `edits`, each
+with a validated review `issue_index`, unique exact original-draft `old_text`
+and supported `new_text`. All edits locate the same original draft. Overlapping
+occurrences, overlapping source spans, missing matches, edits that depend on
+earlier edits and an empty final artifact fail local applicability checks.
+When validated review issues are empty, only an empty edit list is allowed,
+and the complete original artifact is preserved locally. This can preserve a
+missed defect. An issue index and a unique source span do not prove a repair is
+correct. A whole article can still be one span; minimal editing remains a prompt
+requirement. Only content outside actual edited spans is guaranteed unchanged.
+
+Active positional and numeric construction retain their existing typed schemas.
+Without an enabled guard, patch application errors fail. With an enabled guard,
+eligible ordinary initial artifacts can be retained after patch application
+errors, with the validated raw response, revision hashes, failure phase and cost
+recorded. Provider, review, deadline and typed-construction errors remain failures.
+Two calls remain fixed, including empty reviews. No score selects the edits.
+
+`public_membership_observations=true` adds original public condition spans and
+limited numerical table observations to existing contributor/writer and review
+inputs. Its library default is false. Only complete CSV/Markdown tables in the
+canonical fixed public pack can supply values. Unique complete-header binding,
+declared source units, raw row/cell provenance and the original year are needed;
+unsupported qualifiers, unit denominators and compound suffixes yield UNKNOWN.
+Date agreement uses the given `source.date` declaration and an unambiguous
+requested year; it does not parse arbitrary contradictory cohorts in source prose
+or certify historical applicability. Arithmetic is conditional on supplied scope
+and transcription. Inferred rubrics and upstream PASS remain fallible claims.
+Overall membership remains UNKNOWN and independently_verified false: no semantic
+eligibility, aliases, source truth or complete set is certified. UNKNOWN is not FAIL.
+
+These observations do not construct or select a final answer set. They guide
+the existing models while preserving the original task and evidence. Finite
+limits and truncation are recorded. The tested numerical source sidecar is
+68,225 characters before JSON whitespace; it adds real input tokens to the same
+common budget. Calls, tokens, component failures and comparisons retain actual
+costs. Complete result metadata remains separate for every source version.
 
 `planning_response_format=json_schema` requests strict schemas for predict,
 local-plan and reconciliation records; its library default is `json_object`.

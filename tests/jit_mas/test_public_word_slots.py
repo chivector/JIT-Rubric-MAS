@@ -3,6 +3,7 @@
 import re
 
 import pytest
+from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
 from jit_mas.public_word_slots import position_plan, prepare_prompt_instruction, render
@@ -154,3 +155,86 @@ def test_maximum_public_positions_produce_exact_schema_counts():
     item = position_plan(task("Include keyword Peak in the 128th sentence as the 256th word of that sentence."))
     assert item.schema["properties"]["preceding_sentences"]["maxItems"] == 127
     assert item.schema["properties"]["prefix_words"]["maxItems"] == 255
+
+
+TREEBANK_LETTER_COMPOUNDS = ["cannot", "gimme", "gonna", "gotta", "lemme", "wanna"]
+
+
+def alternate_case(word):
+    return "".join(letter.upper() if index % 2 else letter for index, letter in enumerate(word))
+
+
+@pytest.mark.parametrize("compound", TREEBANK_LETTER_COMPOUNDS)
+@pytest.mark.parametrize("case", [str.lower, str.upper, str.title, alternate_case])
+@pytest.mark.parametrize("field", ["prefix_words", "suffix_words"])
+def test_general_treebank_compounds_fail_local_and_transported_word_slot_schema(compound, case, field):
+    item = plan()
+    payload = data()
+    payload[field][0] = case(compound)
+    validator = Draft202012Validator(item.schema)
+    Draft202012Validator.check_schema(item.schema)
+    errors = list(validator.iter_errors(payload))
+    assert len(errors) == 1 and list(errors[0].path) == [field, 0]
+    with pytest.raises(ValidationError):
+        item.model.model_validate(payload)
+    assert payload[field][0] == case(compound)  # Validation never rewrites text.
+
+
+@pytest.mark.parametrize("compound", TREEBANK_LETTER_COMPOUNDS)
+@pytest.mark.parametrize("case", [str.lower, str.upper, str.title, alternate_case])
+def test_unsupported_literal_compound_declines_without_replacing_original_public_task(compound, case):
+    public = task(f"Include keyword {case(compound)} in the second sentence as the third word of that sentence.")
+    original = public.model_dump(mode="json")
+    assert position_plan(public) is None
+    assert public.model_dump(mode="json") == original
+
+
+@pytest.mark.parametrize("word", [
+    "Can", "not", "will", "wander", "cannotable", "GIMMELess", "GONNAbE",
+    "gotten", "lemmas", "wannabe", "xCannot", "WANNAs",
+])
+def test_safe_words_and_compound_substrings_keep_existing_schema_and_render_behavior(word):
+    item = plan()
+    payload = data()
+    payload["prefix_words"][1] = word
+    Draft202012Validator(item.schema).validate(payload)
+    parsed = item.model.model_validate(payload)
+    answer = render(parsed)
+    assert answer.split("toward Maple", 1)[0].endswith("We " + word + " ")
+    assert parsed.model_dump(mode="json") == payload
+    assert set(item.schema["required"]) == set(data())
+    assert item.schema["properties"]["prefix_words"]["maxItems"] == 3
+
+
+@pytest.mark.parametrize("field", ["prefix_words", "suffix_words"])
+def test_render_revalidates_compound_inserted_by_model_construct(field):
+    item = plan()
+    payload = data()
+    payload[field][0] = "gonna"
+    unchecked = item.model.model_construct(**payload)
+    with pytest.raises(ValidationError):
+        render(unchecked)
+    assert unchecked.model_dump(mode="python")[field][0] == "gonna"
+
+
+@pytest.mark.parametrize("field", ["prefix_words", "suffix_words"])
+def test_render_revalidates_compound_inserted_by_list_mutation(field):
+    item = plan()
+    parsed = item.model.model_validate(data())
+    getattr(parsed, field)[0] = "WaNnA"
+    with pytest.raises(ValidationError):
+        render(parsed)
+    assert getattr(parsed, field)[0] == "WaNnA"
+
+
+def test_assignment_rejects_compounds_without_overwriting_previous_valid_words():
+    parsed = plan().model.model_validate(data())
+    original = parsed.model_dump(mode="json")
+    with pytest.raises(ValidationError):
+        parsed.suffix_words = ["GIMME"]
+    assert parsed.model_dump(mode="json") == original
+
+
+@pytest.mark.parametrize("word", ["\u0130", "\u0131", "\u017f", "\u212a"])
+def test_case_insensitive_public_literal_matching_cannot_admit_non_ascii_keyword(word):
+    assert position_plan(task(f"Include keyword {word} in the second sentence as the third word of that sentence.")) is None

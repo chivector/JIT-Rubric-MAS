@@ -6,7 +6,26 @@
 
 曝光审计边界：本文台账中的 **5 个固定 selected TEST ID**仅表示正式选用的开发任务，**不代表整个开发过程总共只见过 5 个 ID 或其他历史 private evaluation 从未曝光**。v9 冻结后的历史评价搜索事件另见文末与 supplemental exposure ledger；已有一个额外 RR task_id 被确认可见，其余实际可见范围因原输出截断而为 `unknown`。未来干净确认必须排除已知 ID 并审计未知范围，不能据本轮固定选题范围作全局未曝光声明。
 
-## 当前完整统一轮次：v19，三十槽全部封存、29槽完整评分
+## 当前完整统一轮次：v20，三十槽全部封存、25槽完整评分
+
+五个campaign先统一注册，固定30槽全部终结封存；**25完整评分、2生成失败、0项已记录评价异常类型、3评分未完成且无异常类型**。Direct 10/10完成评分、Initial-MAS 7/10完成评分、Native JIT 8/10完成评分。下表只用本轮全部固定来源，失败保持缺失值，旧轮较高成绩不替入。
+
+| Benchmark 与输入 | 槽 | Direct | Initial-MAS | Native JIT |
+|---|---:|---:|---:|---:|
+| IFEval strict prompt | 6 | 1.000000 | 1.000000 | 1.000000 |
+| IFBench loose prompt | 6 | 0.000000 | `null` | 0.500000 |
+| DSQA F1 / shared evidence | 6 | 0.200000 | `null` | `null` |
+| RR native weighted / shared evidence | 3 | 0.412500 | `null` | 0.387500 |
+| DRB aggregate / shared evidence | 3 | 0.551724 | 0.500000 | 0.500000 |
+| WritingBench mean / 10 | 6 | 8.8 | 8.3 | 8.7 |
+
+六来源equal normalized failure-zero的**事后描述性macro**：Direct **0.5119798628**、Initial-MAS **0.4685185185**、Native JIT **0.5476313523**。本轮Initial-MAS宏均值仍未超过两个baseline。它不是新增正式主指标，不证明所有benchmark都更好；具体胜负、缺失与真实观察0见完整库存。Baseline失败影响failure-zero宏均值，不能据此宣称已评分任务质量全面提高。
+
+IFEval / IFBench采用pinned author checker；其余四来源仍为同serving Exp模型诊断性judge，不是独立judge或official leaderboard。10道固定开发题包括已授权曝光的TEST题，temperature0.6单轮差值不能证明稳定提升或单项改动因果。相同上限下三方法实际算量不同。
+
+已记录费用 **191模型调用 / 2,069,992tokens**，含生成 **118 / 1,810,825** 与评价 **73 / 259,167**；unknown usage slots=1；中断槽位的未知消耗不冒充0，上数是已持久化下界，美元费用`null`。新版实际唯一full suite **2,467 passed + 60 subtests**，12 changed Python source/test compile通过。独立synthetic预检及身份请求13调用 / 61,938tokens另计；源、证据、参数与checker身份绑定见v20附录。
+
+## 历史统一轮次：v19，三十槽全部封存、29槽完整评分
 
 五个campaign先统一注册，固定30槽全部终结封存；**29完整评分、1生成失败、0评价失败**。Direct 10/10完成、Initial-MAS 10/10完成、Native JIT 9/10完成。下表只用本轮全部固定来源，失败保持缺失值，旧轮较高成绩不替入。
 
@@ -2206,3 +2225,156 @@ Ordinary revision的附加提示要求已验证`issues=[]`时逐字符保留draf
 IFB13 的只读诊断仅访问已封存公开 actor 成品与 pinned checker 的通用 tokenizer 实现，没有读取实际 grader task arguments、评分正文、私有 rubric 或数据CSV。Typed构造有24个前置句槽、35个前缀词槽和32个后缀词槽；渲染成品与保存的3960字符答案及其哈希完全一致。结构句数与通用NLTK句分割均为25，两个ASCII字母词槽却各被通用tokenizer拆为两个词，使目标句68个结构词槽变成70词，指定词从预期第36词移到第37词。这个可观察差异解释位置偏移，但不证明整体0分只有一个原因。诊断工件 `.runtime/v19_ifb13_tokenization_diagnostic_baseline_runtime.json`，SHA256 `0124ae48c6b1cb69f8acd3406ec55fd2d23a140de0b716d9e478476ec810d5dc`。后续应明确定义公开token convention并泛化校验每个词槽在该通用tokenizer下为一词；不能按某个题ID或本例单词特判，修复必须绑定新源码身份、新测试与新实验，不回写v19答案或重算旧成绩。
 
 v18与v19都保留为各自完整固定批次：Initial-MAS的IFEval为1.0→1.0，IFBench为1.0→0.5，DSQA为0.466667→0.428571，RR为0.2875→0.575，DRB为0.448276→0.431034，WritingBench为8.6→8.1。六来源事后macro为0.6827660459→0.6255243272。v19不是所有来源都改善的候选；temperature0.6单次运行与同时改动的提示使这些差值不能作为单一改动的因果证据，baseline自身表现及失败也变化。当前不能宣称已稳定或全面超越baseline，不能拼接不同版本的最高行当作一次方法结果。
+
+## v20候选：原题数值观测与局部修订
+
+用户进一步要求尽可能在所有benchmark领先。本轮在相同固定10题、三个方法和原共同预算上检验三项通用方法改动；原始v19结果不回写，不按评估分数选稿。
+
+- 词槽协议更新为 `public-word-position-slots-v2`：两个数组使用同一有限正向trie regex，排除整个受支持通用Treebank多词compound family及其大小写，不针对题ID或本例词特判。关键词落入该不支持family时compiler保守decline，不替换语义、不引入runtime NLTK/download或新重试。实际own模块129 tests、10相关模块437 tests通过，离线580个通用tokenizer比较一致；这不是全部语言句界或官方任务判定认证。
+- 新 `public_membership_observations=true` 默认关闭，向既有contributor/writer和公开review/revision传入原题、constraints、条件span/hash、canonical fixed public pack中的完整表格与有限Decimal检查。明确字段、单位、原始cell/entity和declared year足够时才计算；其余UNKNOWN。上游PASS单独保留为声明，整体membership始终UNKNOWN、independently_verified=False，不生成隐藏正确名单、别名等价判断或语义资格证明。日期仅依given source.date与原题唯一year声明绑定，没有通用正文cohort矛盾解析或独立历史验证；结果只在记录的declaredscope条件下成立。
+- 新 `public_revision_mode=patch` 默认仍full，普通修订改为既有第二次调用输出 `edits`：每项绑定已验证issue索引，old_text必须在同一原始初稿出现恰好一次，程序拒绝重叠/链式/不存在的匹配，最后同时应用。原文可有重叠出现，不能以str.count非重叠计数代替唯一性检查。空issues只允许空edits，在本地保留完整原稿；missed defect也会被保留，不称正确性认证。Active positional/numeric保留原构造schema，provider/review/budget/typed失败处理不放宽，guard默认关闭；已开启guard的普通patch应用错误可以保留eligible初稿并记录component failure、原response/hash/调用成本。整篇也可能被声明为编辑区，所以仅保证区间外原文保真，最小修改与全部布局保留仍是提示要求。候选guard版本为v4。
+
+实际公开DSQA数值题预检得到5个threshold、1张表52行、2个binding与3个UNKNOWN，共104个cell checks（59PASS/45FAIL/0numericUNKNOWN），其中composite阈值发现初稿literal mention的一项明确FAIL；literal mention不是语义成员判断。另一个历史/语义筛选题没有被转换成数值资格判断。完整数值题sidecar紧凑JSON68,225字符，会增加既有调用input tokens，必须按实际计费，不能称免费或等实际算量。
+
+新版源runtime SHA256 `33f814e6d036ae2b0758d84a13607de21f26954381da3fa877e5d2c58d59c7ce`，runner `2a9e9e26f5987b45062f3b970542880c7c58e8de6e557d17f7a289cf571b3afc`。模型角色参数、温度、penalty、工具和共同预算保留v19；只新增上述两个opt-in设置，private config文件SHA256 `6bd458cdec819c2f3499d916e45fab131b07639bfbf26d1f0677cb6e2ceaaf3c`。正式v5八文件不改变。
+
+三个独立synthetic真实API预检全部completed，固定各2次调用，合计 **6 calls / 31,097tokens**，不含benchmark或evaluator。空review场景在本地逐字符保留了两段文本；数值场景应用两项精确edit并明确标FALSE/TRUE，未修改中间换行；词槽场景经过新schema及renderer完成，但没有独立质量评分。六次检查前后source身份均相同。另一次独立tiny模型身份请求 **1 call / 10tokens** 确认response-model名称与原pin相同，GET /models不计模型调用；模型名称不能证明隐藏weights完全未变。合计 **7 calls / 31,107tokens** 单独计费，不能混入随后固定30槽。此时全套检查正在运行，尚无v20 benchmark结果，不提前宣称全面提升。
+
+## v20复合单位补正后的最终冻结
+
+原候选runtime `33f814e6d036ae2b0758d84a13607de21f26954381da3fa877e5d2c58d59c7ce` 的初次完整检查在结束前由root主动终止，尚未注册或生成v20 benchmark。原因是同行最后找到recognized unit 后截断 `kg/km`、`points per student` 等分母的明确correctness缺口；未把中断测试称为通过。部分日志SHA256 `5aa215af1e8ea7657cefb05b22ecea140b3effb8734b7bf36785deb42da8fd71`，归档 `.runtime/v20_initial_interrupted_validation.json`。源代码补正后只把有限recognized-unit后的分母/指数/乘积/连字符复合后缀设UNKNOWN，不扩date或语义能力；14个新增synthetic unit cases通过，模块累计 **77 targeted tests**，同行只读14negative与2positive control复核通过。Actual公开数值题104个已绑定cell检查及其59PASS/45FAIL观察不变，另三字段仍UNKNOWN。
+
+最终module SHA256 `3133876f736bd65a7a336ec81c0712e6c601c2d6de903a682996e860e3ce6f43`，模块测试 `30b9b03c0c5ac5f895bdeb057e823aead32ee77eee1fa8e8e5889c3129bbfd66`；最终runtime `d2e59c721302cfcba5b00602dd9a344b477ca07f50b1d8b7e5565b5ddc934227`，runner及private config仍是前节值。
+
+最终源码身份又完成三项固定各2调用的synthetic真实API预检，全部completed且before/after identity相同，合计 **6 calls / 30,831tokens**，无benchmark或judge；原候选6调用/31,097tokens和独立模型身份1调用/10tokens仍保留。最终两项ordinary场景分别通过本地空edits完全拷贝和精确数值修复，word-slot场景通过新schema和renderer；这不等于独立质量或官方任务check。全部独立预检及身份检查共 **13 calls / 61,938tokens**，不能计入随后30槽。最终preflight工件 `.runtime/public_patches_v20b_20261004/preflight.json`，SHA256 `8614c66bcf601fe9b9035b77e59485baa3d50dd48e9e2d521038b94d080922d3`。最终源码完整验证已经完成：2,467 passed、1 个预期 warning、60 subtests passed，pytest 用时 382.77s；12 个变更 Python 源码及测试文件的 AST/compile 验证通过，全部文件 SHA256 及 runtime 在验证前后保持一致。完整日志 SHA256 8004440146324dc2748f309bd60aa40a60e426e35b30783a41e25211158bf150。五组共 30 个生成槽位在生成前完成注册，绑定检查确认相对 v19 只新增 public_revision_mode=patch 与 public_membership_observations=true 配置；题目、共享材料、checker、模型参数、预算和评分顺序均保持一致。随后五组均已封存，完整库存及失败分析见后节。
+
+## v20统一三十槽最终封存：完整任务、费用与公开候选审计
+
+本节由五份sealed summary、registration metadata与公开actor receipt投影生成，没有读取评分正文、参考答案或private rubric。所有30固定槽均保留，失败不替换；末次统一运行controller的exit状态另由运行日志核对。
+
+| Benchmark | task ID | 方法 | native score | normalized score | generation / evaluation |
+|---|---|---|---:|---:|---|
+| ifeval | ifeval:1203 | Direct | 1.000000 | 1.000000 | submitted / completed |
+| ifeval | ifeval:1203 | Initial-MAS | 1.000000 | 1.000000 | submitted / completed |
+| ifeval | ifeval:1203 | Native JIT | 1.000000 | 1.000000 | submitted / completed |
+| ifeval | ifeval:1246 | Direct | 1.000000 | 1.000000 | submitted / completed |
+| ifeval | ifeval:1246 | Initial-MAS | 1.000000 | 1.000000 | submitted / completed |
+| ifeval | ifeval:1246 | Native JIT | 1.000000 | 1.000000 | submitted / completed |
+| ifbench | ifbench:13 | Direct | 0.000000 | 0.000000 | submitted / completed |
+| ifbench | ifbench:13 | Initial-MAS | 1.000000 | 1.000000 | submitted / completed |
+| ifbench | ifbench:13 | Native JIT | 0.000000 | 0.000000 | submitted / completed |
+| ifbench | ifbench:22 | Direct | 0.000000 | 0.000000 | submitted / completed |
+| ifbench | ifbench:22 | Initial-MAS | `null` | `null` | failed / submission_failed |
+| ifbench | ifbench:22 | Native JIT | 1.000000 | 1.000000 | submitted / completed |
+| deepsearchqa | deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c | Direct | 0.400000 | 0.400000 | submitted / completed |
+| deepsearchqa | deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c | Initial-MAS | `null` | `null` | submitted / incomplete |
+| deepsearchqa | deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c | Native JIT | `null` | `null` | submitted / incomplete |
+| deepsearchqa | deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c | Direct | 0.000000 | 0.000000 | submitted / completed |
+| deepsearchqa | deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c | Initial-MAS | 0.000000 | 0.000000 | submitted / completed |
+| deepsearchqa | deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c | Native JIT | `null` | `null` | failed / submission_failed |
+| researchrubrics | 6847465956a0f6376a6054a7 | Direct | 0.412500 | 0.453488 | submitted / completed |
+| researchrubrics | 6847465956a0f6376a6054a7 | Initial-MAS | `null` | `null` | submitted / interrupted_evaluation_no_resample |
+| researchrubrics | 6847465956a0f6376a6054a7 | Native JIT | 0.387500 | 0.430233 | submitted / completed |
+| deepresearch_bench_ii | deepresearch_bench_ii:1 | Direct | 0.551724 | 0.551724 | submitted / completed |
+| deepresearch_bench_ii | deepresearch_bench_ii:1 | Initial-MAS | 0.500000 | 0.500000 | submitted / completed |
+| deepresearch_bench_ii | deepresearch_bench_ii:1 | Native JIT | 0.500000 | 0.500000 | submitted / completed |
+| writingbench | writingbench:335 | Direct | 8.600000 | 0.844444 | submitted / completed |
+| writingbench | writingbench:335 | Initial-MAS | 7.600000 | 0.733333 | submitted / completed |
+| writingbench | writingbench:335 | Native JIT | 8.800000 | 0.866667 | submitted / completed |
+| writingbench | writingbench:433 | Direct | 9.000000 | 0.888889 | submitted / completed |
+| writingbench | writingbench:433 | Initial-MAS | 9.000000 | 0.888889 | submitted / completed |
+| writingbench | writingbench:433 | Native JIT | 8.600000 | 0.844444 | submitted / completed |
+
+| 方法 | 生成 calls / tokens | 评价 calls / tokens | 活动秒 generation / evaluation | input / output tokens |
+|---|---|---|---|---|
+| Direct | 10 / 33,099 | 34 / 106,788 | 56.062 / 73.562 | 112,839 / 27,048 |
+| Initial-MAS | 77 / 1,346,030 | 6 / 33,716 | 492.578 / 28.797 | 1,245,393 / 134,353 |
+| Native JIT | 31 / 431,696 | 33 / 118,663 | 492.297 / 79.451 | 427,720 / 122,639 |
+
+已记录账目 **191模型调用 / 2,069,992tokens**；生成 **118 / 1,810,825**、评价 **73 / 259,167**。unknown slots=1，estimated attempts=3，queue idle=0.000秒，未知消耗保持缺失，此处调用/tokens仅是已持久化下界。美元费用保持`null`。独立synthetic和软件测试不计入30槽。
+
+失败库存：
+
+- ifbench / ifbench:22 / Initial-MAS：generation=ValidationError，evaluation=none，evaluation_status=submission_failed。native分数缺失，failure-zero仅是保守汇总规则，不冒称已评分0。
+- deepsearchqa / deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c / Native JIT：generation=RuntimeError，evaluation=none，evaluation_status=submission_failed。native分数缺失，failure-zero仅是保守汇总规则，不冒称已评分0。
+- deepsearchqa / deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c / Initial-MAS：generation=none，evaluation=none，evaluation_status=incomplete。native分数缺失，failure-zero仅是保守汇总规则，不冒称已评分0。
+- deepsearchqa / deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c / Native JIT：generation=none，evaluation=none，evaluation_status=incomplete。native分数缺失，failure-zero仅是保守汇总规则，不冒称已评分0。
+- researchrubrics / 6847465956a0f6376a6054a7 / Initial-MAS：generation=none，evaluation=none，evaluation_status=interrupted_evaluation_no_resample。native分数缺失，failure-zero仅是保守汇总规则，不冒称已评分0。
+
+| Benchmark | Direct normalized failure-zero | Initial-MAS | Native JIT |
+|---|---:|---:|---:|
+| IFEval strict prompt | 1.0000000000 | 1.0000000000 | 1.0000000000 |
+| IFBench loose prompt | 0.0000000000 | 0.5000000000 | 0.5000000000 |
+| DSQA F1 / shared evidence | 0.2000000000 | 0.0000000000 | 0.0000000000 |
+| RR native weighted / shared evidence | 0.4534883721 | 0.0000000000 | 0.4302325581 |
+| DRB aggregate / shared evidence | 0.5517241379 | 0.5000000000 | 0.5000000000 |
+| WritingBench mean / 10 | 0.8666666667 | 0.8111111111 | 0.8555555556 |
+
+这些normalized值保持各注册bounds；RR真实观察0与缺失分数不同，负分不裁剪。完整均值遇到任一未评分槽为`null`。六来源macro为事后描述，不是事前新增的正式主指标；两个instruction来源可以分别看各原主指标。
+
+| 同题两方法都完整评分的比较 | ours wins | ties | losses | 未成对评分（不计为胜出） |
+|---|---:|---:|---:|---:|
+| Initial-MAS vs Direct | 1 | 4 | 2 | 3 |
+| Initial-MAS vs Native JIT | 2 | 3 | 1 | 4 |
+
+上表只比较同题已评分normalized值，以10道原任务为固定库存；缺失pair单独记录，不当作质量胜出，不替代原benchmark指标或六来源macro。
+
+公开10项actor投影`.runtime/v20_ours_public_receipts_root.json`，SHA256 `4b308ae404a8934f9b0000a65e0d01baada63b4a956b3acf92280e919a916ee5`。读取的是公开执行与refinement审计，题面、原答案、literal词与span不在本节复制。
+
+| 公开候选审计指标 | 全部10槽实际汇总 |
+|---|---|
+| all_10_ours_terminal | `true` |
+| all_code_matches_registration | `true` |
+| all_saved_teams_uncapped | `true` |
+| selected_candidate_counts | `{"None": 1, "initial_draft": 1, "revision": 8}` |
+| selection_reason_counts | `{"None": 1, "invalid_public_patch_application": 1, "validated_revision_without_catastrophic_body_loss": 8}` |
+| refinement_status_counts | `{"completed": 8, "completed_with_component_failure": 1, "failed": 1}` |
+| guard_version_counts | `{"public-artifact-regression-guard-v4": 10}` |
+| all_selected_submission_execution_and_audit_hashes_match | `true` |
+| selected_candidate_hash_check_count | `9` |
+| all_saved_refinement_audit_hashes_match | `true` |
+| total_generation_tokens | `1346030` |
+| total_generation_model_calls | `77` |
+| total_planning_calls | `39` |
+| total_execution_model_calls | `18` |
+| total_refinement_calls | `20` |
+| literal_regression_selections | `0` |
+| empty_review_line_break_selections | `0` |
+| heading_only_selections | `0` |
+| local_invalid_revision_selections | `0` |
+| patch_status_counts | `{"applied": 7, "failed": 1}` |
+| applied_patch_edit_count | `20` |
+| applied_zero_edit_patches | `4` |
+| patch_application_initial_selections | `1` |
+| membership_observation_slots | `10` |
+
+| task ID | refinement status | selected | selection reason |
+|---|---|---|---|
+| ifeval:1203 | completed | revision | validated_revision_without_catastrophic_body_loss |
+| ifeval:1246 | completed | revision | validated_revision_without_catastrophic_body_loss |
+| ifbench:13 | completed | revision | validated_revision_without_catastrophic_body_loss |
+| ifbench:22 | failed | None | None |
+| deepsearchqa:d042556cd6083779d4fe4afa21924d414f4966a16a0f271c9ae30a2bc8c3a60c | completed | revision | validated_revision_without_catastrophic_body_loss |
+| deepsearchqa:ba5cecc13c11812a2ed051df55fef96311cec89e54def887ab0d760620fec02c | completed | revision | validated_revision_without_catastrophic_body_loss |
+| 6847465956a0f6376a6054a7 | completed | revision | validated_revision_without_catastrophic_body_loss |
+| deepresearch_bench_ii:1 | completed_with_component_failure | initial_draft | invalid_public_patch_application |
+| writingbench:335 | completed | revision | validated_revision_without_catastrophic_body_loss |
+| writingbench:433 | completed | revision | validated_revision_without_catastrophic_body_loss |
+
+候选选择在评分前完成，不根据judge分数选稿；计数或结构guard只是有限的公开工程保护，不是语义正确证明。实际未触发的分支不能据分数改善解释为已发生救回。若存在component failure，原response、异常与预算仍保留，不能声称全部组件调用成功。
+
+曝光台账同步为 **5 selected TEST IDs / 44 campaign references / 1 legacy incident**，只新增本轮五个实际注册引用；已知额外历史RR ID和unknown可见范围仍保留，不作全局只有五题曝光或剩余历史TEST干净声明。正式v5八文件、原共同证据和模型配置不修改。
+
+全条件typed membership及最终集合认证仍未实现：筛选任务应把原题hard conditions与inferred rubric建议分离，并用原始观测、单位、scope重算数值比较，未知证据保持UNKNOWN；本轮注册patch修订使已验证空issues只允许空edits，本地保留完整原稿；漏审缺陷也会保留。非空issues的合法patch只保证编辑区间外原文保真，不能认证最小修改或全部布局保留；旧full模式的纯CR/LF窄guard仍保留，近似字数不变成隐含精确CJK阈值。只实现了有限原题span/table observations sidecar，完整语义predicate合同仍未实现，不能将有限算式/substring观测称为membership已由程序验证。
+
+## v20失败分析与恢复边界
+
+本轮并未实现全面领先，也未提高已记录的描述性宏均值：Direct / Initial-MAS / Native JIT 分别为 0.5119798628 / 0.4685185185 / 0.5476313523。IFEval 三方均为 1.0；DRB 为 0.551724 / 0.500000 / 0.500000，WritingBench 为 8.8 / 8.3 / 8.7。IFBench、DSQA 与 RR 的 Initial-MAS 均有未评分槽，完整来源均值保持 null，不能用旧轮较高结果补入。Initial-MAS 实际生成 9/10 提交，完整评分 7/10；其余为一项生成失败、两项评分缺失。下面只定位公开工程证据，不归因私有分数或认证语义正确性。
+
+首个 controller 在 RR 最后一项评价期间 exit=1；三份生成提交已封存，已有两项评价保留。日志没有可确认的异常类型，因此根本原因仍未知。运行器现有恢复流程跳过既有生成与评价，把已开始但无结果的评价标记 interrupted_evaluation_no_resample，再完成 DRB / WritingBench；恢复 controller exit=0。没有重采生成或中断评价。该 RR 槽已消耗的全部请求量未持久化，usage_unknown 保留，不能冒充 0；30 槽的已记录下界为 **191 calls / 2,069,992 tokens**，另有 1 个 unknown usage slot。完整独立预检仍另计 13 calls / 61,938 tokens。恢复审计 `.runtime/v20_controller_interruption_root.json`，SHA256 `d735fd45f57189a8e4aa7ebf64f2c039f170e93097f312c86cac07827288772d`。
+
+IFBench 数值构建失败：JSON object 及 transported schema 的字段/类型均合法，15 个 numeric_values 均存在且为 canonical integers，但正文模板只使用了 12 个不同必需 marker，漏 3 个；after-model 跨字段校验因此失败。初稿没有有效最终构建凭据，不能直接保留。另一位置构建输出通过相同 v2 schema、renderer、hash 对齐以及有限通用 tokenizer 核验：25 句，目标 38 个槽分别形成一个非标点 token，句/词位置吻合；该槽官方 checker 的本轮实际分数为 1.0。这只说明该输出未重现旧 compound 分词偏差，不能单独归因其本轮 1.0、认证所有条件或宣称稳定提升。先前将本轮 IFBench 来源均值 null 错误解读成该槽 0 分的口径已纠正；null 来自另一槽生成失败。匿名工件 `.runtime/v20_ifbench_public_technical_diagnostic_baseline_runtime.json`，SHA256 `222ed8dfd455aacf15816c4f45b56764a45dd8ce03726a390ee2aad37b080683`。
+
+八项 ordinary 修订有七项 patch applied、一项 applicability 失败并保留初稿；两项 typed 构建保留原有协议。Applied patch 共 20 个 edit 条目、其中四项空 edit 列表；条目数不等于实际修复次数。DSQA 数值集合项的一条 edit 原文与替换文相同，最终完全未改，公开 7 项的两个有限数值比较全部 PASS，但其他条件及全集仍 UNKNOWN。语义集合项采用 11 候选 × 6 条件表，24 YES、6 NO、33 UNKNOWN、3 AMBIGUOUS，明确提交“固定包下无可确认合格成员”；原材料自身声明历史和覆盖缺口，不能简单归因提示词，也不能强行把 UNKNOWN 转为 PASS。数值侧车的另三列 UNKNOWN 来自有限 header binder，不能直接解释为原始数据缺失。匿名结构/充分性工件 `.runtime/v20_public_dsqa_set_diagnosis_writing_quality.json`，SHA256 `43931450aed46f47d60522dafdcd289352b76ab8cad509d6b6cdddc69ade6096`。
+
+WritingBench 两项初稿分别 2,460 / 857 字符，提交为 2,978 / 857 字符；第二项通过空 edits 保留完整初稿，本轮没有复现 v19 的 802→73 字符压缩。但本轮均值仍低于 Direct，不能把结构保留等同质量提升。DRB 的无效 patch 保留 3,516 字符初稿并记录组件失败，实际得分为 0.5；没有把失败修订当作成功修复。下一候选采用一次明确预算上限的 typed 本地校验反馈，以及完整观察审计关联的 compact 输入；它们尚需独立注册重跑，不能据软件测试宣称 benchmark 提升。

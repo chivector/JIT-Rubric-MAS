@@ -115,5 +115,7 @@
   "public_numeric_construction_layout": "template",
   "public_positional_draft_guidance": true,
   "public_construction_response_format": "json_schema",
-  "public_positional_draft_projection": true
+  "public_positional_draft_projection": true,
+  "public_revision_mode": "patch",
+  "public_membership_observations": true
 }

@@ -67,6 +67,8 @@ class MASConfig(Record):
     # Select a valid draft when an ordinary rewrite locally fails or loses its body.
     # This public-only selection never inspects evaluator scores or rescues execution.
     public_refinement_guard: bool = False
+    public_revision_mode: Literal["full", "patch"] = "full"
+    public_membership_observations: bool = False
     public_refinement_response_format: Literal["json_object", "json_schema", "json_schema_review"] = "json_object"
     public_positional_construction: bool = False
     public_positional_draft_guidance: bool = False
@@ -95,6 +97,8 @@ class MASConfig(Record):
 
     @model_validator(mode="after")
     def fixed_team_limits(self):
+        if self.public_revision_mode == "patch" and not self.public_refinement:
+            raise ValueError("Public patch revision requires public_refinement")
         if self.public_refinement_guard and not self.public_refinement:
             raise ValueError("Public refinement guard requires public_refinement")
         if self.public_positional_draft_projection and not all((

@@ -254,6 +254,34 @@ def _apply_public_positional_draft_guidance(system, instruction, services):
     return system + PUBLIC_POSITIONAL_DRAFT_GUIDANCE_PROMPT
 
 
+def _apply_public_membership_guidance(system, instruction, services):
+    """Opt-in original-condition observations; no rubric/schema/call mutation."""
+    if not getattr(services, "public_membership_observations_requested", False):
+        return system
+    from .public_membership import build_public_membership_observations
+
+    shared = instruction.get("shared_ledger", {})
+    materials = {"contributions": shared.get("contributions", [])} if isinstance(shared, dict) else {}
+    instruction["public_membership_observations"] = build_public_membership_observations(
+        services.public_task, materials)
+    return system + (
+        "\nORIGINAL PUBLIC CONDITIONS: public_membership_observations preserves the "
+        "original request and finite source-bound numerical comparisons. For a qualified "
+        "set, apply only the original hard conditions and requested date, never convert "
+        "inferred rubric, contributor PASS or an optional caution into a new exclusion. "
+        "Use every numeric result only within its source/entity/field/unit/cohort scope. "
+        "A known false conjunct excludes that row; UNKNOWN is missing verification, "
+        "not evidence the item fails. Check all relevant original rows and deduplicate "
+        "aliases while retaining every supported qualifying member. Missing individual "
+        "details cannot create a new nationality, census, inventory or historical "
+        "guarantee requirement. Preserve useful supported findings and distinguish "
+        "conditional applicability from an unqualified guarantee. The original question "
+        "takes priority over paraphrased conditions. These observations do not prove "
+        "semantic membership or certify a complete answer. Do not expose the sidecar "
+        "or its internal hashes in the requested artifact."
+    )
+
+
 def _execution_assignment(agent, synthesizer):
     """Expose delivery authority next to the frozen role scope without mutating it."""
     assignment = copy.deepcopy(agent)
@@ -1228,6 +1256,7 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
         system += "\n" + FINAL_ARTIFACT_CONTRACT
         system += "\n" + FINAL_SUBMISSION_GATE
         instruction["terminal_assignment"] = FINAL_ARTIFACT_CONTRACT
+    system = _apply_public_membership_guidance(system, instruction, services)
     system = _apply_public_positional_draft_guidance(system, instruction, services)
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(instruction, ensure_ascii=False)}]
@@ -1813,6 +1842,7 @@ def _run_agent(agent, team, ctx, services):
         system += "\n" + FINAL_ARTIFACT_CONTRACT
         system += "\n" + FINAL_SUBMISSION_GATE
         instruction["terminal_assignment"] = FINAL_ARTIFACT_CONTRACT
+    system = _apply_public_membership_guidance(system, instruction, services)
     system = _apply_public_positional_draft_guidance(system, instruction, services)
     memory = type(ctx.memory)(prompts=ctx.prompt_templates)
     memory.initialize(system, TaskInput(task=json.dumps(instruction, ensure_ascii=False)))
@@ -2301,6 +2331,8 @@ class TeamExecutor:
         services.public_positional_draft_plan = getattr(self, "public_positional_draft_plan", None)
         services.public_positional_draft_projection_requested = getattr(
             self, "public_positional_draft_projection_requested", False)
+        services.public_membership_observations_requested = getattr(
+            self, "public_membership_observations_requested", False)
         agents_by_id = {agent["agent_id"]: agent for agent in team_data["agents"]}
 
         def single_pass_model(agent_id):
