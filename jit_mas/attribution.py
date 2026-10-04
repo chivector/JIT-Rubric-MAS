@@ -362,10 +362,23 @@ class RubricAttributor(JsonModelCalls):
                                     *["feedback:" + r.rubric_id for r in feedback.rubrics],
                                     "planning:global", "planning:planned", "planning:team"]}
         known_agents = {agent.agent_id for agent in team.agents}
+        outline_attempts = 0
 
         def validate_outline(outline):
-            if not set(outline.questions) <= known_agents:
+            nonlocal outline_attempts
+            outline_attempts += 1
+            # Question allocation is advisory metadata for local attribution.
+            # A model can occasionally echo a stale agent id from a prior
+            # roster.  Preserve one correction turn for the normal case, then
+            # discard only the stale keys deterministically so an invalid
+            # attribution hint cannot consume the whole EVO task.  Findings,
+            # rubric ids and proposals remain strictly validated below.
+            unknown = set(outline.questions) - known_agents
+            if unknown and outline_attempts == 1:
                 raise ValueError("Global attribution addressed an unknown agent")
+            if unknown:
+                outline.questions = {aid: questions for aid, questions in outline.questions.items()
+                                     if aid in known_agents}
 
         outline = self.ask(self.global_model, "attribute_global", OUTLINE_PROMPT + "\n" + COST_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
                            context, AttributionOutline, validate=validate_outline)
