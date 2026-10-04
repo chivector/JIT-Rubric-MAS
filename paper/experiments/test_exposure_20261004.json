@@ -189,6 +189,26 @@
     {
       "path": "outputs/development_pilot_20261004_writing_v18/registration.json",
       "registration_hash": "fd71ece821a79976ef3f0a76a7b2ca06316cf090362ebe9aad071c788a19809a"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_exposed_v19/registration.json",
+      "registration_hash": "a2a0723b5bfaae25665d6d36c822ba6d128b945ff8b273fd917420136374d7a0"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_dsqa_evidence_v19/registration.json",
+      "registration_hash": "5397777cb8af9be89b524534fcfc668b4b20a1aeff326946308c1ff5f3534b52"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_rr_evidence_v19/registration.json",
+      "registration_hash": "189d3fe12b7770cf5db73ccc570e34371466e6281e20c4cbb9bce8ea2c29a5e8"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_drb_evidence_v19/registration.json",
+      "registration_hash": "e45ed441e388a4464a45531673cb5cc34bb3071f8970ef37ad2b0159c62beec1"
+    },
+    {
+      "path": "outputs/development_pilot_20261004_writing_v19/registration.json",
+      "registration_hash": "d937aa9bb8601698a08d565236a7ae2a8adb67d8eac387d7d39b69059ff9fb8d"
     }
   ],
   "supplemental_exposure_events": [

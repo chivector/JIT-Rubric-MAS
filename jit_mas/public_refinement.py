@@ -24,7 +24,7 @@ from .schemas import PublicTask, digest, utc_now
 
 PUBLIC_REFINEMENT_VERSION = "public-draft-review-revision-v3"
 PUBLIC_REFINEMENT_IDS = ("public-review", "public-revision")
-PUBLIC_REFINEMENT_GUARD_VERSION = "public-artifact-regression-guard-v2"
+PUBLIC_REFINEMENT_GUARD_VERSION = "public-artifact-regression-guard-v3"
 _BODY_LOSS_LIMITS = {
     "minimum_draft_non_whitespace_characters": 1000,
     "minimum_draft_punctuation_or_line_chunks": 3,
@@ -71,8 +71,45 @@ original requirements in the complete finished artifact. Strict original-case
 counts can establish a sufficient pass; a broader casefolded substring count
 below the minimum establishes a sufficient failure. All other observations are
 unknown, not proof of either compliance or noncompliance. Compounds, plural or
-embedded forms and process notes cannot establish the strict pass. Do not expand
+embedded forms cannot establish the strict pass. Process notes are not the requested
+artifact, and lexical counts do not certify their meaning or relevance. Do not expand
 an unknown observation into a new requirement or guess a benchmark score.
+"""
+
+GROUNDED_PUBLIC_REVIEW_HINT = """\nAdditional public observation protocol:
+Treat inferred rubrics and contributor PASS labels as fallible suggestions,
+never new mandatory inclusion/exclusion conditions. For a claimed task requirement,
+put a short exact original-task quotation inside [TASK_QUOTE]...[/TASK_QUOTE] in
+the existing public_basis string. Anchor to the original request, not a planner's
+paraphrase. A source-backed factual correction can instead identify its supplied
+source passage; exact quotation presence alone does not prove requirement scope.
+For a numerical eligibility finding, show observed value, operator and original
+bound literally, for example 2.7 >= 2.8, and distinguish TRUE, FALSE and UNKNOWN.
+Recompute comparisons rather than inherit upstream labels; keep units, dates and
+field mapping tied to the original condition. Do not add a personal qualification,
+counting scope, measurement or stock guarantee absent from the original request.
+public_review_observations contains complete-artifact Han-character and paragraph
+counts and finite printed arithmetic observations. Han characters are not words,
+tokens or a certified language count. Approximate length stays approximate;
+do not invent an exact threshold or exclude contacts/headings without a public
+scope instruction. Never estimate a contradictory count from the visual impression.
+False printed arithmetic is not automatically an answer defect: it may correctly
+describe a failed condition. Missing expressions or evidence remain UNKNOWN.
+Return issues=[] when no material repair has a public basis.
+"""
+
+MINIMAL_PUBLIC_REVISION_HINT = """\nUse supported review findings as a small repair
+plan. If the validated review has issues=[], copy the ordinary draft character
+for character, preserving paragraph boundaries as JSON \\n escapes; do not restyle,
+expand or flatten it. Active typed positional/numeric construction still must
+produce its required construction fields and may repair its explicit constraints.
+When issues are present, change only the affected content and preserve satisfied
+requirements, examples, argument structure, citations and useful paragraph/list
+layout. Inspect public_review_basis_observations before trusting a numerical
+comparison or claimed original-task quote. Those observations establish only
+printed arithmetic/substring presence; verify the condition, scope, units and
+source meaning directly. Inferred rubrics are advisory, not new hard filters.
+Do not add unsupported certainty or replace a complete answer with broad caution.
 """
 
 REVIEW_PROMPT = """You are the global component reviewing an actual completed
@@ -473,9 +510,14 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
     title_scope = None
     if guarded:
         from .public_literal_constraints import public_literal_plan
+        from .public_review_observations import artifact_observations, numeric_relation_observations
 
         literal_plan = public_literal_plan(task)
         title_scope = _public_title_scope(task)
+        public_input["public_review_observations"] = {
+            "draft": artifact_observations(result.answer),
+            "numeric_relations": numeric_relation_observations({
+                "draft": result.answer, "public_materials": public_input["public_materials"]})}
         if literal_plan is not None:
             literal_initial_diagnostics = literal_plan.diagnose(result.answer)
             public_input["public_literal_constraints"] = literal_plan.audit()
@@ -501,6 +543,7 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
             "public_literal_constraints": (literal_plan.audit() if literal_plan is not None else
                 {"status": "unknown", "reason": "No complete set of supported positive public literal minima"}),
             "literal_candidate_checks": {"initial": literal_initial_diagnostics, "revision": None},
+            "empty_review_line_break_guard": None,
             "markdown_heading_only_guard": {"public_title_scope": title_scope,
                 "minimum_draft_non_whitespace_characters": 1000,
                 "minimum_draft_punctuation_or_line_chunks": 3,
@@ -608,7 +651,8 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
 
     try:
         publish()
-        review = call("public-review", REVIEW_PROMPT + (PUBLIC_LITERAL_HINT if literal_plan else ""),
+        review = call("public-review", REVIEW_PROMPT + (GROUNDED_PUBLIC_REVIEW_HINT if guarded else "")
+                      + (PUBLIC_LITERAL_HINT if literal_plan else ""),
                       public_input, PublicReview)
         audit["review"] = review.model_dump(mode="json")
         audit["review_hash"] = digest(audit["review"])
@@ -617,6 +661,12 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         revision_schema = PublicRevision
         revision_instructions = REVISION_PROMPT + (PUBLIC_LITERAL_HINT if literal_plan else "")
         revision_payload = {**public_input, "review": audit["review"]}
+        if guarded:
+            from .public_review_observations import review_basis_observations
+
+            audit["public_review_basis_observations"] = review_basis_observations(task, audit["review"])
+            revision_payload["public_review_basis_observations"] = copy.deepcopy(audit["public_review_basis_observations"])
+            revision_instructions += MINIMAL_PUBLIC_REVISION_HINT
         if positional_plan is not None or numeric_construction_plan is not None:
             revision_instructions = revision_instructions.replace(
                 "Return the complete finished artifact in answer.",
@@ -693,6 +743,12 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
                         and literal_revision_diagnostics["status"] == "fail"):
                     return select(audit["draft"], "initial_draft",
                                   "explicit_public_literal_minimum_regression")
+            from .public_review_observations import empty_review_line_break_regression
+
+            layout = empty_review_line_break_regression(task, audit["draft"], final_answer, audit["review"])
+            audit["public_candidate_guard"]["empty_review_line_break_guard"] = layout
+            if eligibility["eligible"] and layout["regression"]:
+                return select(audit["draft"], "initial_draft", "empty_review_line_break_only_regression")
             if (eligibility["eligible"] and title_scope["status"] == "ordinary"
                     and _markdown_heading_only_body_loss(public_input["public_diagnostics"],
                                                         audit["revision_public_diagnostics"], heading)):

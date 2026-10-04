@@ -1,20 +1,20 @@
 # Development pilot configuration
 
 `development_pilot.example.json` retains the same parameters and common budgets
-used in v17 and registered for the v18 public guard candidate. All five v18
-campaigns are sealed: 30 fixed slots, 26 graded, 4 generation failures
+used in v17 and registered for the v19 public guard candidate. All five v19
+campaigns are sealed: 30 fixed slots, 29 graded, 1 generation failures
 and 0 evaluation failures. Initial-MAS completed 10 of 10. The single
-full suite passed with 2,215 tests and 60 subtests. The six-source descriptive
-normalized failure-zero macro is Direct 0.6129510826, Initial-MAS
-0.6827660459 and Native JIT 0.3954661558. This is a small exposed
+full suite passed with 2,282 tests and 60 subtests. The six-source descriptive
+normalized failure-zero macro is Direct 0.5546392824, Initial-MAS
+0.6255243272 and Native JIT 0.5349074817. This is a small exposed
 development inventory with serving-model diagnostic judges for four sources;
 it does not establish a clean held-out or uniform benchmark win. Actual
 calls, tokens and failures are retained in the experiment record.
 
 v17 introduced `planning_response_format=json_schema` and
-`public_refinement_guard=true` relative to v16; v18 retains those settings and
+`public_refinement_guard=true` relative to v16; v18 and v19 retain those settings and
 changes the guard implementation without adding flags, sampling changes or
-budgets. This file matches the actual v18 configuration except for the endpoint,
+budgets. This file matches the actual v19 configuration except for the endpoint,
 model alias and exact response-model pin placeholders. Every source version
 needs its own registrations and validation. The template is not a completed
 experiment registration and contains no credentials or local data paths.
@@ -86,7 +86,7 @@ prove that the endpoint enforces it. Invalid outputs fail with their cost record
 without format fallback, JSON-prefix selection or another sample, except for the
 narrow ordinary-revision candidate guard described below.
 
-`public_refinement_guard=true` enables guard v2 in the v18 source. It can retain
+`public_refinement_guard=true` enables guard v3 in the v19 source. It can retain
 the sole initial completed artifact after ordinary revision locally fails
 JSON/schema validation, after supported structural body loss, or after a
 sufficiently established regression of finite public literal minima. The
@@ -120,6 +120,39 @@ minima conservatively decline within the compiler's finite syntax. Frequency
 selection requires every compiled initial rule to be `PASS` and at least one
 revision rule to be clearly `FAIL`; an ambiguous count is not a failure. These
 local counts do not certify other public requirements, meaning or quality.
+
+The v19 implementation supplies public artifact counts and finite printed
+decimal comparisons to the existing review call. Counts cover the complete
+decoded artifact; Han character counts are not word counts, tokens, implicit
+body-only scope or a precise interpretation of an approximate length request.
+Finite arithmetic results do not validate units, evidence, membership or the
+meaning of an expression that is correctly described as false. Unsupported
+numeric notation remains outside these observations. At most 128 relations
+are observed. Matches are bounded substrings, not validation of a complete
+expression; unsupported spacing can leave a partial numeric relation.
+
+Review issues can use an exact `[TASK_QUOTE]...[/TASK_QUOTE]` anchor from the
+original public question or constraints. The local observation verifies only
+substring presence. An issue-level exact state means at least one supported
+quote matched, not that all its quotations matched. It does not prove that the
+issue follows from the quote or
+that the quoted text is an applicable positive instruction. Quote-grounding observations for unanchored issues
+remain unknown and valid evidence corrections are not discarded merely because
+they lack a task quote. Inferred rubrics and upstream PASS labels remain fallible
+planning material rather than new hard task requirements.
+
+For validated empty review issues, ordinary prose revision is instructed to
+copy the draft character for character while preserving escaped JSON newlines.
+This instruction does not certify the initial draft; a missed issue can leave a
+bad draft unchanged. Typed construction still produces its required fields.
+A narrow additional candidate check retains an eligible ordinary initial draft
+only when the validated review has no issues, it has at least two blank-line paragraphs, the revised artifact is one
+nonempty line, and revision equals initial with only CR/LF characters removed.
+Finite recognized single-line/paragraph, code, CSV, heading and other layout
+requirements conservatively disable this branch or make its scope unknown.
+Other whitespace or content changes do not qualify. Its language coverage is
+limited, and it does not infer overall writing quality. Review and revision
+remain two fixed calls with full candidate and cost records.
 
 Eligibility means a nonempty execution `final_answer`; it does not certify
 semantic correctness or satisfaction of all public constraints. A projected
