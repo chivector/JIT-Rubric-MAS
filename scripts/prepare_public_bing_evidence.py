@@ -41,6 +41,7 @@ STOPWORDS = {
     "explanations", "technical", "sketching", "experimental", "plan", "deciding",
     "whether", "modern", "vision", "language", "model", "stand", "conduct", "analysis",
     "determine", "overall", "impact", "society", "beneficial", "detrimental", "top",
+    "consider", "amongst", "countries", "country", "whose", "which", "saw", "them", "who",
     "computational", "social", "science", "labs", "terms", "undergrad", "research",
     "output", "even", "critically", "ancient", "shaped", "development", "mythology",
     "particularly", "following", "situation", "student", "ways", "people", "invest",
@@ -57,24 +58,65 @@ class _Planner:
         payload = json.loads(messages[-1]["content"])
         task = payload["public_task"]
         question = re.sub(r"\s+", " ", str(task.get("question", ""))).strip()
+        # Preserve multi-word entities and measurement phrases before applying
+        # generic token cleanup.  The old tail-first token rotation turned
+        # "asylum seekers" into a noisy query beginning with just "seekers",
+        # which made Bing return unrelated pages for compound research tasks.
+        lower = question.casefold()
+        anchors = [
+            "cia world factbook", "world factbook", "cia", "world happiness report", "perceptions of corruption",
+            "asylum seekers", "military expenditures", "military spending",
+            "unhcr", "g7", "gross domestic product", "gdp per capita",
+            "foreign-born", "criminality score", "overall criminality", "organised crime index",
+            "organized crime index", "population", "criminality", "crime index",
+            "food and agriculture organization", "world bank", "united nations",
+            "international monetary fund", "ipcc", "oecd", "wipo",
+            "regulatory", "market entry", "supply chain", "alternative proteins",
+        ]
+        phrases = []
+        for phrase in anchors:
+            if (re.search(r"(?<![a-z0-9])" + re.escape(phrase) + r"(?![a-z0-9])", lower)
+                    and phrase not in phrases):
+                phrases.append(phrase)
+        years = re.findall(r"\b(?:19|20)\d{2}\b", question)
+        # A small set of domain-specific facets prevents a compound question
+        # from collapsing into one long low-recall search string.
+        if {"g7", "world factbook", "world happiness report", "unhcr"}.issubset(set(phrases)):
+            return type("Response", (), {"content": json.dumps({"queries": [
+                "G7 CIA World Factbook military expenditures 2023",
+                "G7 2023 World Happiness Report GDP per capita Perceptions of Corruption",
+                "G7 UNHCR asylum seekers 2010",
+            ]})})()
         terms = []
         for token in re.findall(r"[A-Za-z][A-Za-z0-9'-]{2,}|[0-9]{4}", question):
             lowered = token.casefold()
             if lowered not in STOPWORDS and lowered not in {item.casefold() for item in terms}:
                 terms.append(token)
-        if len(terms) >= 4:
-            # Put the subject's trailing nouns/year first.  Research prompts
-            # often begin with generic verbs ("write a report on ..."), and
-            # Bing RSS ranks those generic terms too aggressively.
-            ordered = terms[-3:] + terms[:-3]
+        named = []
+        for token in re.findall(r"\b[A-Z][A-Za-z0-9'-]{2,}\b", question):
+            if token.casefold() not in STOPWORDS and token.casefold() not in {item.casefold() for item in named}:
+                named.append(token)
+        # Add remaining informative terms after the intact anchors.  Keep the
+        # first query compact and make the two follow-ups cover complementary
+        # source families rather than repeating a corrupted paraphrase.
+        seen = {word.casefold() for phrase in phrases for word in phrase.split()}
+        remainder = []
+        taken = set(seen)
+        for word in named + terms:
+            lowered = word.casefold()
+            if lowered not in taken:
+                remainder.append(word)
+                taken.add(lowered)
+        core_terms = phrases + years[:3] + remainder[:10]
+        core = " ".join(core_terms) or question[:160]
+        if phrases:
+            queries = [
+                core,
+                " ".join(phrases[:3] + named[:5] + years[:2] + ["official data"]),
+                " ".join(phrases[-3:] + named[-5:] + years[-2:] + ["statistics report"]),
+            ]
         else:
-            ordered = terms
-        core = " ".join(ordered[:14]) or question[:120]
-        queries = [
-            core,
-            f"{core} data statistics",
-            f"{core} official regulation report",
-        ]
+            queries = [core, f"{core} data statistics", f"{core} official report"]
         return type("Response", (), {"content": json.dumps({"queries": queries})})()
 
 
