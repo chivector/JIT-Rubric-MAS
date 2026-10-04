@@ -32,7 +32,7 @@
 | 历史 Ours（DeepSeek self-judge，33 TEST） | DeepSeek | complete | **0.462092** | `paper/experiments/rr_run0_deepseekjudge_20261002/ours_v34/report_summary.json`；不能替代本轮 GPT-5.6-Sol 正式结果 |
 | Ours 单任务保守答案诊断 | GPT-5.6-Sol | complete | **0.447059** | 25 rubrics；用于定位“缺少可执行细节”的失败原因 |
 | Ours 单任务增强答案诊断 | GPT-5.6-Sol | complete | **0.717647** | 25 rubrics，61/85 加权得分；加入市场/监管/组织/IP/退出/替代蛋白等具体覆盖 |
-| v5 `joint_run_prevalidated_v1` 首个 VAL C0 RR 槽 | GPT-5.6-Sol | complete | **0.552941** | 新 evidence、p2 judge 并发；归一化 `0.616162`，其余槽因 actor 网关长等待而停止 |
+| v5 `joint_run_prevalidated_v1` 已完成 VAL C0 RR 槽 | GPT-5.6-Sol | partial | **0.552941 / 0.845070** | 新 evidence、p2 judge 并发；两个槽完整落盘，仍不足以形成 VAL checkpoint |
 | v5 `joint_run_p8_probe` 首个 VAL C0 RR 槽 | GPT-5.6-Sol | complete | **0.494118** | p8 judge 并发吞吐探测；仅用于选择传输配置，不与正式均值混合 |
 | v5 `joint_run_best` EVO/VAL | GPT-5.6-Sol | incomplete | — | C0 首槽曾被中断，恢复后标为 `InterruptedWithoutDurableOutcome`；第二槽在 judge 超时后仍无结果 |
 | v5 `joint_run_stable` 已完成槽 | GPT-5.6-Sol | partial | **0.517647 / 0.873239 / 0.188235** | 3 个 ResearchRubrics VAL 槽完整落盘；另有 2 个 failed、1 个 started、624 个 pending，未形成 checkpoint 选择或正式均值 |
@@ -44,7 +44,7 @@
 
 `joint_run_best/evo_val_journal.json` 的最后可复核计数为：`pending=628, failed=1, started=1`。更新后的 `joint_run_stable/evo_val_journal.json` 计数为：`complete=3, failed=2, pending=624, started=1`；三个完整槽的原始 score 依次为 `0.5176470588`、`0.8732394366`、`0.1882352941`。其中第三槽之后出现 pooled candidate 缺少精确 persistent identity/version 的契约错误，第四个正在规划的槽因 actor 网关连接错误中断。上述槽位只作为 partial formal audit，不构成 benchmark 均值、checkpoint 选择或 TEST 结果。
 新 evidence bundle 的 `joint_run_evidence_v1` 和 `joint_run_evidence_direct_v1` 均在第一个 actor 槽形成 durable journal 之前因 provider 请求长时间无响应而停止；它们没有新增 complete 槽，也没有改变上述正式计数。稳定传输配置仍是当前可复核的候选配置。
-`joint_run_prevalidated_v1` 新增 1 个 complete 槽（RR C0，原始 `0.5529411765`），随后第二个 VAL 槽在 actor 请求长等待时按 Ctrl-C 停止；`joint_run_p8_probe` 新增 1 个 complete 槽（RR C0，原始 `0.4941176471`），随后同样停止。两者均为真实 API 诊断/配置探测，不形成 checkpoint 选择。旧 `joint_run_formal_p8_v1` 已真实启动并落盘 1 个 complete、1 个 started、628 个 pending；started 槽在 provider 长等待后停止。新代码身份的 `joint_run_val3_v1` 在并行探测中留下 2 failed、3 started、625 pending；`joint_run_final_candidate_v1` 顺序探测在首槽长等待后停止并留下 1 started、629 pending。所有这些输出均没有 checkpoint 选择或正式均值。
+`joint_run_prevalidated_v1` 最终落盘 2 个 complete 槽（RR C0，原始 `0.5529411765`、`0.8450704225`），以及 1 个未完成 started 槽，journal 为 `complete=2, started=1, pending=627`；`joint_run_p8_probe` 落盘 1 个 complete（`0.4941176471`）和 1 个 started；`joint_run_formal_p8_v1` 落盘 1 个 complete（`0.4470588235`）和 1 个 started。新代码身份的 `joint_run_val3_v1` 在并行探测中留下 2 failed、3 started、625 pending；`joint_run_final_candidate_v1` 顺序探测在首槽长等待后停止并留下 1 started、629 pending。所有这些输出均没有 checkpoint 选择或正式均值。
 
 ## 验证
 
