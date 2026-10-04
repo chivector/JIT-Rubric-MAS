@@ -43,7 +43,7 @@
 
 `joint_run_best/evo_val_journal.json` 的最后可复核计数为：`pending=628, failed=1, started=1`。更新后的 `joint_run_stable/evo_val_journal.json` 计数为：`complete=3, failed=2, pending=624, started=1`；三个完整槽的原始 score 依次为 `0.5176470588`、`0.8732394366`、`0.1882352941`。其中第三槽之后出现 pooled candidate 缺少精确 persistent identity/version 的契约错误，第四个正在规划的槽因 actor 网关连接错误中断。上述槽位只作为 partial formal audit，不构成 benchmark 均值、checkpoint 选择或 TEST 结果。
 新 evidence bundle 的 `joint_run_evidence_v1` 和 `joint_run_evidence_direct_v1` 均在第一个 actor 槽形成 durable journal 之前因 provider 请求长时间无响应而停止；它们没有新增 complete 槽，也没有改变上述正式计数。稳定传输配置仍是当前可复核的候选配置。
-`joint_run_prevalidated_v1` 新增 1 个 complete 槽（RR C0，原始 `0.5529411765`），随后第二个 VAL 槽在 actor 请求长等待时按 Ctrl-C 停止；`joint_run_p8_probe` 新增 1 个 complete 槽（RR C0，原始 `0.4941176471`），随后同样停止。两者均为真实 API 诊断/配置探测，不形成 checkpoint 选择。当前正式续跑目录为 `joint_run_formal_p8_v1`，其 journal 计数和最终 report 需在进程收敛后再补录。
+`joint_run_prevalidated_v1` 新增 1 个 complete 槽（RR C0，原始 `0.5529411765`），随后第二个 VAL 槽在 actor 请求长等待时按 Ctrl-C 停止；`joint_run_p8_probe` 新增 1 个 complete 槽（RR C0，原始 `0.4941176471`），随后同样停止。两者均为真实 API 诊断/配置探测，不形成 checkpoint 选择。`joint_run_formal_p8_v1` 已真实启动并落盘 1 个 complete、1 个 started、628 个 pending；started 槽在 provider 长等待后停止，因此该输出仍没有 checkpoint 选择或正式均值。
 
 ## 验证
 
