@@ -5,8 +5,8 @@
 ## 代码与运行身份
 
 - 远端：`https://github.com/chivector/JIT-Rubric-MAS.git`，分支 `main`。
-- 最新代码提交：`a7d772d`（在 `fef5450`、`bd8e21e`、`cd1f637`、`6399efc`、`3df6d2c`、`9405db9` 基础上继续优化）；随后以 `20b7d69` 登记最新 bundle。
-- 最新正式候选 bundle：`.runtime/formal_v5_assets_20261004/bundle_poolfix/bundle.json`，`formal_ready=true`；该 bundle 绑定稳定传输配置（judge 并发上限 2、judge timeout 120 s）并在 pool identity 修复后重新登记。`joint_run_stable` 是修复前 bundle 的 partial audit，不能与新 bundle 混用；正式续跑必须使用新 output。
+- 最新代码提交：`964507b`（在 `a7d772d`、`fef5450`、`bd8e21e`、`cd1f637`、`6399efc`、`3df6d2c`、`9405db9` 基础上继续优化）；随后登记了新证据 bundle。
+- 最新正式候选 bundle：`.runtime/formal_v5_assets_20261004/bundle_evidence_v1/bundle.json`，`formal_ready=true`；该 bundle 使用重新抓取的公开 evidence 和稳定传输配置（judge 并发上限 2、judge timeout 120 s）。`joint_run_stable` 是旧 evidence bundle 的 partial audit，不能与新 bundle 混用；正式续跑必须使用新 output。
 - 冻结协议：`paper/experiments/joint_protocol_v5.json`；六个 benchmark，EVO=60/run，VAL=30/run，TEST=273/run，三次 run，checkpoint 为 C0/C15/C30/C45/C60。
 - 形式化槽位总数：EVO/VAL 630；TEST release 1,911。TEST 必须在 EVO/VAL 形成完整 `evo_val_report.json` 后执行。
 
@@ -20,6 +20,7 @@
 6. 将 judge 传输层改为显式 `httpx.Client(trust_env=...)`，避免 Windows 系统代理被隐式注入；在同一进程内把 judge rubric 并发限制为 2，并为 ResearchRubrics 保留一次瞬时失败重试。
 7. 强化 EVO/VAL resume：VAL 只读取登记时的不可变 checkpoint，live state 与 durable prefix 不一致时 fail closed；无 eligible checkpoint 时记录 inconclusive 而不是伪造选择。
 8. 针对正式运行中观察到的 pooled candidate identity/version 漂移，在结构化输出的唯一 correction turn 中加入 catalogue 原样复制和 immutable identity 约束；该修复已通过 agent-pool 回归测试。
+9. 新增 deterministic public evidence fallback：从公开 Bing RSS 发现页面、用 Jina Reader 固定抓取、写入现有不可变 pack 格式，不调用额外生成模型。新 evidence 覆盖 RR 63/63、DSQA 80/80、DRBII 40/40 冻结任务；成功 source 分别为 146、99、8 个，任务级有 source 的数量分别为 54、44、8。
 
 ## 可复核结果
 
@@ -38,6 +39,7 @@
 ## 当前正式日志状态
 
 `joint_run_best/evo_val_journal.json` 的最后可复核计数为：`pending=628, failed=1, started=1`。更新后的 `joint_run_stable/evo_val_journal.json` 计数为：`complete=3, failed=2, pending=624, started=1`；三个完整槽的原始 score 依次为 `0.5176470588`、`0.8732394366`、`0.1882352941`。其中第三槽之后出现 pooled candidate 缺少精确 persistent identity/version 的契约错误，第四个正在规划的槽因 actor 网关连接错误中断。上述槽位只作为 partial formal audit，不构成 benchmark 均值、checkpoint 选择或 TEST 结果。
+新 evidence bundle 的 `joint_run_evidence_v1` 和 `joint_run_evidence_direct_v1` 均在第一个 actor 槽形成 durable journal 之前因 provider 请求长时间无响应而停止；它们没有新增 complete 槽，也没有改变上述正式计数。稳定传输配置仍是当前可复核的候选配置。
 
 ## 验证
 
