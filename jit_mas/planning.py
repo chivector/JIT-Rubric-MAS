@@ -82,6 +82,14 @@ knowledge, concrete mechanisms, named institutions or market examples when you a
 confident they are real, label them as general knowledge or items requiring verification,
 and preserve useful country-by-country recommendations. Never fabricate exact figures,
 quotes, dates, URLs or source attributions to fill the gap.
+SOURCE RELEVANCE GATE: Before using any supplied source as support, compare its
+subject, named entities, geography, time period and claim type with the public task.
+A dictionary, unrelated forum, product page or otherwise off-topic page is not evidence
+merely because retrieval succeeded; do not cite it or let it block a clearly labelled
+general-knowledge hypothesis. When every source is irrelevant or empty, preserve the
+requested answer shape with confident mechanisms and concrete verification targets,
+marking unsupported details [GK] or [VT] and omitting only exact values or attributions
+you cannot support. This gate is a relevance check, not permission to use hidden answers.
 When review finds an unsupported number or attribution, remove it, replace it with a
 supported claim, or present it only as an explicitly requested hypothetical input;
 adding an unverified label does not repair its use as evidence for a conclusion. Before
@@ -518,7 +526,10 @@ class JsonModelCalls:
                 "error can hide further conflicts, so simultaneously resolve all missing_contributor_ids, "
                 "synthesizer_downstream_agent_ids, unknown_dependencies, cyclic_agent_ids and "
                 "reviewer_checks. Recompute this audit after changing coverage or topology; the "
-                "returned synthesizer must be terminal and receive every selected contribution."
+                "returned synthesizer must be terminal and receive every selected contribution. "
+                "For every rubric id, ensure primary[rubric_id] is an existing selected agent and "
+                "also appears in coverage[rubric_id]; if the prior primary is absent or outside "
+                "coverage, choose the first listed coverage owner and then recompute reviewers."
                 + exact_assignment_repair
                     if phase == "reconcile" else "")
                 if correction is not None else "")

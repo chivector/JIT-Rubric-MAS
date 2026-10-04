@@ -226,6 +226,14 @@ domain detail instead of replacing the answer with a disclaimer. Retain confiden
 well-known institutions, mechanisms and country-specific examples as explicitly
 unverified general knowledge, while removing invented exact figures, quotations,
 dates, URLs and source attributions.
+Before treating a supplied source as support, check that its subject, named entities,
+geography, time period and claim type match the public task. A dictionary, unrelated
+forum, product page or other off-topic page is not evidence just because retrieval
+succeeded; do not cite it or let it block a clearly labelled general-knowledge
+hypothesis. When every source is irrelevant or empty, preserve the requested answer
+shape with confident mechanisms and verification targets, mark unsupported details as
+general knowledge or to-be-verified, and omit only exact values or attributions you
+cannot support.
 For fiction, preserve premise, character motivation, continuity and payoff;
 do not treat fictional events as factual-source violations. For practical or
 experiential prose, check the specific usage, example and subjective perspective
