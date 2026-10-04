@@ -132,7 +132,18 @@ def review_basis_observations(task, review):
 
 
 def empty_review_line_break_regression(task, draft, revision, review):
-    """Only unsupported CR/LF deletion after an empty, validated review."""
+    """Detect public layout loss without acting as a semantic checker.
+
+    The original guard only retained a draft when an empty review was followed
+    by a byte-for-byte body with CR/LF removed.  In practice a structured JSON
+    revision can validly parse while silently flattening a long, multi-paragraph
+    artifact even when the review contains issues.  That failure is especially
+    costly for writing and format-sensitive tasks.  Keep the strict legacy
+    ``regression`` flag, and expose a separate ``severe_regression`` flag for a
+    large ordinary artifact whose final body is reduced to one line.  The caller
+    can retain the initial artifact for this narrow structural failure; no
+    evaluator or private feedback is consulted.
+    """
     question = public_instruction_question(task)
     constraints = task.constraints if hasattr(task, "constraints") else task.get("constraints", [])
     scope_known = not any(_LAYOUT_TRANSFORM.search(text) for text in [question, *constraints])
@@ -144,6 +155,22 @@ def empty_review_line_break_regression(task, draft, revision, review):
                  and revision_observations.get("nonempty_lines") == 1
                  and draft != revision
                  and draft.replace("\r", "").replace("\n", "") == revision)
-    return {"regression": qualifies, "layout_scope": "ordinary" if scope_known else "unknown",
+    # A parsed revision may alter wording while still destroying the layout of
+    # a substantial ordinary answer.  Require a generous size threshold and at
+    # least three separated paragraphs so short one-off prose and explicitly
+    # formatted outputs retain the historical behavior.
+    severe = (scope_known and isinstance(draft, str) and isinstance(revision, str)
+              and observations.get("non_whitespace_characters", 0) >= 1000
+              and observations.get("paragraphs_separated_by_blank_lines", 0) >= 3
+              and observations.get("nonempty_lines", 0) >= 3
+              and revision_observations.get("nonempty_lines") == 1
+              and draft != revision
+              # A tiny title/acknowledgement is handled by the existing
+              # catastrophic-body guard.  This branch targets a substantive
+              # rewrite whose only clear regression is layout flattening.
+              and revision_observations.get("non_whitespace_characters", 0) /
+                  max(1, observations.get("non_whitespace_characters", 0)) >= 0.35)
+    return {"regression": qualifies, "severe_regression": severe,
+            "layout_scope": "ordinary" if scope_known else "unknown",
             "draft": observations, "revision": revision_observations,
-            "limitations": "Only exact CR/LF deletion and an empty review are checked. Other whitespace or content changes do not qualify. Finite layout exclusions can miss unsupported legitimate conversions; retained initial correctness is not certified."}
+            "limitations": "The strict regression flag checks exact CR/LF deletion after an empty review. The severe flag checks only large ordinary multi-paragraph to one-line collapse; it does not assess semantic quality or all public format requirements, and explicit layout conversions suppress it."}

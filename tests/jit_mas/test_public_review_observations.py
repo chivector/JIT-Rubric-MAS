@@ -175,6 +175,19 @@ def test_nonempty_validated_review_does_not_trigger_no_issue_layout_policy():
     assert result.answer == "甲。乙。" and audit["selected_candidate"] == "revision"
 
 
+def test_large_multparagraph_flattening_is_retained_as_initial_layout_guard():
+    issues = [{"defect": "Repair a supported detail", "public_basis": "Original request", "repair": "Keep the complete artifact"}]
+    draft = ("第一段保留完整事实和上下文。" * 80 + "\n\n"
+             + "第二段保留比较、例子和限制。" * 80 + "\n\n"
+             + "第三段保留行动建议和结论。" * 80)
+    result, audit, _, _, _ = refine(draft, "改写后的单行答案。" * 150, issues)
+    assert result.answer == draft
+    assert audit["selected_candidate"] == "initial_draft"
+    assert audit["selection_reason"] == "severe_public_layout_regression"
+    guard = audit["public_candidate_guard"]["empty_review_line_break_guard"]
+    assert guard["severe_regression"] is True
+
+
 def test_default_off_keeps_legacy_payload_and_candidate_behavior():
     result, audit, models, _, _ = refine("甲。\n\n乙。", "甲。乙。", guarded=False)
     assert result.answer == "甲。乙。" and "public_candidate_guard" not in audit

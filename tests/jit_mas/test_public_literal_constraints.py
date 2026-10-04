@@ -219,7 +219,7 @@ def test_valid_initial_is_selected_only_after_strict_pass_and_at_least_one_suffi
     initial, revision = "oak oak sky sky sky.", "oaks oaks sky sky."
     result, audit, models, ledger, snapshots = refine(question, initial, revision)
     assert result.answer == initial
-    assert audit["version"] == PUBLIC_REFINEMENT_GUARD_VERSION == "public-artifact-regression-guard-v4"
+    assert audit["version"] == PUBLIC_REFINEMENT_GUARD_VERSION == "public-artifact-regression-guard-v5"
     assert audit["status"] == "completed" and audit["selected_candidate"] == "initial_draft"
     assert audit["selection_reason"] == "explicit_public_literal_minimum_regression"
     checks = audit["public_candidate_guard"]["literal_candidate_checks"]

@@ -27,7 +27,7 @@ from .schemas import PublicTask, digest, utc_now
 
 PUBLIC_REFINEMENT_VERSION = "public-draft-review-revision-v3"
 PUBLIC_REFINEMENT_IDS = ("public-review", "public-revision")
-PUBLIC_REFINEMENT_GUARD_VERSION = "public-artifact-regression-guard-v4"
+PUBLIC_REFINEMENT_GUARD_VERSION = "public-artifact-regression-guard-v5"
 PUBLIC_CONSTRUCTION_REPAIR_VERSION = "public-typed-validation-repair-v1"
 CONSTRUCTION_REPAIR_HINT = """\nThe previous construction response failed local
 validation. Repair that response once using the identical construction schema
@@ -74,6 +74,11 @@ transparent public structural guard and may retain the initial artifact after a
 local response-validation failure, catastrophic or Markdown-heading-only body loss or a sufficiently
 proven regression of compiled public literal minima. This guard is not an
 evaluator, a quality retry or permission to omit the finished artifact.
+When the draft contains multiple meaningful paragraphs, preserve their actual
+paragraph and line-break structure in the revised answer unless the original
+task explicitly requests a conversion to one line or one paragraph. JSON
+escaping must encode those newlines as characters of the answer; do not flatten
+a complete draft into one long line merely to simplify the response.
 """
 
 PUBLIC_LITERAL_HINT = """\npublic_literal_constraints contains only conservatively
@@ -1082,6 +1087,8 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
             if eligibility["eligible"] and title_scope["status"] != "title_only" and _catastrophic_body_loss(
                     public_input["public_diagnostics"], audit["revision_public_diagnostics"]):
                 return select(audit["draft"], "initial_draft", "catastrophic_revision_body_loss")
+            if eligibility["eligible"] and layout.get("severe_regression"):
+                return select(audit["draft"], "initial_draft", "severe_public_layout_regression")
             return select(final_answer, "revision", "validated_revision_without_catastrophic_body_loss")
         audit["status"] = ("completed_with_component_failure" if audit.get("component_failures")
                            else "completed")

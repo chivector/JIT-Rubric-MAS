@@ -18,7 +18,7 @@ from typing import Any, Mapping
 
 import yaml
 
-from jit_mas.checkpoints import CheckpointIntegrityError, select_checkpoint
+from jit_mas.checkpoints import CheckpointIntegrityError, select_checkpoint, snapshot_store
 from jit_mas.config import MASConfig
 from jit_mas.experience import ExperienceStore
 from jit_mas.independent_campaign import coordinator_lock
@@ -178,6 +178,14 @@ class JointExecutor:
                 raise CheckpointIntegrityError(f"Frozen {name} evidence changed")
             if material["checker"] and evidence_identity(Path(material["checker"])) != material["checker_sha256"]:
                 raise CheckpointIntegrityError(f"Frozen {name} checker changed")
+        journal = self._journal()
+        if journal.is_file():
+            checkpoints = _read(journal).get("checkpoints", {})
+            for key, checkpoint in checkpoints.items():
+                path = checkpoint.get("snapshot_path")
+                expected = checkpoint.get("snapshot_file_sha256")
+                if path and expected and (not Path(path).is_file() or file_hash(Path(path)) != expected):
+                    raise CheckpointIntegrityError(f"Frozen {key} snapshot changed")
 
     def _slots(self) -> dict[str, dict[str, Any]]:
         slots = {}
@@ -233,7 +241,11 @@ class JointExecutor:
         evo = _stage_order(self.manifest, run_id)
         val = [task for benchmark in SOURCES for task in self._membership(benchmark, "validation")]
         test = [task for benchmark in BENCHMARKS for task in self._membership(benchmark, "test")]
-        return SplitManifest(seed=self.manifest.get("membership_seed", 0), evolution=evo,
+        # ``membership_seed`` in the frozen v5 document is a textual
+        # generator label, while the runtime SplitManifest schema requires an
+        # integer order seed.  Runtime membership is already bound above, so
+        # use the registered first order seed as the deterministic descriptor.
+        return SplitManifest(seed=20261001, evolution=evo,
                              validation=val, test=test, stream=[])
 
     def _build_runtime(self, run_id: int):
@@ -299,12 +311,18 @@ class JointExecutor:
             for run_id in RUN_IDS:
                 store, pipelines, datasets, _ = self._build_runtime(run_id)
                 try:
+                    # C0 is a registered whole-state candidate.  Persist the
+                    # empty initial state before its first validation pass so
+                    # selection never silently excludes the baseline.
+                    if f"run{run_id}:c0" not in doc["checkpoints"]:
+                        doc["checkpoints"][f"run{run_id}:c0"] = self._persist_checkpoint(store, run_id, 0)
+                        write_json(self._journal(), doc)
                     for checkpoint in CHECKPOINTS:
                         for benchmark in SOURCES:
                             for task in self._membership(benchmark, "validation"):
                                 self._run_val(doc, pipelines, datasets, benchmark, run_id, checkpoint, task)
                         if checkpoint == 60:
-                            doc["checkpoints"][f"run{run_id}:c{checkpoint}"] = {"state_hash": digest(store.snapshot())}
+                            doc["checkpoints"][f"run{run_id}:c{checkpoint}"] = self._persist_checkpoint(store, run_id, checkpoint)
                             write_json(self._journal(), doc)
                             break
                         order = _stage_order(self.manifest, run_id)
@@ -318,7 +336,7 @@ class JointExecutor:
                                 return {"complete": True, "task_id": task, "outcome": outcome,
                                         "after_state_sha256": digest(pipeline.store.snapshot())}
                             self._consume(doc, sid, invoke)
-                        doc["checkpoints"][f"run{run_id}:c{checkpoint + 15}"] = {"state_hash": digest(store.snapshot())}
+                        doc["checkpoints"][f"run{run_id}:c{checkpoint + 15}"] = self._persist_checkpoint(store, run_id, checkpoint + 15)
                         write_json(self._journal(), doc)
                 finally:
                     store.close()
@@ -336,6 +354,23 @@ class JointExecutor:
             write_json(self.output / "evo_val_report.json", report)
             return report
 
+    def _persist_checkpoint(self, store: ExperienceStore, run_id: int, position: int) -> dict[str, Any]:
+        """Materialize a read-only snapshot artifact for later TestRelease use."""
+        snapshot = store.snapshot()
+        path = self.output / f"run{run_id}" / "checkpoints" / f"c{position:03d}.sqlite"
+        # A crash after the atomic snapshot rename but before the journal write
+        # is resumable when the existing immutable bytes describe the same
+        # state; a different state remains a hard integrity failure.
+        frozen = (ExperienceStore(path, read_only=True) if path.exists()
+                  else snapshot_store(snapshot, path))
+        try:
+            observed = frozen.snapshot()
+            if digest(observed) != digest(snapshot):
+                raise CheckpointIntegrityError("Persisted checkpoint snapshot changed")
+        finally:
+            frozen.close()
+        return {"state_hash": digest(snapshot), "snapshot_path": str(path), "snapshot_file_sha256": file_hash(path)}
+
     def _select_run(self, doc, run_id):
         candidates = []
         for checkpoint in CHECKPOINTS:
@@ -351,7 +386,9 @@ class JointExecutor:
             state_hash = checkpoint_record.get("state_hash") if checkpoint_record else None
             candidates.append({"position": checkpoint, "eligible": eligible and bool(state_hash), "selection_utility": utility,
                                "complete_evaluations": sum(v["complete"] for v in by_benchmark.values()), "by_benchmark": by_benchmark,
-                               "state_hash": state_hash})
+                               "state_hash": state_hash,
+                               "snapshot_path": checkpoint_record.get("snapshot_path") if checkpoint_record else None,
+                               "snapshot_file_sha256": checkpoint_record.get("snapshot_file_sha256") if checkpoint_record else None})
         selected = select_checkpoint(candidates, tolerance=1e-12)
         if selected is None:
             raise RuntimeError(f"Run {run_id} has no eligible checkpoint")
