@@ -523,6 +523,15 @@ class JsonModelCalls:
                     if phase == "reconcile" else "")
                 if correction is not None else "")
             if correction is not None:
+                if getattr(self, "agent_pool", None) is not None:
+                    correction_system += (
+                        "\nPERSISTENT POOL IDENTITY REPAIR: for every pooled candidate, copy "
+                        "pool_agent_id and pool_agent_version verbatim from the original "
+                        "agent_pool_catalogue. Neither field may be null or omitted; the version "
+                        "must be the catalogue integer. Do not substitute agent_id, invent an "
+                        "identity, or rename a pool member. Reconciliation must preserve the same "
+                        "identity pair in team.agents."
+                    )
                 correction_system += _public_planning_stage_hint(
                     original_payload.get("public_planning_context", {}))
             if correction is not None and phase == "agent_evolve":
