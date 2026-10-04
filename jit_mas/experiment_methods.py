@@ -226,7 +226,7 @@ class _GenerationPolicy:
 
 
 def _fixed_team(config, graph):
-    if config.max_agents < 3 or config.team_max_calls < 3:
+    if config.max_agents < 3 or (config.team_max_calls is not None and config.team_max_calls < 3):
         raise ValueError("rubric_fixed requires three agents within the common configured cap")
     ids = [rubric.rubric_id for rubric in graph.rubrics]
     max_tokens = config.models["exec"].max_tokens if "exec" in config.models else 8192

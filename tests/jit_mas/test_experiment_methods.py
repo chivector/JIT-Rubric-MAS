@@ -193,6 +193,15 @@ def test_rubric_fixed_rejects_insufficient_common_resource_cap(pipeline, tmp_pat
                       output_dir=tmp_path / "fixed")
 
 
+def test_rubric_fixed_allows_unbounded_common_call_cap(pipeline, tmp_path):
+    # Formal native profiles may leave team_max_calls unset while still
+    # enforcing the overall model/token budgets.
+    pipeline.config.team_max_calls = None
+    outcome = submit_method(pipeline, "test-deployment", pipeline.store.snapshot(), method="rubric_fixed", repeat=0,
+                            output_dir=tmp_path / "fixed")
+    assert outcome["status"] == "submitted_unscored"
+
+
 def test_generation_policy_preserves_native_multimodal_message_blocks():
     from jit_mas.experiment_methods import _GenerationPolicy
 
