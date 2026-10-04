@@ -124,7 +124,11 @@ class BenchmarkDataset:
         kwargs = dict(judge=judge, judge_id=judge_id, judge_api_base=judge_api_base,
                       judge_max_tokens=judge_max_tokens, judge_timeout=judge_timeout)
         if self.name == "researchrubrics":
-            return ResearchRubricsAdapter(**kwargs, max_attempts=1)
+            # A single transient judge timeout must not turn an otherwise
+            # complete held-out report into an unusable checkpoint.  Retry
+            # once at the adapter boundary; the retry is still metered and
+            # remains part of the immutable run record.
+            return ResearchRubricsAdapter(**kwargs, max_attempts=2)
         adapter = {"deepsearchqa": DeepSearchQAEvaluator,
                    "deepresearch_bench_ii": DeepResearchBenchIIEvaluator,
                    "writingbench": WritingBenchEvaluator,
