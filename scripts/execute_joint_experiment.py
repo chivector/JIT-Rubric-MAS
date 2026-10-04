@@ -10,9 +10,11 @@ until the separate TestRelease integration is available.
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
 from pathlib import Path
+import threading
 import time
 from typing import Any, Mapping
 
@@ -60,9 +62,13 @@ def _score(name: str, outcome: Mapping[str, Any]) -> float | None:
 class JointExecutor:
     """Frozen joint executor.  The bundle is the only source of runtime inputs."""
 
-    def __init__(self, bundle: str | Path, output: str | Path):
+    def __init__(self, bundle: str | Path, output: str | Path, *, val_workers: int = 1):
+        if type(val_workers) is not int or not 1 <= val_workers <= 16:
+            raise ValueError("val_workers must be an integer between 1 and 16")
         self.bundle_path = Path(bundle).resolve()
         self.output = Path(output).resolve()
+        self.val_workers = val_workers
+        self._journal_lock = threading.RLock()
         self.bundle = _read(self.bundle_path)
         self.base = self.bundle_path.parent
         self.protocol_path = _path(self.bundle["protocol"], self.base)
@@ -212,7 +218,8 @@ class JointExecutor:
 
     def _load_or_init(self) -> dict[str, Any]:
         slots = self._slots()
-        identity = {"registration_sha256": digest(self._identity), "slot_ids": sorted(slots)}
+        identity = {"registration_sha256": digest(self._identity), "slot_ids": sorted(slots),
+                    "val_workers": self.val_workers}
         path = self._journal()
         if path.exists():
             doc = _read(path)
@@ -225,24 +232,30 @@ class JointExecutor:
         return doc
 
     def _consume(self, doc, slot_id, callback):
-        row = doc["slots"][slot_id]
-        if row["status"] in TERMINAL:
-            return row
-        if row["status"] == "started":
-            row.update({"status": "failed", "result": {"error_type": "InterruptedWithoutDurableOutcome", "score": None}, "finished_at": time.time()})
+        # Slot state is shared by optional VAL workers.  Hold the lock only for
+        # durable journal transitions; model generation and judging remain
+        # outside the critical section so independent VAL slots can overlap.
+        with self._journal_lock:
+            row = doc["slots"][slot_id]
+            if row["status"] in TERMINAL:
+                return row
+            if row["status"] == "started":
+                row.update({"status": "failed", "result": {"error_type": "InterruptedWithoutDurableOutcome", "score": None}, "finished_at": time.time()})
+                write_json(self._journal(), doc)
+                return row
+            row.update({"status": "started", "started_at": time.time(), "attempts": 1})
             write_json(self._journal(), doc)
-            return row
-        row.update({"status": "started", "started_at": time.time(), "attempts": 1})
-        write_json(self._journal(), doc)
         try:
             result = callback()
             status = "complete" if result.get("complete", True) else "incomplete"
         except Exception as exc:  # preserve failure/null and consume the slot
             result = {"error_type": type(exc).__name__, "score": None, "complete": False}
             status = "failed"
-        row.update({"status": status, "result": result, "result_sha256": digest(result), "finished_at": time.time()})
-        write_json(self._journal(), doc)
-        return row
+        with self._journal_lock:
+            row = doc["slots"][slot_id]
+            row.update({"status": status, "result": result, "result_sha256": digest(result), "finished_at": time.time()})
+            write_json(self._journal(), doc)
+            return row
 
     def _global_manifest(self, run_id: int) -> SplitManifest:
         evo = _stage_order(self.manifest, run_id)
@@ -310,6 +323,25 @@ class JointExecutor:
             norm = None if value is None else (0.0 if upper == lower else max(0.0, min(1.0, (value-lower)/(upper-lower))))
             return {"task_id": task, "score": value, "normalized": norm, "complete": value is not None, "outcome": out}
         return self._consume(doc, sid, invoke)
+
+    def _run_validation_checkpoint(self, doc, pipelines, datasets, run_id: int, checkpoint: int) -> None:
+        """Evaluate one fixed VAL checkpoint, optionally overlapping read-only slots."""
+        jobs = [(benchmark, task)
+                for benchmark in SOURCES
+                for task in self._membership(benchmark, "validation")]
+        if self.val_workers == 1:
+            for benchmark, task in jobs:
+                self._run_val(doc, pipelines, datasets, benchmark, run_id, checkpoint, task)
+            return
+        with ThreadPoolExecutor(max_workers=min(self.val_workers, len(jobs)),
+                                thread_name_prefix=f"val-run{run_id}-c{checkpoint}") as pool:
+            futures = [pool.submit(self._run_val, doc, pipelines, datasets,
+                                   benchmark, run_id, checkpoint, task)
+                       for benchmark, task in jobs]
+            # Consume all futures so the checkpoint never advances while a
+            # sibling slot is still running; each slot remains single-shot.
+            for future in as_completed(futures):
+                future.result()
 
     def _open_checkpoint(self, doc, run_id: int, position: int) -> ExperienceStore:
         """Open and verify one immutable checkpoint for a VAL observation."""
@@ -386,9 +418,7 @@ class JointExecutor:
                     self._ensure_checkpoint(doc, store, run_id, 0)
                     self._assert_live_prefix(doc, store, run_id)
                     for checkpoint in CHECKPOINTS:
-                        for benchmark in SOURCES:
-                            for task in self._membership(benchmark, "validation"):
-                                self._run_val(doc, pipelines, datasets, benchmark, run_id, checkpoint, task)
+                        self._run_validation_checkpoint(doc, pipelines, datasets, run_id, checkpoint)
                         if checkpoint == 60:
                             self._ensure_checkpoint(doc, store, run_id, checkpoint)
                             break
@@ -473,9 +503,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--val-workers", type=int, default=1,
+                        help="Optional concurrent read-only VAL workers (1 preserves sequential order)")
     parser.add_argument("--mode", choices=("check", "run", "test"), required=True)
     args = parser.parse_args(argv)
-    executor = JointExecutor(args.bundle, args.output)
+    executor = JointExecutor(args.bundle, args.output, val_workers=args.val_workers)
     if args.mode == "check":
         result = executor.check(require_provider=False)
     elif args.mode == "run":

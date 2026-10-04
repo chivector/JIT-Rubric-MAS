@@ -1,4 +1,7 @@
 import json
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -255,3 +258,42 @@ def test_run_without_eligible_checkpoint_is_reported_inconclusive(tmp_path):
     record = executor._select_run(document, 0)
     assert record["status"] == "inconclusive"
     assert record["selected"] is None
+
+
+def test_journal_consume_is_thread_safe_for_independent_val_slots(tmp_path):
+    executor = JointExecutor(_bundle(tmp_path), tmp_path / "run", val_workers=4)
+    executor.check()
+    document = executor._load_or_init()
+    slots = [sid for sid, row in document["slots"].items() if row["kind"] == "validation"][:8]
+
+    def consume(slot_id):
+        return executor._consume(document, slot_id,
+                                 lambda: (time.sleep(0.01) or {"complete": True, "score": 1.0}))
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        rows = list(pool.map(consume, slots))
+    assert all(row["status"] == "complete" for row in rows)
+    assert all(document["slots"][sid]["status"] == "complete" for sid in slots)
+    assert json.loads(executor._journal().read_text(encoding="utf-8"))["slots"]
+
+
+def test_validation_worker_pool_keeps_fixed_slot_inventory(tmp_path):
+    executor = JointExecutor(_bundle(tmp_path), tmp_path / "run", val_workers=3)
+    calls, guard = [], threading.Lock()
+    active = [0]
+    maximum = [0]
+
+    def fake_run_val(document, pipelines, datasets, benchmark, run_id, checkpoint, task):
+        with guard:
+            calls.append((benchmark, task))
+            active[0] += 1
+            maximum[0] = max(maximum[0], active[0])
+        time.sleep(0.01)
+        with guard:
+            active[0] -= 1
+
+    executor._run_val = fake_run_val
+    executor._run_validation_checkpoint({}, {}, {}, 0, 0)
+    assert len(calls) == 30
+    assert len(set(calls)) == 30
+    assert maximum[0] >= 2
