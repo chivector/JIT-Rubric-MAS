@@ -10,6 +10,7 @@ import hashlib
 import importlib.metadata
 import json
 import re
+import copy
 from functools import lru_cache
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -546,6 +547,24 @@ def _validate_pack(pack, task):
     return pack
 
 
+@lru_cache(maxsize=512)
+def _validated_pack_cache(path_string: str, task_json: str, file_sha256: str):
+    """Validate one immutable pack once per exact file/task identity.
+
+    Loading the six-benchmark joint runtime used to re-tokenize every evidence
+    pack once per pipeline and once per trajectory.  The file digest remains a
+    required cache key, so a changed file can never reuse an earlier validated
+    result; only the deterministic JSON/hash/token-window work is shared.
+    """
+    path = Path(path_string)
+    raw = path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != file_sha256:
+        raise ValueError("Evidence archive file hash changed during validation")
+    task = PublicTask.model_validate_json(task_json)
+    pack = json.loads(raw.decode("utf-8"))
+    return _validate_pack(pack, task)
+
+
 def _immutable_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -566,7 +585,13 @@ def save_evidence_pack(pack, path):
 
 
 def load_evidence_pack(path, task: PublicTask):
-    return _validate_pack(json.loads(Path(path).read_text(encoding="utf-8")), task)
+    path = Path(path).resolve()
+    raw = path.read_bytes()
+    file_sha256 = hashlib.sha256(raw).hexdigest()
+    task_json = task.model_dump_json()
+    # Return an independent object to preserve the historical API's mutation
+    # semantics while sharing the expensive validation/tokenization result.
+    return copy.deepcopy(_validated_pack_cache(str(path), task_json, file_sha256))
 
 
 def apply_evidence_pack(task: PublicTask, pack):

@@ -375,6 +375,30 @@ def test_manifest_checks_counts_ids_file_and_source_hashes(tmp_path):
         load_evidence_pack(path, tasks["first"])
 
 
+def test_repeated_pack_validation_reuses_token_window_work_but_keeps_copy_semantics(tmp_path, monkeypatch):
+    public = task("cache-validation")
+    pack = synthetic_window_pack(public, {
+        "https://public.org/report": "Background. " * 180 + "The measured result was 12 units."
+    }, token_budget=700, queries=["measured result"])
+    path = save_evidence_pack(pack, evidence_pack_path(tmp_path, public.task_id))
+    import jit_mas.evidence as evidence
+    evidence._validated_pack_cache.cache_clear()
+    original = evidence._validate_pack
+    calls = []
+
+    def counted(value, task_value):
+        calls.append(True)
+        return original(value, task_value)
+
+    monkeypatch.setattr(evidence, "_validate_pack", counted)
+    first = load_evidence_pack(path, public)
+    second = load_evidence_pack(path, public)
+    assert len(calls) == 1
+    assert first == second == pack
+    first["sources"][0]["text"] = "caller mutation"
+    assert load_evidence_pack(path, public)["sources"][0]["text"] != "caller mutation"
+
+
 def test_public_task_only_and_explicit_cli_network_opt_in(tmp_path):
     with pytest.raises(TypeError, match="PublicTask only"):
         EvidencePackBuilder(QueryPlanner(), lambda q: [], lambda u: "").build({"answer": "secret"})
