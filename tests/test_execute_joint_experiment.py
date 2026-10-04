@@ -297,3 +297,78 @@ def test_validation_worker_pool_keeps_fixed_slot_inventory(tmp_path):
     assert len(calls) == 30
     assert len(set(calls)) == 30
     assert maximum[0] >= 2
+
+
+@pytest.mark.parametrize("kind", ["validation", "evolution"])
+@pytest.mark.parametrize("error_type", [ValueError, TimeoutError, ConnectionError])
+def test_failed_slot_consumes_one_callback_even_with_retry_environment(tmp_path, monkeypatch, kind, error_type):
+    monkeypatch.setenv("JIT_MAS_SLOT_ATTEMPTS", "5")
+    executor = JointExecutor(_bundle(tmp_path), tmp_path / "run")
+    executor.check()
+    document = executor._load_or_init()
+    slot_id = next(sid for sid, row in document["slots"].items() if row["kind"] == kind)
+    calls = []
+
+    def generate_once():
+        calls.append(True)
+        raise error_type("synthetic failure")
+
+    row = executor._consume(document, slot_id, generate_once)
+    assert row["status"] == "failed"
+    assert row["attempts"] == 1
+    assert row["result"]["error_type"] == error_type.__name__
+    assert calls == [True]
+    executor._consume(document, slot_id, generate_once)
+    assert calls == [True]
+
+
+def test_validation_parser_failure_is_single_shot_and_records_safe_code_locations(tmp_path, monkeypatch):
+    monkeypatch.setenv("JIT_MAS_SLOT_ATTEMPTS", "7")
+    executor = JointExecutor(_bundle(tmp_path), tmp_path / "run")
+    executor.check()
+    document = executor._load_or_init()
+    slot_id = next(sid for sid, row in document["slots"].items() if row["kind"] == "validation")
+    calls = []
+
+    def parser_failure():
+        private_key_value = "synthetic-secret-must-never-be-persisted"
+        raise json.JSONDecodeError(private_key_value, private_key_value, 0)
+
+    def generate_once():
+        calls.append(True)
+        parser_failure()
+
+    row = executor._consume(document, slot_id, generate_once)
+    diagnostic = row["result"]["failure_diagnostic"]
+    assert calls == [True]
+    assert row["attempts"] == 1
+    assert diagnostic["error_type"] == "JSONDecodeError"
+    assert any(frame["function"] == "parser_failure" for frame in diagnostic["frames"])
+    assert all(set(frame) == {"file", "function", "line"} for frame in diagnostic["frames"])
+    assert all(type(frame["line"]) is int and frame["line"] > 0 for frame in diagnostic["frames"])
+    assert diagnostic["exception_message_recorded"] is False
+    assert diagnostic["locals_recorded"] is False
+    assert diagnostic["source_lines_recorded"] is False
+    persisted = executor._journal().read_text(encoding="utf-8")
+    assert "synthetic-secret-must-never-be-persisted" not in persisted
+    assert "private_key_value" not in persisted
+
+
+def test_pydantic_validation_error_does_not_repeat_generation(tmp_path, monkeypatch):
+    monkeypatch.setenv("JIT_MAS_SLOT_ATTEMPTS", "4")
+    executor = JointExecutor(_bundle(tmp_path), tmp_path / "run")
+    executor.check()
+    document = executor._load_or_init()
+    slot_id = next(sid for sid, row in document["slots"].items() if row["kind"] == "validation")
+    calls = []
+
+    def invalid_generated_record():
+        calls.append(True)
+        from jit_mas.schemas import PublicTask
+        PublicTask.model_validate({"task_id": "generated", "question": 42})
+
+    row = executor._consume(document, slot_id, invalid_generated_record)
+    assert calls == [True]
+    assert row["attempts"] == 1
+    assert row["result"]["error_type"] == "ValidationError"
+    assert row["result"]["failure_diagnostic"]["frames"]

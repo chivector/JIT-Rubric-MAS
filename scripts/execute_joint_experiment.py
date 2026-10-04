@@ -13,7 +13,6 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
-import os
 from pathlib import Path
 import threading
 import time
@@ -58,6 +57,32 @@ def _score(name: str, outcome: Mapping[str, Any]) -> float | None:
     raw = evaluation.get("raw") or {}
     value = raw.get("native_mean") if name == "writingbench" else evaluation.get("score")
     return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def _failure_diagnostic(exc: Exception) -> dict[str, Any]:
+    """Record code locations only, never exception text, source lines or locals."""
+    root = Path(__file__).resolve().parents[1]
+    frames = []
+    traceback = exc.__traceback__
+    while traceback is not None:
+        code = traceback.tb_frame.f_code
+        filename = code.co_filename
+        if filename.startswith("<"):
+            filename = filename if filename in {"<stdin>", "<string>"} else "<dynamic>"
+        else:
+            path = Path(filename)
+            try:
+                filename = path.resolve().relative_to(root).as_posix()
+            except ValueError:
+                # External absolute paths may contain user-controlled directory
+                # names.  The basename suffices to locate a dependency frame.
+                filename = path.name
+        frames.append({"file": filename, "function": code.co_name,
+                       "line": traceback.tb_lineno})
+        traceback = traceback.tb_next
+    return {"schema": "exception-code-locations-v1", "error_type": type(exc).__name__,
+            "frames": frames, "exception_message_recorded": False,
+            "locals_recorded": False, "source_lines_recorded": False}
 
 
 class JointExecutor:
@@ -246,48 +271,19 @@ class JointExecutor:
                 return row
             row.update({"status": "started", "started_at": time.time(), "attempts": 1})
             write_json(self._journal(), doc)
-        # A VAL callback is read-only, so transient provider/parser failures
-        # can be retried without changing the frozen checkpoint or consuming a
-        # new task position.  EVO remains single-shot because a callback may
-        # have partially mutated the live experience store before raising.
-        retry_limit = 1
-        if doc["slots"][slot_id].get("kind") == "validation":
-            try:
-                retry_limit = max(1, int(os.environ.get("JIT_MAS_SLOT_ATTEMPTS", "1")))
-            except ValueError:
-                retry_limit = 1
-        retryable = (ValueError, TimeoutError, ConnectionError)
-        errors = []
-        result = None
-        status = "failed"
-        for attempt in range(1, retry_limit + 1):
-            try:
-                result = callback()
-                status = "complete" if result.get("complete", True) else "incomplete"
-                break
-            except Exception as exc:
-                can_retry = (isinstance(exc, retryable)
-                             or (doc["slots"][slot_id].get("kind") == "validation"
-                                 and type(exc).__name__ in {"ValidationError", "JSONDecodeError"}))
-                if not can_retry:
-                    errors.append({"attempt": attempt, "error_type": type(exc).__name__})
-                    result = {"error_type": type(exc).__name__, "score": None, "complete": False}
-                    break
-                errors.append({"attempt": attempt, "error_type": type(exc).__name__})
-                if attempt < retry_limit:
-                    with self._journal_lock:
-                        doc["slots"][slot_id]["attempts"] = attempt + 1
-                        doc["slots"][slot_id]["retry_errors"] = list(errors)
-                        write_json(self._journal(), doc)
-                    continue
-                result = {"error_type": type(exc).__name__, "score": None, "complete": False}
-        if result is None:
-            result = {"error_type": "UnknownSlotFailure", "score": None, "complete": False}
+        # A read-only VAL callback still generates a task artifact.  Repeating
+        # it would resample that artifact, contrary to the frozen one-artifact
+        # protocol.  Both EVO and VAL therefore consume their callback once.
+        try:
+            result = callback()
+            status = "complete" if result.get("complete", True) else "incomplete"
+        except Exception as exc:
+            result = {"error_type": type(exc).__name__, "score": None, "complete": False,
+                      "failure_diagnostic": _failure_diagnostic(exc)}
+            status = "failed"
         with self._journal_lock:
             row = doc["slots"][slot_id]
             row.update({"status": status, "result": result, "result_sha256": digest(result), "finished_at": time.time()})
-            if errors:
-                row["retry_errors"] = errors
             write_json(self._journal(), doc)
             return row
 
