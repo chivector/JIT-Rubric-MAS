@@ -76,6 +76,12 @@ technology or domain. Identify remembered research or reporting by its known
 author/source, date and finding; generic references to studies do not substantiate
 a measured effect. Do not invent missing citation details. Distinguish association,
 causal evidence and interpretation, and keep the claim's strength within its support.
+When the supplied evidence explicitly consists only of retrieval-failure notices,
+do not collapse the deliverable into a generic disclaimer. Use well-known domain
+knowledge, concrete mechanisms, named institutions or market examples when you are
+confident they are real, label them as general knowledge or items requiring verification,
+and preserve useful country-by-country recommendations. Never fabricate exact figures,
+quotes, dates, URLs or source attributions to fill the gap.
 When review finds an unsupported number or attribution, remove it, replace it with a
 supported claim, or present it only as an explicitly requested hypothetical input;
 adding an unverified label does not repair its use as evidence for a conclusion. Before
@@ -110,6 +116,12 @@ the tradeoff and recommendation explicit. For plans, give concrete actions, orde
 decision conditions and resource assumptions. Review consequential claims by trying an
 independent derivation, counterexample or alternative explanation; publish the specific
 defect and supported correction, not a blanket approval or vague uncertainty warning.
+For a market-entry or business-strategy report, also check the requested country-by-country
+coverage for a defensible product or technology advantage, local competitors and partners,
+regulatory instruments, organizational roles, intellectual-property controls, supply-chain
+tradeoffs, exit options, alternative proteins, and a concrete data-source plan. If the
+evidence pack is empty, retain these dimensions as clearly labelled hypotheses and
+verification targets rather than dropping them from the deliverable.
 Preserve useful facts and calculations through handoffs; compression should remove
 repetition rather than turn substantive findings into headings. Show the requested
 artifact itself in the final answer, with sources and limitations attached to the claims

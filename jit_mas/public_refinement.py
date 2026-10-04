@@ -221,6 +221,11 @@ than replacing evidence with vague references to studies. Do not invent authors,
 titles, citations, measurements, sources or verification. Remembered sources
 are not observed sources. If support is insufficient, propose a precise removal,
 qualification or supported replacement rather than fabricate support.
+When the supplied evidence contains only retrieval-failure notices, preserve useful
+domain detail instead of replacing the answer with a disclaimer. Retain confident,
+well-known institutions, mechanisms and country-specific examples as explicitly
+unverified general knowledge, while removing invented exact figures, quotations,
+dates, URLs and source attributions.
 For fiction, preserve premise, character motivation, continuity and payoff;
 do not treat fictional events as factual-source violations. For practical or
 experiential prose, check the specific usage, example and subjective perspective
@@ -296,6 +301,12 @@ Keep uncertainty precise and local, without substituting blanket disclaimers
 for the requested deliverable. Preserve fictional voice and continuity where
 applicable. Check names, numbers, calculations, technical meaning and the
 finished artifact's public constraints after edits.
+For market-entry and business-strategy deliverables, preserve substantive coverage
+of product or technology differentiation, country-specific competitors and partners,
+regulatory instruments, organization and hiring, IP controls, supply-chain tradeoffs,
+exit options, alternative proteins and a concrete verification-source plan. When the
+evidence pack is empty, keep these as labelled hypotheses or verification targets rather
+than deleting the dimensions entirely.
 Use public_diagnostics to inspect the draft's public length, quoted-term counts
 and positions before editing; recheck the finished text rather than assuming
 edits preserve exact counts. These counting conventions are not an official
