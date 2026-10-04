@@ -48,7 +48,7 @@
 
 ## 验证
 
-- 聚焦回归：原有 `358 passed`；本轮 evidence pack、joint executor、bundle 和 fixed-team 回归分别通过 `29 passed` 与 `32 passed`（另有 `14 passed` fixed-team 定向结果）；并行 VAL 改动新增 `22 passed`，新增 fast validator 没有改变原 pack 内容。
+- 聚焦回归：原有 `358 passed`；本轮相关 evidence pack、joint executor、bundle 和 fixed-team 测试合并运行 `63 passed`（其中包含 `29 passed` evidence、`22 passed` executor/journal 并发与冻结测试、`14 passed` fixed-team 定向结果的重叠子集），新增 fast validator 没有改变原 pack 内容。
 - 之前完整测试：`2647 passed, 1 warning, 60 subtests passed`。
 - `scripts/run_joint_test_release.py` 已通过 `py_compile` 和 CLI/协议测试，但尚未执行 TEST，因为正式 EVO/VAL 前置条件未满足。
 
