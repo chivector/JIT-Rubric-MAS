@@ -186,6 +186,13 @@ class JointExecutor:
                 expected = checkpoint.get("snapshot_file_sha256")
                 if path and expected and (not Path(path).is_file() or file_hash(Path(path)) != expected):
                     raise CheckpointIntegrityError(f"Frozen {key} snapshot changed")
+                if path and checkpoint.get("state_hash"):
+                    frozen = ExperienceStore(path, read_only=True)
+                    try:
+                        if digest(frozen.snapshot()) != checkpoint["state_hash"]:
+                            raise CheckpointIntegrityError(f"Frozen {key} state hash mismatch")
+                    finally:
+                        frozen.close()
 
     def _slots(self) -> dict[str, dict[str, Any]]:
         slots = {}
@@ -289,13 +296,75 @@ class JointExecutor:
     def _run_val(self, doc, pipelines, datasets, name, run_id, checkpoint, task):
         sid = f"val:run{run_id}:c{checkpoint}:{name}:{task}"
         def invoke():
-            snapshot = pipelines[name].store.snapshot()
-            out = pipelines[name].run_task(task, snapshot, mode="validate", attribution=False, repeat=0)
+            # Validation is a read-only observation of the exact checkpoint.
+            # The mutable trajectory may already be several stages ahead when a
+            # run is resumed, so never source VAL from ``pipeline.store``.
+            frozen = self._open_checkpoint(doc, run_id, checkpoint)
+            try:
+                snapshot = frozen.snapshot()
+                out = pipelines[name].run_task(task, snapshot, mode="validate", attribution=False, repeat=0)
+            finally:
+                frozen.close()
             value = _score(name, out)
             lower, upper = self._bounds(name, datasets[name], task)
             norm = None if value is None else (0.0 if upper == lower else max(0.0, min(1.0, (value-lower)/(upper-lower))))
             return {"task_id": task, "score": value, "normalized": norm, "complete": value is not None, "outcome": out}
         return self._consume(doc, sid, invoke)
+
+    def _open_checkpoint(self, doc, run_id: int, position: int) -> ExperienceStore:
+        """Open and verify one immutable checkpoint for a VAL observation."""
+        key = f"run{run_id}:c{position}"
+        record = doc.get("checkpoints", {}).get(key)
+        if not isinstance(record, dict):
+            raise CheckpointIntegrityError(f"Missing frozen checkpoint {key}")
+        path = Path(record.get("snapshot_path", ""))
+        expected_file = record.get("snapshot_file_sha256")
+        expected_state = record.get("state_hash")
+        if not path.is_file() or not expected_file or file_hash(path) != expected_file:
+            raise CheckpointIntegrityError(f"Frozen {key} snapshot file hash mismatch")
+        frozen = ExperienceStore(path, read_only=True)
+        observed = frozen.snapshot()
+        if not expected_state or digest(observed) != expected_state:
+            frozen.close()
+            raise CheckpointIntegrityError(f"Frozen {key} state hash mismatch")
+        return frozen
+
+    def _ensure_checkpoint(self, doc, store: ExperienceStore, run_id: int, position: int) -> dict[str, Any]:
+        """Keep an existing snapshot immutable; never compare it with later live state."""
+        key = f"run{run_id}:c{position}"
+        existing = doc.get("checkpoints", {}).get(key)
+        if existing is not None:
+            frozen = self._open_checkpoint(doc, run_id, position)
+            frozen.close()
+            return existing
+        record = self._persist_checkpoint(store, run_id, position)
+        doc["checkpoints"][key] = record
+        write_json(self._journal(), doc)
+        return record
+
+    def _assert_live_prefix(self, doc, store: ExperienceStore, run_id: int) -> None:
+        """Fail closed if the mutable store and durable EVO journal disagree."""
+        order = _stage_order(self.manifest, run_id)
+        latest_hash = None
+        c0 = doc.get("checkpoints", {}).get(f"run{run_id}:c0")
+        if c0:
+            latest_hash = c0.get("state_hash")
+        for ordinal, task in enumerate(order):
+            sid = f"evo:run{run_id}:{ordinal:02d}:{task}"
+            row = doc["slots"].get(sid)
+            if row is None or row.get("status") == "pending":
+                break
+            if row.get("status") == "started":
+                raise CheckpointIntegrityError(f"Unresolved started EVO slot {sid}; refusing resampling")
+            if row.get("status") not in TERMINAL:
+                raise CheckpointIntegrityError(f"Unknown EVO slot status for {sid}")
+            if row.get("status") == "complete":
+                after = (row.get("result") or {}).get("after_state_sha256")
+                if not after:
+                    raise CheckpointIntegrityError(f"Complete EVO slot {sid} has no durable state hash")
+                latest_hash = after
+        if latest_hash is not None and digest(store.snapshot()) != latest_hash:
+            raise CheckpointIntegrityError(f"Mutable run{run_id} state disagrees with durable EVO prefix")
 
     def run_evolution_validation(self):
         """Run all 3×(C0 VAL → 60 EVO/30 VAL) trajectories once.
@@ -314,16 +383,14 @@ class JointExecutor:
                     # C0 is a registered whole-state candidate.  Persist the
                     # empty initial state before its first validation pass so
                     # selection never silently excludes the baseline.
-                    if f"run{run_id}:c0" not in doc["checkpoints"]:
-                        doc["checkpoints"][f"run{run_id}:c0"] = self._persist_checkpoint(store, run_id, 0)
-                        write_json(self._journal(), doc)
+                    self._ensure_checkpoint(doc, store, run_id, 0)
+                    self._assert_live_prefix(doc, store, run_id)
                     for checkpoint in CHECKPOINTS:
                         for benchmark in SOURCES:
                             for task in self._membership(benchmark, "validation"):
                                 self._run_val(doc, pipelines, datasets, benchmark, run_id, checkpoint, task)
                         if checkpoint == 60:
-                            doc["checkpoints"][f"run{run_id}:c{checkpoint}"] = self._persist_checkpoint(store, run_id, checkpoint)
-                            write_json(self._journal(), doc)
+                            self._ensure_checkpoint(doc, store, run_id, checkpoint)
                             break
                         order = _stage_order(self.manifest, run_id)
                         start, end = checkpoint, checkpoint + 15
@@ -336,15 +403,17 @@ class JointExecutor:
                                 return {"complete": True, "task_id": task, "outcome": outcome,
                                         "after_state_sha256": digest(pipeline.store.snapshot())}
                             self._consume(doc, sid, invoke)
-                        doc["checkpoints"][f"run{run_id}:c{checkpoint + 15}"] = self._persist_checkpoint(store, run_id, checkpoint + 15)
-                        write_json(self._journal(), doc)
+                        self._assert_live_prefix(doc, store, run_id)
+                        self._ensure_checkpoint(doc, store, run_id, checkpoint + 15)
                 finally:
                     store.close()
                 # The final validation at C60 is performed by the loop above;
                 # selection is recorded only after every checkpoint is terminal.
-            for run_id in RUN_IDS:
-                self._select_run(doc, run_id)
-            doc["status"] = "evo_val_complete_test_pending"
+            selections = {str(run_id): self._select_run(doc, run_id) for run_id in RUN_IDS}
+            doc["status"] = ("evo_val_complete_test_pending"
+                              if all(row.get("selected", {}).get("eligible")
+                                     for row in selections.values())
+                              else "evo_val_inconclusive_test_pending")
             write_json(self._journal(), doc)
             report = {"schema": "joint-evo-val-report-v1", "status": doc["status"],
                       "registration_sha256": doc["identity"]["registration_sha256"],
@@ -390,9 +459,11 @@ class JointExecutor:
                                "snapshot_path": checkpoint_record.get("snapshot_path") if checkpoint_record else None,
                                "snapshot_file_sha256": checkpoint_record.get("snapshot_file_sha256") if checkpoint_record else None})
         selected = select_checkpoint(candidates, tolerance=1e-12)
-        if selected is None:
-            raise RuntimeError(f"Run {run_id} has no eligible checkpoint")
-        doc["selections"][str(run_id)] = {"candidates": candidates, "selected": selected, "selection_uses_test": False}
+        record = {"candidates": candidates, "selected": selected,
+                  "selection_uses_test": False,
+                  "status": "selected" if selected is not None else "inconclusive"}
+        doc["selections"][str(run_id)] = record
+        return record
 
     def run_test(self):
         raise NotImplementedError("TEST execution is intentionally unavailable until unified TestRelease wiring is reviewed")

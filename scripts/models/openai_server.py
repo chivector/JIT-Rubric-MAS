@@ -84,6 +84,7 @@ class OpenAIServerModel(Model):
         temperature: Optional[float] = None,
         custom_role_conversions: Optional[Dict[str, str]] = None,
         max_attempts: int = 5,
+        http_trust_env: bool = True,
         **kwargs,
     ):
         import openai
@@ -103,12 +104,17 @@ class OpenAIServerModel(Model):
         tls_endpoint = os.getenv("JIT_MAS_TLS_ENDPOINT")
         disable_tls = tls_verify in {"0", "false", "no", "off"} and (not tls_endpoint or api_base == tls_endpoint)
         disable_keepalive = os.getenv("JIT_MAS_DISABLE_KEEPALIVE", "0") == "1"
-        if disable_tls or disable_keepalive:
-            import httpx
-            client_kwargs["http_client"] = httpx.Client(
-                verify=not disable_tls,
-                limits=httpx.Limits(max_keepalive_connections=0 if disable_keepalive else 20, max_connections=100),
-            )
+        # Always construct the transport explicitly so the trust-env policy is
+        # deterministic (on Windows httpx can inherit the system proxy from the
+        # registry even when HTTP_PROXY is absent).  ``http_trust_env`` is a
+        # client-only option and is therefore never forwarded in completion
+        # kwargs/API request bodies.
+        import httpx
+        client_kwargs["http_client"] = httpx.Client(
+            verify=not disable_tls,
+            trust_env=bool(http_trust_env),
+            limits=httpx.Limits(max_keepalive_connections=0 if disable_keepalive else 20, max_connections=100),
+        )
         self.client = openai.OpenAI(**client_kwargs)
         self.custom_role_conversions = custom_role_conversions
         self.max_attempts = max(1, int(max_attempts))

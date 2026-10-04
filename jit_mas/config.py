@@ -26,6 +26,9 @@ class ModelConfig(Record):
     context_margin: int = Field(default=2048, ge=0)
     context_policy: Literal["reject", "oldest_turns"] = "reject"
     expected_response_model: str | None = None
+    # Keep the provider transport policy explicit and out of the completion
+    # request body.  Windows httpx may otherwise inherit the system proxy.
+    http_trust_env: bool = True
 
     @model_validator(mode="after")
     def context_limits(self):
@@ -50,6 +53,7 @@ class MASConfig(Record):
     models: dict[str, ModelConfig] = Field(default_factory=dict)
     max_agents: int = Field(default=4, ge=1, le=16)
     max_parallel: int = Field(default=2, ge=1, le=16)
+    judge_parallel: int = Field(default=1, ge=1, le=16)
     team_max_calls: int | None = Field(default=16, ge=1)
     max_model_calls: int | None = Field(default=100, ge=1)
     max_total_tokens: int = Field(default=2_000_000, ge=1)
@@ -170,7 +174,8 @@ class NativeModels:
         attempts = max(1, int(os.getenv("JIT_MAS_MODEL_ATTEMPTS", "1")))
         model = OpenAIServerModel(model_id=cfg.model, api_base=cfg.endpoint,
                                   api_key=os.environ[cfg.key_env], temperature=cfg.temperature,
-                                  max_tokens=cfg.max_tokens, max_attempts=attempts, **options)
+                                  max_tokens=cfg.max_tokens, max_attempts=attempts,
+                                  http_trust_env=cfg.http_trust_env, **options)
         model.client = model.client.with_options(max_retries=0, timeout=cfg.timeout)
         from .request_policy import RequestPolicyModel, request_gate
         model = RequestPolicyModel(model, gate=request_gate(self.config.max_inflight_requests),

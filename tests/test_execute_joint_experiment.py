@@ -1,10 +1,13 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from scripts.execute_joint_experiment import JointExecutor
 from jit_mas.experience import ExperienceStore
+from jit_mas.schemas import ChangeProposal, Experience
+from jit_mas.schemas import digest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -78,6 +81,43 @@ def test_checkpoint_persistence_materializes_immutable_snapshot(tmp_path):
         resumed_store.close()
 
 
+def test_existing_checkpoint_is_not_rewritten_after_live_store_advances(tmp_path):
+    executor = JointExecutor(_bundle(tmp_path), tmp_path / "run")
+    executor.check()
+    store = ExperienceStore(tmp_path / "mutable.sqlite")
+    try:
+        document = executor._load_or_init()
+        initial = executor._persist_checkpoint(store, 0, 0)
+        document["checkpoints"]["run0:c0"] = initial
+        executor._journal().write_text(json.dumps(document), encoding="utf-8")
+        store.commit(ChangeProposal(
+            proposal_id="proposal-resume",
+            source_task_id="synthetic-evo",
+            base_version=0,
+            experience=Experience(
+                experience_id="experience-resume",
+                bank="rubric",
+                instruction="Use a compact checklist.",
+                applicability="writing",
+                source_task_ids=["synthetic-evo"],
+                evidence=["synthetic-evidence"],
+            ),
+            diff="add checklist",
+            rationale="resume test",
+            evidence=["synthetic-evidence"],
+            expected_benefit="stable output",
+        ))
+        preserved = executor._ensure_checkpoint(document, store, 0, 0)
+        assert preserved == initial
+        frozen = ExperienceStore(Path(initial["snapshot_path"]), read_only=True)
+        try:
+            assert frozen.snapshot().version == 0
+        finally:
+            frozen.close()
+    finally:
+        store.close()
+
+
 def test_assert_frozen_rejects_checkpoint_snapshot_change(tmp_path):
     executor = JointExecutor(_bundle(tmp_path), tmp_path / "run")
     executor.check()
@@ -133,3 +173,76 @@ def test_provider_run_requires_non_synthetic_preflight(tmp_path):
     executor = JointExecutor(_bundle(tmp_path), tmp_path / "run")
     with pytest.raises(ValueError, match="provider preflight"):
         executor.check(require_provider=True)
+
+
+def test_validation_reads_registered_checkpoint_after_live_store_advances(tmp_path):
+    executor = JointExecutor(_bundle(tmp_path), tmp_path / "run")
+    executor.check()
+    document = executor._load_or_init()
+    live = ExperienceStore(tmp_path / "live.sqlite")
+    try:
+        executor._ensure_checkpoint(document, live, 0, 0)
+        task = executor._membership("researchrubrics", "validation")[0]
+        seen = []
+
+        class FakePipeline:
+            def run_task(self, task_id, snapshot, **kwargs):
+                seen.append(snapshot.version)
+                return {"evaluation": {"complete": True, "score": 0.5}}
+
+        dataset = SimpleNamespace(lower_bounds={task: 0.0}, upper_bounds={task: 1.0})
+        # The live store is intentionally the mutable trajectory object.  A
+        # fake pipeline would expose a later live version if _run_val used it;
+        # the registered checkpoint must remain the only VAL input.
+        live.db.execute("UPDATE state SET value='7' WHERE key='current'")
+        live.db.commit()
+        executor._run_val(document, {"researchrubrics": FakePipeline()},
+                          {"researchrubrics": dataset}, "researchrubrics", 0, 0, task)
+        assert seen == [0]
+    finally:
+        live.close()
+
+
+def test_existing_checkpoint_is_not_rewritten_from_later_live_state(tmp_path):
+    executor = JointExecutor(_bundle(tmp_path), tmp_path / "run")
+    executor.check()
+    document = executor._load_or_init()
+    live = ExperienceStore(tmp_path / "live.sqlite")
+    try:
+        original = executor._ensure_checkpoint(document, live, 0, 15)
+        # Simulate a trajectory that has advanced after C15.  Re-entering the
+        # C15 loop must verify the immutable file and return it unchanged.
+        live.db.execute("UPDATE state SET value='0' WHERE key='current'")
+        live.db.commit()
+        resumed = executor._ensure_checkpoint(document, live, 0, 15)
+        assert resumed == original
+        frozen = executor._open_checkpoint(document, 0, 15)
+        try:
+            assert frozen.snapshot().version == 0
+        finally:
+            frozen.close()
+    finally:
+        live.close()
+
+
+def test_mid_c30_unresolved_prefix_fails_closed(tmp_path):
+    executor = JointExecutor(_bundle(tmp_path), tmp_path / "run")
+    executor.check()
+    document = executor._load_or_init()
+    live = ExperienceStore(tmp_path / "live.sqlite")
+    try:
+        executor._ensure_checkpoint(document, live, 0, 0)
+        executor._ensure_checkpoint(document, live, 0, 15)
+        executor._ensure_checkpoint(document, live, 0, 30)
+        after = digest(live.snapshot())
+        order = [row for row in document["slots"].values()
+                 if row["kind"] == "evolution" and row["run_id"] == 0]
+        order.sort(key=lambda row: row["ordinal"])
+        for row in order[:30]:
+            row.update(status="complete", result={"complete": True,
+                       "after_state_sha256": after})
+        order[30]["status"] = "started"
+        with pytest.raises(Exception, match="Unresolved started EVO slot"):
+            executor._assert_live_prefix(document, live, 0)
+    finally:
+        live.close()

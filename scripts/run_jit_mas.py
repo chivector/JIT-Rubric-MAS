@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import uuid
 from pathlib import Path
 
 import yaml
@@ -77,6 +78,20 @@ def make_pipeline(config, store, output, *, data=None, splits=None, fixture_mode
             spec = config.models["judge"]
             kwargs = {"judge_api_base": spec.endpoint, "judge_max_tokens": spec.max_tokens,
                       "judge_timeout": spec.timeout}
+            # ResearchRubrics evaluates one independent judge request per
+            # rubric.  Keep the identity-only call sequential, but construct
+            # independent metered judges for a real scored call so those
+            # requests can use the registered bounded parallelism.  The same
+            # ledger is shared by every child, preserving accounting.
+            if dataset is not None and dataset.name == "researchrubrics":
+                parallel = config.judge_parallel if judge is not None else 1
+                kwargs["max_parallel_judgments"] = parallel
+                if parallel > 1:
+                    ledger = getattr(judge, "ledger", None)
+                    if ledger is None:
+                        raise ValueError("Parallel judge evaluation requires a metered judge")
+                    kwargs["judge_factory"] = lambda: provider.create(
+                        "judge", f"judge-rubric-{uuid.uuid4().hex[:12]}", ledger, "evaluation")
         if dataset is not None:
             return dataset.evaluator(judge, judge_id=judge_id, checker=checker, **kwargs)
         return ResearchRubricsAdapter(judge=judge, judge_id=judge_id, **kwargs)

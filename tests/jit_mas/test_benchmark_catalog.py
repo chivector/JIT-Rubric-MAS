@@ -121,7 +121,7 @@ def test_researchrubrics_preserves_ids_and_private_weight_bounds(tmp_path):
     assert dataset.lower_bounds["synthetic-rr"] == -1.5
     assert dataset.public_metadata["synthetic-rr"]["domain"] == "science"
     assert "PRIVATE" not in dataset.tasks["synthetic-rr"].model_dump_json()
-    assert dataset.evaluator(Judge([]))._max_attempts == 1
+    assert dataset.evaluator(Judge([]))._max_attempts == 2
 
 
 def test_drbii_projection_retains_public_source_prohibition_not_private_task(tmp_path):
