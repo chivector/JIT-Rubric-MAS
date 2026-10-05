@@ -133,4 +133,20 @@ parallel2 的两个终态失败均为 DeepSearchQA 规划输出的 coverage/prim
 | p14_relevance | C0 VAL RR 两槽 | complete | 0.376471、0.802817 | 293,163、266,494 |
 | 历史 Direct | RR 33 TEST（旧 exploratory protocol） | complete | **0.469267** | 旧记录，口径不同 |
 
-截至本记录，p18 journal 为 `complete=1, failed=1, started=1, pending=627`，累计 token `319,942`；p15 为 `complete=6, failed=36, started=1, incomplete=1, pending=586`，累计 token `5,637,926`。这些数字用于运行与成本审计，不构成六 benchmark 的最终成绩，也没有启动 TEST release。
+截至本记录，p18 journal 为 `complete=7, failed=1, started=1, pending=621`，累计 token `1,690,838`；p15 为 `complete=6, failed=36, started=1, incomplete=1, pending=586`，累计 token `5,637,926`。这些数字用于运行与成本审计，不构成六 benchmark 的最终成绩，也没有启动 TEST release。
+
+### Benchmark × Method 诊断快照
+
+下表使用各 benchmark 最近一份已封存、`comparison_complete=true` 的开发诊断包（RR/DSQA/WB/DRBII 为同模型自评；IFEval/IFBench 为已曝光题目的 checker 结果）。分数为该包的归一化均值；括号内为该方法在该诊断包的 generation+evaluation token 总量。它们不属于 v5 正式 TEST，也不用于选版。
+
+| Benchmark | Direct | 原生 JIT | Ours | rubric-fixed / 外部 SOTA |
+|---|---:|---:|---:|---:|
+| ResearchRubrics（1 题） | 0.488（72,792） | 0.488（129,283） | **0.605（279,806）** | 无有效记录 |
+| DeepSearchQA（2 题） | 0.467（14,743） | **0.833（99,114）** | 0.429（275,621） | 无有效记录 |
+| WritingBench（2 题） | **0.867（17,603）** | 0.856（94,331） | 0.811（235,428） | 无有效记录 |
+| DeepResearch Bench II（1 题） | **0.552（21,704）** | 0.500（84,438） | 0.500（166,410） | 无有效记录 |
+| IFEval（2 个已曝光题） | **1.000（联合包 2,807）** | 0.500（联合包 107,091） | **1.000（联合包 272,835）** | 无有效记录 |
+| IFBench（2 个已曝光题） | 0.000（与 IFEval 共包） | **0.500（与 IFEval 共包）** | **0.500（与 IFEval 共包）** | 无有效记录 |
+| 六项简单宏平均（诊断口径） | 0.562 | 0.613 | **0.641** | 不适用于正式论文结论 |
+
+诊断包的合计 token 约为 Direct 129.6k、原生 JIT 514.3k、Ours 1.23M；这是不同题数和不同协议的开发包合计，不能替代正式成本比较。当前诊断结果显示 Ours 的 token 明显高于原生 JIT，尚未达到预期的 `Single-Agent < Ours < JIT` 顺序。
