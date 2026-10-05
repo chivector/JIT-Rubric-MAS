@@ -133,7 +133,7 @@ parallel2 的两个终态失败均为 DeepSearchQA 规划输出的 coverage/prim
 | p14_relevance | C0 VAL RR 两槽 | complete | 0.376471、0.802817 | 293,163、266,494 |
 | 历史 Direct | RR 33 TEST（旧 exploratory protocol） | complete | **0.469267** | 旧记录，口径不同 |
 
-截至本记录，p18 journal 为 `complete=7, failed=1, started=1, pending=621`，累计 token `1,690,838`；p15 为 `complete=6, failed=36, started=1, incomplete=1, pending=586`，累计 token `5,637,926`。这些数字用于运行与成本审计，不构成六 benchmark 的最终成绩，也没有启动 TEST release。
+截至本记录，p18 journal 为 `complete=8, failed=1, started=1, pending=620`，累计 token `1,940,102`；p15 为 `complete=6, failed=36, started=1, incomplete=1, pending=586`，累计 token `5,637,926`。这些数字用于运行与成本审计，不构成六 benchmark 的最终成绩，也没有启动 TEST release。
 
 ### Benchmark × Method 诊断快照
 
