@@ -5,8 +5,8 @@
 ## 代码与运行身份
 
 - 远端：`https://github.com/chivector/JIT-Rubric-MAS.git`，分支 `main`。
-- 最新代码提交：`92159fb`（在 `68adf5e` 的不可变 evidence pack 缓存、`ece1d16` 的 prevalidated renderer 和 `9866b34` 的 rubric baseline 修复基础上继续优化）；随后登记了新的 prevalidated evidence bundle。
-- 最新正式候选 bundle：`.runtime/formal_v5_assets_20261004/bundle_p8_val3_v1/bundle.json`，`formal_ready=true`；该 bundle 使用重新抓取并完成结构预验证的公开 evidence、actor timeout 60 s、judge timeout 120 s、judge 并发上限 8。旧 `joint_run_*` 输出不能与新 bundle 混用；正式顺序 VAL 使用 `--val-workers 1`。
+- 历史 p8 代码提交：`92159fb`（在 `68adf5e` 的不可变 evidence pack 缓存、`ece1d16` 的 prevalidated renderer 和 `9866b34` 的 rubric baseline 修复基础上继续优化）；随后登记了新的 prevalidated evidence bundle。
+- 历史 p8 候选 bundle：`.runtime/formal_v5_assets_20261004/bundle_p8_val3_v1/bundle.json`，`formal_ready=true`；该 bundle 使用重新抓取并完成结构预验证的公开 evidence、actor timeout 60 s、judge timeout 120 s、judge 并发上限 8。旧 `joint_run_*` 输出不能与新 bundle 混用；正式顺序 VAL 使用 `--val-workers 1`。
 - 冻结协议：`paper/experiments/joint_protocol_v5.json`；六个 benchmark，EVO=60/run，VAL=30/run，TEST=273/run，三次 run，checkpoint 为 C0/C15/C30/C45/C60。
 - 形式化槽位总数：EVO/VAL 630；TEST release 1,911。TEST 必须在 EVO/VAL 形成完整 `evo_val_report.json` 后执行。
 
@@ -54,19 +54,19 @@
 
 ## 失败原因与下一步
 
-本轮主要失败不是 Ours 生成器无法输出，而是 actor/judge 中转服务出现长时间连接等待；历史 GPT 运行还记录过 quota/authentication failure。当前 formal p8 输出会继续按 journal 的 durable 状态推进；若 provider 再次无法收敛，只保留 consumed failure，不把 partial 槽位写成正式均值，也不以 incomplete EVO/VAL 启动 TEST。
+本轮主要失败不是 Ours 生成器无法输出，而是 actor/judge 中转服务出现长时间连接等待；历史 GPT 运行还记录过 quota/authentication failure。历史 formal p8 输出已停止，保留 journal 的 durable 状态；若 provider 再次无法收敛，只保留 consumed failure，不把 partial 槽位写成正式均值，也不以 incomplete EVO/VAL 启动 TEST。
 
 ## 2026-10-05 软 budget-aware 收尾更新
 
-用户明确要求不把简单/中等/复杂任务映射成固定角色上限。为此，最新提交 `9afb055` 将 roster enforcement 改为显式开关，默认关闭；正式 p12 配置 `adaptive_budget_enforcement: false`。运行仍保留任务复杂度、输入长度、约束数量、附件/工具信息形成的 `limits.adaptive_budget` 建议，以及共享 ledger 的 token/调用预算和真实余额检查。模型可以按上下文选择 1 个、2 个或完整池，只有真实预算耗尽才 fail closed；这保留了 budget-aware 的自适应性，不把复杂度标签当成硬裁决。
+用户明确要求不把简单/中等/复杂任务映射成固定角色上限。最新实现删除了这套难度分档、角色数/调用数建议和对应 Prompt；正式 p12 配置中的 `adaptive_budget_enforcement: false` 仅作为旧配置兼容字段。运行保留 configured `max_agents`、共享 ledger 的 token/调用预算、未来阶段预留和真实余额检查，规划器根据任务要求、独立检查的预期收益、上下文不确定性与实时剩余预算决定角色数和协作深度；预算耗尽时 fail closed。
 
 p12 冻结 bundle：`.runtime/formal_v5_assets_20261004/bundle_p12_soft_budget/bundle.json`，registration/protocol 哈希已写入 bundle，provider preflight 为非 synthetic。代码、配置和 evidence 在登记后保持不变。p11 的硬上限运行已停止并保留为失败审计；p12 是当前正式候选。
 
 ### 正式运行调度审计
 
-- `joint_run_p12_soft_budget`：顺序 VAL 探测落盘 `complete=5, failed=1, started=1, pending=623`，累计 provider token `1,746,442`；其中一个失败是中转请求超时，未被计入成绩均值。该输出未继续使用，因为单路吞吐过低。
+- `joint_run_p12_soft_budget`：顺序 VAL 探测落盘 `complete=5, failed=1, started=1, pending=623`，累计 token `1,746,442`（含超时请求估算 `60,021`）；其中一个失败是中转请求超时，未被计入成绩均值。该输出未继续使用，因为单路吞吐过低。
 - `joint_run_p12_parallel`：尝试 8 路只读 VAL；中转服务出现请求容量排队超时，已停止并保留失败诊断，未与正式结果混合。
-- `joint_run_p12_parallel2`：使用同一冻结 bundle、2 路只读 VAL，不改变模型或方法；进程已在后台继续，当前检查点正在推进，槽位结果和 token usage 均写入 `evo_val_journal.json`。并行仅改变执行调度，不能改变 checkpoint、候选、评分或答案。
+- `joint_run_p12_parallel2`：使用同一冻结 bundle、2 路只读 VAL，不改变模型或方法；已由操作方中止，最终计数与成本见下文；槽位结果和 token usage 保留在 `evo_val_journal.json`。并行仅改变执行调度，不能改变 checkpoint、候选、评分或答案。
 
 ### Token accounting
 
@@ -75,3 +75,26 @@ p12 冻结 bundle：`.runtime/formal_v5_assets_20261004/bundle_p12_soft_budget/b
 p12 顺序运行的前几个完整槽已观察到真实 provider token；例如首槽 34 次模型调用、总计 248,617 token，其中 Ours inference 171,373 token、judge evaluation 77,244 token。这个数值用于最终 performance-token trade-off 表，不会把估算值冒充 provider usage。
 
 在 p12 EVO/VAL 形成完整 `evo_val_report.json` 之前，不启动 TEST；完成后严格执行 register → submit → seal → score，并保留所有失败槽位、原始答案、judge rubric、token usage、哈希和 provider identity。
+
+
+## 角色数规则纠偏（当前实现）
+
+本轮删除了从题目长度、关键词和 simple/moderate/complex 标签推导角色数/调用数的函数、规划 payload 和 Prompt 规则。角色数与协作深度由规划器依据任务需求、有用的独立检查、边际质量收益和实时预算决定。保留原有 configured `max_agents`、`TeamBudgetPlan`、未来阶段预留、每阶段预算刷新及运行时 ledger 校验。旧配置 `adaptive_budget_enforcement: false` 继续可读；`true` 明确拒绝，防止重新启用已移除策略。
+
+拟定的 p13（固定三次团队调用、关闭 refinement、缩小总预算）只做过配置登记，没有执行；已通过 `.runtime/formal_v5_assets_20261004/p13_abandoned.json` 标记撤销。纠偏后的下一轮沿用 p12 的 `team_max_calls=null`、`max_model_calls=null`、`max_total_tokens=2,000,000` 和原有 public refinement 配置，不以另一种固定调用数代替角色数硬限制。新代码必须重新登记运行，不能拼接到旧 journal。
+
+### p12 最终中断审计
+
+| 输出目录后缀 | complete | failed | started | pending | 已落盘总 token | 其中估算 token |
+|---|---:|---:|---:|---:|---:|---:|
+| `joint_run_p12_soft_budget` | 5 | 1 | 1 | 623 | 1,746,442 | 60,021 |
+| `joint_run_p12_parallel` | 0 | 3 | 8 | 619 | 432,512 | 346,123 |
+| `joint_run_p12_parallel2` | 22 | 2 | 2 | 604 | 5,621,177 | 107,494 |
+
+各目录新增 `operator_interruption.json`；保留原 journal、答案、失败记录和 token usage。以上成本是终态槽位已落盘值，尚未覆盖中断中的 started 槽位，不应写成整个 campaign 的精确账单。parallel2 的 inference 为 4,595,606 provider tokens；evaluation 为 1,025,571 tokens（含估算 107,494）。报告分别列 actor、judge、合计，估算量独立列示。
+
+parallel2 的两个终态失败均为 DeepSearchQA 规划输出的 coverage/primary/agent.rubric_ids 不一致，并非 provider 超时；不通过静默重分配责任来掩盖该错误。ResearchRubrics 公寓题的 evidence 包存在明显跑题网页，需要进一步修复检索相关性；哈希验证通过并不证明内容相关。中断和重启同样属于本轮开发成本，全部保留，不挑选高分槽位拼成正式结果。
+
+历史 pilot 与当前 p12 的题目和 evidence 条件不同，不能通过直接比较均值宣称方法优劣或成本比。当前没有完整 checkpoint 选择、TEST release 或六 benchmark 正式结果，也没有证据证明 Ours 的 token 已介于 Direct 和 Native JIT 之间。
+
+本次纠偏回归：182 passed，覆盖短题允许三角色、长题允许单角色、协作执行、真实预算不足拒绝、预算估算不作为硬迭代上限，以及 token accounting。TEST submit 并行器 `cf4656b` 另有 20 passed；评分阶段保持串行。

@@ -1,83 +1,95 @@
-"""Deterministic budget recommendations are public-task based and auditable."""
+"""Roster size stays a model decision within configured and live budgets."""
+
+import json
+
+import pytest
+from pydantic import ValidationError
 
 from jit_mas.agent_pool import seed_pool
-from jit_mas.planning import ADAPTIVE_BUDGET_VERSION, GlobalAnalyzer, adaptive_budget_profile
-from jit_mas.schemas import PublicTask
+from jit_mas.budget import BudgetLedger
+from jit_mas.config import MASConfig
+from jit_mas.planning import GlobalAnalyzer
+from jit_mas.schemas import AgentSpec, PublicTask
 
 
-def test_simple_task_prefers_one_role_and_one_call():
-    profile = adaptive_budget_profile(PublicTask(task_id="simple", question="Explain the result"),
-                                     max_agents=4, total_max_calls=16)
-    assert profile["version"] == ADAPTIVE_BUDGET_VERSION
-    assert profile["complexity_band"] == "simple"
-    assert profile["preferred_max_agents"] == 1
-    assert profile["preferred_total_max_calls"] == 1
-    assert profile["signals"]["constraint_count"] == 0
+def candidates(count, mode='single_pass'):
+    roles = ['analyst', 'critic', 'writer'][-count:]
+    return [AgentSpec(agent_id=role, role=role.title(), capability='reasoning',
+                      pool_agent_id=role, pool_agent_version=1,
+                      max_calls=None if mode == 'iterative_shared_ledger' else 1,
+                      max_tokens=256).model_dump(mode='json') for role in roles]
 
 
-def test_complex_task_retains_configured_roster_and_records_signals():
-    task = PublicTask(
-        task_id="complex",
-        question=("Research and compare alternatives across countries and periods, "
-                   "calculate a reproducible table, and cite evidence for every claim. " * 8),
-        constraints=["include limitations", "cover each requested country", "show assumptions"],
-        attachments=["brief", "data"], tools=["search"], capabilities=["research", "review"],
-    )
-    profile = adaptive_budget_profile(task, max_agents=4, total_max_calls=16)
-    assert profile["complexity_band"] == "complex"
-    assert profile["preferred_max_agents"] == 4
-    assert profile["preferred_total_max_calls"] == 12
-    assert "evidence" in profile["signals"]["complexity_terms"]
-
-
-def test_task_adaptive_profile_is_present_in_every_planning_payload():
-    task = PublicTask(task_id="audit", question="Compare evidence for two alternatives")
-    seen = []
-
-    def model(messages):
-        import json
-        payload = json.loads(messages[1]["content"])
-        seen.append(payload["limits"]["adaptive_budget"])
-        return json.dumps({"graph": {"rubrics": []}, "candidates": [{
-            "agent_id": "writer", "role": "Writer", "capability": "writing",
-            "rubric_ids": [], "max_calls": 1, "max_tokens": 128,
-        }]})
-
-    GlobalAnalyzer(model, max_agents=4, total_max_calls=16).predict(task)
-    assert seen and seen[0]["version"] == ADAPTIVE_BUDGET_VERSION
-    assert seen[0]["preferred_max_agents"] == 2
-
-
-def test_only_evolving_pool_enforces_preferred_roster_cap():
-    import json
-
-    task = PublicTask(task_id="easy", question="Explain the result")
-    requests = []
+@pytest.mark.parametrize('question,count', [
+    ('Prove it.', 3),
+    ('Compare the alternatives and explain the result.', 3),
+    ('Summarize these repeated notes. ' * 50, 1),
+])
+@pytest.mark.parametrize('mode', ['single_pass', 'iterative_shared_ledger'])
+def test_roster_is_not_determined_by_question_length_or_keywords(question, count, mode):
+    agents = candidates(count, mode)
+    graph = {'rubrics': []}
+    calls = []
+    budget = BudgetLedger(max_calls=None, max_tokens=5000)
+    planned_calls = 2 if mode == 'iterative_shared_ledger' else 1
 
     def model(messages, **kwargs):
-        requests.append((json.loads(messages[1]["content"]), kwargs))
-        return json.dumps({"graph": {"rubrics": []}, "candidates": [{
-            "agent_id": "writer", "role": "Writer", "capability": "writing",
-            "rubric_ids": [], "max_calls": 1, "max_tokens": 128,
-            "pool_agent_id": "writer", "pool_agent_version": 1,
-        }]})
+        payload = json.loads(messages[1]['content'])
+        calls.append((payload, kwargs))
+        if payload['phase'] == 'predict':
+            return json.dumps({'graph': graph, 'candidates': agents})
+        team_agents = [dict(a) for a in agents]
+        team_agents[-1]['depends_on'] = [a['agent_id'] for a in agents[:-1]]
+        return json.dumps({'graph': graph, 'team': {
+            'agents': team_agents, 'synthesizer_id': agents[-1]['agent_id'],
+            'max_parallel': 2, 'total_max_calls': None, 'execution_mode': mode,
+            'budget_plan': {
+                'agents': [
+                    {'agent_id': a['agent_id'], 'expected_model_calls': planned_calls,
+                     'expected_input_tokens': 400, 'expected_output_tokens': 200,
+                     'rationale': 'Independent reasoning and verification for this task.'}
+                    for a in agents],
+                'reserved_future_tokens': 500, 'reserved_future_model_calls': 1,
+                'quality_cost_tradeoff': 'Distinct contributions justify their expected token cost.',
+                'stopping_policy': 'Finish once the deliverable and consequential checks are complete.',
+            },
+        }})
 
-    pooled = GlobalAnalyzer(model, max_agents=3, agent_pool=seed_pool(),
-                            adaptive_budget_enforcement=True)
-    pooled.predict(task)
-    assert requests[0][0]["limits"]["max_agents"] == 1
-    assert requests[0][0]["limits"]["adaptive_budget"]["enforced"] is True
+    analyzer = GlobalAnalyzer(model, max_agents=3, agent_pool=seed_pool(),
+                              execution_mode=mode, total_max_calls=None,
+                              budget_context=budget.resource_context, max_corrections=0)
+    analyzer.planning_response_format = 'json_schema'
+    team = analyzer.build(PublicTask(task_id='roster', question=question),
+                          local_planning=False).team
+    assert len(team.agents) == count
+    assert team.total_max_calls is None
+    assert team.budget_plan.totals()['model_calls'] == count * planned_calls
+    assert len(calls) == 2
+    for payload, kwargs in calls:
+        assert payload['limits']['max_agents'] == 3
+        assert 'adaptive_budget' not in payload['limits']
+        assert payload['limits']['resource_budget']['remaining_tokens'] == 5000
+    predict_schema = calls[0][1]['response_format']['json_schema']['schema']
+    assert predict_schema['properties']['candidates']['maxItems'] == 3
 
-    baseline_requests = []
 
-    def baseline_model(messages, **kwargs):
-        baseline_requests.append(json.loads(messages[1]["content"]))
-        return json.dumps({"graph": {"rubrics": []}, "candidates": [{
-            "agent_id": "writer", "role": "Writer", "capability": "writing",
-            "rubric_ids": [], "max_calls": 1, "max_tokens": 128,
-        }]})
+@pytest.mark.parametrize('max_agents,remaining_calls,error', [
+    (2, 10, 'Candidate count exceeds limit=2'),
+    (3, 2, 'remaining shared model-call budget'),
+])
+def test_real_resource_limits_still_reject_unaffordable_rosters(max_agents, remaining_calls, error):
+    response = {'graph': {'rubrics': []}, 'candidates': candidates(3)}
+    budget = BudgetLedger(max_calls=remaining_calls, max_tokens=5000)
+    analyzer = GlobalAnalyzer(lambda _: json.dumps(response), max_agents=max_agents,
+                              agent_pool=seed_pool(), max_corrections=0,
+                              budget_context=budget.resource_context)
+    with pytest.raises(ValueError, match=error):
+        analyzer.predict(PublicTask(task_id='budget', question='Prove it.'))
 
-    GlobalAnalyzer(baseline_model, max_agents=3).predict(task)
-    assert baseline_requests[0]["limits"]["max_agents"] == 3
-    assert "adaptive_budget" in baseline_requests[0]["limits"]
-    assert baseline_requests[0]["limits"]["adaptive_budget"]["enforced"] is False
+
+def test_old_disabled_config_loads_but_difficulty_caps_cannot_be_reenabled():
+    assert MASConfig(adaptive_budget_enforcement=False).adaptive_budget_enforcement is False
+    with pytest.raises(ValidationError, match='adaptive_budget_enforcement'):
+        MASConfig(adaptive_budget_enforcement=True)
+    with pytest.raises(ValueError, match='Difficulty-based roster enforcement has been removed'):
+        GlobalAnalyzer(lambda _: '', adaptive_budget_enforcement=True)

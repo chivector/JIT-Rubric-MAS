@@ -5,7 +5,6 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
-import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Sequence, TypeVar
@@ -672,7 +671,8 @@ itself; factual correctness takes precedence over satisfying a mistaken predicti
 Propose capabilities and concrete responsibilities, not a permanent cast of named roles.
 Prefer independent Analyst and Evidence contributions followed by one final Writer when
 the task benefits from both. These are functions, not fixed role names or a fixed roster:
-merge them into one agent for a simple task and retain real forward data dependencies.
+merge them when one agent can cover the requirements without losing useful independent
+checks, and retain real forward data dependencies.
 Execution is single-pass: each selected agent receives one model call and publishes once.
 Contributors publish a short answer and a structured ledger with requirements, outline,
 evidence_spans and source_references; the Writer consumes the shared ledger and submits
@@ -836,7 +836,8 @@ Set every AgentSpec.max_calls=1 explicitly. Execution provides exactly one model
 per selected role, with no JSON correction, second draft, debate or communication loop.
 Unused team.total_max_calls is a ceiling, not permission to revisit a completed role.
 Prefer task-conditioned Analyst/Evidence contributions in parallel, then a final Writer,
-merging roles for simple tasks and retaining genuine forward data dependencies. The
+merging roles when their contributions overlap and retaining useful independent checks
+and genuine forward data dependencies. The
 synthesizer_id identifies that final Writer regardless of its role label; its tools=[].
 Contributors publish a short answer plus a ledger with requirements, outline,
 evidence_spans and source_references; one external tool batch may add raw evidence after
@@ -967,78 +968,11 @@ that ceiling, not the obligation to estimate cost. Estimates are not fixed itera
 caps. Stop when the deliverable is complete or further work has insufficient expected
 quality benefit for its token cost, while respecting enforced budgets and preserving
 the final response. Do not claim savings or numerical quality gains without evidence.
-The limits.adaptive_budget object is a deterministic recommendation from the public task.
-For a simple task, start with one role and one model call; for a moderate task, use at
-most the preferred two-role roster and its preferred call ceiling; for a complex task,
-use the configured maximum when its explicit deliverables, evidence facets or independent
-checks require it. Escalate only when naming the uncovered requirement in selection_rationale
-and budget_plan.rationale. Never add a role merely to spend the available budget, and keep
-the final writer's output budget inside the same token accounting."""
-
-
-
-
-
-ADAPTIVE_BUDGET_VERSION = "task-adaptive-roster-v1"
-_ADAPTIVE_COMPLEXITY_TERMS = frozenset({
-    "analyze", "analyse", "compare", "comparison", "evaluate", "evaluation",
-    "research", "evidence", "sources", "cite", "citation", "synthesize",
-    "synthesis", "design", "plan", "strategy", "alternatives", "multiple",
-    "exhaustive", "all", "every", "table", "calculate", "derive", "review",
-    "分析", "比较", "评估", "研究", "证据", "来源", "引用", "综合", "设计",
-    "规划", "策略", "多个", "全部", "每个", "表格", "计算", "推导", "审查",
-})
-
-
-def adaptive_budget_profile(task: PublicTask, *, max_agents: int,
-                            total_max_calls: int | None,
-                            execution_mode: str = "single_pass",
-                            enforced: bool = False) -> dict[str, Any]:
-    """Compute an auditable roster recommendation from public task text.
-
-    ``enforced`` is set only for the evolving pool path; fixed and baseline methods
-    retain their configured hard limits.
-    """
-    task = PublicTask.model_validate(task)
-    text = " ".join([task.question, *task.constraints, *task.capabilities])
-    folded = text.casefold()
-    words = re.findall(r"[\w\u4e00-\u9fff]+", folded)
-    terms = sorted({term for term in _ADAPTIVE_COMPLEXITY_TERMS
-                    if (term in folded if any(ord(char) > 127 for char in term)
-                        else term in words)})
-    score = (2 if len(task.question) >= 240 else 0) + (2 if len(task.question) >= 520 else 0)
-    score += min(3, len(task.constraints)) + min(2, len(task.attachments))
-    score += min(2, len(task.tools)) + min(2, len(task.capabilities)) + min(4, len(terms))
-    conjunction_count = len(re.findall(r"\band\b|\bor\b|以及|并且|或者", folded))
-    score += min(2, conjunction_count)
-    if max_agents <= 1:
-        band, preferred_agents = "single", 1
-    elif score <= 2:
-        band, preferred_agents = "simple", 1
-    elif score <= 7:
-        band, preferred_agents = "moderate", min(2, max_agents)
-    else:
-        band, preferred_agents = "complex", max_agents
-    if total_max_calls is None:
-        preferred_calls = None
-    else:
-        calls_per_agent = {"single": 1, "simple": 1, "moderate": 2, "complex": 3}[band]
-        preferred_calls = min(total_max_calls, max(1, preferred_agents * calls_per_agent))
-    return {
-        "version": ADAPTIVE_BUDGET_VERSION, "complexity_band": band,
-        "complexity_score": score, "preferred_max_agents": preferred_agents,
-        "preferred_total_max_calls": preferred_calls, "configured_max_agents": max_agents,
-        "configured_total_max_calls": total_max_calls,
-        "signals": {"question_chars": len(task.question), "question_words": len(words),
-                    "constraint_count": len(task.constraints),
-                    "attachment_count": len(task.attachments), "tool_count": len(task.tools),
-                    "capability_count": len(task.capabilities), "complexity_terms": terms,
-                    "conjunction_count": conjunction_count},
-        "enforced": bool(enforced),
-        "policy": "Use the preferred cap when it covers every explicit public requirement; "
-                  "escalate to the configured maximum only for documented coverage, evidence, "
-                  "or independent-check needs.", "execution_mode": execution_mode,
-    }
+Choose role count and collaboration depth from the actual requirements, unresolved
+uncertainty, useful independent checks and remaining budget. Explain the expected
+benefit and incremental input/output token cost of additional work in budget_plan.
+Preserve enough budget to finish the deliverable; avoid repeated full drafts and
+redundant context when a concise handoff suffices."""
 
 
 PUBLIC_REFINEMENT_PLANNING_VERSION = "public-draft-planning-v1"
@@ -1136,7 +1070,9 @@ class GlobalAnalyzer(JsonModelCalls):
             raise ValueError("unknown execution_mode")
         self.execution_mode = execution_mode
         self.agent_pool = agent_pool
-        self.adaptive_budget_enforcement = bool(adaptive_budget_enforcement)
+        if adaptive_budget_enforcement:
+            raise ValueError("Difficulty-based roster enforcement has been removed; "
+                             "set adaptive_budget_enforcement=false and use live budget planning")
         knowledge_policy_prompt(knowledge_policy)
         self.knowledge_policy = knowledge_policy
         self.budget_context = budget_context
@@ -1184,14 +1120,6 @@ class GlobalAnalyzer(JsonModelCalls):
     def _limits(self, task: PublicTask | None = None) -> dict:
         limits = {"max_agents": self.max_agents, "max_parallel": self.max_parallel,
                   "total_max_calls": self.total_max_calls, "execution_mode": self.execution_mode}
-        if task is not None:
-            adaptive = adaptive_budget_profile(
-                task, max_agents=self.max_agents, total_max_calls=self.total_max_calls,
-                execution_mode=self.execution_mode,
-                enforced=self.agent_pool is not None and self.adaptive_budget_enforcement)
-            limits["adaptive_budget"] = adaptive
-            if self.agent_pool is not None and self.adaptive_budget_enforcement:
-                limits["max_agents"] = adaptive["preferred_max_agents"]
         if self.knowledge_policy is not None:
             limits["knowledge_policy"] = self.knowledge_policy
         if self.execution_max_tokens is not None:
@@ -1228,14 +1156,6 @@ class GlobalAnalyzer(JsonModelCalls):
 
     def _refresh_limits(self, task: PublicTask | None = None) -> dict:
         return {"limits": self._limits(task)}
-
-    def _effective_max_agents(self, task: PublicTask) -> int:
-        """Use the adaptive cap only for persistent evolving pool runs."""
-        if self.agent_pool is None or not self.adaptive_budget_enforcement:
-            return self.max_agents
-        return adaptive_budget_profile(
-            task, max_agents=self.max_agents, total_max_calls=self.total_max_calls,
-            execution_mode=self.execution_mode, enforced=True)["preferred_max_agents"]
 
     def _prompt(self, prompt: str) -> str:
         prompt += "\n" + QUALITY_ASSURANCE_PROMPT + BUDGET_AWARE_PROMPT
@@ -1338,7 +1258,7 @@ class GlobalAnalyzer(JsonModelCalls):
         task = PublicTask.model_validate(task)
         prompt = PREDICT_PROMPT + (POOL_ORGANIZATION_PROMPT if self.agent_pool is not None else "")
         pool_catalogue = self._pool_catalogue() if self.agent_pool is not None else None
-        effective_max_agents = self._effective_max_agents(task)
+        effective_max_agents = self.max_agents
         prediction = self.ask(self.global_model, "predict", self._prompt(prompt),
                               {"task": task, "experiences": experiences,
                                 **({"public_planning_context": copy.deepcopy(self.public_planning_context)}
@@ -1356,7 +1276,7 @@ class GlobalAnalyzer(JsonModelCalls):
         if not self.explicit_rubrics and (prediction.graph.rubrics or prediction.graph.edges):
             raise ValueError("Explicit rubrics are disabled for this ablation")
         ids = [agent.agent_id for agent in prediction.candidates]
-        effective_max_agents = self._effective_max_agents(task)
+        effective_max_agents = self.max_agents
         if len(ids) > effective_max_agents or len(ids) != len(set(ids)):
             raise ValueError(f"Candidate count exceeds limit={effective_max_agents} or contains duplicate IDs")
         remaining_calls = self._resource_budget().get("remaining_model_calls")
@@ -1487,7 +1407,7 @@ class GlobalAnalyzer(JsonModelCalls):
     def reconcile(self, task: PublicTask, prediction: Prediction,
                   plans: Sequence[LocalPlan], experiences: Sequence = ()) -> PlannedTeam:
         prompt = RECONCILE_PROMPT + (POOL_ORGANIZATION_PROMPT if self.agent_pool is not None else "")
-        effective_max_agents = self._effective_max_agents(task)
+        effective_max_agents = self.max_agents
         response = self.ask(self.global_model, "reconcile", self._prompt(prompt),
                             {"task": task, "prediction": prediction, "local_plans": plans,
                              **({"public_planning_context": copy.deepcopy(self.public_planning_context)}
@@ -1540,7 +1460,7 @@ class GlobalAnalyzer(JsonModelCalls):
         if not self.explicit_rubrics and (result.graph.rubrics or result.graph.edges
                                          or team.coverage or team.primary or team.reviewers):
             raise ValueError("Explicit rubrics are disabled for this ablation")
-        effective_max_agents = self._effective_max_agents(task)
+        effective_max_agents = self.max_agents
         if (team.execution_mode != self.execution_mode or len(team.agents) > effective_max_agents
                 or team.max_parallel > self.max_parallel
                 or (self.total_max_calls is not None

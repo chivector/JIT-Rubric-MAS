@@ -91,9 +91,9 @@ class MASConfig(Record):
     local_attribution: bool = True
     persistent_experience: bool = True
     evolving_agent_pool: bool = True
-    # Optional task-adaptive roster cap for evolving pool runs; disabled by default
-    # to preserve historical and baseline semantics unless explicitly enabled.
-    adaptive_budget_enforcement: bool = False
+    # Compatibility with frozen configs that explicitly disabled the removed
+    # difficulty-to-roster rule; new runs cannot re-enable that rule.
+    adaptive_budget_enforcement: Literal[False] = False
     explicit_rubrics: bool = True
     fixed_team: TeamSpec | None = None
     seed: int = 0
