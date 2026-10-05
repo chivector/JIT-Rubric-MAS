@@ -635,7 +635,10 @@ class JsonModelCalls:
                     correction["instruction"] += (
                         " The truncated previous text remains in the audit and is intentionally "
                         "omitted from this request. Regenerate a compact complete plan from all "
-                        "original inputs, not a continuation or repeated copy of the broken tail.")
+                        "original inputs, not a continuation or repeated copy of the broken tail. "
+                        "Use terse phrases in every string field, preserve each required rubric "
+                        "and assignment exactly once, and omit repeated task/evidence prose so "
+                        "the closing JSON fits comfortably below the response ceiling.")
                 else:
                     correction["previous_response"] = content
                 correction["validation_errors"] = errors
