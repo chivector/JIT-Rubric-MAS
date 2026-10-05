@@ -4,6 +4,7 @@ from jit_mas.token_usage import (
     summarize_outcome,
     usage_totals_from_slots,
 )
+import pytest
 from jit_mas.budget import BudgetLedger, MeteredModel
 from scripts.models.base import Model
 
@@ -90,3 +91,26 @@ def test_model_estimate_flag_reaches_shared_budget_ledger():
     record = ledger.snapshot()["records"][0]
     assert record["input_tokens"] == 12 and record["output_tokens"] == 4
     assert record["estimated"] is True
+
+
+def test_failed_call_can_charge_fresh_provider_usage_without_reusing_previous_call():
+    class Provider:
+        def __init__(self):
+            self.counts = {"input_token_count": 9, "output_token_count": 2, "estimated": False}
+
+        def reset_token_counters(self):
+            self.counts = {}
+
+        def __call__(self, messages, **kwargs):
+            self.counts = {"input_token_count": 9, "output_token_count": 2, "estimated": False}
+            raise RuntimeError("structured response failure")
+
+        def get_token_counts(self):
+            return self.counts
+
+    ledger = BudgetLedger(max_calls=2, max_tokens=100)
+    with pytest.raises(RuntimeError):
+        MeteredModel(Provider(), ledger, "inference", max_tokens=16)([])
+    record = ledger.snapshot()["records"][0]
+    assert record["input_tokens"] == 9 and record["output_tokens"] == 2
+    assert record["estimated"] is False

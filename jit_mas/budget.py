@@ -168,6 +168,16 @@ class MeteredModel:
         limit = min(int(kwargs.pop("max_tokens", self.max_tokens)), self.max_tokens)
         if limit <= 0:
             raise ValueError("max_tokens must be positive")
+        # Avoid carrying the previous successful request's usage into an
+        # exception path.  Providers that expose usage before raising (for
+        # example, a structured-response parse failure) can still be charged
+        # accurately below; a transport failure with no usage falls back to the
+        # reserved estimate.
+        if hasattr(self.model, "reset_token_counters"):
+            try:
+                self.model.reset_token_counters()
+            except Exception:
+                pass
         context_record = None
         if self.context_window is not None:
             from .request_policy import prepare_context
@@ -182,7 +192,14 @@ class MeteredModel:
             try:
                 response = self.model(messages, max_tokens=limit, **kwargs)
             except BaseException as exc:
-                self.ledger.settle(ticket, error=type(exc).__name__, elapsed=time.monotonic() - start,
+                try:
+                    counts = self.model.get_token_counts() if hasattr(self.model, "get_token_counts") else {}
+                    counts = counts or {}
+                except Exception:
+                    counts = {}
+                self.ledger.settle(ticket, counts.get("input_token_count"),
+                    counts.get("output_token_count"), error=type(exc).__name__,
+                    elapsed=time.monotonic() - start, estimated=counts.get("estimated"),
                     metadata={"context": context_record, "request": copy.deepcopy(
                         getattr(self.model, "last_request_metadata", {}))})
                 raise
