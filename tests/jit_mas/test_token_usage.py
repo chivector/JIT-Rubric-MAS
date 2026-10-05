@@ -1,5 +1,4 @@
 from jit_mas.token_usage import (
-    merge_usage,
     summarize_budget,
     summarize_outcome,
     usage_totals_from_slots,

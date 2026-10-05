@@ -9,7 +9,6 @@ it easy for experiment controllers to aggregate slot and campaign totals.
 
 from __future__ import annotations
 
-from collections import defaultdict
 from copy import deepcopy
 from typing import Any, Iterable, Mapping
 
