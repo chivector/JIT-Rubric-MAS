@@ -279,6 +279,37 @@ def _pooled_reconciliation_schema(prediction: Prediction, *, max_agents: int) ->
     return schema
 
 
+def _pooled_prediction_schema(catalogue: Sequence[dict[str, Any]], *, max_agents: int) -> dict[str, Any]:
+    """Bind pooled prediction candidates to members in the current catalogue.
+
+    Candidate ``agent_id`` values are task-local names chosen by the planner and
+    therefore remain unconstrained here.  The persistent pool identity is the
+    only identity known before prediction; each ``AgentSpec`` branch binds its
+    ``pool_agent_id`` and ``pool_agent_version`` to one catalogue member.
+    """
+    schema = Prediction.model_json_schema()
+    definitions = schema["$defs"]
+    original_agent = definitions["AgentSpec"]
+    branches = []
+    for member in catalogue:
+        pool_agent_id = member.get("pool_agent_id")
+        pool_agent_version = member.get("version")
+        if type(pool_agent_id) is not str or type(pool_agent_version) is not int:
+            raise ValueError("Agent pool catalogue entries require pool_agent_id and integer version")
+        branch = copy.deepcopy(original_agent)
+        properties = branch["properties"]
+        properties["pool_agent_id"] = {"type": "string", "const": pool_agent_id}
+        properties["pool_agent_version"] = {"type": "integer", "const": pool_agent_version}
+        required = branch.setdefault("required", [])
+        for field in ("pool_agent_id", "pool_agent_version"):
+            if field not in required:
+                required.append(field)
+        branches.append(branch)
+    definitions["AgentSpec"] = {"anyOf": branches}
+    schema["properties"]["candidates"]["maxItems"] = max_agents
+    return schema
+
+
 def as_json(value: Any) -> Any:
     if isinstance(value, BaseModel):
         return value.model_dump(mode="json")
@@ -1215,14 +1246,17 @@ class GlobalAnalyzer(JsonModelCalls):
     def predict(self, task: PublicTask, experiences: Sequence = ()) -> Prediction:
         task = PublicTask.model_validate(task)
         prompt = PREDICT_PROMPT + (POOL_ORGANIZATION_PROMPT if self.agent_pool is not None else "")
+        pool_catalogue = self._pool_catalogue() if self.agent_pool is not None else None
         prediction = self.ask(self.global_model, "predict", self._prompt(prompt),
                               {"task": task, "experiences": experiences,
-                               **({"public_planning_context": copy.deepcopy(self.public_planning_context)}
-                                  if self.public_planning_context else {}),
-                               **({"agent_pool_catalogue": self._pool_catalogue()} if self.agent_pool is not None else {}),
-                               "limits": self._limits()}, Prediction,
+                                **({"public_planning_context": copy.deepcopy(self.public_planning_context)}
+                                   if self.public_planning_context else {}),
+                                **({"agent_pool_catalogue": pool_catalogue} if pool_catalogue is not None else {}),
+                                "limits": self._limits()}, Prediction,
                               validate=lambda item: self._validate_prediction(task, item),
-                              refresh_payload=self._refresh_limits)
+                              refresh_payload=self._refresh_limits,
+                              json_schema=_pooled_prediction_schema(pool_catalogue, max_agents=self.max_agents)
+                              if pool_catalogue is not None else None)
         self.last_prediction = prediction.model_copy(deep=True)
         return prediction
 
