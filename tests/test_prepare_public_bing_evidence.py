@@ -60,6 +60,25 @@ def test_relevance_gate_drops_dictionary_page_but_keeps_named_school_result(monk
                for row in result["filtered_results"])
 
 
+def test_relevance_gate_does_not_treat_a_year_as_a_domain_anchor(monkeypatch):
+    rss = """<?xml version='1.0' encoding='UTF-8'?>
+    <rss><channel>
+      <item><title>2016 - Wikipedia</title>
+        <link>https://en.wikipedia.org/wiki/2016</link></item>
+      <item><title>Toronto District School Board annual report</title>
+        <link>https://www.tdsb.example/reports/2016</link></item>
+    </channel></rss>"""
+
+    def fake_get(*_args, **_kwargs):
+        return SimpleNamespace(text=rss, raise_for_status=lambda: None)
+
+    monkeypatch.setattr(module.requests, "get", fake_get)
+    result = module._search("2016 Toronto District School Board annual report")
+    urls = [row["url"] for row in result["results"]]
+    assert "https://en.wikipedia.org/wiki/2016" not in urls
+    assert "https://www.tdsb.example/reports/2016" in urls
+
+
 def test_relevance_gate_keeps_housing_listing_with_multiple_domain_anchors(monkeypatch):
     rss = """<?xml version='1.0' encoding='UTF-8'?>
     <rss><channel>

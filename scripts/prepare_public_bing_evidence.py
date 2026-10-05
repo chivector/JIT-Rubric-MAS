@@ -76,6 +76,11 @@ WEAK_RETRIEVAL_TERMS = {
 }
 
 
+def _is_weak_term(term: str) -> bool:
+    lowered = term.casefold()
+    return lowered in WEAK_RETRIEVAL_TERMS or re.fullmatch(r"(?:19|20)\d{2}", lowered) is not None
+
+
 def _word_hit(term: str, text: str) -> bool:
     """Match a query term as a token, avoiding substring false positives."""
     term = term.casefold().strip()
@@ -110,8 +115,7 @@ def _relevance(query: str, title: str, link: str) -> tuple[int, int]:
     terms = _query_terms(query)
     haystack = f"{title} {link}"
     overlap = sum(_word_hit(term, haystack) for term in terms)
-    strong = sum(_word_hit(term, haystack)
-                 for term in terms if term.casefold() not in WEAK_RETRIEVAL_TERMS)
+    strong = sum(_word_hit(term, haystack) for term in terms if not _is_weak_term(term))
     return overlap, strong
 
 
@@ -207,7 +211,10 @@ class _Planner:
             if lowered not in taken:
                 remainder.append(word)
                 taken.add(lowered)
-        core_terms = phrases + years[:3] + remainder[:10]
+        # Put entities/domain terms before years. Bing RSS otherwise tends to
+        # interpret a long benchmark question as a date lookup and return
+        # calendar/Wikipedia pages that merely mention the first year.
+        core_terms = phrases + remainder[:10] + years[:3]
         core = " ".join(core_terms) or question[:160]
         if phrases:
             queries = [
@@ -228,7 +235,7 @@ def _search(query: str) -> dict[str, Any]:
     rows = []
     dropped = []
     terms = _query_terms(query)
-    has_strong_terms = any(term.casefold() not in WEAK_RETRIEVAL_TERMS for term in terms)
+    has_strong_terms = any(not _is_weak_term(term) for term in terms)
     for item in root.findall("./channel/item"):
         link = item.findtext("link") or ""
         if not link.startswith(("http://", "https://")):
