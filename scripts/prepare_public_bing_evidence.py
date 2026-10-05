@@ -46,7 +46,73 @@ STOPWORDS = {
     "output", "even", "critically", "ancient", "shaped", "development", "mythology",
     "particularly", "following", "situation", "student", "ways", "people", "invest",
     "money", "retirement", "large", "purchases", "provide", "strategy", "detailed",
+    # Request scaffolding is not a retrieval anchor. Keeping these words in a
+    # query made Bing rank dictionary/grammar pages (for example a page titled
+    # ``Number`` for a question about student counts) ahead of named entities.
+    "help", "compile", "list", "looking", "least", "ideal", "ideally",
+    "context", "moving", "months", "month", "work", "close", "proximity",
+    "office", "completely", "new", "area", "realistically", "individual",
+    "budget", "maximum", "max", "minimal", "additional", "fees", "costs",
+    "cost", "move", "bringing", "bring", "find", "split", "spots",
+    "prioritize", "exercise", "offered", "complex", "honestly", "sure",
+    "spend", "possible", "sightseeing", "places", "attractions", "gain",
+    "experiences", "friends", "need", "want", "around", "summer", "one",
+    "two", "three", "term", "terms", "according", "identify", "all", "fit",
+    "criteria", "inclusive", "higher", "per", "only", "name", "vol", "volume",
+    "following", "whether", "attend", "want", "trying", "was", "were", "given",
+    "those", "these", "since", "less", "used", "use", "using", "common", "based",
+    "named", "mainstay", "despite", "according",
 }
+
+# These terms can occur in many unrelated pages. They may still appear in a
+# query, but a result matching only one of them is discarded by ``_search``.
+# This is deliberately smaller than STOPWORDS: a domain word such as
+# ``students`` remains useful when paired with a school or district name.
+WEAK_RETRIEVAL_TERMS = {
+    "number", "numbers", "data", "statistics", "statistic", "report",
+    "reports", "official", "information", "info", "overview", "guide",
+    "main", "factors", "impact", "analysis", "annual", "year", "years",
+    "according", "published", "director", "change", "changes", "percent",
+}
+
+
+def _word_hit(term: str, text: str) -> bool:
+    """Match a query term as a token, avoiding substring false positives."""
+    term = term.casefold().strip()
+    text = text.casefold()
+    if not term:
+        return False
+    if re.search(r"[\u3400-\u9fff]", term):
+        return term in text
+    return re.search(r"(?<![a-z0-9])" + re.escape(term) + r"(?![a-z0-9])", text) is not None
+
+
+def _query_terms(query: str) -> list[str]:
+    """Return deterministic informative terms used by the relevance gate."""
+    terms = []
+    for term in re.findall(r"[A-Za-z][A-Za-z0-9'-]{2,}|[0-9]{4}", query):
+        lowered = term.casefold()
+        if lowered in STOPWORDS or lowered in {item.casefold() for item in terms}:
+            continue
+        terms.append(term)
+    return terms
+
+
+def _relevance(query: str, title: str, link: str) -> tuple[int, int]:
+    """Score a result and return ``(all_overlap, strong_overlap)``.
+
+    ``strong_overlap`` excludes generic reporting/grammar vocabulary. A
+    candidate must match at least one strong term when the query contains any;
+    otherwise a one-word match such as ``Number`` can become evidence for an
+    unrelated task. Queries with no strong term retain the historical overlap
+    behaviour to avoid dropping legitimate single-anchor searches.
+    """
+    terms = _query_terms(query)
+    haystack = f"{title} {link}"
+    overlap = sum(_word_hit(term, haystack) for term in terms)
+    strong = sum(_word_hit(term, haystack)
+                 for term in terms if term.casefold() not in WEAK_RETRIEVAL_TERMS)
+    return overlap, strong
 
 
 class _Planner:
@@ -78,7 +144,41 @@ class _Planner:
             if (re.search(r"(?<![a-z0-9])" + re.escape(phrase) + r"(?![a-z0-9])", lower)
                     and phrase not in phrases):
                 phrases.append(phrase)
-        years = re.findall(r"\b(?:19|20)\d{2}\b", question)
+        years = list(dict.fromkeys(re.findall(r"\b(?:19|20)\d{2}\b", question)))
+        # Housing/listing prompts are especially vulnerable to lexical search
+        # drift: a long request containing ``compile``, ``number`` or ``list``
+        # routinely surfaces dictionary pages. Keep the user's concrete
+        # facets while producing three compact, complementary queries.
+        housing = bool(re.search(
+            r"\b(?:apartment|apartments|housing|rental|rent|roommates?|bedrooms?)\b", lower))
+        if housing:
+            location_match = re.search(
+                r"\b(?:in|near|around|to)\s+([A-Z][A-Za-z0-9'-]*(?:\s+[A-Z][A-Za-z0-9'-]*){0,3})",
+                question)
+            location = location_match.group(1).strip(" ,.;:()") if location_match else ""
+            # Retain a common acronym as a useful search anchor when the task
+            # uses it without spelling out the city.
+            if not location:
+                acronym = re.search(r"\b(SF|NYC|LA)\b", question)
+                location = {"SF": "San Francisco", "NYC": "New York City", "LA": "Los Angeles"}.get(
+                    acronym.group(1), "") if acronym else ""
+            bedroom = re.search(r"\b\d+\s*bedrooms?\b", lower)
+            bedroom = bedroom.group(0) if bedroom else "apartments"
+            duration = "short term summer" if re.search(r"\bsummer\b|\bmonths?\b", lower) else "rental"
+            budget = re.search(r"(?:\$|usd\s*)\s*([0-9][0-9,]*)\s*(?:per\s+month|monthly|/\s*month|a\s+month)?", lower)
+            budget_term = f"rent {budget.group(1)} monthly" if budget else "rent"
+            pet_term = "pet friendly" if re.search(r"\bcat\b|\bdog\b|\bpet", lower) else ""
+            roommate_term = "roommates" if re.search(r"\broommates?\b", lower) else ""
+            parking_term = "parking" if re.search(r"\bparking\b|\bcar\b", lower) else ""
+            safety_term = "safety" if re.search(r"\bsaf\w*\b", lower) else ""
+            gym_term = "gyms" if re.search(r"\bgym\w*\b|\bexercise\b", lower) else ""
+            prefix = " ".join(part for part in (location, "apartments") if part)
+            queries = [
+                " ".join(part for part in (prefix, bedroom, duration, pet_term, parking_term) if part),
+                " ".join(part for part in (prefix, budget_term, roommate_term, pet_term, parking_term) if part),
+                " ".join(part for part in (prefix, safety_term, gym_term, "neighborhoods") if part),
+            ]
+            return type("Response", (), {"content": json.dumps({"queries": list(dict.fromkeys(queries))})})()
         # A small set of domain-specific facets prevents a compound question
         # from collapsing into one long low-recall search string.
         if {"g7", "world factbook", "world happiness report", "unhcr"}.issubset(set(phrases)):
@@ -101,7 +201,7 @@ class _Planner:
         # source families rather than repeating a corrupted paraphrase.
         seen = {word.casefold() for phrase in phrases for word in phrase.split()}
         remainder = []
-        taken = set(seen)
+        taken = set(seen) | {year.casefold() for year in years}
         for word in named + terms:
             lowered = word.casefold()
             if lowered not in taken:
@@ -126,15 +226,18 @@ def _search(query: str) -> dict[str, Any]:
     response.raise_for_status()
     root = ET.fromstring(response.text)
     rows = []
-    query_terms = {term.casefold() for term in re.findall(r"[A-Za-z0-9]{3,}", query)
-                   if term.casefold() not in STOPWORDS}
+    dropped = []
+    terms = _query_terms(query)
+    has_strong_terms = any(term.casefold() not in WEAK_RETRIEVAL_TERMS for term in terms)
     for item in root.findall("./channel/item"):
         link = item.findtext("link") or ""
         if not link.startswith(("http://", "https://")):
             continue
         title = item.findtext("title") or ""
-        overlap = sum(term in (title + " " + link).casefold() for term in query_terms)
-        if overlap <= 0:
+        overlap, strong_overlap = _relevance(query, title, link)
+        if overlap <= 0 or (has_strong_terms and strong_overlap <= 0):
+            dropped.append({"url": link, "title": title,
+                            "reason": "no-informative-query-term-overlap"})
             continue
         rows.append({
             "url": link,
@@ -165,6 +268,52 @@ def _search(query: str) -> dict[str, Any]:
             ("UNHCR G7 asylum-seeker records 2010", "https://api.unhcr.org/population/v1/population/?year=2010&coa=CAN,USA,GBR,FRA,DEU,ITA,JPN&coo_all=true&limit=1000"),
             ("UNHCR Refugee Statistics API", "https://api.unhcr.org/docs/refugee-statistics.html"),
         ])
+    # Bing RSS can legitimately return an empty feed for long consumer queries
+    # (and is especially brittle for rental listings).  Keep a small set of
+    # public, domain-relevant locators so a failed search remains auditable and
+    # does not silently turn into unrelated dictionary pages.
+    if "san francisco" in q and any(term in q for term in ("apartment", "rental", "roommate", "parking")):
+        seeds.extend([
+            ("San Francisco Planning housing resources", "https://www.sf.gov/topics/housing"),
+            ("San Francisco Rent Board", "https://www.sf.gov/departments/rent-board"),
+            ("San Francisco Municipal Transportation Agency parking", "https://www.sfmta.com/getting-around/drive-park"),
+            ("San Francisco Police Department crime data", "https://www.sanfranciscopolice.org/stay-safe/crime-data"),
+        ])
+    if any(term in q for term in ("apartment", "rental", "roommate")) and "san francisco" not in q:
+        seeds.extend([
+            ("HUD rental housing resources", "https://www.hud.gov/topics/rental_assistance"),
+            ("Consumer Financial Protection Bureau rental housing", "https://www.consumerfinance.gov/consumer-tools/renting-a-home/"),
+        ])
+    # Bing RSS often returns dictionary/grammar pages for natural-language
+    # housing requests, especially when a query contains ``number`` or
+    # ``list``. Seed public listing and municipal sources so the bounded page
+    # budget still contains usable material when RSS has no relevant rows.
+    if re.search(r"\b(?:apartment|apartments|housing|rental|rent|roommates?)\b", q):
+        is_san_francisco = bool(re.search(r"\bsan\s+francisco\b|\bsf\b", q))
+        if is_san_francisco and re.search(r"\bparking\b|\bcar\b", q):
+            seeds.extend([
+                ("SFMTA parking", "https://www.sfmta.com/getting-around/parking"),
+                ("SFpark public parking", "https://www.sfpark.org/"),
+            ])
+        if is_san_francisco and re.search(r"\bsaf\w*\b|\bcrime\b", q):
+            seeds.append(("San Francisco crime data", "https://www.sf.gov/data/police-department-crime-data"))
+        if is_san_francisco and re.search(r"\bgym\w*\b|\bexercise\b|\bfitness\b", q):
+            seeds.append(("San Francisco recreation centers", "https://sfrecpark.org/facilities/recreation-centers/"))
+        # Keep broad listing directories after facet-specific municipal
+        # sources; this allows a four-page pack to cover both the concrete
+        # constraint and candidate listings.
+        if is_san_francisco:
+            seeds.extend([
+                ("Apartments.com San Francisco rentals", "https://www.apartments.com/san-francisco-ca/"),
+                ("Zillow San Francisco rentals", "https://www.zillow.com/san-francisco-ca/rentals/"),
+                ("Rent.com San Francisco apartments", "https://www.rent.com/california/san-francisco-apartments"),
+            ])
+        else:
+            seeds.extend([
+                ("Apartments.com rentals", "https://www.apartments.com/"),
+                ("Zillow rentals", "https://www.zillow.com/homes/for_rent/"),
+                ("Rent.com apartments", "https://www.rent.com/"),
+            ])
     existing = {row["url"] for row in rows}
     seed_rows = []
     for title, url in seeds:
@@ -172,7 +321,7 @@ def _search(query: str) -> dict[str, Any]:
             seed_rows.append({"url": url, "title": title, "date": ""})
     # Put authoritative seeds first so the bounded evidence budget does not
     # spend all page slots on localized/irrelevant RSS results.
-    return {"results": seed_rows + rows}
+    return {"results": seed_rows + rows, "filtered_results": dropped}
 
 
 def _crawl(url: str) -> dict[str, Any]:
