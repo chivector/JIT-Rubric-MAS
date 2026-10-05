@@ -268,51 +268,53 @@ def _search(query: str) -> dict[str, Any]:
             ("UNHCR G7 asylum-seeker records 2010", "https://api.unhcr.org/population/v1/population/?year=2010&coa=CAN,USA,GBR,FRA,DEU,ITA,JPN&coo_all=true&limit=1000"),
             ("UNHCR Refugee Statistics API", "https://api.unhcr.org/docs/refugee-statistics.html"),
         ])
-    # Bing RSS can legitimately return an empty feed for long consumer queries
-    # (and is especially brittle for rental listings).  Keep a small set of
-    # public, domain-relevant locators so a failed search remains auditable and
-    # does not silently turn into unrelated dictionary pages.
-    if "san francisco" in q and any(term in q for term in ("apartment", "rental", "roommate", "parking")):
-        seeds.extend([
-            ("San Francisco Planning housing resources", "https://www.sf.gov/topics/housing"),
-            ("San Francisco Rent Board", "https://www.sf.gov/departments/rent-board"),
-            ("San Francisco Municipal Transportation Agency parking", "https://www.sfmta.com/getting-around/drive-park"),
-            ("San Francisco Police Department crime data", "https://www.sanfranciscopolice.org/stay-safe/crime-data"),
-        ])
-    if any(term in q for term in ("apartment", "rental", "roommate")) and "san francisco" not in q:
-        seeds.extend([
-            ("HUD rental housing resources", "https://www.hud.gov/topics/rental_assistance"),
-            ("Consumer Financial Protection Bureau rental housing", "https://www.consumerfinance.gov/consumer-tools/renting-a-home/"),
-        ])
     # Bing RSS often returns dictionary/grammar pages for natural-language
     # housing requests, especially when a query contains ``number`` or
     # ``list``. Seed public listing and municipal sources so the bounded page
     # budget still contains usable material when RSS has no relevant rows.
     if re.search(r"\b(?:apartment|apartments|housing|rental|rent|roommates?)\b", q):
         is_san_francisco = bool(re.search(r"\bsan\s+francisco\b|\bsf\b", q))
+        listings = []
+        if is_san_francisco:
+            listings = [
+                ("Apartments.com San Francisco rentals", "https://www.apartments.com/san-francisco-ca/"),
+                ("Zillow San Francisco rentals", "https://www.zillow.com/san-francisco-ca/rentals/"),
+                ("Rent.com San Francisco apartments", "https://www.rent.com/california/san-francisco-apartments"),
+            ]
+        else:
+            listings = [
+                ("Apartments.com rentals", "https://www.apartments.com/"),
+                ("Zillow rentals", "https://www.zillow.com/homes/for_rent/"),
+                ("Rent.com apartments", "https://www.rent.com/"),
+            ]
+        facet_sources = []
         if is_san_francisco and re.search(r"\bparking\b|\bcar\b", q):
-            seeds.extend([
+            facet_sources.extend([
                 ("SFMTA parking", "https://www.sfmta.com/getting-around/parking"),
                 ("SFpark public parking", "https://www.sfpark.org/"),
             ])
         if is_san_francisco and re.search(r"\bsaf\w*\b|\bcrime\b", q):
-            seeds.append(("San Francisco crime data", "https://www.sf.gov/data/police-department-crime-data"))
+            facet_sources.append(("San Francisco crime data", "https://www.sf.gov/data/police-department-crime-data"))
         if is_san_francisco and re.search(r"\bgym\w*\b|\bexercise\b|\bfitness\b", q):
-            seeds.append(("San Francisco recreation centers", "https://sfrecpark.org/facilities/recreation-centers/"))
-        # Keep broad listing directories after facet-specific municipal
-        # sources; this allows a four-page pack to cover both the concrete
-        # constraint and candidate listings.
+            facet_sources.append(("San Francisco recreation centers", "https://sfrecpark.org/facilities/recreation-centers/"))
+        # Listing queries need candidate sources first; facet-only queries
+        # prioritize municipal sources and retain one listing directory within
+        # the bounded page budget.
+        if facet_sources and not re.search(r"\bsafety\b|\bgym\w*\b|\bexercise\b|\bfitness\b", q):
+            seeds.extend(listings + facet_sources)
+        elif facet_sources:
+            seeds.extend(facet_sources + listings)
+        else:
+            seeds.extend(listings)
         if is_san_francisco:
             seeds.extend([
-                ("Apartments.com San Francisco rentals", "https://www.apartments.com/san-francisco-ca/"),
-                ("Zillow San Francisco rentals", "https://www.zillow.com/san-francisco-ca/rentals/"),
-                ("Rent.com San Francisco apartments", "https://www.rent.com/california/san-francisco-apartments"),
+                ("San Francisco Planning housing resources", "https://www.sf.gov/topics/housing"),
+                ("San Francisco Rent Board", "https://www.sf.gov/departments/rent-board"),
             ])
         else:
             seeds.extend([
-                ("Apartments.com rentals", "https://www.apartments.com/"),
-                ("Zillow rentals", "https://www.zillow.com/homes/for_rent/"),
-                ("Rent.com apartments", "https://www.rent.com/"),
+                ("HUD rental housing resources", "https://www.hud.gov/topics/rental_assistance"),
+                ("Consumer Financial Protection Bureau rental housing", "https://www.consumerfinance.gov/consumer-tools/renting-a-home/"),
             ])
     existing = {row["url"] for row in rows}
     seed_rows = []
