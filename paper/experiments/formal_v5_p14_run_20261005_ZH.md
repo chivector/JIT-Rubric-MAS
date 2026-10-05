@@ -27,3 +27,5 @@
 ## 启动前验证
 
 Pipeline、双层进化、动态 Pool 与经验校验回归共 **116 passed**；joint bundle、executor 与 TEST worker 回归 **33 passed**。严格经验适用性门限保留，仅修正不满足既有 scope 的合成 fixture；新负例仍验证不相关任务不能检索该经验。提交失败的已结算 token 现在可进入失败槽成本统计，跨任务重复短 proposal ID 与冻结重放均有回归覆盖。
+
+启动后发现控制器在 `selected=None` 时的报告分支会抛出异常；主代码已用一行空值处理修复，额外 **25 passed** 回归包含 630 槽完整终态与不重采样检查。活动源码副本保持冻结。独立零 API finalizer 仅在原控制器因此退出、全部槽位终态且身份校验通过后生成 inconclusive 报告，保留原 failure status、journal 和 receipts，并记录独立 finalization sidecar；不修改生成、评分或选版规则，也不启动 TEST。

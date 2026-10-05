@@ -491,7 +491,7 @@ class JointExecutor:
                 # selection is recorded only after every checkpoint is terminal.
             selections = {str(run_id): self._select_run(doc, run_id) for run_id in RUN_IDS}
             doc["status"] = ("evo_val_complete_test_pending"
-                              if all(row.get("selected", {}).get("eligible")
+                              if all((row.get("selected") or {}).get("eligible")
                                      for row in selections.values())
                               else "evo_val_inconclusive_test_pending")
             write_json(self._journal(), doc)

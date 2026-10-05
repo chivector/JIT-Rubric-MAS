@@ -260,6 +260,55 @@ def test_run_without_eligible_checkpoint_is_reported_inconclusive(tmp_path):
     assert record["selected"] is None
 
 
+def test_full_run_with_ineligible_replicate_writes_report_without_resampling(tmp_path, monkeypatch):
+    executor = JointExecutor(_bundle(tmp_path), tmp_path / "run")
+    check_inputs = executor.check
+    monkeypatch.setattr(executor, "check", lambda **kwargs: check_inputs(require_provider=False))
+    calls = {"evolution": 0, "validation": 0}
+
+    class SyntheticPipeline:
+        def __init__(self, store, benchmark, run_id):
+            self.store, self.benchmark, self.run_id = store, benchmark, run_id
+
+        def run(self, mode, task_ids):
+            assert mode == "evolve" and len(task_ids) == 1
+            calls["evolution"] += 1
+            return [{"evaluation": {"complete": True, "score": 0.5}}]
+
+        def run_task(self, task_id, snapshot, **kwargs):
+            assert kwargs["mode"] == "validate" and kwargs["attribution"] is False
+            calls["validation"] += 1
+            complete = self.run_id != 0 or self.benchmark != "researchrubrics"
+            return {"evaluation": {"complete": complete, "score": 0.5,
+                                   "raw": {"native_mean": 5.5}}}
+
+    def synthetic_runtime(run_id):
+        store = ExperienceStore(executor.output / f"run{run_id}" / "experience.sqlite")
+        names = ("researchrubrics", "deepsearchqa", "writingbench")
+        pipelines = {name: SyntheticPipeline(store, name, run_id) for name in names}
+        datasets = {name: SimpleNamespace(
+            lower_bounds={task: 0.0 for task in executor._membership(name, "validation")},
+            upper_bounds={task: 1.0 for task in executor._membership(name, "validation")})
+            for name in names}
+        return store, pipelines, datasets, executor._global_manifest(run_id)
+
+    monkeypatch.setattr(executor, "_build_runtime", synthetic_runtime)
+    report = executor.run_evolution_validation()
+    assert report["status"] == "evo_val_inconclusive_test_pending"
+    assert report["formal_test_ready"] is False
+    assert report["test_feedback_released"] is False
+    assert report["selections"]["0"]["selected"] is None
+    assert all(report["selections"][str(run_id)]["selected"]["eligible"] for run_id in (1, 2))
+    assert calls == {"evolution": 180, "validation": 450}
+    journal = json.loads(executor._journal().read_text(encoding="utf-8"))
+    assert len(journal["slots"]) == 630
+    assert all(row["status"] in {"complete", "incomplete"} for row in journal["slots"].values())
+    assert journal["status"] == report["status"]
+    assert json.loads((executor.output / "evo_val_report.json").read_text(encoding="utf-8")) == report
+    assert executor.run_evolution_validation() == report
+    assert calls == {"evolution": 180, "validation": 450}
+
+
 def test_journal_consume_is_thread_safe_for_independent_val_slots(tmp_path):
     executor = JointExecutor(_bundle(tmp_path), tmp_path / "run", val_workers=4)
     executor.check()
