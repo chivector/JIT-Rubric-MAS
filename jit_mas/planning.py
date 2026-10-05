@@ -998,7 +998,9 @@ def adaptive_budget_profile(task: PublicTask, *, max_agents: int,
     text = " ".join([task.question, *task.constraints, *task.capabilities])
     folded = text.casefold()
     words = re.findall(r"[\w\u4e00-\u9fff]+", folded)
-    terms = sorted({term for term in _ADAPTIVE_COMPLEXITY_TERMS if term in folded})
+    terms = sorted({term for term in _ADAPTIVE_COMPLEXITY_TERMS
+                    if (term in folded if any(ord(char) > 127 for char in term)
+                        else term in words)})
     score = (2 if len(task.question) >= 240 else 0) + (2 if len(task.question) >= 520 else 0)
     score += min(3, len(task.constraints)) + min(2, len(task.attachments))
     score += min(2, len(task.tools)) + min(2, len(task.capabilities)) + min(4, len(terms))
