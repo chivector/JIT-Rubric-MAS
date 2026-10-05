@@ -627,6 +627,7 @@ class JsonModelCalls:
                     "these validation errors. Do not alter evidence, task constraints or budgets "
                     "to evade validation. This is the only correction attempt.",
                 }
+                json_decode_error = any(error.get("type") == "json_decode" for error in errors)
                 if structured_planning and finish_metadata.get("finish_reason") == "length":
                     raw = content if isinstance(content, str) else ""
                     correction.update(previous_response_sha256=hashlib.sha256(raw.encode()).hexdigest(),
@@ -639,6 +640,24 @@ class JsonModelCalls:
                         "Use terse phrases in every string field, preserve each required rubric "
                         "and assignment exactly once, and omit repeated task/evidence prose so "
                         "the closing JSON fits comfortably below the response ceiling.")
+                elif json_decode_error:
+                    # A malformed response is often a truncated or partially echoed
+                    # JSON object. Replaying that text in the correction request wastes
+                    # the same context budget that caused the failure and can make the
+                    # second response truncate again. Keep a bounded short response for
+                    # diagnosis, but use a digest-only repair for large/uncertain text.
+                    raw = content if isinstance(content, str) else ""
+                    correction.update(previous_response_sha256=hashlib.sha256(raw.encode()).hexdigest(),
+                                      previous_response_characters=len(raw))
+                    if len(raw) <= 12000:
+                        correction["previous_response"] = raw
+                    correction["instruction"] += (
+                        " The previous text was not valid JSON. Return exactly one complete "
+                        "minified JSON object with no markdown, prose, comments or repeated "
+                        "task/evidence text; preserve every required field and assignment "
+                        "from the original inputs. The prior text is included only when it "
+                        "is short enough to inspect; otherwise reconstruct from the original "
+                        "inputs and validation errors.")
                 else:
                     correction["previous_response"] = content
                 correction["validation_errors"] = errors

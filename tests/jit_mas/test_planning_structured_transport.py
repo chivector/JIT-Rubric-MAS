@@ -208,6 +208,20 @@ def test_nontruncated_invalid_correction_still_contains_the_original_response():
     assert "previous_response_sha256" not in correction
 
 
+def test_large_json_decode_correction_is_digest_only_and_compact():
+    records = prepared()
+    broken = "{" + "\"graph\": [" + ("BROKEN " * 5000)
+    provider = Provider(replies=[broken, records[0].model_dump(mode="json")])
+    analyzer, _ = bound(provider)
+    analyzer.predict(PublicTask(task_id="synthetic-large-json-error", question="Explain factors."))
+    correction = provider.requests[1]["payload"]["response_correction"]
+    assert correction["previous_response_characters"] == len(broken)
+    assert correction["previous_response_sha256"] == hashlib.sha256(broken.encode()).hexdigest()
+    assert "previous_response" not in correction
+    assert "minified JSON object" in correction["instruction"]
+    assert "BROKEN" not in provider.requests[1]["messages"][1]["content"]
+
+
 def test_schema_mode_has_no_fallback_or_extra_attempt_when_provider_output_is_invalid():
     provider = Provider(replies=['{"graph":', '{"graph":', prepared()[0].model_dump(mode="json")],
                         finish_reasons=["length", "length", "stop"])
