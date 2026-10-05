@@ -1117,7 +1117,8 @@ class GlobalAnalyzer(JsonModelCalls):
                  max_corrections: int = 1, execution_max_tokens: int | None = None,
                  execution_mode: str = "single_pass", agent_pool: AgentPoolSnapshot | None = None,
                  budget_context: Callable[[], dict] | None = None,
-                 excluded_task_ids: Sequence[str] = (), knowledge_policy: str | None = None):
+                 excluded_task_ids: Sequence[str] = (), knowledge_policy: str | None = None,
+                 adaptive_budget_enforcement: bool = False):
         super().__init__(max_corrections=max_corrections)
         if not 1 <= local_rounds <= 3 or max_agents < 1 or max_parallel < 1:
             raise ValueError("Planning requires positive limits and one to three local rounds")
@@ -1135,6 +1136,7 @@ class GlobalAnalyzer(JsonModelCalls):
             raise ValueError("unknown execution_mode")
         self.execution_mode = execution_mode
         self.agent_pool = agent_pool
+        self.adaptive_budget_enforcement = bool(adaptive_budget_enforcement)
         knowledge_policy_prompt(knowledge_policy)
         self.knowledge_policy = knowledge_policy
         self.budget_context = budget_context
@@ -1185,9 +1187,10 @@ class GlobalAnalyzer(JsonModelCalls):
         if task is not None:
             adaptive = adaptive_budget_profile(
                 task, max_agents=self.max_agents, total_max_calls=self.total_max_calls,
-                execution_mode=self.execution_mode, enforced=self.agent_pool is not None)
+                execution_mode=self.execution_mode,
+                enforced=self.agent_pool is not None and self.adaptive_budget_enforcement)
             limits["adaptive_budget"] = adaptive
-            if self.agent_pool is not None:
+            if self.agent_pool is not None and self.adaptive_budget_enforcement:
                 limits["max_agents"] = adaptive["preferred_max_agents"]
         if self.knowledge_policy is not None:
             limits["knowledge_policy"] = self.knowledge_policy
@@ -1228,7 +1231,7 @@ class GlobalAnalyzer(JsonModelCalls):
 
     def _effective_max_agents(self, task: PublicTask) -> int:
         """Use the adaptive cap only for persistent evolving pool runs."""
-        if self.agent_pool is None:
+        if self.agent_pool is None or not self.adaptive_budget_enforcement:
             return self.max_agents
         return adaptive_budget_profile(
             task, max_agents=self.max_agents, total_max_calls=self.total_max_calls,

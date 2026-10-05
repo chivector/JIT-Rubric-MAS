@@ -62,7 +62,8 @@ def test_only_evolving_pool_enforces_preferred_roster_cap():
             "pool_agent_id": "writer", "pool_agent_version": 1,
         }]})
 
-    pooled = GlobalAnalyzer(model, max_agents=3, agent_pool=seed_pool())
+    pooled = GlobalAnalyzer(model, max_agents=3, agent_pool=seed_pool(),
+                            adaptive_budget_enforcement=True)
     pooled.predict(task)
     assert requests[0][0]["limits"]["max_agents"] == 1
     assert requests[0][0]["limits"]["adaptive_budget"]["enforced"] is True

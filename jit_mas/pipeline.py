@@ -630,6 +630,7 @@ class MASPipeline:
                                   execution_max_tokens=(self.config.models["exec"].max_tokens
                                                         if "exec" in self.config.models else None),
                                   agent_pool=pool,
+                                  adaptive_budget_enforcement=self.config.adaptive_budget_enforcement,
                                   budget_context=ledger.resource_context,
                                   excluded_task_ids=self.manifest.validation + self.manifest.test,
                                   knowledge_policy=self.knowledge_policy)
