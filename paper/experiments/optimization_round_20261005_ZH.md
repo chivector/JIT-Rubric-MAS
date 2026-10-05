@@ -98,3 +98,23 @@ parallel2 的两个终态失败均为 DeepSearchQA 规划输出的 coverage/prim
 历史 pilot 与当前 p12 的题目和 evidence 条件不同，不能通过直接比较均值宣称方法优劣或成本比。当前没有完整 checkpoint 选择、TEST release 或六 benchmark 正式结果，也没有证据证明 Ours 的 token 已介于 Direct 和 Native JIT 之间。
 
 本次纠偏回归：182 passed，覆盖短题允许三角色、长题允许单角色、协作执行、真实预算不足拒绝、预算估算不作为硬迭代上限，以及 token accounting。TEST submit 并行器 `cf4656b` 另有 20 passed；评分阶段保持串行。
+
+## 2026-10-05 新证据与预算配置审计
+
+旧的 `evidence_bing_*_merged_p11` 包虽然结构哈希完整，但 RR 公寓题曾返回英语语法页面，不能作为正式输入。提交 `b57cedf`/`a32af39`/`bc0a554` 增加住房领域查询、强相关词门控、过滤结果审计、地点特定公共来源和年份弱词过滤。新包为：
+
+- `evidence_bing_rr_v5_relevance`：63/63 选中任务；
+- `evidence_bing_dsqa_v5_relevance`：80/80 选中任务；
+- `evidence_bing_drbii_v5_relevance`：40/40 选中任务。
+
+三包均绑定到 `bundle_p14_relevance`/后续候选 bundle，`formal_ready=true`，并保留每个 pack、manifest、source hash、filtered_results 和 retrieval-failure 记录。公寓题抽查未再出现 `many` 语法页；对 RSS/Jina 无法获得相关页面的任务，包中明确记录空检索，不补造事实。
+
+为检验性能—token 权衡，登记了以下新配置和独立输出；它们不能互相拼接，也不能冒充完整 v5 结果：
+
+| 配置/输出 | 关键设置 | 已完成 VAL 槽 | 已知分数 | 已落盘 token | 状态 |
+|---|---|---:|---|---:|---|
+| `p14_relevance` | iterative shared ledger，完整 refinement | 2 | 0.3765、0.8028 | 293,163、266,494 | operator 中止，成本/质量诊断 |
+| `p15_single_pass` | single pass，完整 refinement | 3 | 0.5412、0.6338、另 1 个继续恢复 | 362,443、201,532、其余见 journal | 当前正式候选，按 journal 继续 |
+| `p17_patch_refine` | single pass，patch refinement | 2 complete、1 failed | 0.7606、0.6000；1 个 JSONDecodeError | 322,864、298,354、失败 111,484 | 撤销，未进入选版 |
+
+`p17` 的失败来自 refinement JSON 解码契约，保留为失败实验；这说明 patch 模式在当前中转服务上不能直接替代完整 refinement。p15 的每槽 token 由 `token_usage.by_stage` 分列 inference/evaluation，失败槽也计入估算或 provider usage，不能从正式均值中静默删除。完整 `evo_val_report.json` 和 TEST release 仍未形成，当前任何分数都不是论文最终均值。
