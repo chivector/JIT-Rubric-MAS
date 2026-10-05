@@ -18,8 +18,10 @@ the runner never resamples a slot.
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 from pathlib import Path
+import threading
 from typing import Any
 
 from jit_mas.checkpoints import CheckpointIntegrityError, snapshot_store
@@ -37,6 +39,7 @@ from scripts.run_jit_mas import make_pipeline
 
 STATIC_METHODS = ("ours_initial", "direct", "jit_matched", "rubric_fixed")
 ALL_METHODS = ("ours_selected",) + STATIC_METHODS
+MAX_SUBMIT_WORKERS = 16
 
 
 def _read(path: Path) -> Any:
@@ -113,6 +116,11 @@ class JointTestReleaseRunner:
         self.bundle = self.executor.bundle
         self.materials: dict[str, dict[str, Any]] = {}
         self.config: MASConfig | None = None
+        # TEST submissions use isolated output directories, but a future
+        # condition may share an R* preparation cache.  Keep that preparation
+        # section serializable within one runner while allowing the expensive
+        # task generation work to run concurrently.
+        self._shared_rstar_lock = threading.Lock()
 
     def _check_release_inputs(self) -> None:
         # This check is metadata-only, but require the bundle's explicit
@@ -226,36 +234,99 @@ class JointTestReleaseRunner:
         finally:
             store.close()
 
-    def submit(self, *, resolve_interrupted: str | None = None) -> dict[str, Any]:
+    def _submit_slot(self, release: TestRelease, slot_id: str, slot: dict[str, Any], *,
+                     shared_dir: Path, resolve_interrupted: str | None = None) -> str:
+        """Submit one registered slot and return its durable terminal state.
+
+        Each worker receives a unique slot ID, so the TestRelease record and
+        ``submission_started`` marker are independent files.  Keeping all
+        marker/record transitions in this helper makes the threaded path use
+        exactly the same idempotency rules as the original serial loop.
+        """
+        record_path = release._path(slot_id)
+        if record_path.exists():
+            return "preexisting"
+        started = release._path(slot_id, "submission_started")
+        if started.exists():
+            if resolve_interrupted is None:
+                raise RuntimeError(f"Interrupted TEST slot requires explicit resolution: {slot_id}")
+            release.record_failure(slot_id, error_type="InterruptedSubmission",
+                                   budget={"usage_unknown": True, "reason": resolve_interrupted})
+            return "failed"
+        write_json(started, {"slot_hash": digest(slot), "started_at": utc_now()})
+        try:
+            # At present the frozen inventory has no G/GO controls.  Keep a
+            # runner-local guard for any future shared-R* condition so workers
+            # cannot race the same ``.started.json`` marker and turn a valid
+            # cache build into an apparent interrupted submission.
+            if slot.get("method") in {"G", "GO"}:
+                with self._shared_rstar_lock:
+                    outcome = self._submit_one(slot, shared_dir=shared_dir)
+            else:
+                outcome = self._submit_one(slot, shared_dir=shared_dir)
+            release.record(slot_id, outcome)
+            return "submitted"
+        except CheckpointIntegrityError:
+            # Integrity failures are campaign-level violations.  Do not turn
+            # them into a per-slot failure that could be sealed as data.
+            raise
+        except Exception as exc:
+            failure = getattr(exc, "jit_mas_run_failure", {})
+            release.record_failure(slot_id, error_type=type(exc).__name__,
+                                   budget=failure.get("budget", {"usage_unknown": True}))
+            return "failed"
+
+    def submit(self, *, resolve_interrupted: str | None = None,
+               workers: int = 1) -> dict[str, Any]:
+        if type(workers) is not int or not 1 <= workers <= MAX_SUBMIT_WORKERS:
+            raise ValueError(f"workers must be an integer between 1 and {MAX_SUBMIT_WORKERS}")
         self._check_release_inputs()
         release = self._release()
         shared_dir = self.campaign / "shared_rstar"
         completed = failed = recovered = 0
+        pending = []
+        # Detect unresolved markers before dispatching any fresh request.  This
+        # avoids a threaded invocation doing paid work before discovering that
+        # an earlier process stopped mid-submission.
         for slot_id, slot in release.slots.items():
-            record_path = release._path(slot_id)
-            if record_path.exists():
+            if release._path(slot_id).exists():
                 completed += 1
                 continue
-            started = release._path(slot_id, "submission_started")
-            if started.exists():
-                if resolve_interrupted is None:
-                    raise RuntimeError(f"Interrupted TEST slot requires explicit resolution: {slot_id}")
-                release.record_failure(slot_id, error_type="InterruptedSubmission",
-                                       budget={"usage_unknown": True, "reason": resolve_interrupted})
-                failed += 1
-                continue
-            write_json(started, {"slot_hash": digest(slot), "started_at": utc_now()})
+            if release._path(slot_id, "submission_started").exists() and resolve_interrupted is None:
+                raise RuntimeError(f"Interrupted TEST slot requires explicit resolution: {slot_id}")
+            pending.append((slot_id, slot))
+
+        if workers == 1:
+            for slot_id, slot in pending:
+                state = self._submit_slot(release, slot_id, slot, shared_dir=shared_dir,
+                                          resolve_interrupted=resolve_interrupted)
+                if state in {"submitted", "preexisting"}:
+                    completed += 1
+                elif state == "failed":
+                    failed += 1
+        elif pending:
+            executor = ThreadPoolExecutor(max_workers=workers,
+                                           thread_name_prefix="joint-test-submit")
+            futures = {
+                executor.submit(self._submit_slot, release, slot_id, slot,
+                                shared_dir=shared_dir,
+                                resolve_interrupted=resolve_interrupted): slot_id
+                for slot_id, slot in pending
+            }
             try:
-                outcome = self._submit_one(slot, shared_dir=shared_dir)
-                release.record(slot_id, outcome)
-                completed += 1
-            except CheckpointIntegrityError:
+                for future in as_completed(futures):
+                    state = future.result()
+                    if state in {"submitted", "preexisting"}:
+                        completed += 1
+                    elif state == "failed":
+                        failed += 1
+            except BaseException:
+                for future in futures:
+                    future.cancel()
+                executor.shutdown(wait=True, cancel_futures=True)
                 raise
-            except Exception as exc:
-                failure = getattr(exc, "jit_mas_run_failure", {})
-                release.record_failure(slot_id, error_type=type(exc).__name__,
-                                       budget=failure.get("budget", {"usage_unknown": True}))
-                failed += 1
+            else:
+                executor.shutdown(wait=True)
         return {"submitted_or_preexisting": completed, "recovered": recovered, "failed": failed,
                 "slots": len(release.slots), "sealed": (self.campaign / "seal.json").is_file()}
 
@@ -333,11 +404,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--evo-val-dir", type=Path, required=True)
     parser.add_argument("--campaign", type=Path, required=True)
     parser.add_argument("--resolve-interrupted")
+    parser.add_argument("--submit-workers", type=int, default=1,
+                        help=f"Concurrent TEST submission workers (1-{MAX_SUBMIT_WORKERS}; default: 1)")
     args = parser.parse_args(argv)
     try:
         runner = JointTestReleaseRunner(args.bundle, args.evo_val_dir, args.campaign)
         result = (runner.register() if args.mode == "register" else
-                  runner.submit(resolve_interrupted=args.resolve_interrupted) if args.mode == "submit" else
+                  runner.submit(resolve_interrupted=args.resolve_interrupted,
+                                workers=args.submit_workers) if args.mode == "submit" else
                   runner.seal() if args.mode == "seal" else
                   runner.score() if args.mode == "score" else runner.status())
     except (ValueError, RuntimeError, FileNotFoundError, PermissionError, CheckpointIntegrityError) as exc:
