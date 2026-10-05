@@ -27,6 +27,7 @@ from jit_mas.config import MASConfig
 from jit_mas.experience import ExperienceStore
 from jit_mas.pipeline import write_json
 from jit_mas.schemas import ExperienceSnapshot, digest, utc_now
+from jit_mas.token_usage import empty_usage, merge_usage, summarize_outcome
 from jit_mas.test_release import TestRelease, score_with_pipeline
 from scripts.execute_joint_experiment import BENCHMARKS, JointExecutor, RUN_IDS
 from scripts.mas_baseline_methods import run_direct
@@ -215,6 +216,7 @@ class JointTestReleaseRunner:
                                             repeat=0, attribution=False, defer_evaluation=True, resume=False)
             if outcome.get("experience_hash") != slot["experience_hash"]:
                 raise CheckpointIntegrityError("TEST outcome experience hash differs from registered state")
+            outcome["token_usage"] = summarize_outcome(outcome)
             return outcome
         finally:
             store.close()
@@ -267,10 +269,12 @@ class JointTestReleaseRunner:
             raise ValueError("Cannot score before every TEST slot is sealed")
         scored = complete = failed = 0
         by_condition: dict[str, dict[str, Any]] = {}
+        total_usage = empty_usage()
         for slot_id, slot in release.slots.items():
             pipeline, store, _ = self._slot_material(slot)
             try:
                 result = release.evaluate(slot_id, lambda record, pipeline=pipeline: score_with_pipeline(pipeline, record))
+                result["token_usage"] = summarize_outcome(result)
                 scored += 1
                 complete += bool(result.get("complete"))
                 failed += not bool(result.get("complete"))
@@ -278,8 +282,10 @@ class JointTestReleaseRunner:
                 summary = by_condition.setdefault(key, {
                     "method": slot["method"], "benchmark": slot["benchmark"],
                     "run_id": slot["run_id"], "scores": [], "complete": 0,
-                    "slots": 0})
+                    "slots": 0, "token_usage": empty_usage()})
                 summary["slots"] += 1
+                summary["token_usage"] = merge_usage([summary["token_usage"], result["token_usage"]])
+                total_usage = merge_usage([total_usage, result["token_usage"]])
                 if result.get("complete"):
                     summary["complete"] += 1
                 score = result.get("official_score")
@@ -290,6 +296,7 @@ class JointTestReleaseRunner:
         report = {"schema": "joint-test-report-v5", "slots": len(release.slots),
                   "evaluated": scored, "complete": complete,
                   "incomplete_or_failed": failed, "feedback_released": True,
+                  "token_usage": total_usage,
                   "by_condition": [
                       {**row, "mean_official_score": (sum(row["scores"]) / len(row["scores"])
                                                        if row["scores"] else None)}

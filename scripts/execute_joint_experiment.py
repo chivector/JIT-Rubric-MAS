@@ -26,6 +26,7 @@ from jit_mas.experience import ExperienceStore
 from jit_mas.independent_campaign import coordinator_lock
 from jit_mas.pipeline import code_fingerprint, write_json
 from jit_mas.schemas import SplitManifest, digest
+from jit_mas.token_usage import summarize_budget, summarize_outcome, usage_totals_from_slots
 from scripts.env_config import resolve_env_placeholders
 from scripts.run_benchmark_experiment import evidence_identity, file_hash
 from scripts.run_jit_mas import make_pipeline
@@ -83,6 +84,14 @@ def _failure_diagnostic(exc: Exception) -> dict[str, Any]:
     return {"schema": "exception-code-locations-v1", "error_type": type(exc).__name__,
             "frames": frames, "exception_message_recorded": False,
             "locals_recorded": False, "source_lines_recorded": False}
+
+
+def _failure_token_usage(exc: Exception) -> dict[str, Any]:
+    """Recover ledger usage attached by ``MASPipeline`` on a failed task."""
+    failure = getattr(exc, "jit_mas_run_failure", None)
+    if isinstance(failure, Mapping) and isinstance(failure.get("budget"), Mapping):
+        return summarize_budget(failure["budget"])
+    return summarize_budget(None)
 
 
 class JointExecutor:
@@ -253,7 +262,8 @@ class JointExecutor:
                 raise CheckpointIntegrityError("Joint journal identity or slot inventory changed")
             return doc
         doc = {"schema": "joint-evo-val-journal-v1", "identity": identity, "slots": slots,
-               "checkpoints": {}, "selections": {}, "status": "running"}
+               "checkpoints": {}, "selections": {}, "status": "running",
+               "token_usage": usage_totals_from_slots(slots.values())}
         write_json(path, doc)
         return doc
 
@@ -266,7 +276,10 @@ class JointExecutor:
             if row["status"] in TERMINAL:
                 return row
             if row["status"] == "started":
-                row.update({"status": "failed", "result": {"error_type": "InterruptedWithoutDurableOutcome", "score": None}, "finished_at": time.time()})
+                row.update({"status": "failed", "result": {
+                    "error_type": "InterruptedWithoutDurableOutcome", "score": None,
+                    "token_usage": summarize_budget(None)}, "finished_at": time.time()})
+                doc["token_usage"] = usage_totals_from_slots(doc["slots"].values())
                 write_json(self._journal(), doc)
                 return row
             row.update({"status": "started", "started_at": time.time(), "attempts": 1})
@@ -279,11 +292,16 @@ class JointExecutor:
             status = "complete" if result.get("complete", True) else "incomplete"
         except Exception as exc:
             result = {"error_type": type(exc).__name__, "score": None, "complete": False,
-                      "failure_diagnostic": _failure_diagnostic(exc)}
+                      "failure_diagnostic": _failure_diagnostic(exc),
+                      "token_usage": _failure_token_usage(exc)}
             status = "failed"
+        if "token_usage" not in result:
+            nested = result.get("outcome") if isinstance(result, Mapping) else None
+            result["token_usage"] = summarize_outcome(nested if isinstance(nested, Mapping) else result)
         with self._journal_lock:
             row = doc["slots"][slot_id]
             row.update({"status": status, "result": result, "result_sha256": digest(result), "finished_at": time.time()})
+            doc["token_usage"] = usage_totals_from_slots(doc["slots"].values())
             write_json(self._journal(), doc)
             return row
 
@@ -351,7 +369,8 @@ class JointExecutor:
             value = _score(name, out)
             lower, upper = self._bounds(name, datasets[name], task)
             norm = None if value is None else (0.0 if upper == lower else max(0.0, min(1.0, (value-lower)/(upper-lower))))
-            return {"task_id": task, "score": value, "normalized": norm, "complete": value is not None, "outcome": out}
+            return {"task_id": task, "score": value, "normalized": norm, "complete": value is not None,
+                    "outcome": out, "token_usage": summarize_outcome(out)}
         return self._consume(doc, sid, invoke)
 
     def _run_validation_checkpoint(self, doc, pipelines, datasets, run_id: int, checkpoint: int) -> None:
@@ -461,7 +480,8 @@ class JointExecutor:
                             def invoke(task=task, pipeline=pipelines[benchmark]):
                                 outcome = pipeline.run("evolve", [task])[0]
                                 return {"complete": True, "task_id": task, "outcome": outcome,
-                                        "after_state_sha256": digest(pipeline.store.snapshot())}
+                                        "after_state_sha256": digest(pipeline.store.snapshot()),
+                                        "token_usage": summarize_outcome(outcome)}
                             self._consume(doc, sid, invoke)
                         self._assert_live_prefix(doc, store, run_id)
                         self._ensure_checkpoint(doc, store, run_id, checkpoint + 15)
@@ -479,7 +499,8 @@ class JointExecutor:
                       "registration_sha256": doc["identity"]["registration_sha256"],
                       "selections": doc["selections"], "formal_test_ready": False,
                       "test_note": "TEST requires TestRelease integration",
-                      "test_feedback_released": False}
+                      "test_feedback_released": False,
+                      "token_usage": usage_totals_from_slots(doc["slots"].values())}
             write_json(self.output / "evo_val_report.json", report)
             return report
 
