@@ -217,6 +217,11 @@ class JointTestReleaseRunner:
             if outcome.get("experience_hash") != slot["experience_hash"]:
                 raise CheckpointIntegrityError("TEST outcome experience hash differs from registered state")
             outcome["token_usage"] = summarize_outcome(outcome)
+            # Keep the per-task artifact and the TestRelease record consistent;
+            # the latter is the campaign ledger, while complete.json is the
+            # operator-facing slot report used for post-run cost audits.
+            if outcome.get("run_dir"):
+                write_json(Path(outcome["run_dir"]) / "complete.json", outcome)
             return outcome
         finally:
             store.close()
