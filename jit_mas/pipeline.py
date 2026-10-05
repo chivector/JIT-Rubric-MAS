@@ -274,6 +274,7 @@ class MASPipeline:
                 agent_updates = self._evolve_agents(task, ledger, result, team, pool, run_dir)
             proposals = attributor.propose(task, findings, snapshot.version, snapshot.experiences,
                                           agent_reflections=agent_updates if pool is not None else None)
+            proposals = [self._scope_proposal_id(task.task_id, proposal) for proposal in proposals]
             if pool is not None:
                 proposals, agent_updates, pool_operations, observations = self._integrate_evolution(
                     task, snapshot, ledger, run_dir, team, findings, feedback, proposals, agent_updates, result,
@@ -283,6 +284,14 @@ class MASPipeline:
             return proposals, agent_updates, pool_operations, observations
         finally:
             save_attribution()
+
+    @staticmethod
+    def _scope_proposal_id(task_id, proposal):
+        """Make model-supplied proposal IDs unique across the experience store."""
+        prefix = f"{task_id}:"
+        if proposal.proposal_id.startswith(prefix):
+            return proposal
+        return proposal.model_copy(update={"proposal_id": prefix + proposal.proposal_id})
 
     @staticmethod
     def _validate_evolution_decision(decision, proposals, updates, *, pool=None, task_id=None,
