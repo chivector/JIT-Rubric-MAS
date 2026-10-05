@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Sequence, TypeVar
@@ -965,7 +966,71 @@ calls and tools must fit remaining finite ceilings. A null call ceiling removes 
 that ceiling, not the obligation to estimate cost. Estimates are not fixed iteration
 caps. Stop when the deliverable is complete or further work has insufficient expected
 quality benefit for its token cost, while respecting enforced budgets and preserving
-the final response. Do not claim savings or numerical quality gains without evidence."""
+the final response. Do not claim savings or numerical quality gains without evidence.
+The limits.adaptive_budget object is a deterministic recommendation from the public task.
+For a simple task, start with one role and one model call; for a moderate task, use at
+most the preferred two-role roster and its preferred call ceiling; for a complex task,
+use the configured maximum when its explicit deliverables, evidence facets or independent
+checks require it. Escalate only when naming the uncovered requirement in selection_rationale
+and budget_plan.rationale. Never add a role merely to spend the available budget, and keep
+the final writer's output budget inside the same token accounting."""
+
+
+
+
+
+ADAPTIVE_BUDGET_VERSION = "task-adaptive-roster-v1"
+_ADAPTIVE_COMPLEXITY_TERMS = frozenset({
+    "analyze", "analyse", "compare", "comparison", "evaluate", "evaluation",
+    "research", "evidence", "sources", "cite", "citation", "synthesize",
+    "synthesis", "design", "plan", "strategy", "alternatives", "multiple",
+    "exhaustive", "all", "every", "table", "calculate", "derive", "review",
+    "分析", "比较", "评估", "研究", "证据", "来源", "引用", "综合", "设计",
+    "规划", "策略", "多个", "全部", "每个", "表格", "计算", "推导", "审查",
+})
+
+
+def adaptive_budget_profile(task: PublicTask, *, max_agents: int,
+                            total_max_calls: int | None,
+                            execution_mode: str = "single_pass") -> dict[str, Any]:
+    """Compute an auditable roster and call recommendation from public task text."""
+    task = PublicTask.model_validate(task)
+    text = " ".join([task.question, *task.constraints, *task.capabilities])
+    folded = text.casefold()
+    words = re.findall(r"[\w\u4e00-\u9fff]+", folded)
+    terms = sorted({term for term in _ADAPTIVE_COMPLEXITY_TERMS if term in folded})
+    score = (2 if len(task.question) >= 240 else 0) + (2 if len(task.question) >= 520 else 0)
+    score += min(3, len(task.constraints)) + min(2, len(task.attachments))
+    score += min(2, len(task.tools)) + min(2, len(task.capabilities)) + min(4, len(terms))
+    conjunction_count = len(re.findall(r"\band\b|\bor\b|以及|并且|或者", folded))
+    score += min(2, conjunction_count)
+    if max_agents <= 1:
+        band, preferred_agents = "single", 1
+    elif score <= 2:
+        band, preferred_agents = "simple", 1
+    elif score <= 7:
+        band, preferred_agents = "moderate", min(2, max_agents)
+    else:
+        band, preferred_agents = "complex", max_agents
+    if total_max_calls is None:
+        preferred_calls = None
+    else:
+        calls_per_agent = {"single": 1, "simple": 1, "moderate": 2, "complex": 3}[band]
+        preferred_calls = min(total_max_calls, max(1, preferred_agents * calls_per_agent))
+    return {
+        "version": ADAPTIVE_BUDGET_VERSION, "complexity_band": band,
+        "complexity_score": score, "preferred_max_agents": preferred_agents,
+        "preferred_total_max_calls": preferred_calls, "configured_max_agents": max_agents,
+        "configured_total_max_calls": total_max_calls,
+        "signals": {"question_chars": len(task.question), "question_words": len(words),
+                    "constraint_count": len(task.constraints),
+                    "attachment_count": len(task.attachments), "tool_count": len(task.tools),
+                    "capability_count": len(task.capabilities), "complexity_terms": terms,
+                    "conjunction_count": conjunction_count},
+        "policy": "Use the preferred cap when it covers every explicit public requirement; "
+                  "escalate to the configured maximum only for documented coverage, evidence, "
+                  "or independent-check needs.", "execution_mode": execution_mode,
+    }
 
 
 PUBLIC_REFINEMENT_PLANNING_VERSION = "public-draft-planning-v1"
@@ -1106,9 +1171,13 @@ class GlobalAnalyzer(JsonModelCalls):
                              "catalogue member. Reconciliation must retain each selected candidate's "
                              "original pool identity and version.")
 
-    def _limits(self) -> dict:
+    def _limits(self, task: PublicTask | None = None) -> dict:
         limits = {"max_agents": self.max_agents, "max_parallel": self.max_parallel,
                   "total_max_calls": self.total_max_calls, "execution_mode": self.execution_mode}
+        if task is not None:
+            limits["adaptive_budget"] = adaptive_budget_profile(
+                task, max_agents=self.max_agents, total_max_calls=self.total_max_calls,
+                execution_mode=self.execution_mode)
         if self.knowledge_policy is not None:
             limits["knowledge_policy"] = self.knowledge_policy
         if self.execution_max_tokens is not None:
@@ -1143,8 +1212,8 @@ class GlobalAnalyzer(JsonModelCalls):
         resource["remaining_seconds"] = state.get("remaining_seconds")
         return resource
 
-    def _refresh_limits(self) -> dict:
-        return {"limits": self._limits()}
+    def _refresh_limits(self, task: PublicTask | None = None) -> dict:
+        return {"limits": self._limits(task)}
 
     def _prompt(self, prompt: str) -> str:
         prompt += "\n" + QUALITY_ASSURANCE_PROMPT + BUDGET_AWARE_PROMPT
@@ -1252,9 +1321,9 @@ class GlobalAnalyzer(JsonModelCalls):
                                 **({"public_planning_context": copy.deepcopy(self.public_planning_context)}
                                    if self.public_planning_context else {}),
                                 **({"agent_pool_catalogue": pool_catalogue} if pool_catalogue is not None else {}),
-                                "limits": self._limits()}, Prediction,
+                                "limits": self._limits(task)}, Prediction,
                               validate=lambda item: self._validate_prediction(task, item),
-                              refresh_payload=self._refresh_limits,
+                              refresh_payload=lambda: self._refresh_limits(task),
                               json_schema=_pooled_prediction_schema(pool_catalogue, max_agents=self.max_agents)
                               if pool_catalogue is not None else None)
         self.last_prediction = prediction.model_copy(deep=True)
@@ -1333,10 +1402,10 @@ class GlobalAnalyzer(JsonModelCalls):
                          **({"agent_profile": profile} if profile is not None else {}),
                          "immutable_identity": {"agent_id": candidate.agent_id,
                                                 "capability": candidate.capability},
-                         "experiences": local_experiences, "limits": self._limits()},
+                         "experiences": local_experiences, "limits": self._limits(task)},
                         LocalPlan, agent_id=candidate.agent_id,
                         validate=lambda item: self._validate_local_plan(task, prediction, candidate, item),
-                        refresh_payload=self._refresh_limits)
+                        refresh_payload=lambda: self._refresh_limits(task))
 
     def _validate_local_plan(self, task: PublicTask, prediction: Prediction,
                              candidate: AgentSpec, plan: LocalPlan) -> None:
@@ -1399,10 +1468,10 @@ class GlobalAnalyzer(JsonModelCalls):
                              **({"public_planning_context": copy.deepcopy(self.public_planning_context)}
                                 if self.public_planning_context else {}),
                              **({"agent_pool_catalogue": self._pool_catalogue()} if self.agent_pool is not None else {}),
-                             "experiences": experiences, "limits": self._limits()},
+                             "experiences": experiences, "limits": self._limits(task)},
                             _ReconciliationResponse,
                             validate=lambda item: self._validate_reconciled_pool(task, prediction, plans, item),
-                            refresh_payload=self._refresh_limits,
+                            refresh_payload=lambda: self._refresh_limits(task),
                             json_schema=_pooled_reconciliation_schema(prediction, max_agents=self.max_agents)
                             if self.agent_pool is not None else None)
         # Local testimony belongs to its author, not the reconciler.
