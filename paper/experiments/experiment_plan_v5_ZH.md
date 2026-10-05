@@ -1,6 +1,17 @@
 # 六 benchmark 联合进化：小子集协议 v5
 
-目的：在可承担的工作量内，验证跨 benchmark 联合进化后，**同一个冻结的 MAS 生成 meta-agent** 能否改善不同任务。保留 v4 的方法，只缩减题数、checkpoint 数与重复生成次数；不运行全量 benchmark。
+目的：在可承担的工作量内，验证跨 benchmark 联合进化后，**同一份冻结的 meta-agent 经验与 full agent harness prototype 状态** 能否改善不同任务。保留 v4 的题目与评价协议，只缩减题数、checkpoint 数与重复生成次数；不运行全量 benchmark。
+
+## 方法与阶段边界
+
+**构建 MAS 时不做双层归因，也不修改 Agent Pool；执行后进化时才做双层归因并统一更新两层状态。** 新 query 到达后，meta-agent 根据公开 query 预测 rubrics，显式识别任务关键点，并以此设计角色、职责、拓扑与协作。Meta 读取当前冻结的 Agent Pool 快照，选择和组合合适的 full agent harness prototypes 并作任务适配；若没有合适的 harness，Meta 可为当前任务临时创建完整 agent harness，并记录创建原因、完整 profile、来源及使用情况。构建时的 rubric 职责分配是设计依据，不是对尚未发生的执行结果归因；临时创建只影响当前 MAS，Pool 的合并、删除及其他结构操作均留到反思进化阶段。
+
+执行结束并获得 judge 反馈后，meta-agent 根据全部 rubrics、当前 MAS 结构和执行证据进行全局归因；再按当前 MAS 的 rubric 职责及评测对齐关系，把每个 agent 相关/负责的 rubrics 分配给它。各 agent 基于自身轨迹进行局部归因与 harness 反思，meta-agent 汇总这些内容，确定本次进化更新。RubricGraph、职责映射和语义对齐记录提供可校验的归因结构，具体机制及实现边界见 [双层进化实现](dual_evolution_agent_pool_ZH.md)。
+
+- **meta-level** 累积预测 rubrics 的经验，以及依据这些 rubrics 设计 MAS 结构的经验；下一道题仍根据其 query 生成任务条件化 MAS。
+- **MAS-level** 累积角色的 context、tools、memory、skills、策略与 harness policy 等经验，维护可复用的 **full agent harness prototypes**。Agent Pool 的成员、能力分工及层次关系均可演化；初始经典角色是种子，不是固定角色全集。Meta 根据历史任务、失败模式、可观察质量收益及实际 Token 成本，在每轮进化中选择 Add、Delete/Prune、Split、Merge、Specialize、Reorganize 等结构操作，并决定是否保留本轮实际执行且有反馈的临时 harness。Pool 可形成树状或层次化森林，也可保持扁平；不预设必须采用的根、深度或角色划分。`agent_pool` 是代码中的存储名称，不是仅缓存角色 prompt 的方法定义。
+
+两层状态及 Pool 的完整成员、harness 与层次关系共同构成 checkpoint。EVO 中，Meta 汇总全局和局部反思后，确定经验、角色 harness 和 Pool 结构的本轮更新；通过来源、证据、身份、版本及结构检查后，在同一事务中原子写入。VAL/TEST 只利用冻结状态设计和执行 MAS，可记录仅供当前任务使用的临时 harness，但不开展执行后双层归因、反思、长期 Pool 更新或基于反馈跨题积累。本节明确方法边界，不改变已注册的题目成员、题序、评分和选版规则。
 
 ## 题目与用途
 
@@ -28,7 +39,7 @@
 3. **每个 checkpoint 都评全部固定 30 道 VAL，每题生成一次。** 不是最近一批，也不是累计变化的 VAL。VAL 不写经验，不把反馈交给源题执行 agent。
 4. 每个 benchmark 至少 `9/10` 完整评分才有筛选资格。按固定理论范围归一化（RR 保留有符号权重范围；DSQA `[0,1]`；WritingBench `[1,10]`），先在 benchmark 内平均，再三者等权平均。缺失原生得分为 null，仅筛选用标注的下界；不能用观察到的最高/最低分归一化。
 5. 全部四阶段结束后，从五个候选中选一个完整状态；最大值相对容差 `1e-12` 内，依次按完整评价数量、较早位置、状态哈希打破平局。没有合格候选则报告该 run 不确定，不追加有利 run。
-6. 经验仍直接写入，不恢复 accept/hold/reject。生成、评价、归因和执行器单次 shared-ledger 通信等核心机制不变。
+6. 经验仍直接写入，不恢复 accept/hold/reject。MAS 构建与执行后双层归因/进化分为独立阶段；每个 checkpoint 同时保存 meta-level 经验、完整角色 harness 原型及动态 Pool 结构。每轮允许结构提案，但是否操作及采用哪种组织由 Meta 根据证据决定，不强制每轮增删成员。评价和执行器单次 shared-ledger 通信等协议不变。
 
 
 ## Budget-aware MAS 生成
@@ -41,7 +52,7 @@ MAS 生成 Meta-Agent 必须将 token 开销作为团队设计依据，而不仅
 
 ## TEST 与基线
 
-**一个 run 只选一个通用版本，用于全部六个 benchmark，不按 benchmark 另选 checkpoint。** 三个 run 都报告；默认发布包预先指定为 run 0 的联合 VAL winner，不看 TEST 挑版本。包内冻结生成模型身份、代码、prompt、配置、工具/检索策略和联合经验快照，不是新训练的权重，也不是固定团队；遇到新题仍生成任务条件化 MAS。
+**一个 run 只选一个通用版本，用于全部六个 benchmark，不按 benchmark 另选 checkpoint。** 三个 run 都报告；默认发布包预先指定为 run 0 的联合 VAL winner，不看 TEST 挑版本。包内冻结生成模型身份、代码、prompt、配置、工具/检索策略，以及 meta-level 经验和 full agent harness prototypes、成员层次与结构更新记录的完整联合快照；这些是经验与原型状态，不是新训练的权重。遇到新题仍预测 rubrics、复用或临时创建角色 harness 并生成任务条件化 MAS，冻结的长期 Pool 保持不变。
 
 五个核心方法为 **Initial、Selected、Direct、原生 JIT、固定 rubric-MAS**。三个 Selected 状态各对每道 TEST 生成一份；四种静态方法每题各生成一份，跨三个 run 共享，不冒充三份独立样本。底座、允许的公开输入、证据材料和资源上限匹配。全部答案先按冻结库存提交并封存，再评分；TEST 无经验更新、补题或按质量重试。
 

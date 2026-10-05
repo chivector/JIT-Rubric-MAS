@@ -21,7 +21,8 @@ class SummaryCitingModel(FixtureModel):
     def _phase(self, payload):
         response = super()._phase(payload)
         if payload["phase"] == "agent_evolve":
-            evidence = ["evaluation:summary", payload["evaluation_summary"]["rubrics"][0]["evidence_id"]]
+            evidence = ["evaluation:summary", *[rubric["evidence_id"]
+                        for rubric in payload["evaluation_summary"]["rubrics"]]]
             response["evidence"] = evidence
             for lesson in response["lessons"]:
                 lesson["evidence"] = evidence
@@ -98,8 +99,12 @@ def test_reflection_without_individual_findings_receives_observable_submission_f
         for field in ("score", "complete", "evaluator_version", "aggregation"):
             assert summary[field] == feedback[field]
         assert "individual" in summary["causal_limit"] and "causal" in summary["causal_limit"]
-        assert len(summary["rubrics"]) == len(feedback["rubrics"])
-        for safe, rubric in zip(summary["rubrics"], feedback["rubrics"]):
+        assignment = payload["credit_assignment"]
+        assert assignment["agent_id"] == payload["agent"]["agent_id"]
+        relevant = [rubric for rubric in feedback["rubrics"]
+                    if rubric["rubric_id"] in assignment["evaluated_rubric_ids"]]
+        assert len(summary["rubrics"]) == len(relevant)
+        for safe, rubric in zip(summary["rubrics"], relevant):
             assert set(safe) == {"evidence_id", "rubric_id", "weight", "score", "verdict", "status"}
             assert safe["evidence_id"] == "feedback:" + rubric["rubric_id"]
             for field in ("rubric_id", "weight", "score", "verdict", "status"):
@@ -133,7 +138,11 @@ def test_summary_evidence_survives_joint_commit_and_frozen_attribution_replay(
         assert snapshot.version == snapshot.agent_pool.version == 1 and snapshot.experiences
         for update in attributed["agent_updates"]:
             assert "evaluation:summary" in update["evidence"]
-            assert any(identifier.startswith("feedback:") for identifier in update["evidence"])
+            assignments = read_artifact(attributed, "attribution.json")["credit_assignments"]
+            team = read_artifact(attributed, "frozen_plan.json")["TeamSpec"]
+            agent = next(agent for agent in team["agents"] if agent["pool_agent_id"] == update["pool_agent_id"])
+            assert {identifier for identifier in update["evidence"] if identifier.startswith("feedback:")} == {
+                "feedback:" + rubric_id for rubric_id in assignments[agent["agent_id"]]["evaluated_rubric_ids"]}
             profile = next(member for member in snapshot.agent_pool.profiles
                            if member.pool_agent_id == update["pool_agent_id"])
             assert profile.version == 2 and "evaluation:summary" in profile.memory[-1].evidence

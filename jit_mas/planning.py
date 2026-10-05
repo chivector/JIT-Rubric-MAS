@@ -1,10 +1,16 @@
-"""Task-conditioned global/local planning over JIT's model callable protocol."""
+"""Task-conditioned MAS construction over JIT's model callable protocol.
+
+Planning predicts task rubrics and assigns responsibilities before execution. It
+does not perform global or local rubric credit assignment; that attribution
+belongs to post-execution evolution after judge feedback is available.
+"""
 
 from __future__ import annotations
 
 import copy
 import hashlib
 import json
+import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Sequence, TypeVar
@@ -143,6 +149,20 @@ they qualify, rather than a list of instructions for someone else to produce it.
 """.strip() + "\n" + PUBLIC_CONSTRAINT_CONSTRUCTION_PROMPT
 
 
+CONSTRUCTION_STAGE_CONTRACT = """
+CONSTRUCTION-STAGE CONTRACT: This request is building a MAS before the current
+query has executed and before judge feedback exists. Rubrics here are predicted
+quality requirements used to guide structure design; coverage, primary owners,
+reviewers, dependencies and agent.rubric_ids are execution responsibilities and
+handoff checks, not credit assignment. Do not infer global or local rubric credit,
+success, failure, or causal responsibility from this plan. Global attribution and
+agent-level attribution are performed only during post-execution evolution after
+the judge feedback and the completed MAS artifacts are available. Keep this
+construction response free of attribution findings, reward claims and evolution
+updates.
+""".strip()
+
+
 class _ReconciliationResponse(Record):
     graph: RubricGraph
     team: TeamSpec
@@ -160,7 +180,7 @@ class _ReconciliationResponse(Record):
 PLANNING_SCHEMA_NAMES = {"predict": "MASPredict", "local_plan": "MASLocalPlan",
                          "reconcile": "MASReconcile"}
 PLANNING_TEXT_LIMITS = {"rationale": 1024, "selection_rationale": 1024,
-                        "task_prompt": 4096}
+                        "creation_rationale": 1024, "task_prompt": 4096, "communication": 1024}
 
 
 def _constrain_planning_schema(schema: dict, *, uncapped: bool) -> dict:
@@ -222,7 +242,9 @@ def _planning_compact_prompt(output_cap: int | None) -> str:
         "task and evidence remain authoritative, so role task_prompt should specify scope, "
         "inputs and expected contribution rather than recopy them. Keep rationale annotations "
         "within 1024 characters and task_prompt within 4096; these are plan annotations, not "
-        "limits on the requested final artifact or required facts. In uncapped iterative mode, "
+        "limits on the requested final artifact or required facts. Keep communication within "
+        "1024 characters: state the handoff protocol once without repeating responsibilities, "
+        "checkpoints, resource limits or generic prohibitions. In uncapped iterative mode, "
         "emit max_calls=null and total_max_calls=null; estimate expected_model_calls separately "
         "and keep stopping conditions, token and deadline budgets binding. "
         "PUBLIC ELIGIBILITY SCOPE: Only conditions stated in the original public question and "
@@ -260,6 +282,12 @@ def _pooled_reconciliation_schema(prediction: Prediction, *, max_agents: int) ->
                                  "const": value}
             if field not in branch["required"]:
                 branch["required"].append(field)
+        properties["temporary_profile"] = {"type": "object" if candidate.temporary_profile else "null",
+                                           "const": as_json(candidate.temporary_profile)}
+        properties["creation_rationale"] = {"type": "string", "const": candidate.creation_rationale}
+        if candidate.temporary_profile is not None:
+            branch["required"].extend(field for field in ("temporary_profile", "creation_rationale")
+                                      if field not in branch["required"])
         other_ids = [aid for aid in candidate_ids if aid != candidate.agent_id]
         properties["depends_on"]["items"] = {"type": "string", "enum": other_ids} if other_ids \
             else {"type": "string"}
@@ -280,12 +308,13 @@ def _pooled_reconciliation_schema(prediction: Prediction, *, max_agents: int) ->
 
 
 def _pooled_prediction_schema(catalogue: Sequence[dict[str, Any]], *, max_agents: int) -> dict[str, Any]:
-    """Bind pooled prediction candidates to members in the current catalogue.
+    """Allow exact catalogue bindings and new task-local harness prototypes.
 
     Candidate ``agent_id`` values are task-local names chosen by the planner and
     therefore remain unconstrained here.  The persistent pool identity is the
-    only identity known before prediction; each ``AgentSpec`` branch binds its
-    ``pool_agent_id`` and ``pool_agent_version`` to one catalogue member.
+    only identity known before prediction. Existing-member branches bind exact
+    versions; the creation branch carries a complete, untrained prototype with
+    a new identity, whose equality with the binding is validated semantically.
     """
     schema = Prediction.model_json_schema()
     definitions = schema["$defs"]
@@ -300,11 +329,38 @@ def _pooled_prediction_schema(catalogue: Sequence[dict[str, Any]], *, max_agents
         properties = branch["properties"]
         properties["pool_agent_id"] = {"type": "string", "const": pool_agent_id}
         properties["pool_agent_version"] = {"type": "integer", "const": pool_agent_version}
+        properties["temporary_profile"] = {"type": "null", "const": None}
+        properties["creation_rationale"] = {"type": "string", "const": ""}
         required = branch.setdefault("required", [])
         for field in ("pool_agent_id", "pool_agent_version"):
             if field not in required:
                 required.append(field)
         branches.append(branch)
+    temporary = copy.deepcopy(original_agent)
+    properties = temporary["properties"]
+    known_ids = [member["pool_agent_id"] for member in catalogue]
+    identity_pattern = (r"^(?!(?:" + "|".join(re.escape(identity) for identity in known_ids)
+                        + r")$)[A-Za-z0-9_-]+$" if known_ids else r"^[A-Za-z0-9_-]+$")
+    properties["pool_agent_id"] = {"type": "string", "pattern": identity_pattern}
+    properties["pool_agent_version"] = {"type": "integer", "const": 1}
+    properties["creation_rationale"] = {"type": "string", "minLength": 1,
+                                        "maxLength": PLANNING_TEXT_LIMITS["creation_rationale"]}
+    profile = copy.deepcopy(definitions["AgentProfile"])
+    profile_properties = profile["properties"]
+    profile_properties["pool_agent_id"] = copy.deepcopy(properties["pool_agent_id"])
+    profile_properties["version"] = {"type": "integer", "const": 1}
+    for field in ("memory", "source_task_ids", "evidence"):
+        profile_properties[field]["maxItems"] = 0
+    for field in ("pool_agent_id", "version", "role", "capabilities", "prompt", "skills",
+                  "preferred_tools", "memory", "reasoning_strategy", "planning_strategy",
+                  "communication", "harness", "source_task_ids", "evidence"):
+        if field not in profile["required"]:
+            profile["required"].append(field)
+    properties["temporary_profile"] = profile
+    for field in ("pool_agent_id", "pool_agent_version", "temporary_profile", "creation_rationale"):
+        if field not in temporary["required"]:
+            temporary["required"].append(field)
+    branches.append(temporary)
     definitions["AgentSpec"] = {"anyOf": branches}
     schema["properties"]["candidates"]["maxItems"] = max_agents
     return schema
@@ -567,12 +623,13 @@ class JsonModelCalls:
             if correction is not None:
                 if getattr(self, "agent_pool", None) is not None:
                     correction_system += (
-                        "\nPERSISTENT POOL IDENTITY REPAIR: for every pooled candidate, copy "
-                        "pool_agent_id and pool_agent_version verbatim from the original "
-                        "agent_pool_catalogue. Neither field may be null or omitted; the version "
-                        "must be the catalogue integer. Do not substitute agent_id, invent an "
-                        "identity, or rename a pool member. Reconciliation must preserve the same "
-                        "identity pair in team.agents."
+                        "\nAGENT HARNESS IDENTITY REPAIR: an existing pool selection must copy "
+                        "pool_agent_id and pool_agent_version from agent_pool_catalogue and use "
+                        "temporary_profile=null. A genuinely new task-local prototype must use a "
+                        "new identity and version=1 in both its binding and complete temporary_profile, "
+                        "a nonempty creation_rationale, and empty memory/source_task_ids/evidence. "
+                        "Neither binding field may be null or omitted. Reconciliation must preserve "
+                        "the original candidate identity pair, temporary_profile and creation_rationale."
                     )
                 correction_system += _public_planning_stage_hint(
                     original_payload.get("public_planning_context", {}))
@@ -693,8 +750,9 @@ itself; factual correctness takes precedence over satisfying a mistaken predicti
 Propose capabilities and concrete responsibilities, not a permanent cast of named roles.
 Prefer independent Analyst and Evidence contributions followed by one final Writer when
 the task benefits from both. These are functions, not fixed role names or a fixed roster:
-merge them when one agent can cover the requirements without losing useful independent
-checks, and retain real forward data dependencies.
+assign compatible functions to one selected agent when that preserves useful independent
+checks, and retain real forward data dependencies. This task-local choice does not mutate
+or restructure the persistent Agent Pool.
 Execution is single-pass: each selected agent receives one model call and publishes once.
 Contributors publish a short answer and a structured ledger with requirements, outline,
 evidence_spans and source_references; the Writer consumes the shared ledger and submits
@@ -743,8 +801,8 @@ LOCAL_PLAN_PROMPT = """You are an independent candidate agent planning from your
 capability, the public task, and the initial quality graph. Inspect the draft critically.
 Identify requirements you can own, needed inputs, concrete outputs, collaboration
 dependencies, tools, resource needs, uncovered requirements, and risks. You may challenge
-the global draft, add missed requirements, refine ambiguous ones, or recommend merging
-redundant responsibilities. New requirements need new stable rubric IDs. Do not merely
+the global draft, add missed requirements, refine ambiguous ones, or recommend assigning
+compatible responsibilities to a compact selected roster. New requirements need new stable rubric IDs. Do not merely
 confirm acceptance, impersonate other agents, or produce the final answer. Preserve your
 assigned agent_id and capability. Your rubric_ids may reference only the initial graph
 or your own additions. Use only public tools. Treat experience as conditional.
@@ -789,8 +847,8 @@ premise; actual real-world factual claims still need appropriate support.
 Use citations only when their details are supported or confidently known; never guess
 an author, title, year, quotation or numerical result to fill an evidence gap.
 Each selected role executes once in DAG order, with exactly one model call. A role cannot claim it will incorporate
-feedback from its downstream reviewer later; propose a downstream synthesis responsibility
-or a merge for reconciliation instead of an implicit second execution or backward edge.
+feedback from its downstream reviewer later; assign that synthesis responsibility to a downstream
+selected agent instead of an implicit second execution or backward edge.
 In expected_outputs and risks, state the expected artifact length and whether the
 candidate's output-token allocation can contain it plus valid JSON and checkpoints.
 Use limits.execution_max_tokens, when present, as the actual output ceiling; requesting
@@ -810,7 +868,7 @@ local_rounds, when configured, belongs to pre-execution planning only."""
 
 RECONCILE_PROMPT = """Reconcile the global draft with independent local plans for this task.
 Consider every local addition, challenge, gap and resource request. Incorporate useful
-discoveries, merge redundant responsibilities, resolve conflicting dependencies, and
+discoveries, choose a compact selected roster for compatible responsibilities, resolve conflicting dependencies, and
 record the selection rationale, including reasons for rejecting material local suggestions.
 Resolve substantive challenges before preserving a predicted rubric: requirements not
 stated by the public task remain fallible hypotheses. Do not enforce an unverified formula,
@@ -821,8 +879,9 @@ force the answer to conform to it. Conditional experience cannot override the pu
 Generate the revised graph and an executable TeamSpec. Preserve stable rubric IDs for
 unchanged requirements. Coverage is many-to-many. The synthesizer reconciles conflicts
 and gaps in the requested output genre, not just concatenates contributions; allocate
-enough output tokens for synthesis and checks. Represent any merged responsibilities in the
-agents array itself, not only in the selection rationale.
+enough output tokens for synthesis and checks. Represent any combined responsibilities in the
+agents array itself, not only in the selection rationale. These are task-local selections;
+Pool structural operations are reserved for post-execution evolution.
 The synthesizer must independently emit the complete final deliverable requested by
 the task, not just review notes, an editing preamble, or a pointer to an upstream draft.
 Size its max_tokens for that final output plus JSON escaping, evidence IDs, checkpoints
@@ -891,7 +950,8 @@ Before returning, check ALL cross-field constraints against the actual JSON you 
   dependencies when it is the only agent). Rubric graph relationships are not this DAG.
   Each selected agent executes once in DAG order. A writer cannot synthesize before
   downstream reviewers run and then implicitly run again. Select an existing downstream
-  agent for final synthesis and connect all contributors without cycles, or merge roles.
+  agent for final synthesis and connect all contributors without cycles; assign compatible
+  responsibilities to one selected agent when that preserves the required checks.
   Responsibilities and checkpoints may refer only to information available at that role's
   turn. An upstream writer cannot truthfully check that it incorporated future reviewer
   feedback. Assign incorporation to a downstream role; do not claim an impossible check.
@@ -902,7 +962,7 @@ Before returning, check ALL cross-field constraints against the actual JSON you 
   coverage includes that agent.
   After finalizing coverage, mechanically derive every agent.rubric_ids as the sorted,
   deduplicated list of rid values for which agent.agent_id is in coverage[rid]. Recompute
-  it after every merge or reassignment; do not copy an outdated candidate assignment.
+  it after every responsibility reassignment; do not copy an outdated candidate assignment.
 - For each reviewer in reviewers[rubric_id], reviewer != primary[rubric_id], and that
   primary owner must be an ancestor of the reviewer through depends_on, directly or
   transitively. An upstream agent cannot review a downstream owner's future artifact.
@@ -930,28 +990,45 @@ Before returning, check ALL cross-field constraints against the actual JSON you 
   include multiple model calls. Keep expected calls within any finite role/team ceilings
   and the estimated input/output totals plus reserves within the remaining shared budget."""
 
-POOL_ORGANIZATION_PROMPT = """\nEVOLVING AGENT POOL: Select reusable agents from agent_pool_catalogue.
-Every selected candidate must carry the exact pool_agent_id and pool_agent_version of
-one available pool member; copy its catalogue.version into pool_agent_version.
+POOL_ORGANIZATION_PROMPT = """\nEVOLVING AGENT POOL: Select reusable full agent harness prototypes from agent_pool_catalogue.
+For an existing member, carry its exact pool_agent_id and catalogue.version as
+pool_agent_version, temporary_profile=null and creation_rationale="".
 agent_id names its participation in this task; the pool
 identity persists across tasks. Select and combine the smallest suitable roster. The
 same pool member may participate only once. You control the task goals, responsibilities,
 rubric assignments, communication topology, resource ceilings, and a short task_prompt.
 Different agent_id values do not create additional copies of a pool member. If two
-responsibilities need the same member, combine them into one participation; otherwise
-choose distinct available pool members with suitable capabilities. A duplicate-binding
-correction names every duplicate pool identity and its participating agent_id values.
-Keep task_prompt limited to public task constraints and local role goals. Preserve the
-member's established internal capabilities. Its local plan chooses skills, reasoning,
-memory use, harness, and communication habits. Reconciliation may select or remove
-candidates but cannot replace a selected member's pool identity or internal choices.
+responsibilities need the same member, combine their responsibilities into one participation.
+When no existing harness is suitable, you may create a new task-local full prototype in
+temporary_profile rather than force an unsuitable catalogue selection. Give it a new
+pool_agent_id absent from the catalogue and version=1, and copy that identity/version into
+the candidate binding. Include role, capabilities, prompt, skills, preferred_tools,
+reasoning_strategy, planning_strategy, communication and the installed rubric_mas harness
+policy. Provide empty memory, source_task_ids and evidence: this is a creation before
+execution, not learned experience. Include a nonempty creation_rationale explaining the
+capability gap and expected quality/token-cost benefit. parent_agent_id may identify an
+existing reusable prototype from which the new specialty derives. Only use tools available
+in task.tools. A task-local prototype has no effect on the persistent pool; its complete
+creation record will be considered for admission only during post-execution evolution.
+Keep task_prompt limited to public task constraints and local role goals. Reuse the
+member's complete retained harness prototype (prompt, skills, reasoning strategy,
+memory policy, tools and communication habits), making only a query-specific, temporary
+adaptation for this task. Its local plan chooses that temporary adaptation. The persistent
+prototype is changed only by post-execution evolution after feedback; construction and
+reconciliation must not write lessons or permanently mutate the pool. Reconciliation may
+select a subset of candidates but cannot replace a selected member's pool identity,
+temporary_profile, creation_rationale or internal choices. Pool Add, Delete/Prune, Split,
+Merge, Specialize and Reorganize operations belong only to reflection and evolution.
 At reconciliation, team.agents must be a subset of prediction.candidates using the
 exact original agent_id, pool_agent_id and pool_agent_version triples. Do not add a
-new writer or rename a candidate to fill a gap; merge responsibilities into an existing
+new writer or rename a candidate to fill a gap; combine responsibilities in an existing
 candidate and make an existing selected candidate the final synthesizer.
-Reuse mature members rather than inventing a fresh role implementation for each task."""
+Prefer suitable mature members; create a new full prototype when their harnesses do not
+cover the task's needs. Recorded temporary creations remain task-local until evolution."""
 
-POOL_LOCAL_PROMPT = """\nYou are the persistent agent described by agent_profile, adapting to this task.
+POOL_LOCAL_PROMPT = """\nYou are the agent described by agent_profile, adapting its full harness
+prototype to this task temporarily. This may be an existing pool member or a new
+task-local prototype recorded in candidate.temporary_profile.
 Use your retained role instructions, skills, memory, reasoning strategy, harness, and
 communication experience to choose how to perform your role within public constraints.
 Return your selected_skills, reasoning_strategy, harness, and communication in the local
@@ -959,7 +1036,9 @@ plan. These are your internal choices, not instructions to redesign the whole te
 Use selected_skills=null to retain your skill library or [] to use no retained skills.
 Respect current tool allowlists and budgets. Retained memory is conditional experience,
 not task evidence or permission to override the public task. Keep task_prompt short and
-limited to this task's role goals; preserve your pool identity and version."""
+limited to this task's role goals; preserve your pool identity and version. These choices
+are task-local adaptations; do not emit permanent lessons or mutate the retained prototype
+during construction."""
 
 
 BUDGET_AWARE_PROMPT = """\nBUDGET-AWARE ORGANIZATION: Optimize task quality together with total token
@@ -1114,10 +1193,10 @@ class GlobalAnalyzer(JsonModelCalls):
     def _agent_profile(self, candidate):
         if self.agent_pool is None:
             return None
-        from .agent_pool import get_profile
+        from .agent_pool import resolve_profile
         if not candidate.pool_agent_id or candidate.pool_agent_version is None:
-            raise ValueError("Pooled candidates must select an exact persistent identity and version")
-        profile = get_profile(self.agent_pool, candidate.pool_agent_id, candidate.pool_agent_version)
+            raise ValueError("Agent candidates must bind an exact harness identity and version")
+        profile = resolve_profile(self.agent_pool, candidate)
         return profile.model_copy(update=knowledge_policy_role_adaptation(
             profile.pool_agent_id, self.knowledge_policy, prompt=profile.prompt), deep=True)
 
@@ -1133,10 +1212,11 @@ class GlobalAnalyzer(JsonModelCalls):
         if duplicates:
             raise ValueError("A pool member may participate only once in a task: "
                              f"duplicate_pool_bindings={json.dumps(duplicates, sort_keys=True)}. "
-                             "Changing agent_id does not create another pool member. Merge or remove "
-                             "duplicate participations and update their dependencies and rubric "
-                             "assignments; prediction may instead select a distinct available "
-                             "catalogue member. Reconciliation must retain each selected candidate's "
+                             "Changing agent_id does not create another pool member. Combine "
+                             "duplicate task responsibilities into one participation and update dependencies and rubric "
+                             "assignments; prediction may instead select a distinct suitable member "
+                             "or create a new full prototype for a genuine capability gap. "
+                             "Reconciliation must retain each selected candidate's "
                              "original pool identity and version.")
 
     def _limits(self, task: PublicTask | None = None) -> dict:
@@ -1180,7 +1260,8 @@ class GlobalAnalyzer(JsonModelCalls):
         return {"limits": self._limits(task)}
 
     def _prompt(self, prompt: str) -> str:
-        prompt += "\n" + QUALITY_ASSURANCE_PROMPT + BUDGET_AWARE_PROMPT
+        prompt += ("\n" + CONSTRUCTION_STAGE_CONTRACT + "\n" + QUALITY_ASSURANCE_PROMPT
+                   + BUDGET_AWARE_PROMPT)
         if self.execution_mode == "iterative_shared_ledger":
             # The planning constants also document the historical single-pass
             # control. Remove those prohibitions before adding the iterative
@@ -1188,13 +1269,13 @@ class GlobalAnalyzer(JsonModelCalls):
             for old, new in (
                 ("Execution is single-pass: each selected agent receives one model call and publishes once.",
                  "Execution may be iterative: each selected agent can receive additional model turns and revise a published artifact."),
-                ("Each selected role executes once in DAG order, with exactly one model call. A role cannot claim it will incorporate\nfeedback from its downstream reviewer later; propose a downstream synthesis responsibility\nor a merge for reconciliation instead of an implicit second execution or backward edge.",
+                ("Each selected role executes once in DAG order, with exactly one model call. A role cannot claim it will incorporate\nfeedback from its downstream reviewer later; assign that synthesis responsibility to a downstream\nselected agent instead of an implicit second execution or backward edge.",
                  "The dependency DAG provides initial inputs; roles may later resume to answer public peer requests and incorporate new ledger evidence while preserving private history."),
                 ("Set every AgentSpec.max_calls=1 explicitly. There is no execution-time JSON\ncorrection, second draft or communication round; fit a complete response in that call.",
                  "Set AgentSpec.max_calls to the configured ceiling, or null when the iterative task removes that optional ceiling. Token and timeout budgets remain binding."),
                 ("Set LocalPlan.max_calls=1; the reconciled AgentSpec.max_calls\nmust also be 1. Do not request correction calls or communication rounds.",
                  "Set LocalPlan.max_calls to the configured iterative ceiling, or null when no role ceiling is requested. Peer communication and follow-up turns are allowed."),
-                ("Each selected agent executes once in DAG order. A writer cannot synthesize before\ndownstream reviewers run and then implicitly run again. Select an existing downstream\nagent for final synthesis and connect all contributors without cycles, or merge roles.\nResponsibilities and checkpoints may refer only to information available at that role's\nturn. An upstream writer cannot truthfully check that it incorporated future reviewer\nfeedback. Assign incorporation to a downstream role; do not claim an impossible check.",
+                ("Each selected agent executes once in DAG order. A writer cannot synthesize before\ndownstream reviewers run and then implicitly run again. Select an existing downstream\nagent for final synthesis and connect all contributors without cycles; assign compatible\nresponsibilities to one selected agent when that preserves the required checks.\nResponsibilities and checkpoints may refer only to information available at that role's\nturn. An upstream writer cannot truthfully check that it incorporated future reviewer\nfeedback. Assign incorporation to a downstream role; do not claim an impossible check.",
                  "The DAG orders initial availability, while cooperative scheduling may resume a role after peer requests or revised artifacts. Final synthesis waits for pending peer requests and terminal dependency outcomes."),
                 ("A reviewer is\na single-pass consumer of published evidence, never an interactive feedback loop.",
                  "A reviewer may be resumed for public clarification or revision; private role history remains scoped to that role."),
@@ -1330,6 +1411,10 @@ class GlobalAnalyzer(JsonModelCalls):
                              f"allowed_tools={sorted(set(task.tools))}. Use exact callable tool "
                              "names from task.tools; an empty allowlist requires tools=[]. "
                              "Reasoning, writing and review are capabilities, not tools.")
+        if (agent.temporary_profile is not None
+                and not set(agent.temporary_profile.preferred_tools) <= set(task.tools)):
+            raise ValueError(f"Temporary harness {agent.pool_agent_id} prefers unavailable tools: "
+                             f"allowed_tools={sorted(set(task.tools))}")
         if not set(agent.rubric_ids) <= rubric_ids:
             raise ValueError(f"Agent {agent.agent_id} references unknown rubrics")
         if self.execution_mode == "single_pass" and agent.max_calls != 1:
@@ -1368,6 +1453,9 @@ class GlobalAnalyzer(JsonModelCalls):
                          **({"agent_profile": profile} if profile is not None else {}),
                          "immutable_identity": {"agent_id": candidate.agent_id,
                                                 "capability": candidate.capability},
+                         **({"immutable_harness_binding": {"pool_agent_id": candidate.pool_agent_id,
+                                                           "pool_agent_version": candidate.pool_agent_version}}
+                            if profile is not None else {}),
                          "experiences": local_experiences, "limits": self._limits(task)},
                         LocalPlan, agent_id=candidate.agent_id,
                         validate=lambda item: self._validate_local_plan(task, prediction, candidate, item),
@@ -1455,8 +1543,10 @@ class GlobalAnalyzer(JsonModelCalls):
         invalid_bindings = []
         for agent in result.team.agents:
             candidate = candidates.get(agent.agent_id)
-            if candidate is None or (agent.pool_agent_id, agent.pool_agent_version) != (
-                    candidate.pool_agent_id, candidate.pool_agent_version):
+            if candidate is None or (agent.pool_agent_id, agent.pool_agent_version,
+                    agent.temporary_profile, agent.creation_rationale) != (
+                    candidate.pool_agent_id, candidate.pool_agent_version,
+                    candidate.temporary_profile, candidate.creation_rationale):
                 invalid_bindings.append({"actual": {"agent_id": agent.agent_id,
                     "pool_agent_id": agent.pool_agent_id, "pool_agent_version": agent.pool_agent_version},
                     "expected": None if candidate is None else {"agent_id": candidate.agent_id,
@@ -1465,10 +1555,12 @@ class GlobalAnalyzer(JsonModelCalls):
         if invalid_bindings:
             allowed = [{"agent_id": agent.agent_id, "pool_agent_id": agent.pool_agent_id,
                         "pool_agent_version": agent.pool_agent_version} for agent in prediction.candidates]
-            raise ValueError("Reconciliation cannot invent or replace a candidate's pool identity: "
+            raise ValueError("Reconciliation cannot invent or replace a candidate's pool identity "
+                             "or its recorded temporary_profile/creation_rationale: "
                              f"invalid_bindings={json.dumps(invalid_bindings, sort_keys=True)}; "
                              f"allowed_candidate_bindings={json.dumps(allowed, sort_keys=True)}. "
-                             "Select a subset of these exact triples. Merge any missing responsibility "
+                             "Select a subset of these exact triples and preserve their complete "
+                             "temporary creation records. Combine any missing responsibility "
                              "into an existing candidate; do not add, rename or rebind a role. "
                              "Update dependencies, synthesizer_id and all rubric assignments to "
                              "the selected existing IDs.")
@@ -1526,8 +1618,8 @@ class GlobalAnalyzer(JsonModelCalls):
                              f"missing_contributor_ids={missing}; "
                              f"edges_upstream_to_downstream={edges}; terminal_candidates={terminals}. "
                              "Each agent executes once in DAG order. Select an existing downstream "
-                             "agent and connect every missing contributor without a cycle, or merge "
-                             "responsibilities and remove redundant agents. Changing only the "
+                             "agent and connect every missing contributor without a cycle, or assign "
+                             "the missing responsibilities to a selected compatible agent. Changing only the "
                              "synthesizer_id may be insufficient; never add backward edges to an "
                              "upstream writer that already feeds its reviewers.")
         if violations:

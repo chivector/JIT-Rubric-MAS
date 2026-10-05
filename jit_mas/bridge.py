@@ -848,7 +848,9 @@ class JITHarnessSynthesizer:
         artifact = SynthesizedHarness(name, agent.workspace_dir, self.backend,
             content_hash(sidecar["team"]), content_hash(sidecar["task"]), content_hash(files),
             content_hash(sidecar), selection={"strategy": "pooled_agent_reuse",
-                "agent_pool_hash": content_hash(sidecar["agent_pool"])})
+                "agent_pool_hash": content_hash(sidecar["agent_pool"]),
+                "temporary_agent_ids": [item["agent_id"] for item in sidecar["team"]["agents"]
+                                        if item.get("temporary_profile") is not None]})
         artifact.verify_integrity()
         return artifact
 

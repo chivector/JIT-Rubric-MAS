@@ -107,6 +107,7 @@ class AgentProfile(Record):
     version: int = Field(default=1, ge=1)
     role: str = Field(min_length=1)
     capabilities: list[str] = Field(min_length=1)
+    parent_agent_id: str | None = None
     prompt: str = Field(min_length=1, max_length=6000)
     skills: dict[str, str] = Field(default_factory=dict)
     preferred_tools: list[str] = Field(default_factory=list)
@@ -126,16 +127,62 @@ class AgentProfile(Record):
         return self
 
 
+class AgentPoolOperation(Record):
+    operation_id: str = Field(min_length=1)
+    kind: Literal["add", "delete", "prune", "split", "merge", "specialize", "reorganize"]
+    source_task_id: str = Field(min_length=1)
+    base_pool_version: int = Field(ge=0)
+    target_agent_ids: list[str] = Field(default_factory=list)
+    base_agent_versions: dict[str, int] = Field(default_factory=dict)
+    profiles: list[AgentProfile] = Field(default_factory=list)
+    parent_assignments: dict[str, str | None] = Field(default_factory=dict)
+    evidence: list[str] = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    expected_benefit: str = Field(min_length=1)
+    token_cost_tradeoff: str = Field(min_length=1)
+
+
+class AgentPoolObservation(Record):
+    task_id: str = Field(min_length=1)
+    agent_id: str = Field(min_length=1)
+    pool_agent_id: str = Field(min_length=1)
+    profile_version: int = Field(ge=1)
+    temporary: bool = False
+    submission_score: float | None = Field(default=None, allow_inf_nan=False)
+    complete: bool
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    tool_calls: int = Field(default=0, ge=0)
+    cost: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    usage_available: bool = False
+    usage_estimated: bool = True
+    evidence: list[str] = Field(min_length=1)
+
+
 class AgentPoolSnapshot(Record):
     version: int = Field(default=0, ge=0)
+    initialized: bool = False
     profiles: list[AgentProfile] = Field(default_factory=list)
     applied_updates: list[str] = Field(default_factory=list)
+    observations: list[AgentPoolObservation] = Field(default_factory=list)
+    structural_history: list[AgentPoolOperation] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def distinct_agents(self):
         ids = [profile.pool_agent_id for profile in self.profiles]
         if len(ids) != len(set(ids)) or len(self.applied_updates) != len(set(self.applied_updates)):
             raise ValueError("Agent Pool IDs and update IDs must be unique")
+        parents = {profile.pool_agent_id: profile.parent_agent_id for profile in self.profiles}
+        for agent_id in parents:
+            visited = {agent_id}
+            parent = parents[agent_id]
+            while parent is not None:
+                if parent not in parents:
+                    raise ValueError("Agent Pool parent refers to an unknown member")
+                if parent in visited:
+                    raise ValueError("Agent Pool hierarchy contains a cycle")
+                visited.add(parent)
+                parent = parents[parent]
         return self
 
 
@@ -168,6 +215,8 @@ class AgentSpec(Record):
     checkpoints: list[str] = Field(default_factory=list)
     pool_agent_id: str | None = None
     pool_agent_version: int | None = Field(default=None, ge=1)
+    temporary_profile: AgentProfile | None = None
+    creation_rationale: str = ""
     task_prompt: str = ""
     selected_skills: list[str] | None = None
     reasoning_strategy: str = ""
@@ -178,6 +227,15 @@ class AgentSpec(Record):
     def bound_identity(self):
         if (self.pool_agent_id is None) != (self.pool_agent_version is None):
             raise ValueError("Pool identity and version must be bound together")
+        if self.temporary_profile is not None:
+            if (self.pool_agent_id != self.temporary_profile.pool_agent_id
+                    or self.pool_agent_version != self.temporary_profile.version):
+                raise ValueError("Temporary harness identity must match its task binding")
+            if not self.creation_rationale.strip():
+                raise ValueError("Temporary harness creation requires a rationale")
+            if (self.temporary_profile.version != 1 or self.temporary_profile.memory
+                    or self.temporary_profile.source_task_ids or self.temporary_profile.evidence):
+                raise ValueError("Temporary harness cannot invent learned history")
         return self
 
 
@@ -377,6 +435,18 @@ class RubricAlignment(Record):
     matches: list[AlignmentMatch] = Field(default_factory=list)
     missed_evaluated_ids: list[str] = Field(default_factory=list)
     unmatched_predicted_ids: list[str] = Field(default_factory=list)
+
+
+class RubricCreditAssignment(Record):
+    agent_id: str = Field(min_length=1)
+    predicted_rubric_ids: list[str] = Field(default_factory=list)
+    evaluated_rubric_ids: list[str] = Field(default_factory=list)
+    graph_edges: list[RubricEdge] = Field(default_factory=list)
+    assignment_basis: dict[str, list[Literal["agent_spec", "coverage", "primary", "reviewer"]]] = Field(
+        default_factory=dict)
+    meta_assigned_evaluated_rubric_ids: list[str] = Field(default_factory=list)
+    assignment_rationale: str = ""
+    causal_identification: Literal[False] = False
 
 
 class AttributionFinding(Record):

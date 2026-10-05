@@ -7,6 +7,7 @@ import pytest
 
 from jit_mas.agent_pool import (
     apply_updates,
+    catalogue,
     get_profile,
     role_context,
     seed_pool,
@@ -110,6 +111,32 @@ def test_seed_pool_starts_unmature_and_bindings_require_exact_version():
         validate_bindings(pool, TeamSpec(
             agents=[AgentSpec(agent_id="writer", role="Writer", capability="writing")],
             synthesizer_id="writer", total_max_calls=1))
+
+
+def test_catalogue_exposes_reusable_harness_summary_without_private_context():
+    pool = seed_pool()
+    writer = get_profile(pool, "writer", 1)
+    writer.preferred_tools = ["web_search"]
+    writer.reasoning_strategy = "Separate evidence from assumptions."
+    writer.planning_strategy = "Plan the outline before drafting."
+    writer.communication = "Publish concise handoffs."
+    pool.profiles[0] = writer
+
+    member = next(item for item in catalogue(pool) if item["pool_agent_id"] == "writer")
+
+    assert member["version"] == 1
+    assert member["skills"] == sorted(writer.skills)
+    assert member["preferred_tools"] == ["web_search"]
+    assert member["reasoning_strategy"] == writer.reasoning_strategy
+    assert member["planning_strategy"] == writer.planning_strategy
+    assert member["communication"] == writer.communication
+    assert member["harness"] == writer.harness.model_dump(mode="json")
+    assert "prompt" not in member and "memory" not in member
+
+    member["skills"].append("task-only-skill")
+    member["harness"]["memory_policy"] = "recent"
+    assert "task-only-skill" not in writer.skills
+    assert writer.harness.memory_policy == "full"
 
 
 def test_harness_reuse_skips_meta_generation_and_freezes_pool_sidecar():

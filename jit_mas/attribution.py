@@ -12,7 +12,7 @@ from pydantic import Field
 from .planning import JsonModelCalls, as_json
 from .schemas import (
     AttributionFinding, ChangeProposal, EvaluationFeedback, PublicTask, Record,
-    RubricAlignment, RubricGraph, TeamSpec, digest,
+    RubricAlignment, RubricCreditAssignment, RubricGraph, TeamSpec, digest,
 )
 
 
@@ -24,6 +24,8 @@ class Findings(Record):
 class AttributionOutline(Record):
     findings: list[AttributionFinding] = Field(default_factory=list)
     questions: dict[str, list[str]] = Field(default_factory=dict)
+    rubric_assignments: dict[str, list[str]] = Field(default_factory=dict)
+    rubric_assignment_rationale: dict[str, str] = Field(default_factory=dict)
 
 
 class Proposals(Record):
@@ -58,6 +60,74 @@ def feedback_view(feedback: EvaluationFeedback) -> dict:
                                  "positive_criterion_partial")
         view["rubrics"].append(row)
     return view
+
+
+def build_credit_assignments(planned_graph: RubricGraph, team: TeamSpec,
+                             planned_alignment: RubricAlignment,
+                             feedback: EvaluationFeedback, *,
+                             meta_assignments: dict[str, list[str]] | None = None,
+                             meta_assignment_rationales: dict[str, str] | None = None
+                             ) -> dict[str, RubricCreditAssignment]:
+    """Route complete judge feedback by frozen responsibility and semantic alignment."""
+    if not feedback.complete:
+        raise ValueError("Rubric credit assignment requires complete evaluation feedback")
+    predicted_ids = {rubric.rubric_id for rubric in planned_graph.rubrics}
+    evaluated_ids = {rubric.rubric_id for rubric in feedback.rubrics}
+    if len(evaluated_ids) != len(feedback.rubrics):
+        raise ValueError("Evaluated rubric IDs must be unique for credit assignment")
+    assigned_ids = {rubric_id for agent in team.agents for rubric_id in agent.rubric_ids}
+    assigned_ids.update(team.coverage)
+    assigned_ids.update(team.primary)
+    assigned_ids.update(team.reviewers)
+    if not assigned_ids <= predicted_ids:
+        raise ValueError("Team responsibility references an unknown predicted rubric")
+    predicted_to_evaluated: dict[str, set[str]] = {}
+    for match in planned_alignment.matches:
+        if (not match.predicted_ids or not match.evaluated_ids
+                or not set(match.predicted_ids) <= predicted_ids
+                or not set(match.evaluated_ids) <= evaluated_ids):
+            raise ValueError("Alignment contains empty or unknown rubric references")
+        for predicted_id in match.predicted_ids:
+            predicted_to_evaluated.setdefault(predicted_id, set()).update(match.evaluated_ids)
+
+    meta_assignments = meta_assignments or {}
+    meta_assignment_rationales = meta_assignment_rationales or {}
+    if not set(meta_assignments) <= {agent.agent_id for agent in team.agents}:
+        raise ValueError("Meta rubric assignment references an unknown agent")
+    if set(meta_assignments) != set(meta_assignment_rationales):
+        raise ValueError("Every meta rubric assignment needs a rationale")
+    for aid, rubric_ids in meta_assignments.items():
+        if not rubric_ids or not set(rubric_ids) <= evaluated_ids:
+            raise ValueError("Meta rubric assignment references an unknown evaluated rubric")
+        if not meta_assignment_rationales[aid].strip():
+            raise ValueError("Meta rubric assignment rationale cannot be empty")
+
+    assignments = {}
+    for agent in team.agents:
+        basis: dict[str, list[str]] = {}
+        for rubric_id in sorted(predicted_ids):
+            sources = []
+            if rubric_id in agent.rubric_ids:
+                sources.append("agent_spec")
+            if agent.agent_id in team.coverage.get(rubric_id, []):
+                sources.append("coverage")
+            if team.primary.get(rubric_id) == agent.agent_id:
+                sources.append("primary")
+            if agent.agent_id in team.reviewers.get(rubric_id, []):
+                sources.append("reviewer")
+            if sources:
+                basis[rubric_id] = sources
+        assigned_evaluated = {evaluated_id for rubric_id in basis
+                              for evaluated_id in predicted_to_evaluated.get(rubric_id, ())}
+        meta_evaluated = sorted(set(meta_assignments.get(agent.agent_id, ())) - assigned_evaluated)
+        edges = [edge.model_copy(deep=True) for edge in planned_graph.edges
+                 if edge.source in basis or edge.target in basis]
+        assignments[agent.agent_id] = RubricCreditAssignment(
+            agent_id=agent.agent_id, predicted_rubric_ids=list(basis),
+            evaluated_rubric_ids=sorted(assigned_evaluated | set(meta_evaluated)), graph_edges=edges,
+            assignment_basis=basis, meta_assigned_evaluated_rubric_ids=meta_evaluated,
+            assignment_rationale=meta_assignment_rationales.get(agent.agent_id, ""))
+    return assignments
 
 
 def _compact_duplicate_event_content(events: Sequence[dict], local_execution: dict | None) -> list[dict]:
@@ -155,7 +225,14 @@ requirements/priorities), organization (ownership, handoffs, review or budget), 
 (failure despite adequate organization), external_or_uncertain (tool/environment or
 insufficient/conflicting evidence). An unowned missed requirement does not justify blaming
 an arbitrary agent. Cite only supplied evidence IDs, record opposing evidence, alternatives
-and uncertainty. This is a hypothesis, not an identified causal effect."""
+and uncertainty. This is a hypothesis, not an identified causal effect.
+credit_assignments provides formal responsibility routes from the frozen team and semantic
+alignment. To request an agent's reflection on an additional evaluated rubric, return its
+exact evaluated ID in rubric_assignments[agent_id] with a nonempty explanation in
+rubric_assignment_rationale[agent_id], grounded in the completed role or collaboration
+topology. This may include missed criteria, but allocates reflection scope rather than
+failure blame. Do not invent responsibility or alter the frozen plan. Criteria without a
+supported local connection remain available only to the meta-agent's global analysis."""
 
 COST_ATTRIBUTION_PROMPT = """Use observed resource_usage alongside team.budget_plan to inspect
 token use, repeated context and redundant collaboration. Forecasts are not actual usage;
@@ -181,7 +258,11 @@ evidence exchange is allowed. Do not request hidden reasoning or invent missing 
 Suggest only supported hypotheses, not direct writes to experience or evaluator settings.
 An event with content_ref repeats content already present at the supplied local_execution
 path with the exact content_hash; inspect that complete value and cite the event_id.
-This is a storage reference, not missing evidence or a summary of the content."""
+This is a storage reference, not missing evidence or a summary of the content.
+credit_assignment routes your frozen responsibilities to assigned_predicted_rubrics and
+their semantically aligned judge feedback. Its graph_edges give cross-rubric context,
+not additional ownership. Shared split/merge feedback does not identify your individual
+causal contribution. Unassigned judge criteria remain the meta-agent's global concern."""
 
 INTEGRATE_PROMPT = """Integrate the global outline and independent local analyses into
 evidence-supported attribution hypotheses. Preserve disagreements and alternative
@@ -214,9 +295,9 @@ Record applicability, task signals, capability signature for execution advice,
 source task, evidence and counterevidence, concrete diff, old state version, expected benefit,
 risks. Success findings can yield conditional
 positive advice. Only supported findings justify a proposal; abstain when evidence is
-insufficient. Cite evidence IDs from the findings and do not invent new evidence. Only the
-first proposal is written directly after attribution and structural/evidence-reference checks;
-additional proposals are recorded but not applied under the one-update-per-source policy.
+insufficient. Cite evidence IDs from the findings and do not invent new evidence. The caller
+selects which proposal, if any, to write after structural/evidence-reference checks under
+the one-update-per-source policy; this phase only proposes candidates.
 there is no acceptance decision, hold state, or independent-task promotion gate. Do not
 claim an update has been experimentally validated. Do not edit evaluator,
 hidden rubrics, split manifests, runtime or budget guards. Return at most three proposals.
@@ -278,6 +359,7 @@ class RubricAttributor(JsonModelCalls):
         self.last_global_outline: AttributionOutline | None = None
         self.last_local_findings: dict[str, Findings] = {}
         self.last_alignments: dict[str, RubricAlignment] = {}
+        self.last_credit_assignments: dict[str, RubricCreditAssignment] = {}
         self._scoring_context: dict | None = None
 
     def align(self, graph: RubricGraph, feedback: EvaluationFeedback) -> RubricAlignment:
@@ -333,10 +415,14 @@ class RubricAttributor(JsonModelCalls):
                   planned_alignment: RubricAlignment | None = None) -> list[AttributionFinding]:
         if feedback.task_id != task.task_id:
             raise ValueError("Feedback task differs from submitted task")
+        if not feedback.complete:
+            raise ValueError("Attribution requires complete evaluation feedback")
         data, local_runs, events = self._execution_view(result)
         global_alignment = global_alignment or self.align(global_graph, feedback)
         planned_alignment = planned_alignment or self.align(planned_graph, feedback)
         self.last_alignments = {"global": global_alignment, "planned": planned_alignment}
+        self.last_credit_assignments = build_credit_assignments(planned_graph, team,
+                                                               planned_alignment, feedback)
         event_by_id = {event["event_id"]: event for event in events}
         if len(event_by_id) != len(events):
             raise ValueError("Event IDs must be unique for attribution")
@@ -356,6 +442,7 @@ class RubricAttributor(JsonModelCalls):
             self._scoring_context["quality_audit"] = copy.deepcopy(evaluation["quality_audit"])
         context = {"task": task, "global_graph": global_graph, "planned_graph": planned_graph,
                    "team": team, "feedback": evaluation, "alignments": self.last_alignments,
+                   "credit_assignments": self.last_credit_assignments,
                    "submission": {"evidence_id": submission_id, "answer": data.get("answer")},
                    "event_index": event_index, "shared_artifacts": shared,
                    "evidence_ids": [*event_by_id, submission_id,
@@ -379,10 +466,17 @@ class RubricAttributor(JsonModelCalls):
             if unknown:
                 outline.questions = {aid: questions for aid, questions in outline.questions.items()
                                      if aid in known_agents}
+            build_credit_assignments(planned_graph, team, planned_alignment, feedback,
+                meta_assignments=outline.rubric_assignments,
+                meta_assignment_rationales=outline.rubric_assignment_rationale)
 
         outline = self.ask(self.global_model, "attribute_global", OUTLINE_PROMPT + "\n" + COST_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
                            context, AttributionOutline, validate=validate_outline)
         self.last_global_outline = outline
+        self.last_credit_assignments = build_credit_assignments(planned_graph, team,
+            planned_alignment, feedback, meta_assignments=outline.rubric_assignments,
+            meta_assignment_rationales=outline.rubric_assignment_rationale)
+        context["credit_assignments"] = self.last_credit_assignments
         evaluated_to_predicted: dict[str, set[str]] = {}
         for match in planned_alignment.matches:
             for evaluated in match.evaluated_ids:
@@ -390,20 +484,24 @@ class RubricAttributor(JsonModelCalls):
 
         def analyze_agent(agent):
             aid = agent.agent_id
+            assignment = self.last_credit_assignments[aid]
             if aid not in local_runs:
                 return aid, Findings(findings=[AttributionFinding(
-                    finding_id="missing-trace-" + aid, rubric_ids=agent.rubric_ids,
+                    finding_id="missing-trace-" + aid, rubric_ids=assignment.predicted_rubric_ids,
                     categories=["external_or_uncertain"], agent_ids=[aid],
                     component="trace", hypothesis="Complete local observable trace is unavailable",
                     alternatives=["The agent may not have been scheduled"], uncertainty=1.0)])
-            relevant = [r for r in evaluation["rubrics"] if
-                        evaluated_to_predicted.get(r["rubric_id"], set()).intersection(agent.rubric_ids)]
+            relevant = [rubric for rubric in evaluation["rubrics"]
+                        if rubric["rubric_id"] in assignment.evaluated_rubric_ids]
             # Full local I/O is retained; only indexed, connected cross-agent events are shared.
             related = [event for event in events if event.get("agent_id") == aid
                        or event.get("recipient") == aid
                        or event.get("agent_id") in agent.depends_on and event.get("kind") in {
                            "artifact", "artifact_created", "artifact_published", "handoff", "message_sent"}]
             payload = {"task": task, "agent": agent, "local_execution": local_runs[aid],
+                       "credit_assignment": assignment,
+                       "assigned_predicted_rubrics": [rubric for rubric in planned_graph.rubrics
+                           if rubric.rubric_id in assignment.predicted_rubric_ids],
                        "feedback": relevant, "questions": outline.questions.get(aid, []),
                        "global_findings": outline.findings,
                        "related_events": _compact_duplicate_event_content(related, local_runs[aid]),
@@ -464,8 +562,11 @@ class RubricAttributor(JsonModelCalls):
                 finding.uncertainty = max(finding.uncertainty, 0.9)
             if not finding.success:
                 refs = set(finding.rubric_ids)
-                mapped = set().union(*(evaluated_to_predicted.get(rid, {rid}) for rid in refs))
-                owners = set().union(*(set(team.coverage.get(rid, [])) for rid in mapped))
+                evaluated_ids = {rubric.rubric_id for rubric in feedback.rubrics}
+                mapped = set().union(*(evaluated_to_predicted.get(rid, set())
+                    if rid in evaluated_ids else {rid} for rid in refs))
+                owners = {assignment.agent_id for assignment in self.last_credit_assignments.values()
+                          if mapped.intersection(assignment.predicted_rubric_ids)}
                 if not owners and finding.supporting_evidence:
                     finding.agent_ids = []
                     finding.categories = [category for category in finding.categories
@@ -477,7 +578,8 @@ class RubricAttributor(JsonModelCalls):
         return final.findings
 
     def propose(self, task: PublicTask, findings: Sequence[AttributionFinding],
-                base_version: int, experiences: Sequence = ()) -> list[ChangeProposal]:
+                base_version: int, experiences: Sequence = (), *,
+                agent_reflections=None) -> list[ChangeProposal]:
         supported = [finding for finding in findings if finding.supporting_evidence
                      and any(category != "external_or_uncertain" for category in finding.categories)]
         if not supported:
@@ -486,20 +588,36 @@ class RubricAttributor(JsonModelCalls):
         counterevidence = evidence | {eid for finding in supported for eid in finding.opposing_evidence}
         scoring = (self._scoring_context if self._scoring_context
                    and self._scoring_context["task_id"] == task.task_id else None)
-        return self.ask(self.global_model, "propose", PROPOSE_PROMPT,
-                             {"task": task, "findings": supported,
-                              "base_version": base_version, "experiences": experiences,
-                              "valid_supporting_evidence_ids": sorted(evidence),
-                              "valid_counterevidence_ids": sorted(counterevidence),
-                              "scoring_context": scoring},
+        payload = {"task": task, "findings": supported,
+                   "base_version": base_version, "experiences": experiences,
+                   "valid_supporting_evidence_ids": sorted(evidence),
+                   "valid_counterevidence_ids": sorted(counterevidence),
+                   "scoring_context": scoring}
+        allowed_banks = None
+        prompt = PROPOSE_PROMPT
+        if agent_reflections is not None:
+            allowed_banks = ["rubric", "organization"]
+            payload.update(agent_reflections=agent_reflections, allowed_experience_banks=allowed_banks)
+            prompt += ("\nThe meta-level update follows the supplied agent_reflections. "
+                       "Integrate their supported lessons into rubric prediction or MAS organization "
+                       "experience only, using allowed_experience_banks. Capability-specific "
+                       "execution practices belong to the retained agent harness updates.")
+        else:
+            prompt += ("\nThis legacy caller writes only the first proposal after attribution; "
+                       "additional proposals are recorded but not applied.")
+        return self.ask(self.global_model, "propose", prompt, payload,
                              Proposals, validate=lambda result: self._validate_proposals(
                                  result.proposals, task, supported, base_version, experiences,
-                                 scoring_context=scoring)).proposals
+                                 scoring_context=scoring, allowed_banks=allowed_banks)).proposals
 
     @staticmethod
-    def _validate_proposals(proposals, task, supported, base_version, experiences, *, scoring_context=None):
+    def _validate_proposals(proposals, task, supported, base_version, experiences, *, scoring_context=None,
+                            allowed_banks=None):
         if len(proposals) > 3:
             raise ValueError("At most three single-experience proposals are allowed")
+        proposal_ids = [proposal.proposal_id for proposal in proposals]
+        if any(not proposal_id.strip() for proposal_id in proposal_ids) or len(proposal_ids) != len(set(proposal_ids)):
+            raise ValueError("Proposal IDs must be nonempty and unique")
         evidence = {eid for finding in supported for eid in finding.supporting_evidence}
         counterevidence = {eid for finding in supported for eid in finding.opposing_evidence}
         existing = {entry["experience_id"]: entry for entry in as_json(experiences)}
@@ -510,6 +628,9 @@ class RubricAttributor(JsonModelCalls):
             private_counts -= _content_counts(" ".join([task.question, *task.constraints]), public=True)
         for proposal in proposals:
             exp = proposal.experience
+            if allowed_banks is not None and exp.bank not in allowed_banks:
+                raise ValueError("Meta-level proposal must use the allowed experience banks: "
+                                 + ", ".join(allowed_banks))
             if proposal.source_task_id != task.task_id or proposal.base_version != base_version:
                 raise ValueError("Proposal source task or base version changed")
             if exp.source_task_ids != [task.task_id]:

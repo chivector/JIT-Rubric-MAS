@@ -175,6 +175,64 @@ def test_bounded_output_annotations_are_validated_without_truncating_inputs_or_r
     assert ledger.snapshot()["tokens"] == 20
 
 
+@pytest.mark.parametrize("phase", ["predict", "local_plan", "reconcile"])
+@pytest.mark.parametrize("pooled", [False, True])
+def test_communication_bound_is_enforced_and_corrected_without_changing_public_inputs(phase, pooled):
+    records = prepared()
+    agent_pool = None
+    if pooled:
+        profiles = [AgentProfile(pool_agent_id=identity, role="Author", capabilities=["composition"],
+                                 prompt="Compose the complete public artifact.")
+                    for identity in ("public_composer", "public_analyst")]
+        agent_pool = AgentPoolSnapshot(profiles=profiles)
+        records[0].candidates[0] = AgentSpec.model_validate({
+            **records[0].candidates[0].model_dump(mode="json"),
+            "pool_agent_id": profiles[0].pool_agent_id, "pool_agent_version": profiles[0].version,
+        })
+        records[2]["team"]["agents"][0] = records[0].candidates[0].model_dump(mode="json")
+    before_records = [records[0].model_dump(mode="json"), records[1].model_dump(mode="json"),
+                      copy.deepcopy(records[2])]
+    valid = copy.deepcopy({"predict": before_records[0], "local_plan": before_records[1],
+                           "reconcile": before_records[2]}[phase])
+    holder = (valid["candidates"][0] if phase == "predict" else
+              valid["team"]["agents"][0] if phase == "reconcile" else valid)
+    holder["communication"] = "Publish the substantive ledger once.".ljust(1024)
+    invalid = copy.deepcopy(valid)
+    invalid_holder = (invalid["candidates"][0] if phase == "predict" else
+                      invalid["team"]["agents"][0] if phase == "reconcile" else invalid)
+    invalid_holder["communication"] += "x"
+    task = PublicTask(task_id="synthetic-communication-bound",
+                      question="Preserve all supplied facts: " + "public fact " * 2000,
+                      attachments=["Public evidence: " + "source fact " * 2000])
+    before_task = task.model_dump(mode="json")
+    provider = Provider(replies=[invalid, valid])
+    analyzer, ledger = bound(provider, agent_pool=agent_pool)
+    invoke(analyzer, phase, task, records)
+    assert len(provider.requests) == len(analyzer.call_records) == 2
+    for request in provider.requests:
+        schema = request["kwargs"]["response_format"]["json_schema"]["schema"]
+        if phase == "local_plan":
+            assert schema["properties"]["communication"]["maxLength"] == 1024
+        else:
+            agent_schema = schema["$defs"]["AgentSpec"]
+            branches = agent_schema.get("anyOf", [agent_schema])
+            assert all(branch["properties"]["communication"]["maxLength"] == 1024
+                       for branch in branches)
+            if pooled and phase == "predict":
+                assert len(branches) == 3
+        assert request["payload"]["task"] == before_task
+        assert "state the handoff protocol once" in request["messages"][0]["content"]
+    correction = provider.requests[1]["payload"]["response_correction"]
+    assert "communication" in correction["validation_errors"][0]["message"]
+    assert json.loads(correction["previous_response"]) == invalid
+    assert [json.loads(row["response"]) for row in analyzer.call_records] == [invalid, valid]
+    assert task.model_dump(mode="json") == before_task
+    assert [records[0].model_dump(mode="json"), records[1].model_dump(mode="json"),
+            records[2]] == before_records
+    assert ledger.snapshot()["model_calls"] == 2
+    assert ledger.snapshot()["tokens"] == 20
+
+
 def test_truncated_correction_keeps_full_audit_and_original_inputs_but_does_not_replay_tail():
     records = prepared()
     broken = '{"graph":{"rubrics":[{"requirement":"' + "BROKEN_PUBLIC_TAIL " * 4000

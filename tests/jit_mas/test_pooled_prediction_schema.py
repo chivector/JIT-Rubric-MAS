@@ -28,7 +28,8 @@ def test_pooled_prediction_schema_binds_catalogue_identity_but_not_task_id():
     branches = schema["$defs"]["AgentSpec"]["anyOf"]
     assert {(branch["properties"]["pool_agent_id"]["const"],
              branch["properties"]["pool_agent_version"]["const"])
-            for branch in branches} == {("writer", 3), ("analyst", 2)}
+            for branch in branches if "const" in branch["properties"]["pool_agent_id"]} == {
+                ("writer", 3), ("analyst", 2)}
     assert all("pool_agent_id" in branch["required"]
                and "pool_agent_version" in branch["required"] for branch in branches)
     assert all("const" not in branch["properties"]["agent_id"] for branch in branches)
@@ -81,7 +82,8 @@ def test_predict_uses_pool_schema_and_keeps_one_correction_for_duplicate_pool_me
     assert schema["properties"]["candidates"]["maxItems"] == 3
     assert {(branch["properties"]["pool_agent_id"]["const"],
              branch["properties"]["pool_agent_version"]["const"])
-            for branch in schema["$defs"]["AgentSpec"]["anyOf"]} == {
+            for branch in schema["$defs"]["AgentSpec"]["anyOf"]
+            if "const" in branch["properties"]["pool_agent_id"]} == {
                 (profile.pool_agent_id, profile.version) for profile in pool.profiles}
     assert "response_correction" in json.loads(requests[1]["messages"][1]["content"])
     assert [(agent.agent_id, agent.pool_agent_id) for agent in result.candidates] == [

@@ -7,7 +7,10 @@ import pytest
 
 from jit_mas.budget import BudgetLedger
 from jit_mas.planning import GlobalAnalyzer
-from jit_mas.schemas import AgentSpec, Prediction, PublicTask, RubricGraph
+from jit_mas.schemas import (
+    AgentHarnessPolicy, AgentPoolSnapshot, AgentProfile, AgentSpec, Prediction, PublicTask,
+    RubricGraph,
+)
 
 
 def prepared_team(mode):
@@ -69,6 +72,62 @@ def test_role_quality_guidance_is_delivered_to_every_planning_phase(mode):
         assert "Do not introduce a fixed round count" in prompts["reconcile"]
         assert all(agent.max_calls is None for agent in result.team.agents)
     assert result.team.agents[-1].max_tokens == 256
+
+
+@pytest.mark.parametrize("mode", ["single_pass", "iterative_shared_ledger"])
+@pytest.mark.parametrize("pooled", [False, True])
+def test_construction_assigns_rubrics_without_attribution_or_persistent_evolution(mode, pooled):
+    prediction, response = prepared_team(mode)
+    pool = None
+    if pooled:
+        pool = AgentPoolSnapshot(profiles=[
+            AgentProfile(pool_agent_id=agent.agent_id, role=agent.role,
+                         capabilities=[agent.capability], prompt="Retained role instructions.",
+                         skills={"retained_check": "Check supported claims before publishing."},
+                         reasoning_strategy="Retained reasoning strategy.",
+                         harness=AgentHarnessPolicy(memory_policy="recent", memory_window=6))
+            for agent in prediction.candidates
+        ])
+        for candidate, agent in zip(prediction.candidates, response["team"]["agents"]):
+            agent.update(pool_agent_id=candidate.agent_id, pool_agent_version=1)
+        prediction.candidates = [AgentSpec.model_validate(agent) for agent in response["team"]["agents"]]
+    original_pool = pool.model_dump(mode="json") if pool is not None else None
+    requests = []
+
+    def model(messages):
+        payload = json.loads(messages[1]["content"])
+        requests.append((messages[0]["content"], payload))
+        if payload["phase"] == "predict":
+            return prediction.model_dump_json()
+        if payload["phase"] == "local_plan":
+            candidate = payload["candidate"]
+            local = {key: candidate[key] for key in
+                     ("agent_id", "capability", "rubric_ids", "depends_on", "max_calls")}
+            if pooled and candidate["agent_id"] == "writer":
+                local["harness"] = AgentHarnessPolicy(memory_policy="recent", memory_window=3).model_dump()
+            return json.dumps(local)
+        return json.dumps(response)
+
+    result = GlobalAnalyzer(model, execution_mode=mode,
+                            total_max_calls=response["team"]["total_max_calls"],
+                            agent_pool=pool).build(PublicTask(
+                                task_id="construction", question="Explain the public conclusion."))
+
+    assert len(requests) == 4
+    assert {payload["phase"] for _, payload in requests} == {"predict", "local_plan", "reconcile"}
+    for prompt, payload in requests:
+        assert "CONSTRUCTION-STAGE CONTRACT" in prompt
+        assert "not credit assignment" in prompt
+        assert "post-execution evolution" in prompt
+        assert not {"feedback", "attribution", "reflection", "agent_pool_updates"}.intersection(payload)
+    assert result.team.coverage == {"accuracy": ["analyst", "writer"]}
+    assert result.team.primary == {"accuracy": "analyst"}
+    if pooled:
+        assert pool.model_dump(mode="json") == original_pool
+        assert result.team.agents[0].harness.memory_window == 6
+        assert result.team.agents[1].harness.memory_window == 3
+        assert all(agent.selected_skills == ["retained_check"] for agent in result.team.agents)
+        assert {agent.pool_agent_version for agent in result.team.agents} == {1}
 
 
 def test_iterative_arithmetic_correction_preserves_valid_multiple_call_estimate():

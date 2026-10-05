@@ -391,7 +391,7 @@ def test_explicit_submitted_resume_reuses_immutable_answer_and_eval_only(setup, 
     try:
         outcome = continued.run_task(task_id, state.snapshot(), mode="evolve", attribution=True,
             resume_source=source_dir, resume_source_hash=anchor)
-        assert provider.calls and all(call["agent_id"] in {"global-post", "analyst", "evidence", "writer"}
+        assert provider.calls and all(call["agent_id"] in {"global-post", "meta-evolution", "analyst", "evidence", "writer"}
                                       for call in provider.calls)
         assert all(call["role"] in {"global", "local"} for call in provider.calls)
         assert set(outcome["budget"]["by_stage"]) == {"update"}

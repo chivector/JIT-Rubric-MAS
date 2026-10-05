@@ -212,6 +212,13 @@ class FixtureModel:
                                  "applicability": "Technical comparison tasks", "capability": p["agent"]["capability"],
                                  "source_task_ids": [p["source_task_id"]], "evidence": evidence}],
                     "evidence": evidence}
+        if phase == "evolution_integrate":
+            member_ids = {profile["pool_agent_id"] for profile in p.get("agent_pool", {}).get("profiles", [])}
+            return {"proposal_id": p["candidate_proposals"][0]["proposal_id"] if p["candidate_proposals"] else None,
+                    "agent_update_ids": [update["update_id"] for update in p["agent_reflections"]
+                                         if not p.get("agent_pool") or update["pool_agent_id"] in member_ids],
+                    "pool_operations": [],
+                    "rationale": "Retain the evidence-scoped synthetic meta and role process lessons."}
         if phase == "propose":
             task_id, version = p["task"]["task_id"], p["base_version"]
             if p["experiences"]:

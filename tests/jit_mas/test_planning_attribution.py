@@ -650,6 +650,11 @@ def test_feedback_projection_interprets_signed_scores_without_altering_official_
 
 def test_all_attribution_phases_use_compact_feedback_but_keep_full_local_execution():
     official = detailed_feedback()
+    official.complete = True
+    official.rubrics[2].status = "ok"
+    official.rubrics[2].score = 0
+    official.rubrics[2].verdict = "Not Satisfied"
+    official.rubrics[2].raw["error"] = None
     before = official.model_dump(mode="json")
     expected = feedback_view(official)
     graph = RubricGraph(rubrics=[rubric()])

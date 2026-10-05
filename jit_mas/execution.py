@@ -1106,6 +1106,8 @@ def _persistent_role(agent, services):
         return None
     from .agent_pool import role_context
     context = role_context(services.agent_pool, AgentSpec.model_validate(agent), services.public_task)
+    context.update(temporary=agent.get("temporary_profile") is not None,
+                   creation_rationale=agent.get("creation_rationale", ""))
     context.update(knowledge_policy_role_adaptation(context["pool_agent_id"], services.knowledge_policy,
                                                   prompt=context["prompt"]))
     return context
@@ -2457,6 +2459,8 @@ class TeamExecutor:
             result.metadata["knowledge_policy"] = self.knowledge_policy
         if services.agent_pool is not None:
             result.metadata["agent_pool_hash"] = content_hash(services.agent_pool)
+            result.metadata["temporary_agent_ids"] = [agent["agent_id"] for agent in team_data["agents"]
+                                                       if agent.get("temporary_profile") is not None]
         # Runtime sees a coordinator with no model calls. Sum disjoint leaf traces
         # here; the shared ledger is authoritative and is never charged again.
         result.metadata["input_token_count"] = sum(s.input_token_count for r in result.sub_runs for s in r.trajectory)

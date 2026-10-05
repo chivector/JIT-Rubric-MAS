@@ -53,7 +53,7 @@ class MASConfig(Record):
     models: dict[str, ModelConfig] = Field(default_factory=dict)
     max_agents: int = Field(default=4, ge=1, le=16)
     max_parallel: int = Field(default=2, ge=1, le=16)
-    judge_parallel: int = Field(default=1, ge=1, le=16)
+    judge_parallel: int = Field(default=1, ge=1, le=64)
     team_max_calls: int | None = Field(default=16, ge=1)
     max_model_calls: int | None = Field(default=100, ge=1)
     max_total_tokens: int = Field(default=2_000_000, ge=1)

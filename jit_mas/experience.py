@@ -218,10 +218,10 @@ class ExperienceStore:
             return candidate
 
     def commit_evolution(self, *, source_task_id, base_version, proposal=None, updates=(),
-                         update_id=None):
-        """Atomically persist meta experience and the source agents' long-term updates."""
-        from .agent_pool import apply_updates
-        from .schemas import AgentEvolutionUpdate
+                         operations=(), observations=(), update_id=None):
+        """Atomically persist both experience levels and dynamic Agent Pool decisions."""
+        from .agent_pool import apply_evolution
+        from .schemas import AgentEvolutionUpdate, AgentPoolObservation, AgentPoolOperation
 
         self._write_guard()
         if not isinstance(source_task_id, str) or not source_task_id.strip():
@@ -243,7 +243,17 @@ class ExperienceStore:
         ids = [update.update_id for update in normalized]
         if len(ids) != len(set(ids)):
             raise ValueError("Duplicate agent update IDs")
-        if not normalized:
+        normalized_operations = [AgentPoolOperation.model_validate(
+            operation.model_dump(mode="json") if hasattr(operation, "model_dump") else operation)
+            for operation in (operations or ())]
+        normalized_observations = [AgentPoolObservation.model_validate(
+            observation.model_dump(mode="json") if hasattr(observation, "model_dump") else observation)
+            for observation in (observations or ())]
+        if any(operation.source_task_id != source_task_id for operation in normalized_operations):
+            raise ValueError("Agent Pool operation changed its source task")
+        if any(observation.task_id != source_task_id for observation in normalized_observations):
+            raise ValueError("Agent Pool observation changed its source task")
+        if not normalized and not normalized_operations and not normalized_observations:
             if proposal is not None:
                 return self.commit(proposal)
             current = self.snapshot()
@@ -253,6 +263,10 @@ class ExperienceStore:
         body = {"source_task_id": source_task_id, "base_version": base_version,
                 "proposal": proposal.model_dump(mode="json") if proposal is not None else None,
                 "updates": [update.model_dump(mode="json") for update in normalized]}
+        if normalized_operations:
+            body["operations"] = [operation.model_dump(mode="json") for operation in normalized_operations]
+        if normalized_observations:
+            body["observations"] = [observation.model_dump(mode="json") for observation in normalized_observations]
         if update_id is None:
             update_id = digest(body)
         if not isinstance(update_id, str) or not update_id.strip():
@@ -282,9 +296,9 @@ class ExperienceStore:
                 candidate = candidate_snapshot(base, proposal)
             else:
                 candidate = base.model_copy(deep=True)
-            candidate.agent_pool = apply_updates(base.agent_pool, normalized,
-                                                 source_task_id=source_task_id)
-            candidate.policy_versions = {**candidate.policy_versions, "agent_pool": "dual-evolution-v1"}
+            candidate.agent_pool = apply_evolution(base.agent_pool, normalized,
+                normalized_operations, normalized_observations, source_task_id=source_task_id)
+            candidate.policy_versions = {**candidate.policy_versions, "agent_pool": "dynamic-dual-evolution-v2"}
             version = int(self.db.execute("SELECT MAX(version) FROM snapshots").fetchone()[0]) + 1
             candidate.version = version
             self.db.execute("INSERT INTO snapshots VALUES(?,?)", (version, candidate.model_dump_json()))
@@ -300,7 +314,10 @@ class ExperienceStore:
                 "event": "dual_evolution_update", "update_id": update_id,
                 "source_task_id": source_task_id, "update_hash": digest(body),
                 "proposal_id": proposal.proposal_id if proposal is not None else None,
-                "agent_update_ids": ids, "before": base.version, "after": version,
+                "agent_update_ids": ids,
+                "pool_operation_ids": [operation.operation_id for operation in normalized_operations],
+                "pool_observation_count": len(normalized_observations),
+                "before": base.version, "after": version,
                 "baseline_hash": digest(base), "updated_hash": digest(candidate), "time": utc_now()}),))
             return candidate
 
