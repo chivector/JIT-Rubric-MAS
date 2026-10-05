@@ -1,0 +1,54 @@
+{
+  "schema": "jit-rubric-mas-development-diagnostic-v1",
+  "campaign": "instruction_probe_20261005_C0_v2",
+  "scope": "exposed_TEST_development_only",
+  "formal_result": false,
+  "interpretation": "These tasks were exposed during development and are retained for engineering diagnostics only. They must not be reported as clean formal TEST or superiority evidence.",
+  "code_commit": "9e2c59d",
+  "registration_hash": "ce7c7e186b4cdd0681be113224c38a249d1533717527c05929d611d17403360d",
+  "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+  "config": {
+    "backend": "native_jit",
+    "actor_model": "deepseek-v4-flash-vision",
+    "judge_model": "gpt-5.6-sol",
+    "judge_calls": 0,
+    "workers": 1,
+    "judge_workers": 1,
+    "max_inflight": 3,
+    "judge_parallel": 1,
+    "pool_mode": "read_only",
+    "attribution": false
+  },
+  "rows": [
+    {
+      "benchmark": "ifeval",
+      "task_id": "ifeval:1203",
+      "metric": "prompt-level strict accuracy",
+      "native_score": 1.0,
+      "normalized_score": 1.0,
+      "complete": true,
+      "checker_revision": "e49bbfe381c9c0e564b937f1c4e163a2273c65cc",
+      "checker_identity": "pinned Google IFEval author checker"
+    },
+    {
+      "benchmark": "ifbench",
+      "task_id": "ifbench:22",
+      "metric": "prompt-level loose accuracy",
+      "native_score": 1.0,
+      "normalized_score": 1.0,
+      "complete": true,
+      "checker_revision": "1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d",
+      "checker_identity": "pinned AllenAI IFBench author checker"
+    }
+  ],
+  "cost": {
+    "model_calls": 14,
+    "tokens": 173413,
+    "unknown_budgets": 0
+  },
+  "artifacts": {
+    "summary": "outputs/instruction_probe_20261005_C0_v2/summary.json",
+    "registration": "outputs/instruction_probe_20261005_C0_v2/registration.json",
+    "inventory": "outputs/instruction_probe_20261005_C0_v2/release/inventory.json"
+  }
+}
