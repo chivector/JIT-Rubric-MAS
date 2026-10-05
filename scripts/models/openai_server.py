@@ -52,6 +52,33 @@ def _trailing_user_text(messages) -> str:
     return ""
 
 
+def _estimate_input_tokens(completion_kwargs: dict) -> int:
+    """Estimate prompt tokens, including native tool schemas when present."""
+    total = count_tokens_messages(completion_kwargs.get("messages", []) or [])
+    tools = completion_kwargs.get("tools")
+    if tools:
+        total += count_tokens_text(json.dumps(tools, ensure_ascii=False, sort_keys=True,
+                                              default=str))
+    return total
+
+
+def _estimate_output_tokens(message) -> int:
+    """Estimate all visible completion material, including tool arguments."""
+    parts = []
+    for name in ("content", "reasoning_content", "reasoning"):
+        value = getattr(message, name, None)
+        if value:
+            parts.append(str(value))
+    calls = getattr(message, "tool_calls", None)
+    if calls:
+        parts.append(json.dumps([
+            {"name": getattr(getattr(call, "function", None), "name", ""),
+             "arguments": getattr(getattr(call, "function", None), "arguments", "")}
+            for call in calls
+        ], ensure_ascii=False, sort_keys=True, default=str))
+    return count_tokens_text("\n".join(parts))
+
+
 class OpenAIServerModel(Model):
     """Connects to an OpenAI-compatible API server.
 
@@ -281,7 +308,7 @@ class OpenAIServerModel(Model):
                     )
 
                 if input_tokens is None:
-                    input_tokens = count_tokens_messages(completion_kwargs.get("messages", []) or [])
+                    input_tokens = _estimate_input_tokens(completion_kwargs)
                     estimated_tokens = True
 
                 raw_message = response.choices[0].message
@@ -294,8 +321,7 @@ class OpenAIServerModel(Model):
                     raise EmptyContentError(response)
 
                 if output_tokens is None:
-                    out_text = response.choices[0].message.content or ""
-                    output_tokens = count_tokens_text(out_text)
+                    output_tokens = _estimate_output_tokens(raw_message)
                     estimated_tokens = True
 
                 self._record_token_usage(

@@ -6,7 +6,9 @@ import httpx
 from openai import APIConnectionError
 
 from scripts.models.base import Model
-from scripts.models.openai_server import OpenAIServerModel
+from scripts.models.openai_server import (
+    OpenAIServerModel, _estimate_input_tokens, _estimate_output_tokens,
+)
 
 
 def test_transport_trust_env_is_client_only_and_never_request_body(monkeypatch):
@@ -78,3 +80,26 @@ def test_api_connection_failure_is_re_raised_at_threshold_for_task_recovery(monk
     with pytest.raises(APIConnectionError) as caught:
         model([{"role": "user", "content": "Offline request"}])
     assert caught.value is error
+
+
+def test_fallback_token_estimate_includes_tool_schema_and_native_arguments():
+    prompt = {"messages": [{"role": "user", "content": "Use the tool"}],
+              "tools": [{"type": "function", "function": {
+                  "name": "lookup", "parameters": {"type": "object"}}}]}
+    with_tools = _estimate_input_tokens(prompt)
+    without_tools = _estimate_input_tokens({"messages": prompt["messages"]})
+    assert with_tools > without_tools
+
+    class Function:
+        name = "lookup"
+        arguments = '{"query":"token audit"}'
+
+    class Call:
+        function = Function()
+
+    class Message:
+        content = ""
+        reasoning_content = "checking"
+        tool_calls = [Call()]
+
+    assert _estimate_output_tokens(Message()) > 0
