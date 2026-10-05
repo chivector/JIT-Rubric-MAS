@@ -338,10 +338,7 @@ def _pooled_prediction_schema(catalogue: Sequence[dict[str, Any]], *, max_agents
         branches.append(branch)
     temporary = copy.deepcopy(original_agent)
     properties = temporary["properties"]
-    known_ids = [member["pool_agent_id"] for member in catalogue]
-    identity_pattern = (r"^(?!(?:" + "|".join(re.escape(identity) for identity in known_ids)
-                        + r")$)[A-Za-z0-9_-]+$" if known_ids else r"^[A-Za-z0-9_-]+$")
-    properties["pool_agent_id"] = {"type": "string", "pattern": identity_pattern}
+    properties["pool_agent_id"] = {"type": "string", "pattern": r"^[A-Za-z0-9_-]+$"}
     properties["pool_agent_version"] = {"type": "integer", "const": 1}
     properties["creation_rationale"] = {"type": "string", "minLength": 1,
                                         "maxLength": PLANNING_TEXT_LIMITS["creation_rationale"]}

@@ -74,6 +74,12 @@ i02 只改变并发配置，使用同一批三个固定样本和只读参照；i
 
 如果观察到低分，先区分执行失败、证据不足、规划/分工、输出与 harness 缺陷，再选择一个有过程证据支持的实现因素修改；另行登记新的代码和配置身份，用固定少量 EVO 样本复查，有效则保留，无效则回退。随后在未参与该轮调优的 EVO 任务上补充检查，保留失败和成本，不能用同题反复调优的分数宣称泛化提升，也不能将答案或私有评分标准写入设计策略或 harness。
 
-本轮动态 Pool、双层进化、RubricGraph 职责分配、规划 transport 和开发运行器相关回归 **219 passed**，核心实现审查未发现必须修正的行为缺陷。启动器静态检查通过；凭据预检仍缺 `JIT_BENCHMARK_API_KEY` 和 `RESCORE_JUDGE_API_KEY`，四次生成均未启动，模型调用和 Token 均为 0。尚无新真实分数，因此尚未作性能结论或推送最终版本。
+本轮动态 Pool、双层进化、RubricGraph 职责分配、规划 transport 和开发运行器相关回归 **219 passed**，核心实现审查未发现必须修正的行为缺陷。启动器静态检查通过；首次真实运行发现 schema transport 兼容性问题并已修复，修复后的 C0 生成阶段完成但 judge 认证失败，尚无新真实分数，因此尚未作性能结论。
 
 最终发布纳入确定的 `jit_mas` 实现、开发评测脚本、相关测试和方法/运行文档。上述本地启动器依赖被忽略的 `.runtime` bundle、数据和公开证据缓存，不作为干净 clone 可直接启动的公开示例；凭据、运行状态及本地生成物保留在已有忽略目录。公开运行入口继续使用 `scripts/run_jit_mas.py`、`configs/jit_mas.native.example.yaml` 和 `docs/jit_mas.md`，所需数据与证据按文档单独准备。
+
+## 首次认证运行记录
+
+用户提供凭据后，认证预检通过。首次 C0 请求暴露了一个服务兼容性问题：临时 harness 的新 Pool ID schema 使用了 Python/PCRE 风格负向前瞻，生成端 grammar 不支持该 regex，因此返回 HTTP 400；这不是任务分数。修复为服务端兼容的普通 `[A-Za-z0-9_-]+` pattern，已有 `resolve_profile` 和预测交叉校验继续负责拒绝与持久 Pool 冲突的临时身份；相关 focused tests 为 **61 passed**。
+
+修复后的 retry C0 已成功生成提交，但 judge endpoint 对评测请求返回 HTTP 401 `Invalid token`。只读 `/models` 探测结果为生成端 HTTP 200、judge 端 HTTP 401；因此当前没有 native score、完整率或可解释的性能差值，RR/DSQA 进化阶段没有启动。两次运行的失败 receipt 均保留在本地 ignored `outputs/` 目录，不重用失败 slot，也不把失败当作低指标结论。下一次运行需要在本机替换为有效的 `RESCORE_JUDGE_API_KEY`，无需修改代码或重新选择题目。

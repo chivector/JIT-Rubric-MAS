@@ -48,6 +48,9 @@ def writer_agent(*, max_calls=1):
 def test_prediction_schema_supports_new_full_harnesses_alongside_exact_pool_bindings():
     pool = seed_pool()
     schema = _pooled_prediction_schema(catalogue(pool), max_agents=3)
+    temporary_branch = schema["$defs"]["AgentSpec"]["anyOf"][-1]
+    assert "(?<!" not in json.dumps(temporary_branch)
+    assert "(?!" not in json.dumps(temporary_branch)
     validator = Draft202012Validator(schema)
     validator.check_schema(schema)
     record = Prediction(graph=RubricGraph(rubrics=[]),
@@ -61,8 +64,11 @@ def test_prediction_schema_supports_new_full_harnesses_alongside_exact_pool_bind
     invalid = copy.deepcopy(record)
     invalid["candidates"][0]["pool_agent_id"] = "analyst"
     invalid["candidates"][0]["temporary_profile"]["pool_agent_id"] = "analyst"
-    with pytest.raises(SchemaValidationError):
-        validator.validate(invalid)
+    validator.validate(invalid)
+    analyzer = GlobalAnalyzer(lambda _messages: "{}", agent_pool=seed_pool())
+    with pytest.raises(ValueError, match="conflicts with an Agent Pool member"):
+        analyzer._validate_prediction(PublicTask(task_id="collision", question="Check the binding."),
+                                      Prediction.model_validate(invalid))
     invalid = copy.deepcopy(record)
     del invalid["candidates"][0]["temporary_profile"]["skills"]
     with pytest.raises(SchemaValidationError):
