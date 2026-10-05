@@ -1174,9 +1174,15 @@ class MASPipeline:
                     update_id = digest({"task_id": task_id, "baseline": digest(state),
                                         "proposal": proposal, "agent_updates": raw_agent_updates,
                                         "pool_operations": raw_operations, "pool_observations": raw_observations})
-                    written = self.store.commit_evolution(source_task_id=task_id,
-                        base_version=baseline, proposal=proposal, updates=raw_agent_updates,
-                        operations=raw_operations, observations=raw_observations, update_id=update_id)
+                    try:
+                        written = self.store.commit_evolution(source_task_id=task_id,
+                            base_version=baseline, proposal=proposal, updates=raw_agent_updates,
+                            operations=raw_operations, observations=raw_observations, update_id=update_id)
+                    except Exception as exc:
+                        exc.jit_mas_run_failure = {"task_id": task_id, "mode": mode,
+                            "run_dir": outcome["run_dir"], "error_type": type(exc).__name__,
+                            "budget": outcome["budget"]}
+                        raise
                     if proposal is not None:
                         outcome["experience_updates"].append({
                             "proposal_id": proposal.proposal_id, "source_task_id": proposal.source_task_id,

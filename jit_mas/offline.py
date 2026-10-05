@@ -15,7 +15,7 @@ FIXTURES = {
     "evolve-comparison": "Compare two message queue designs for a small service.",
     "validation-storage": "Compare two storage designs for an archival service.",
     "validation-recovery": "Compare recovery designs for a batch processor.",
-    "test-deployment": "Compare deployment designs for a reporting service.",
+    "test-deployment": "Compare deployment designs for a reporting system.",
     "test-poem": "Write a four-line poem about a clock, using plain language.",
     "stream-first": "Compare caching designs for a catalogue service.",
     "stream-next": "Compare logging designs for a telemetry service.",

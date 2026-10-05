@@ -16,6 +16,8 @@ from scripts.run_jit_mas import make_pipeline
 
 class DecisionFixtureModel(FixtureModel):
     def _phase(self, payload):
+        if payload["phase"] == "propose" and self.provider.repeated_proposal_id:
+            payload = {**payload, "experiences": []}
         response = super()._phase(payload)
         phase = payload["phase"]
         if phase == "attribute_global" and self.provider.meta_assignment:
@@ -25,6 +27,9 @@ class DecisionFixtureModel(FixtureModel):
             response["lessons"] = []
         if phase == "propose" and response["proposals"]:
             experience = response["proposals"][0]["experience"]
+            if self.provider.repeated_proposal_id:
+                response["proposals"][0]["proposal_id"] = "proposal-1"
+                experience["experience_id"] = payload["task"]["task_id"] + ":boundary-assumptions"
             experience["bank"] = self.provider.meta_bank
             if self.provider.meta_bank == "organization":
                 experience["instruction"] = (
@@ -51,12 +56,14 @@ class DecisionFixtureModel(FixtureModel):
 
 
 class DecisionFixtureModels(FixtureModels):
-    def __init__(self, *, selection="writer", empty_reflections=False, meta_bank="rubric", meta_assignment=False):
+    def __init__(self, *, selection="writer", empty_reflections=False, meta_bank="rubric", meta_assignment=False,
+                 repeated_proposal_id=False):
         super().__init__()
         self.selection = selection
         self.empty_reflections = empty_reflections
         self.meta_bank = meta_bank
         self.meta_assignment = meta_assignment
+        self.repeated_proposal_id = repeated_proposal_id
 
     def create(self, role, agent_id, ledger, stage):
         if role not in {"global", "local"}:
@@ -189,26 +196,59 @@ def test_full_harness_prototype_mode_rejects_meta_execution_bank(pipeline_factor
     assert not read_artifact(caught.value.jit_mas_run_failure["run_dir"], "attribution.json")["complete"]
 
 
-def frozen_decision_source(pipeline_factory, selection):
-    source_pipeline, source_store, _ = pipeline_factory(selection=selection)
+def test_repeated_model_proposal_ids_commit_once_per_task(pipeline_factory, monkeypatch):
+    pipeline, store, models = pipeline_factory(repeated_proposal_id=True)
+    task_ids = ["evolve-comparison", "stream-first"]
+    pipeline.manifest = pipeline.manifest.model_copy(update={
+        "evolution": task_ids, "stream": ["stream-next"]})
+    outcomes = pipeline.run("evolve", task_ids)
+    expected_ids = [task_id + ":proposal-1" for task_id in task_ids]
+    assert [outcome["proposals"][0]["proposal_id"] for outcome in outcomes] == expected_ids
+    snapshot = store.snapshot()
+    assert snapshot.version == 2
+    assert snapshot.applied_proposals == expected_ids
+    assert store.db.execute("SELECT COUNT(*) FROM proposals").fetchone()[0] == 2
+    assert store.db.execute("SELECT COUNT(*) FROM evolution_commits").fetchone()[0] == 2
+    for outcome in outcomes:
+        meta = read_artifact(outcome["run_dir"], "meta_evolution.json")
+        assert meta["decision"]["proposal_id"] == outcome["proposals"][0]["proposal_id"]
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Completed source tasks must resume without calling models")
+
+    monkeypatch.setattr(models, "create", forbidden)
+    resumed = pipeline.run("evolve", task_ids)
+    assert all(outcome["resumed"] for outcome in resumed)
+    assert digest(store.snapshot()) == digest(snapshot)
+
+
+def frozen_decision_source(pipeline_factory, selection, *, repeated_proposal_id=False):
+    source_pipeline, source_store, _ = pipeline_factory(selection=selection,
+                                                       repeated_proposal_id=repeated_proposal_id)
     task_id = source_pipeline.manifest.evolution[0]
     source = source_pipeline.run_task(task_id, source_store.snapshot(), mode="evolve",
                                       attribution=False, resume=False)
     anchor = submitted_source_digest(source["run_dir"])
-    continued, continued_store, _ = pipeline_factory(selection=selection, meta_assignment=True)
+    continued, continued_store, _ = pipeline_factory(selection=selection, meta_assignment=True,
+                                                     repeated_proposal_id=repeated_proposal_id)
     attributed = continued.run("evolve", resume_source=source["run_dir"],
                                 resume_source_hash=anchor)[0]
     return source, anchor, attributed, continued_store
 
 
 @pytest.mark.parametrize("selection", ["writer", "reject_all"])
-def test_frozen_final_meta_selection_replays_without_model_calls(pipeline_factory, monkeypatch, selection):
-    source, source_anchor, attributed, continued_store = frozen_decision_source(pipeline_factory, selection)
+@pytest.mark.parametrize("repeated_proposal_id", [False, True])
+def test_frozen_final_meta_selection_replays_without_model_calls(
+        pipeline_factory, monkeypatch, selection, repeated_proposal_id):
+    source, source_anchor, attributed, continued_store = frozen_decision_source(
+        pipeline_factory, selection, repeated_proposal_id=repeated_proposal_id)
     location = Path(attributed["run_dir"])
     attribution_anchor = attribution_source_digest(location)
     original_meta = (location / "meta_evolution.json").read_bytes()
     original_reflections = (location / "agent_evolution.json").read_bytes()
     meta = json.loads(original_meta)
+    if repeated_proposal_id:
+        assert meta["candidate_proposals"][0]["proposal_id"] == attributed["task_id"] + ":proposal-1"
     replay, replay_store, replay_models = pipeline_factory(selection="fail")
 
     def forbidden(*args, **kwargs):

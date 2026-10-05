@@ -224,10 +224,20 @@ def test_retrieval_excludes_current_restricted_and_future_sources():
         entry.source_task_ids, entry.created_at = [source], timestamp
         entries.append(entry)
     bank = ExperienceSnapshot(experiences=entries)
-    found = retrieve(bank, PublicTask(task_id="current", question="A new task"),
+    found = retrieve(bank, PublicTask(task_id="current",
+                     question="Plan independent evidence collection and synthesis for a new task."),
                      excluded_task_ids=["validation-a"], before="2026-09-15T00:00:00+00:00")
     assert [entry["source_task_ids"] for entry in found] == [["past-task"]]
     assert "validation_status" not in found[0]
+
+
+def test_retrieval_rejects_eligible_source_outside_public_task_scope():
+    entry = proposal().experience
+    entry.source_task_ids = ["past-task"]
+    bank = ExperienceSnapshot(experiences=[entry])
+    found = retrieve(bank, PublicTask(task_id="current", question="A new task"),
+                     excluded_task_ids=["validation-a"], before="2026-09-15T00:00:00+00:00")
+    assert found == []
 
 
 def test_legacy_snapshot_only_activates_previously_committed_members():

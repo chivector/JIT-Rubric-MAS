@@ -30,6 +30,26 @@ def read_run(outcome, filename):
     return json.loads((Path(outcome["run_dir"]) / filename).read_text(encoding="utf-8"))
 
 
+def test_evolution_commit_failure_retains_settled_usage(setup, monkeypatch):
+    from scripts.execute_joint_experiment import _failure_token_usage
+
+    pipeline, store, provider = setup
+    baseline = digest(store.snapshot())
+
+    def fail_commit(**kwargs):
+        raise ValueError("Synthetic commit failure")
+
+    monkeypatch.setattr(store, "commit_evolution", fail_commit)
+    with pytest.raises(ValueError, match="Synthetic commit failure") as caught:
+        pipeline.run("evolve")
+    failure = caught.value.jit_mas_run_failure
+    usage = _failure_token_usage(caught.value)
+    assert usage["model_calls"] == failure["budget"]["model_calls"] > 0
+    assert usage["total_tokens"] == failure["budget"]["tokens"] > 0
+    assert digest(store.snapshot()) == baseline
+    assert store.task_run("evolve", pipeline.manifest.evolution[0])["status"] == "submitted"
+
+
 def test_complete_vertical_loop_and_reuse(setup):
     pipeline, store, provider = setup
     outcome = pipeline.run("evolve")[0]
