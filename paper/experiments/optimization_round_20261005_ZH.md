@@ -55,3 +55,23 @@
 ## 失败原因与下一步
 
 本轮主要失败不是 Ours 生成器无法输出，而是 actor/judge 中转服务出现长时间连接等待；历史 GPT 运行还记录过 quota/authentication failure。当前 formal p8 输出会继续按 journal 的 durable 状态推进；若 provider 再次无法收敛，只保留 consumed failure，不把 partial 槽位写成正式均值，也不以 incomplete EVO/VAL 启动 TEST。
+
+## 2026-10-05 软 budget-aware 收尾更新
+
+用户明确要求不把简单/中等/复杂任务映射成固定角色上限。为此，最新提交 `9afb055` 将 roster enforcement 改为显式开关，默认关闭；正式 p12 配置 `adaptive_budget_enforcement: false`。运行仍保留任务复杂度、输入长度、约束数量、附件/工具信息形成的 `limits.adaptive_budget` 建议，以及共享 ledger 的 token/调用预算和真实余额检查。模型可以按上下文选择 1 个、2 个或完整池，只有真实预算耗尽才 fail closed；这保留了 budget-aware 的自适应性，不把复杂度标签当成硬裁决。
+
+p12 冻结 bundle：`.runtime/formal_v5_assets_20261004/bundle_p12_soft_budget/bundle.json`，registration/protocol 哈希已写入 bundle，provider preflight 为非 synthetic。代码、配置和 evidence 在登记后保持不变。p11 的硬上限运行已停止并保留为失败审计；p12 是当前正式候选。
+
+### 正式运行调度审计
+
+- `joint_run_p12_soft_budget`：顺序 VAL 探测落盘 `complete=5, failed=1, started=1, pending=623`，累计 provider token `1,746,442`；其中一个失败是中转请求超时，未被计入成绩均值。该输出未继续使用，因为单路吞吐过低。
+- `joint_run_p12_parallel`：尝试 8 路只读 VAL；中转服务出现请求容量排队超时，已停止并保留失败诊断，未与正式结果混合。
+- `joint_run_p12_parallel2`：使用同一冻结 bundle、2 路只读 VAL，不改变模型或方法；进程已在后台继续，当前检查点正在推进，槽位结果和 token usage 均写入 `evo_val_journal.json`。并行仅改变执行调度，不能改变 checkpoint、候选、评分或答案。
+
+### Token accounting
+
+所有 EVO/VAL/TEST 槽位现在写入 `token_usage`，区分 provider usage、estimated usage、unknown usage，并按 inference/evaluation/execution stage 汇总；失败请求不会复用前一请求的计数。TEST 槽位的 `complete.json`、submit/score journal 和最终 report 均保留相同字段。专项 token/budget/OpenAI 回归为 29 passed，联合 executor/bundle/adaptive/pooled/baseline 回归为 65 passed。
+
+p12 顺序运行的前几个完整槽已观察到真实 provider token；例如首槽 34 次模型调用、总计 248,617 token，其中 Ours inference 171,373 token、judge evaluation 77,244 token。这个数值用于最终 performance-token trade-off 表，不会把估算值冒充 provider usage。
+
+在 p12 EVO/VAL 形成完整 `evo_val_report.json` 之前，不启动 TEST；完成后严格执行 register → submit → seal → score，并保留所有失败槽位、原始答案、judge rubric、token usage、哈希和 provider identity。
