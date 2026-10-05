@@ -992,8 +992,13 @@ _ADAPTIVE_COMPLEXITY_TERMS = frozenset({
 
 def adaptive_budget_profile(task: PublicTask, *, max_agents: int,
                             total_max_calls: int | None,
-                            execution_mode: str = "single_pass") -> dict[str, Any]:
-    """Compute an auditable roster and call recommendation from public task text."""
+                            execution_mode: str = "single_pass",
+                            enforced: bool = False) -> dict[str, Any]:
+    """Compute an auditable roster recommendation from public task text.
+
+    ``enforced`` is set only for the evolving pool path; fixed and baseline methods
+    retain their configured hard limits.
+    """
     task = PublicTask.model_validate(task)
     text = " ".join([task.question, *task.constraints, *task.capabilities])
     folded = text.casefold()
@@ -1029,6 +1034,7 @@ def adaptive_budget_profile(task: PublicTask, *, max_agents: int,
                     "attachment_count": len(task.attachments), "tool_count": len(task.tools),
                     "capability_count": len(task.capabilities), "complexity_terms": terms,
                     "conjunction_count": conjunction_count},
+        "enforced": bool(enforced),
         "policy": "Use the preferred cap when it covers every explicit public requirement; "
                   "escalate to the configured maximum only for documented coverage, evidence, "
                   "or independent-check needs.", "execution_mode": execution_mode,
@@ -1177,9 +1183,12 @@ class GlobalAnalyzer(JsonModelCalls):
         limits = {"max_agents": self.max_agents, "max_parallel": self.max_parallel,
                   "total_max_calls": self.total_max_calls, "execution_mode": self.execution_mode}
         if task is not None:
-            limits["adaptive_budget"] = adaptive_budget_profile(
+            adaptive = adaptive_budget_profile(
                 task, max_agents=self.max_agents, total_max_calls=self.total_max_calls,
-                execution_mode=self.execution_mode)
+                execution_mode=self.execution_mode, enforced=self.agent_pool is not None)
+            limits["adaptive_budget"] = adaptive
+            if self.agent_pool is not None:
+                limits["max_agents"] = adaptive["preferred_max_agents"]
         if self.knowledge_policy is not None:
             limits["knowledge_policy"] = self.knowledge_policy
         if self.execution_max_tokens is not None:
@@ -1216,6 +1225,14 @@ class GlobalAnalyzer(JsonModelCalls):
 
     def _refresh_limits(self, task: PublicTask | None = None) -> dict:
         return {"limits": self._limits(task)}
+
+    def _effective_max_agents(self, task: PublicTask) -> int:
+        """Use the adaptive cap only for persistent evolving pool runs."""
+        if self.agent_pool is None:
+            return self.max_agents
+        return adaptive_budget_profile(
+            task, max_agents=self.max_agents, total_max_calls=self.total_max_calls,
+            execution_mode=self.execution_mode, enforced=True)["preferred_max_agents"]
 
     def _prompt(self, prompt: str) -> str:
         prompt += "\n" + QUALITY_ASSURANCE_PROMPT + BUDGET_AWARE_PROMPT
@@ -1318,6 +1335,7 @@ class GlobalAnalyzer(JsonModelCalls):
         task = PublicTask.model_validate(task)
         prompt = PREDICT_PROMPT + (POOL_ORGANIZATION_PROMPT if self.agent_pool is not None else "")
         pool_catalogue = self._pool_catalogue() if self.agent_pool is not None else None
+        effective_max_agents = self._effective_max_agents(task)
         prediction = self.ask(self.global_model, "predict", self._prompt(prompt),
                               {"task": task, "experiences": experiences,
                                 **({"public_planning_context": copy.deepcopy(self.public_planning_context)}
@@ -1326,7 +1344,7 @@ class GlobalAnalyzer(JsonModelCalls):
                                 "limits": self._limits(task)}, Prediction,
                               validate=lambda item: self._validate_prediction(task, item),
                               refresh_payload=lambda: self._refresh_limits(task),
-                              json_schema=_pooled_prediction_schema(pool_catalogue, max_agents=self.max_agents)
+                              json_schema=_pooled_prediction_schema(pool_catalogue, max_agents=effective_max_agents)
                               if pool_catalogue is not None else None)
         self.last_prediction = prediction.model_copy(deep=True)
         return prediction
@@ -1335,8 +1353,9 @@ class GlobalAnalyzer(JsonModelCalls):
         if not self.explicit_rubrics and (prediction.graph.rubrics or prediction.graph.edges):
             raise ValueError("Explicit rubrics are disabled for this ablation")
         ids = [agent.agent_id for agent in prediction.candidates]
-        if len(ids) > self.max_agents or len(ids) != len(set(ids)):
-            raise ValueError("Candidate count exceeds limit or contains duplicate IDs")
+        effective_max_agents = self._effective_max_agents(task)
+        if len(ids) > effective_max_agents or len(ids) != len(set(ids)):
+            raise ValueError(f"Candidate count exceeds limit={effective_max_agents} or contains duplicate IDs")
         remaining_calls = self._resource_budget().get("remaining_model_calls")
         if remaining_calls is not None and len(ids) > remaining_calls:
             raise ValueError("Candidate initial calls exceed remaining shared model-call budget")
@@ -1465,6 +1484,7 @@ class GlobalAnalyzer(JsonModelCalls):
     def reconcile(self, task: PublicTask, prediction: Prediction,
                   plans: Sequence[LocalPlan], experiences: Sequence = ()) -> PlannedTeam:
         prompt = RECONCILE_PROMPT + (POOL_ORGANIZATION_PROMPT if self.agent_pool is not None else "")
+        effective_max_agents = self._effective_max_agents(task)
         response = self.ask(self.global_model, "reconcile", self._prompt(prompt),
                             {"task": task, "prediction": prediction, "local_plans": plans,
                              **({"public_planning_context": copy.deepcopy(self.public_planning_context)}
@@ -1474,7 +1494,7 @@ class GlobalAnalyzer(JsonModelCalls):
                             _ReconciliationResponse,
                             validate=lambda item: self._validate_reconciled_pool(task, prediction, plans, item),
                             refresh_payload=lambda: self._refresh_limits(task),
-                            json_schema=_pooled_reconciliation_schema(prediction, max_agents=self.max_agents)
+                            json_schema=_pooled_reconciliation_schema(prediction, max_agents=effective_max_agents)
                             if self.agent_pool is not None else None)
         # Local testimony belongs to its author, not the reconciler.
         result = PlannedTeam(graph=response.graph, team=response.team,
@@ -1517,12 +1537,13 @@ class GlobalAnalyzer(JsonModelCalls):
         if not self.explicit_rubrics and (result.graph.rubrics or result.graph.edges
                                          or team.coverage or team.primary or team.reviewers):
             raise ValueError("Explicit rubrics are disabled for this ablation")
-        if (team.execution_mode != self.execution_mode or len(team.agents) > self.max_agents
+        effective_max_agents = self._effective_max_agents(task)
+        if (team.execution_mode != self.execution_mode or len(team.agents) > effective_max_agents
                 or team.max_parallel > self.max_parallel
                 or (self.total_max_calls is not None
                     and (team.total_max_calls is None or team.total_max_calls > self.total_max_calls))):
             raise ValueError("Reconciled team exceeds configured resource limits: "
-                             f"agents={len(team.agents)} <= {self.max_agents}, "
+                             f"agents={len(team.agents)} <= {effective_max_agents}, "
                              f"max_parallel={team.max_parallel} <= {self.max_parallel}, "
                              f"total_max_calls={team.total_max_calls} <= {self.total_max_calls} required")
         known = {r.rubric_id for r in result.graph.rubrics}

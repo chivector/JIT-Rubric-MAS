@@ -71,7 +71,10 @@ def test_predict_uses_pool_schema_and_keeps_one_correction_for_duplicate_pool_me
 
     analyzer = GlobalAnalyzer(model, max_agents=3, agent_pool=pool)
     analyzer.planning_response_format = "json_schema"
-    result = analyzer.predict(PublicTask(task_id="schema", question="Write a short explanation."))
+    result = analyzer.predict(PublicTask(
+        task_id="schema",
+        question=("Research and compare evidence across alternatives, countries and periods; "
+                   "produce a reproducible table and cite sources for every claim. " * 12)))
 
     assert len(requests) == len(analyzer.call_records) == 2
     schema = requests[0]["kwargs"]["response_format"]["json_schema"]["schema"]
