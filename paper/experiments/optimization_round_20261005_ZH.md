@@ -116,5 +116,21 @@ parallel2 的两个终态失败均为 DeepSearchQA 规划输出的 coverage/prim
 | `p14_relevance` | iterative shared ledger，完整 refinement | 2 | 0.3765、0.8028 | 293,163、266,494 | operator 中止，成本/质量诊断 |
 | `p15_single_pass` | single pass，完整 refinement | 3 | 0.5412、0.6338、另 1 个继续恢复 | 362,443、201,532、其余见 journal | 当前正式候选，按 journal 继续 |
 | `p17_patch_refine` | single pass，patch refinement | 2 complete、1 failed | 0.7606、0.6000；1 个 JSONDecodeError | 322,864、298,354、失败 111,484 | 撤销，未进入选版 |
+| `p18_serial` | single pass，完整 refinement；`max_parallel=1`、`max_inflight_requests=1`、`judge_parallel=1` | 1 complete、1 failed、1 started | 0.915493；1 个 JSONDecodeError | 274,185；失败 45,757；累计 journal 319,942 | 当前串行恢复候选，仍在运行 |
 
 `p17` 的失败来自 refinement JSON 解码契约，保留为失败实验；这说明 patch 模式在当前中转服务上不能直接替代完整 refinement。p15 的每槽 token 由 `token_usage.by_stage` 分列 inference/evaluation，失败槽也计入估算或 provider usage，不能从正式均值中静默删除。完整 `evo_val_report.json` 和 TEST release 仍未形成，当前任何分数都不是论文最终均值。
+
+### 当前可审计的临时汇总（非正式均值）
+
+下表只汇总已经写入独立 journal 的完整槽位；`p14`、`p15`、`p17`、`p18` 使用不同运行配置或处于中断/恢复状态，不能跨运行拼接成 benchmark 均值。历史 Direct 仅作为旧探索协议参照。
+
+| 来源 | 阶段/任务 | 状态 | score | 槽位 token |
+|---|---|---|---:|---:|
+| p18_serial | C0 VAL RR `6847465956a0f6376a60535d` | complete | **0.915493** | 274,185 |
+| p18_serial | C0 VAL RR `6847465956a0f6376a605391` | failed (`JSONDecodeError`) | — | 45,757（估算） |
+| p17_patch_refine | C0 VAL RR 两槽 | complete | 0.600000、0.760563 | 298,354、322,864 |
+| p15_single_pass | C0 VAL RR 三槽 | complete | 0.541176、0.633803、0.750000 | 362,443、201,532、221,569 |
+| p14_relevance | C0 VAL RR 两槽 | complete | 0.376471、0.802817 | 293,163、266,494 |
+| 历史 Direct | RR 33 TEST（旧 exploratory protocol） | complete | **0.469267** | 旧记录，口径不同 |
+
+截至本记录，p18 journal 为 `complete=1, failed=1, started=1, pending=627`，累计 token `319,942`；p15 为 `complete=6, failed=36, started=1, incomplete=1, pending=586`，累计 token `5,637,926`。这些数字用于运行与成本审计，不构成六 benchmark 的最终成绩，也没有启动 TEST release。
