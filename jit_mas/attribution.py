@@ -242,10 +242,11 @@ or factual checks. A shorter answer or fewer calls alone does not prove better q
 efficiency; unknown prices remain unknown."""
 
 FEEDBACK_IDS_PROMPT = """Copy rubric IDs exactly from the supplied graphs and feedback;
-copy evidence references exactly from evidence_ids. A feedback:<rubric_id> reference is
-an evidence ID, not a rubric ID. Quote verification flags describe whether the quoted
-text was found verbatim; do not treat unverified quotes as exact observations or change
-the recorded official score based on this diagnostic.""" + "\n" + SIGNED_SCORE_PROMPT + "\n" + EVIDENCE_QUALITY_PROMPT
+copy evidence references exactly from evidence_ids. Use only exact evidence IDs in
+supporting_evidence and opposing_evidence: opposing_evidence is a list of evidence IDs,
+not an explanation in prose. Put alternatives, explanations and uncertainty in their
+dedicated text fields. A feedback:<rubric_id> reference is an evidence ID, not a rubric
+ID. Quote verification flags describe whether the quoted text was found verbatim; do not treat unverified quotes as exact observations or change the recorded official score based on this diagnostic.""" + "\n" + SIGNED_SCORE_PROMPT + "\n" + EVIDENCE_QUALITY_PROMPT
 
 LOCAL_ATTRIBUTION_PROMPT = """Analyze your own execution with your complete observable local
 context, the relevant rubric feedback, global questions and upstream/downstream evidence.
@@ -449,10 +450,41 @@ class RubricAttributor(JsonModelCalls):
                                     *["feedback:" + r.rubric_id for r in feedback.rubrics],
                                     "planning:global", "planning:planned", "planning:team"]}
         known_agents = {agent.agent_id for agent in team.agents}
+        valid_evidence = set(context["evidence_ids"])
+        valid_rubrics = ({r.rubric_id for r in planned_graph.rubrics}
+                         | {r.rubric_id for r in global_graph.rubrics}
+                         | {r.rubric_id for r in feedback.rubrics})
+
+        def _validate_findings(findings, *, phase, unique_ids=False):
+            finding_ids: set[str] = set()
+            for index, finding in enumerate(findings.findings):
+                finding_id = finding.finding_id
+                if unique_ids and finding_id in finding_ids:
+                    raise ValueError(f"{phase} findings[{index}] finding_id={finding_id!r}: "
+                                     "Duplicate attribution finding ID")
+                finding_ids.add(finding_id)
+                invalid_agents = sorted(set(finding.agent_ids) - known_agents)
+                invalid_rubrics = sorted(set(finding.rubric_ids) - valid_rubrics)
+                if invalid_agents or invalid_rubrics:
+                    raise ValueError(
+                        f"{phase} findings[{index}] finding_id={finding_id!r}: "
+                        "Attribution references unknown agents or rubrics; "
+                        f"invalid_agent_ids={invalid_agents}; invalid_rubric_ids={invalid_rubrics}; "
+                        f"valid_rubric_ids={sorted(valid_rubrics)}")
+                for field in ("supporting_evidence", "opposing_evidence"):
+                    references = getattr(finding, field)
+                    invalid = sorted(set(references) - valid_evidence)
+                    if invalid:
+                        raise ValueError(
+                            f"{phase} findings[{index}].{field} finding_id={finding_id!r}: "
+                            "Attribution invented an evidence reference; "
+                            f"invalid_evidence_ids={invalid}; valid_evidence_ids={sorted(valid_evidence)}")
+
         outline_attempts = 0
 
         def validate_outline(outline):
             nonlocal outline_attempts
+            _validate_findings(outline, phase="attribute_global")
             outline_attempts += 1
             # Question allocation is advisory metadata for local attribution.
             # A model can occasionally echo a stale agent id from a prior
@@ -510,11 +542,13 @@ class RubricAttributor(JsonModelCalls):
             model = self.local_model_factory(aid)
 
             def validate_requests(findings):
+                _validate_findings(findings, phase="attribute_local")
                 requested = set(findings.evidence_requests)
                 if len(requested) > 8 or not requested <= event_by_id.keys():
                     raise ValueError("Local attribution requested unavailable or too many events")
 
             def validate_followup(findings):
+                _validate_findings(findings, phase="attribute_local_followup")
                 if findings.evidence_requests:
                     raise ValueError("Local attribution exceeded its evidence exchange limit")
 
@@ -536,26 +570,13 @@ class RubricAttributor(JsonModelCalls):
             with ThreadPoolExecutor(max_workers=self.max_parallel) as pool:
                 futures = [pool.submit(analyze_agent, agent) for agent in team.agents]
                 self.last_local_findings = dict(future.result() for future in futures)
-        valid_evidence = set(context["evidence_ids"])
-        valid_rubrics = ({r.rubric_id for r in planned_graph.rubrics}
-                         | {r.rubric_id for r in global_graph.rubrics}
-                         | {r.rubric_id for r in feedback.rubrics})
-
-        def validate_findings(final):
-            finding_ids: set[str] = set()
-            for finding in final.findings:
-                if finding.finding_id in finding_ids:
-                    raise ValueError("Duplicate attribution finding ID")
-                finding_ids.add(finding.finding_id)
-                if not set(finding.agent_ids) <= known_agents or not set(finding.rubric_ids) <= valid_rubrics:
-                    raise ValueError("Attribution references unknown agents or rubrics")
-                if not set(finding.supporting_evidence + finding.opposing_evidence) <= valid_evidence:
-                    raise ValueError("Attribution invented an evidence reference")
+        def validate_final_findings(final):
+            _validate_findings(final, phase="attribute_integrate", unique_ids=True)
 
         final = self.ask(self.global_model, "attribute_integrate", INTEGRATE_PROMPT + "\n" + COST_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
                          {**context, "global_outline": outline,
                           "local_findings": self.last_local_findings}, Findings,
-                         validate=validate_findings)
+                         validate=validate_final_findings)
         for finding in final.findings:
             if not finding.supporting_evidence:
                 finding.categories = ["external_or_uncertain"]
@@ -594,7 +615,7 @@ class RubricAttributor(JsonModelCalls):
                    "valid_counterevidence_ids": sorted(counterevidence),
                    "scoring_context": scoring}
         allowed_banks = None
-        prompt = PROPOSE_PROMPT
+        prompt = PROPOSE_PROMPT + "\n" + FEEDBACK_IDS_PROMPT
         if agent_reflections is not None:
             allowed_banks = ["rubric", "organization"]
             payload.update(agent_reflections=agent_reflections, allowed_experience_banks=allowed_banks)

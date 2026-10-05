@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from jit_mas.budget import BudgetLedger, MeteredModel
 from jit_mas.config import MASConfig, ModelConfig
 from jit_mas.public_refinement import PublicReview, refine_public_answer
+from jit_mas.output_contract import PUBLIC_ELIGIBILITY_SCOPE_PROMPT
 from jit_mas.schemas import PublicTask, digest
 from scripts.kernel.types import RunResult
 from scripts.models.base import ChatMessage
@@ -50,6 +51,8 @@ def test_review_schema_and_ordinary_prose_object_transport_preserve_complete_art
     snapshots = []
     refine_public_answer(task, result, models, ledger, config,
                         audit_writer=lambda audit: snapshots.append(copy.deepcopy(audit)))
+    assert all(PUBLIC_ELIGIBILITY_SCOPE_PROMPT in request["messages"][0]["content"]
+               for request in models.requests)
     expected_review = {"type": "json_schema", "json_schema": {
         "name": "PublicReview", "strict": True, "schema": PublicReview.model_json_schema()}}
     assert models.requests[0]["kwargs"]["response_format"] == expected_review

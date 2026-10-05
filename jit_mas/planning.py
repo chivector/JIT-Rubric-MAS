@@ -18,7 +18,8 @@ from typing import Any, Callable, Sequence, TypeVar
 from pydantic import BaseModel, TypeAdapter, ValidationError, model_validator
 
 from .experience import experience_applicability
-from .output_contract import PUBLIC_CONSTRAINT_CONSTRUCTION_PROMPT
+from .output_contract import (PUBLIC_CONSTRAINT_CONSTRUCTION_PROMPT,
+                              PUBLIC_ELIGIBILITY_SCOPE_PROMPT)
 from .schemas import (
     AgentSpec, LocalPlan, PlannedTeam, Prediction, PublicTask, Record, RubricGraph, TeamSpec,
     AgentPoolSnapshot,
@@ -146,7 +147,7 @@ Preserve useful facts and calculations through handoffs; compression should remo
 repetition rather than turn substantive findings into headings. Show the requested
 artifact itself in the final answer, with sources and limitations attached to the claims
 they qualify, rather than a list of instructions for someone else to produce it.
-""".strip() + "\n" + PUBLIC_CONSTRAINT_CONSTRUCTION_PROMPT
+""".strip() + "\n" + PUBLIC_ELIGIBILITY_SCOPE_PROMPT + "\n" + PUBLIC_CONSTRAINT_CONSTRUCTION_PROMPT
 
 
 CONSTRUCTION_STAGE_CONTRACT = """

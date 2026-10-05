@@ -35,3 +35,21 @@ verification. Keep construction, reasoning and counting notes outside the answer
 answer contains only the requested artifact. If a conflict remains unresolved, report
 it honestly in internal checkpoints and in the answer only when its format permits.
 """.strip()
+
+
+PUBLIC_ELIGIBILITY_SCOPE_PROMPT = """
+PUBLIC PREDICATE SCOPE: A hard inclusion or exclusion predicate may come only from
+the original public question, its explicit constraints, or an explicitly named
+public source field and operator. Do not promote a proxy statistic, administrative
+procedure, catalog or distributor presence, retrieval success, evidence coverage,
+freshness or live-stock assumption, citation/URL requirement, or an applicant
+identity characteristic into a new qualification rule unless the public task
+states it. Keep the primary answer set separate from verification notes and
+unverified candidates. For every original predicate, distinguish TRUE (the
+observed value satisfies its stated scope), CONTRADICTED (the observed value
+fails that same stated scope), and UNKNOWN (the available public material does
+not establish either). UNKNOWN is not contradiction and cannot by itself exclude
+a candidate; CONTRADICTED affects only the candidate and original predicate it
+actually covers. Do not present an unverified candidate as a qualifying member,
+and do not turn a missing proxy observation into a failure of the original task.
+""".strip()

@@ -79,18 +79,26 @@ def experience_applicability(entry, task: PublicTask, *, capability=None) -> dic
         terms = _terms(signal)
         specific = terms - _GENERAL_TERMS
         operations = specific.intersection(_TASK_OPERATIONS)
+        domain_terms = specific - operations
         matched_terms = terms.intersection(public_terms)
         if operations:
-            matched = operations <= public_terms and not operations.intersection(denied_operations)
+            matched = (operations <= public_terms
+                       and domain_terms <= public_terms
+                       and not operations.intersection(denied_operations))
         else:
-            matched = bool((specific or terms).intersection(public_terms))
+            matched = bool((specific or terms).intersection(public_terms)) and specific <= public_terms
         grounded = grounded or bool(matched and specific.intersection(public_terms))
         diagnostics.append({"signal": signal, "matched": matched,
                             "matched_terms": sorted(matched_terms),
-                            "required_operations": sorted(operations)})
+                            "required_operations": sorted(operations),
+                            "required_domain_terms": sorted(domain_terms)})
     # A stated operation boundary must not disappear merely because format words match.
-    operations = _terms(data.get("applicability", "")).intersection(_TASK_OPERATIONS)
-    boundary_matches = (not operations or operations <= public_terms) and not operations.intersection(denied_operations)
+    applicability_terms = _terms(data.get("applicability", ""))
+    applicability_specific = applicability_terms - _GENERAL_TERMS
+    operations = applicability_specific.intersection(_TASK_OPERATIONS)
+    domain_terms = applicability_specific - operations
+    boundary_matches = (operations <= public_terms and domain_terms <= public_terms
+                        and not operations.intersection(denied_operations))
     matched = all(item["matched"] for item in diagnostics) and boundary_matches
     grounded = grounded or bool(operations and boundary_matches)
     reason = ("public_signals_match" if diagnostics else

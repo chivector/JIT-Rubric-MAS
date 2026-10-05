@@ -103,6 +103,38 @@ def test_applicability_operation_boundary_cannot_be_replaced_by_format_signals()
     assert diagnostic["applicability_operations"] == ["compare"]
 
 
+def test_operation_signal_requires_its_substantive_domain_terms():
+    entry = comparison_advice(task_signals=["compare clinical outcomes"])
+    task = PublicTask(task_id="later", question="Compare national policies.")
+    diagnostic = experience_applicability(entry, task)
+    assert not diagnostic["matched"]
+    assert diagnostic["signal_matches"][0]["required_domain_terms"] == ["clinical", "outcomes"]
+
+
+def test_matching_domain_and_normalized_operation_remain_applicable():
+    entry = comparison_advice(task_signals=["compare clinical outcomes"],
+                             applicability="Clinical outcomes comparison")
+    task = PublicTask(task_id="later", question="Write an article contrasting clinical outcomes.")
+    diagnostic = experience_applicability(entry, task, capability="technical writing")
+    assert diagnostic["matched"] and diagnostic["task_grounded"]
+
+
+def test_nonoperation_signal_requires_all_substantive_terms():
+    entry = comparison_advice(task_signals=["national countries employment"])
+    task = PublicTask(task_id="later", question="Compare national policies.")
+    diagnostic = experience_applicability(entry, task)
+    assert not diagnostic["matched"]
+    assert diagnostic["reason"] == "public_task_scope_mismatch"
+
+
+def test_applicability_domain_boundary_cannot_match_only_its_operation():
+    entry = comparison_advice(task_signals=[], applicability="Compare clinical outcomes")
+    task = PublicTask(task_id="later", question="Compare national policies.")
+    diagnostic = experience_applicability(entry, task)
+    assert not diagnostic["matched"]
+    assert not diagnostic["applicability_boundary_matches"]
+
+
 def finding():
     return AttributionFinding(finding_id="observed-gap", rubric_ids=["private-count"],
         categories=["prediction"], hypothesis="Shared properties were omitted.",

@@ -7,7 +7,8 @@ from types import SimpleNamespace
 import pytest
 
 from jit_mas.execution import TeamMemory, TeamPlanning, TeamServices, run_team
-from jit_mas.output_contract import PUBLIC_CONSTRAINT_CONSTRUCTION_PROMPT
+from jit_mas.output_contract import (PUBLIC_CONSTRAINT_CONSTRUCTION_PROMPT,
+                                     PUBLIC_ELIGIBILITY_SCOPE_PROMPT)
 from jit_mas.planning import GlobalAnalyzer
 from jit_mas.schemas import AgentSpec, PublicTask, RubricGraph, TeamSpec
 from scripts.kernel.types import TaskInput, ToolSelection
@@ -70,6 +71,7 @@ def test_planning_models_receive_construction_advice_and_the_unchanged_public_ta
 
     def model(messages):
         assert PUBLIC_CONSTRAINT_CONSTRUCTION_PROMPT in messages[0]["content"]
+        assert PUBLIC_ELIGIBILITY_SCOPE_PROMPT in messages[0]["content"]
         payload = json.loads(messages[1]["content"])
         assert payload["task"] == task.model_dump(mode="json")
         received.append(copy.deepcopy(payload))
@@ -112,6 +114,7 @@ def test_constructed_artifact_is_delivered_verbatim_in_both_execution_modes(mode
         system = messages[0]["content"]
         public = json.loads(messages[1]["content"])["public_task"]
         assert PUBLIC_CONSTRAINT_CONSTRUCTION_PROMPT in system
+        assert PUBLIC_ELIGIBILITY_SCOPE_PROMPT in system
         assert public["question"] == question and public["tools"] == []
         return {"answer": answer, "continue": False}
 
@@ -147,6 +150,7 @@ def test_later_revision_keeps_prompt_and_submits_only_the_repaired_decoded_answe
 
     def revise(messages):
         assert PUBLIC_CONSTRAINT_CONSTRUCTION_PROMPT in messages[0]["content"]
+        assert PUBLIC_ELIGIBILITY_SCOPE_PROMPT in messages[0]["content"]
         prior = [json.loads(message["content"]) for message in messages
                  if message["role"] == "assistant"]
         assert prior[-1]["answer"] == draft

@@ -761,6 +761,47 @@ def test_attribution_corrections_preserve_evidence_exchange_limits():
     assert sum("validation_errors" in row for row in analyzer.call_records) == 4
 
 
+def test_attribution_findings_validate_evidence_at_every_phase_with_precise_correction():
+    graph, spec, alignment, result = _stale_question_attribution_fixture()
+    phases = Counter()
+
+    def valid_finding(finding_id="f"):
+        return {"finding_id": finding_id, "rubric_ids": ["r1"], "agent_ids": ["a1"],
+                "categories": ["execution"], "hypothesis": "Observed evidence supports the answer",
+                "supporting_evidence": ["observed"]}
+
+    def respond(data):
+        phase = data["phase"]
+        phases[phase] += 1
+        correcting = "response_correction" in data
+        if phase == "attribute_global":
+            return {"questions": {"a1": ["Check the published evidence"]},
+                    "findings": [valid_finding("outline-gap")] if correcting else [
+                        {**valid_finding("outline-gap"), "supporting_evidence": ["invented"]}]}
+        if phase == "attribute_local":
+            return {"findings": [] if correcting else [
+                {**valid_finding("local-gap"), "opposing_evidence": ["unsupported explanation"]}]}
+        if phase == "attribute_integrate":
+            return {"findings": [valid_finding()]}
+        raise AssertionError(f"unexpected phase {phase}")
+
+    analyzer = RubricAttributor(Scripted(respond), max_parallel=1)
+    output = analyzer.attribute(PublicTask(task_id="t", question="Compare"), graph, graph,
+        spec, result, feedback(), global_alignment=alignment, planned_alignment=alignment)
+
+    assert output[0].finding_id == "f"
+    assert phases == {"attribute_global": 2, "attribute_local": 4, "attribute_integrate": 1}
+    failed = [row for row in analyzer.call_records if "validation_errors" in row]
+    assert len(failed) == 3
+    messages = [row["validation_errors"][0]["message"] for row in failed]
+    assert any("attribute_global findings[0].supporting_evidence" in message
+               and "invalid_evidence_ids=['invented']" in message
+               and "valid_evidence_ids" in message for message in messages)
+    assert any("attribute_local findings[0].opposing_evidence" in message
+               and "invalid_evidence_ids=['unsupported explanation']" in message
+               and "valid_evidence_ids" in message for message in messages)
+
+
 def _stale_question_attribution_fixture():
     """Return a two-agent attribution setup for stale-roster regression tests."""
     graph = RubricGraph(rubrics=[rubric()])
