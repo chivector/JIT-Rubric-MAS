@@ -206,6 +206,11 @@ class Model:
     def __init__(self, **kwargs):
         self.last_input_token_count = None
         self.last_output_token_count = None
+        # ``True`` means one or both counts were estimated locally because the
+        # provider response did not expose usage telemetry.  Keep this bit next
+        # to the counts so MeteredModel can preserve the provenance in the
+        # shared BudgetLedger rather than misreporting the fallback as exact.
+        self.last_token_usage_estimated = False
         self.total_input_token_count = 0
         self.total_output_token_count = 0
         self.kwargs = kwargs
@@ -229,6 +234,7 @@ class Model:
 
         self.last_input_token_count = input_count
         self.last_output_token_count = output_count
+        self.last_token_usage_estimated = bool(estimated)
 
         if input_count is not None:
             self.total_input_token_count += input_count
@@ -238,6 +244,7 @@ class Model:
     def reset_token_counters(self) -> None:
         self.last_input_token_count = None
         self.last_output_token_count = None
+        self.last_token_usage_estimated = False
         self.total_input_token_count = 0
         self.total_output_token_count = 0
 
@@ -282,6 +289,7 @@ class Model:
         return {
             "input_token_count": self.last_input_token_count,
             "output_token_count": self.last_output_token_count,
+            "estimated": self.last_token_usage_estimated,
         }
 
     def get_total_token_counts(self) -> Dict[str, int]:

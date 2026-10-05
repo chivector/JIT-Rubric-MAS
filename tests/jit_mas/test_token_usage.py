@@ -4,6 +4,8 @@ from jit_mas.token_usage import (
     summarize_outcome,
     usage_totals_from_slots,
 )
+from jit_mas.budget import BudgetLedger, MeteredModel
+from scripts.models.base import Model
 
 
 def test_summarize_budget_preserves_provider_and_estimated_usage_by_stage():
@@ -67,3 +69,24 @@ def test_slot_aggregate_ignores_pending_and_sums_terminal_rows():
     assert usage["total_tokens"] == 17
     assert usage["estimated_tokens"] == 12
     assert usage["source"] == "mixed"
+
+
+def test_model_estimate_flag_reaches_shared_budget_ledger():
+    model = Model()
+    model._record_token_usage(12, 4, estimated=True)
+    assert model.get_token_counts() == {
+        "input_token_count": 12, "output_token_count": 4, "estimated": True,
+    }
+
+    class Provider:
+        def __call__(self, messages, **kwargs):
+            return "answer"
+
+        def get_token_counts(self):
+            return {"input_token_count": 12, "output_token_count": 4, "estimated": True}
+
+    ledger = BudgetLedger(max_calls=1, max_tokens=100)
+    MeteredModel(Provider(), ledger, "inference", max_tokens=16)([])
+    record = ledger.snapshot()["records"][0]
+    assert record["input_tokens"] == 12 and record["output_tokens"] == 4
+    assert record["estimated"] is True

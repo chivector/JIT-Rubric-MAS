@@ -79,11 +79,15 @@ class BudgetLedger:
             self._pending[ticket] = (stage, agent_id, input_bound, output_bound)
             return ticket
 
-    def settle(self, ticket, input_tokens=None, output_tokens=None, *, error="", elapsed=0, metadata=None):
+    def settle(self, ticket, input_tokens=None, output_tokens=None, *, error="", elapsed=0,
+               metadata=None, estimated=None):
         with self._lock:
             stage, agent_id, inp, out = self._pending.pop(ticket)
             self._reserved -= inp + out
-            estimated = input_tokens is None or output_tokens is None
+            if estimated is None:
+                estimated = input_tokens is None or output_tokens is None
+            else:
+                estimated = bool(estimated) or input_tokens is None or output_tokens is None
             used_in = inp if input_tokens is None else max(0, int(input_tokens))
             used_out = out if output_tokens is None else max(0, int(output_tokens))
             self._tokens += used_in + used_out
@@ -190,6 +194,7 @@ class MeteredModel:
             content = getattr(response, "content", str(response))
             self.ledger.settle(ticket, counts.get("input_token_count"),
                                counts.get("output_token_count"), elapsed=time.monotonic() - start,
+                               estimated=counts.get("estimated"),
                                metadata={"context": context_record, "request": copy.deepcopy(
                                    getattr(self.model, "last_request_metadata", {}))})
             self.calls.append({"messages": copy.deepcopy(messages), "content": content,
