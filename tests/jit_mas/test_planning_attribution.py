@@ -756,6 +756,148 @@ def test_attribution_corrections_preserve_evidence_exchange_limits():
     assert sum("validation_errors" in row for row in analyzer.call_records) == 4
 
 
+def _stale_question_attribution_fixture():
+    """Return a two-agent attribution setup for stale-roster regression tests."""
+    graph = RubricGraph(rubrics=[rubric()])
+    spec = TeamSpec.model_validate(team([agent(), agent("a2")], {"r1": ["a1", "a2"]}))
+    alignment = RubricAlignment(matches=[{"predicted_ids": ["r1"], "evaluated_ids": ["e1"],
+        "relation": "equivalent", "confidence": 0.7, "rationale": "Evidence requirement"}])
+    result = {"answer": "Submitted", "metadata": {"events": [
+        {"event_id": "observed", "agent_id": "a1", "kind": "artifact_published",
+         "content": "Evidence"}]},
+        "sub_runs": [{"metadata": {"agent_id": aid}, "trajectory": [
+            {"model_input_messages": [{"content": aid + "-input"}],
+             "model_output_messages": {"content": aid + "-reply"}}]}
+            for aid in ("a1", "a2")]}
+    return graph, spec, alignment, result
+
+
+def test_stale_outline_questions_get_one_correction_then_filter_only_unknown_keys():
+    graph, spec, alignment, result = _stale_question_attribution_fixture()
+    global_inputs = []
+    local_questions = {}
+    valid_finding = {"finding_id": "f", "rubric_ids": ["r1"], "agent_ids": ["a1"],
+                     "categories": ["execution"], "hypothesis": "Observed evidence supports the answer",
+                     "supporting_evidence": ["observed"]}
+
+    def respond(data):
+        phase = data["phase"]
+        if phase == "attribute_global":
+            global_inputs.append(copy.deepcopy(data))
+            return {"questions": {"a1": ["Check the published evidence"],
+                                   "a2": ["Check the dependent handoff"],
+                                   "stale-agent": ["Question from an old roster"]}}
+        if phase == "attribute_local":
+            local_questions[data["agent_id"]] = list(data["questions"])
+            return {"findings": []}
+        if phase == "attribute_integrate":
+            return {"findings": [valid_finding]}
+        raise AssertionError(f"unexpected phase {phase}")
+
+    model = Scripted(respond)
+    analyzer = RubricAttributor(model, max_parallel=1)
+    output = analyzer.attribute(PublicTask(task_id="t", question="Compare"), graph, graph,
+        spec, result, feedback(), global_alignment=alignment, planned_alignment=alignment)
+
+    assert output[0].finding_id == "f"
+    assert len(global_inputs) == 2
+    assert "unknown agent" in global_inputs[1]["response_correction"]["validation_errors"][0]["message"]
+    assert analyzer.last_global_outline.questions == {
+        "a1": ["Check the published evidence"], "a2": ["Check the dependent handoff"]}
+    assert local_questions == {
+        "a1": ["Check the published evidence"], "a2": ["Check the dependent handoff"]}
+    global_record = [row for row in analyzer.call_records if row["phase"] == "attribute_global"]
+    assert len(global_record) == 2
+    assert "validation_errors" in global_record[0]
+    assert "validation_errors" not in global_record[1]
+
+
+def test_stale_outline_questions_fail_closed_without_a_correction_budget():
+    graph, spec, alignment, result = _stale_question_attribution_fixture()
+
+    def respond(data):
+        assert data["phase"] == "attribute_global"
+        return {"questions": {"a1": ["Valid question"], "stale-agent": ["Old question"]}}
+
+    analyzer = RubricAttributor(Scripted(respond), max_corrections=0)
+    with pytest.raises(ValueError, match="unknown agent"):
+        analyzer.attribute(PublicTask(task_id="t", question="Compare"), graph, graph,
+                           spec, result, feedback(), global_alignment=alignment,
+                           planned_alignment=alignment)
+    assert len(analyzer.call_records) == 1
+    assert analyzer.call_records[0]["phase"] == "attribute_global"
+    assert "validation_errors" in analyzer.call_records[0]
+
+
+@pytest.mark.parametrize(("field", "message"), [
+    ("agent_ids", "unknown agents or rubrics"),
+    ("rubric_ids", "unknown agents or rubrics"),
+    ("supporting_evidence", "invented an evidence reference"),
+])
+def test_stale_question_filter_does_not_weaken_final_finding_validation(field, message):
+    graph, spec, alignment, result = _stale_question_attribution_fixture()
+    calls = Counter()
+
+    def respond(data):
+        phase = data["phase"]
+        calls[phase] += 1
+        if phase == "attribute_global":
+            return {"questions": {"a1": ["Keep this"], "stale-agent": ["Drop this"]}}
+        if phase == "attribute_integrate":
+            finding = {"finding_id": "f", "rubric_ids": ["r1"], "agent_ids": ["a1"],
+                       "categories": ["execution"], "hypothesis": "Unsupported final claim",
+                       "supporting_evidence": ["observed"]}
+            finding[field] = (["ghost-agent"] if field == "agent_ids" else
+                              ["ghost-rubric"] if field == "rubric_ids" else ["invented"])
+            return {"findings": [finding]}
+        raise AssertionError(f"unexpected phase {phase}")
+
+    analyzer = RubricAttributor(Scripted(respond), local_attribution=False)
+    with pytest.raises(ValueError, match=message):
+        analyzer.attribute(PublicTask(task_id="t", question="Compare"), graph, graph,
+                           spec, result, feedback(), global_alignment=alignment,
+                           planned_alignment=alignment)
+    assert analyzer.last_global_outline.questions == {"a1": ["Keep this"]}
+    assert calls == {"attribute_global": 2, "attribute_integrate": 2}
+
+
+def test_stale_question_filter_does_not_weaken_proposal_evidence_validation():
+    graph, spec, alignment, result = _stale_question_attribution_fixture()
+    finding = {"finding_id": "f", "rubric_ids": ["r1"], "agent_ids": ["a1"],
+               "categories": ["execution"], "hypothesis": "Observed evidence supports the answer",
+               "supporting_evidence": ["observed"]}
+    valid = {"proposal_id": "p", "source_task_id": "t", "base_version": 0,
+             "experience": {"experience_id": "x", "bank": "execution",
+                 "instruction": "Cross-check source disagreements", "applicability": "Conflicting evidence",
+                 "capability": "evidence comparison", "source_task_ids": ["t"],
+                 "evidence": ["observed"], "counterevidence": []},
+             "diff": "+ cross-check before synthesis", "rationale": "Observed source consistency",
+             "evidence": ["observed"], "expected_benefit": "Fewer unsupported comparisons"}
+    invalid = copy.deepcopy(valid)
+    invalid["evidence"] = ["invented"]
+    phases = Counter()
+
+    def respond(data):
+        phase = data["phase"]
+        phases[phase] += 1
+        if phase == "attribute_global":
+            return {"questions": {"a1": ["Keep this"], "stale-agent": ["Drop this"]}}
+        if phase == "attribute_integrate":
+            return {"findings": [finding]}
+        if phase == "propose":
+            return {"proposals": [invalid]}
+        raise AssertionError(f"unexpected phase {phase}")
+
+    analyzer = RubricAttributor(Scripted(respond), local_attribution=False)
+    findings = analyzer.attribute(PublicTask(task_id="t", question="Compare"), graph, graph,
+        spec, result, feedback(), global_alignment=alignment, planned_alignment=alignment)
+    assert analyzer.last_global_outline.questions == {"a1": ["Keep this"]}
+    assert findings[0].supporting_evidence == ["observed"]
+    with pytest.raises(ValueError, match="Proposal evidence is not supported"):
+        analyzer.propose(PublicTask(task_id="t", question="Compare"), findings, 0)
+    assert phases == {"attribute_global": 2, "attribute_integrate": 1, "propose": 2}
+
+
 def test_semantic_alignment_paraphrase_partial_many_to_many_and_omissions():
     graph = RubricGraph(rubrics=[rubric(), rubric("r2", "Discuss uncertainty"),
                                rubric("r3", "Readable prose"), rubric("r4", "Trace source support")])
