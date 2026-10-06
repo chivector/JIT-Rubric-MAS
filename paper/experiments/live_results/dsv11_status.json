@@ -1,0 +1,92 @@
+{
+  "schema_version": "dsv11-live-v1",
+  "campaign": "dsv11",
+  "phase": "full",
+  "registered_slots": 1725,
+  "statuses": {
+    "complete": 202,
+    "failed": 3,
+    "missing": 60,
+    "pending": 1456,
+    "started": 4
+  },
+  "terminal_slots": 265,
+  "active": 4,
+  "test_feedback_released": false,
+  "registration_hash": "2befe4b1fa768a84cc5596cc1832163a3fab9df9d5d22790c4537c96a806a4d6",
+  "batch_selections": [
+    {
+      "source": "deepsearchqa",
+      "run_id": 0,
+      "batch_index": 0,
+      "candidate_index": 1,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.17,
+      "eligible": true
+    },
+    {
+      "source": "deepsearchqa",
+      "run_id": 0,
+      "batch_index": 1,
+      "candidate_index": 2,
+      "complete_evaluations": 9,
+      "minimum_complete": 9,
+      "selection_utility": 0.29,
+      "eligible": true
+    },
+    {
+      "source": "deepsearchqa",
+      "run_id": 0,
+      "batch_index": 2,
+      "candidate_index": 1,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.22999999999999998,
+      "eligible": true
+    },
+    {
+      "source": "researchrubrics",
+      "run_id": 0,
+      "batch_index": 0,
+      "candidate_index": 0,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.4681445553131055,
+      "eligible": true
+    },
+    {
+      "source": "researchrubrics",
+      "run_id": 0,
+      "batch_index": 1,
+      "candidate_index": 1,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.45271832984309546,
+      "eligible": true
+    },
+    {
+      "source": "researchrubrics",
+      "run_id": 0,
+      "batch_index": 2,
+      "candidate_index": 0,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.45677997656252434,
+      "eligible": true
+    },
+    {
+      "source": "writingbench",
+      "run_id": 0,
+      "batch_index": 0,
+      "candidate_index": 1,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.7911111111111111,
+      "eligible": true
+    }
+  ],
+  "final_report_available": false,
+  "paper_summary_available": false,
+  "observed_at": "2026-10-06T16:15:33.989691+00:00"
+}
