@@ -4,13 +4,13 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 224,
+    "complete": 228,
     "failed": 4,
     "missing": 60,
-    "pending": 1433,
+    "pending": 1429,
     "started": 4
   },
-  "terminal_slots": 288,
+  "terminal_slots": 292,
   "active": 4,
   "test_feedback_released": false,
   "registration_hash": "2befe4b1fa768a84cc5596cc1832163a3fab9df9d5d22790c4537c96a806a4d6",
@@ -88,5 +88,5 @@
   ],
   "final_report_available": false,
   "paper_summary_available": false,
-  "observed_at": "2026-10-06T16:34:17.532064+00:00"
+  "observed_at": "2026-10-06T16:36:21.230111+00:00"
 }
