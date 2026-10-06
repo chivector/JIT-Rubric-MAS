@@ -57,7 +57,9 @@ def run_preflight(config_path: Path, output_path: Path) -> dict:
             # scheduling itself is covered by the dedicated synthetic protocol
             # tests and is still required in the native config above.
             software_config = config.model_copy(update={"backend": "scripted", "models": {},
-                                                        "execution_mode": "single_pass"})
+                                                        "execution_mode": "single_pass",
+                                                        "public_refinement": False,
+                                                        "public_refinement_guard": False})
             pipeline = make_pipeline(software_config, store, root / "runs")
             evolved = pipeline.run("evolve", limit=1)
             heldout = pipeline.run("evaluate", limit=1)

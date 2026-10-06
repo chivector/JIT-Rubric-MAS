@@ -94,9 +94,20 @@ class IndependentEnvironment:
                 load_evidence_tasks({task_id: dataset.tasks[task_id] for task_id in selected},
                                     evidence, expected_count=len(selected))
                 evidence_hash = evidence_hash or evidence_identity(evidence)
+            checker_root = registered.get("checker_source_root")
+            checker_hash = None
+            if name in {"ifeval", "ifbench"}:
+                if not isinstance(checker_root, str) or not checker_root.strip():
+                    raise ValueError(f"{name} requires a pinned checker_source_root")
+                checker_root = _path(checker_root, base)
+                checker_hash = evidence_identity(checker_root)
+            elif checker_root is not None:
+                raise ValueError(f"Only instruction benchmarks may register checker_source_root: {name}")
             self.datasets[name] = dataset
             self.materials[name] = {"data": str(data), "evidence_dir": str(evidence) if evidence else None,
-                                    "dataset_sha256": dataset.dataset_sha256, "evidence": evidence_hash}
+                                    "dataset_sha256": dataset.dataset_sha256, "evidence": evidence_hash,
+                                    "checker_source_root": str(checker_root) if checker_root else None,
+                                    "checker_source": checker_hash}
             if name in SOURCES:
                 for task_id in membership["validation"]:
                     self.bounds[task_id] = ([1.0, 10.0] if name == "writingbench" else
@@ -171,6 +182,8 @@ class IndependentEnvironment:
             changed = changed or file_hash(material["data"]) != material["dataset_sha256"]
             if material["evidence_dir"]:
                 changed = changed or evidence_identity(material["evidence_dir"]) != material["evidence"]
+            if material.get("checker_source_root"):
+                changed = changed or evidence_identity(material["checker_source_root"]) != material["checker_source"]
         if changed:
             raise CheckpointIntegrityError("Frozen campaign code, configuration, data or evidence changed")
 

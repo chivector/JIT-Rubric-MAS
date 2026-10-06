@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import math
 from pathlib import Path
+import uuid
 from typing import Callable, Mapping
 
 from .experience import ExperienceStore
@@ -26,7 +27,7 @@ class UnresolvedSourceAttempt(RuntimeError):
 
 def _write_json(path: Path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     temporary.write_text(json.dumps(value, indent=2, ensure_ascii=True, allow_nan=False), encoding="utf-8")
     temporary.replace(path)
 
@@ -39,7 +40,7 @@ def snapshot_store(snapshot: ExperienceSnapshot, path) -> ExperienceStore:
     """Materialize one immutable historical state and return an independent RO connection."""
     path = Path(path)
     if not path.exists():
-        temporary = path.with_suffix(path.suffix + ".tmp")
+        temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
         if temporary.exists():
             temporary.unlink()
         store = ExperienceStore(temporary)

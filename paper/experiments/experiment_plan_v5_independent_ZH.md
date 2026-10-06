@@ -1,6 +1,6 @@
 # 六 benchmark 评测、三 benchmark 独立进化：小子集协议 v5
 
-目的：在可承担的工作量内，验证 **ResearchRubrics、DeepSearchQA、WritingBench 分别独立进化的 MAS 生成 meta-agent** 能否改善各自任务，并在三个纯 TEST benchmark 上分别评价全部三个来源的迁移表现。沿用 [原 v5 方案](experiment_plan_v5_ZH.md) 的题数与划分、三个题序种子、五个核心方法及统一 token/超时预算；本版采用任务内多次调用与 VAL/TEST 并行调度。不运行全量 benchmark，不将三个源 benchmark 的经验合并成一个通用版本。
+目的：在可承担的工作量内，验证 **ResearchRubrics、DeepSearchQA、WritingBench 分别独立进化的 MAS 生成 meta-agent** 能否改善各自任务，并在三个纯 TEST benchmark 上分别评价全部三个来源的迁移表现。沿用 [原联合 v5 方案](experiment_plan_v5_joint_ZH.md) 的题数与划分、三个题序种子、五个核心方法及统一 token/超时预算；本版采用任务内多次调用与 VAL/TEST 并行调度。不运行全量 benchmark，不将三个源 benchmark 的经验合并成一个通用版本。
 
 ## 题目与用途
 
@@ -55,7 +55,7 @@ EVO 的角色反思接收自身真实输入/输出 token、模型/工具调用�
 
 Initial 与 Selected 使用相同的多次调用执行器、工具权限及预算，只在经验状态上不同。固定 rubric-MAS 保留固定组织与不进化的设定，使用相同的多次调用、shared-ledger 和工具规则；Direct 与原生 JIT 保留各自方法的执行组织，在匹配的 token/时间/成本预算和工具权限下运行，不强制所有方法调用次数相同。
 
-原 single-pass 文档及旧配置中的 `AgentSpec.max_calls=1`、`team_max_calls=3`、`max_model_calls=200`、零协作轮数和仅一批工具/Writer 禁用外部工具规则不适用于本版；`max_tool_calls=0` 也不能作为新的统一调用次数限制，任务是否允许工具由冻结工具清单决定。正式执行配置必须取消这些次数硬上限，而不是仅把 1 改成较大的固定值。当前旧执行器仍包含相关限制，不能将旧执行器的运行结果冒称符合本版多次调用协议。
+原 single-pass 文档及旧配置中的 `AgentSpec.max_calls=1`、`team_max_calls=3`、`max_model_calls=200`、零协作轮数和仅一批工具/Writer 禁用外部工具规则不适用于本版；`max_tool_calls=0` 也不能作为新的统一调用次数限制，任务是否允许工具由冻结工具清单决定。当前正式 campaign 使用 `iterative_shared_ledger`，配置已取消模型/工具调用次数硬上限，并冻结单题 token/时间预算及并发限制；具体身份见 [运行登记](independent_v5_execution_20261006_ZH.md)。旧执行器的历史结果仍按原契约解释。
 
 ## 工程并行调度
 
@@ -117,4 +117,4 @@ EVO 与 VAL 工作量保持不变。TEST 合计 **2,751** 个任务单元，其�
 
 这是 **subset track**：小样本区间可能较宽；单状态单题一份产物不能估计该状态生成方差；三个种子只控制进化题序，不保证服务端采样种子。不能将结果冒称官方全量、全面优于其他方法或 SOTA；也不能将按来源独立进化与分别迁移的结果描述为同一个通用生成器在六个 benchmark 上的表现。
 
-原 [joint_protocol_v5.json](joint_protocol_v5.json) 仍记录联合进化协议，仅作历史参照，**不是本独立进化版的机器可读注册**；原题目清单仍可按上述规则复用。正式执行前须冻结与本文一致的独立经验库、题序、checkpoint、VAL 选择、完整迁移矩阵、产物库存、多次调用执行契约与并行调度配置。本次只完善实验方案，没有修改运行代码或发起真实 API 实验；旧 single-pass 执行器及 v3 运行入口不能直接冒充本版的完整执行。正式结果只由与本独立进化版冻结身份匹配的真实运行记录产生。
+原 [joint_protocol_v5.json](joint_protocol_v5.json) 仍记录联合进化协议，仅作历史参照，**不是本独立进化版的机器可读注册**。当前正式 campaign 使用 [independent_protocol_v5.json](independent_protocol_v5.json)，已冻结九条独立轨迹、题序、checkpoint、VAL 选择、完整迁移矩阵、产物库存、多次调用执行契约和并发配置，并通过 `scripts/run_independent_experiment.py` 执行真实 API 实验。旧 single-pass 执行器及 v3 运行记录仍属历史；正式结果只由与本独立进化版冻结身份匹配的真实运行记录产生。EVO/VAL、TEST 封存与评分及论文统计分别登记，不把进行中的工程快照解释为最终性能。

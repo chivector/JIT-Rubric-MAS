@@ -9,8 +9,10 @@ from jit_mas.budget import MeteredModel
 from jit_mas.config import MASConfig
 from jit_mas.experience import ExperienceStore
 from jit_mas.offline import FixtureModel, FixtureModels
-from jit_mas.pipeline import MASPipeline, attribution_source_digest, submitted_source_digest
-from jit_mas.schemas import EvaluationFeedback, RubricFeedback, digest
+from jit_mas.pipeline import EvolutionDecision, MASPipeline, attribution_source_digest, submitted_source_digest
+from jit_mas.schemas import (AgentEvolutionUpdate, AgentPoolOperation, AttributionFinding,
+                              EvaluationFeedback, RubricFeedback, digest)
+from jit_mas.agent_pool import seed_pool
 from scripts.run_jit_mas import make_pipeline
 
 
@@ -95,6 +97,32 @@ def read_artifact(run_dir, name):
 def phase_calls(models):
     return [json.loads(call["messages"][-1]["content"]) for call in models.calls
             if call["role"] in {"global", "local"}]
+
+
+def test_local_agent_findings_drop_evidence_outside_agent_scope():
+    finding = AttributionFinding(finding_id="f1", rubric_ids=["r1"], categories=["execution"],
+        hypothesis="A local process observation.", supporting_evidence=["own", "other"],
+        opposing_evidence=["other"])
+    localized = MASPipeline._localize_agent_findings([finding], {"own"})[0]
+    assert localized.supporting_evidence == ["own"]
+    assert localized.opposing_evidence == []
+
+
+def test_meta_rejects_direct_update_and_specialize_overlap():
+    pool = seed_pool()
+    writer = next(profile for profile in pool.profiles if profile.pool_agent_id == "writer")
+    operation = AgentPoolOperation(operation_id="specialize-writer", kind="specialize",
+        source_task_id="task", base_pool_version=pool.version, target_agent_ids=["writer"],
+        base_agent_versions={"writer": writer.version}, profiles=[writer], evidence=["evidence"],
+        rationale="Improve the retained writer harness.", expected_benefit="Better local quality.",
+        token_cost_tradeoff="No additional execution role.")
+    update = AgentEvolutionUpdate(update_id="update-writer", pool_agent_id="writer",
+        base_agent_version=writer.version, source_task_id="task", evidence=["evidence"])
+    decision = EvolutionDecision(agent_update_ids=[update.update_id], pool_operations=[operation],
+        rationale="Choose one atomic harness change.")
+    with pytest.raises(ValueError, match="cannot both change"):
+        MASPipeline._validate_evolution_decision(decision, [], [update], pool=pool,
+            task_id="task", valid_ids={"evidence"})
 
 
 @pytest.mark.parametrize("meta_bank", ["rubric", "organization"])

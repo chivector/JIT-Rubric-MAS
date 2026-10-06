@@ -1,7 +1,9 @@
 """Offline vertical integration through real JIT generation/loading/execution."""
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier, Lock
 
 import pytest
 
@@ -9,7 +11,7 @@ from jit_mas.config import MASConfig, NativeModels
 from jit_mas.experience import ExperienceStore
 from jit_mas.offline import FixtureModels
 from jit_mas.schemas import AgentSpec, Experience, ExperienceSnapshot, TeamSpec, digest
-from jit_mas.pipeline import attribution_source_digest, submitted_source_digest
+from jit_mas.pipeline import attribution_source_digest, submitted_source_digest, write_json
 from scripts.run_jit_mas import make_pipeline
 
 
@@ -28,6 +30,32 @@ def setup(tmp_path, monkeypatch):
 
 def read_run(outcome, filename):
     return json.loads((Path(outcome["run_dir"]) / filename).read_text(encoding="utf-8"))
+
+
+def test_parallel_json_writes_to_same_path_use_independent_atomic_files(tmp_path, monkeypatch):
+    target = tmp_path / "planning_calls.json"
+    documents = [{"worker": index, "records": [f"worker-{index}"] * 1000} for index in range(8)]
+    ready_to_replace = Barrier(len(documents))
+    replacement_lock = Lock()
+    temporary_paths = []
+    original_replace = Path.replace
+
+    def replace_after_all_writes(path, destination):
+        if destination == target:
+            temporary_paths.append(path)
+            ready_to_replace.wait(timeout=10)
+        with replacement_lock:
+            return original_replace(path, destination)
+
+    monkeypatch.setattr(Path, "replace", replace_after_all_writes)
+    with ThreadPoolExecutor(max_workers=len(documents)) as workers:
+        futures = [workers.submit(write_json, target, document) for document in documents]
+        for future in futures:
+            future.result()
+
+    assert len(set(temporary_paths)) == len(documents)
+    assert json.loads(target.read_text(encoding="utf-8")) in documents
+    assert all(not path.exists() for path in temporary_paths)
 
 
 def test_evolution_commit_failure_retains_settled_usage(setup, monkeypatch):

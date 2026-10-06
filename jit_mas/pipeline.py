@@ -86,6 +86,9 @@ referenced existing parents and any child/retained ancestor affected by implicit
 reparenting, evidence from valid_evidence_ids, rationale, expected_benefit
 and token_cost_tradeoff. New profiles use version 1 and current-task provenance/evidence;
 specialize preserves identity and its base version for the transaction to increment.
+Within one decision, an existing member may be changed by a direct agent update or a
+specialize operation, never both. For specialize, copy the bound base version exactly;
+the host transaction increments it after validation.
 add creates profiles; delete/prune removes targets; split retains one general parent and
 adds at least two children; merge replaces at least two targets with one new profile;
 specialize replaces one target's complete harness; reorganize uses parent_assignments.
@@ -128,7 +131,7 @@ def write_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     if hasattr(value, "model_dump"):
         value = value.model_dump(mode="json")
-    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     temporary.write_text(json.dumps(value, indent=2, ensure_ascii=True, allow_nan=False), encoding="utf-8")
     temporary.replace(path)
 
@@ -308,6 +311,13 @@ class MASPipeline:
             return
         from .agent_pool import apply_evolution
         selected = [update for update in updates if update.update_id in decision.agent_update_ids]
+        specialized_targets = {agent_id for operation in decision.pool_operations
+                               if operation.kind == "specialize"
+                               for agent_id in operation.target_agent_ids}
+        overlapping_members = {update.pool_agent_id for update in selected} & specialized_targets
+        if overlapping_members:
+            raise ValueError("Agent update and specialize cannot both change the same member: "
+                             + ", ".join(sorted(overlapping_members)))
         members = {profile.pool_agent_id for profile in pool.profiles}
         if any(update.pool_agent_id not in members for update in selected):
             raise ValueError("Temporary harness retention requires an Add operation")
@@ -364,6 +374,15 @@ class MASPipeline:
             for lesson in profile.memory:
                 valid.update(lesson.evidence + lesson.counterevidence)
         return valid
+
+    @staticmethod
+    def _localize_agent_findings(findings, valid_ids):
+        return [finding.model_copy(update={
+            "supporting_evidence": [item for item in finding.supporting_evidence
+                                     if item in valid_ids],
+            "opposing_evidence": [item for item in finding.opposing_evidence
+                                   if item in valid_ids],
+        }) for finding in findings]
 
     @staticmethod
     def _retention_candidates(team, updates, task_id):
@@ -455,6 +474,7 @@ class MASPipeline:
             valid_ids = set(evidence["valid_evidence_ids"])
             findings = [finding for finding in attributed_findings
                         if agent.agent_id in finding.agent_ids]
+            findings = self._localize_agent_findings(findings, valid_ids)
             payload = {"task": task, "agent": agent, "team": team, "agent_profile": profile,
                        "local_execution": local, "attribution_findings": findings,
                        "credit_assignment": assignment,
