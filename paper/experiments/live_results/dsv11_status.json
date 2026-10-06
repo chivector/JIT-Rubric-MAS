@@ -5,13 +5,12 @@
   "registered_slots": 1725,
   "statuses": {
     "complete": 612,
-    "failed": 156,
+    "failed": 168,
     "incomplete": 2,
-    "missing": 943,
-    "pending": 12
+    "missing": 943
   },
-  "terminal_slots": 1711,
-  "active": 4,
+  "terminal_slots": 1723,
+  "active": 0,
   "test_feedback_released": false,
   "registration_hash": "2befe4b1fa768a84cc5596cc1832163a3fab9df9d5d22790c4537c96a806a4d6",
   "batch_selections": [
@@ -236,7 +235,7 @@
       "eligible": true
     }
   ],
-  "final_report_available": false,
-  "paper_summary_available": false,
-  "observed_at": "2026-10-06T20:04:48.589132+00:00"
+  "final_report_available": true,
+  "paper_summary_available": true,
+  "observed_at": "2026-10-06T20:06:54.994787+00:00"
 }
