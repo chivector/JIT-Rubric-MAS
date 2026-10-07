@@ -4,21 +4,21 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 831,
-    "failed": 95,
+    "complete": 833,
+    "failed": 106,
     "incomplete": 8,
-    "pending": 695,
-    "started": 4,
+    "pending": 684,
+    "started": 2,
     "submitted": 92
   },
-  "terminal_slots": 934,
+  "terminal_slots": 947,
   "active": 4,
   "test_feedback_released": false,
   "test": {
     "registered_slots": 573,
     "statuses": {
-      "failed": 63,
-      "pending": 418,
+      "failed": 74,
+      "pending": 407,
       "submitted": 92
     },
     "complete": false
@@ -639,25 +639,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 831,
+    "complete_slot_count": 833,
     "tokens": {
-      "total": 227431595,
-      "input": 210968647,
-      "output": 16462948,
-      "model_calls": 14954
+      "total": 228017442,
+      "input": 211513402,
+      "output": 16504040,
+      "model_calls": 14975
     },
     "latency": {
       "slot": {
-        "sample_count": 831,
-        "mean_seconds": 145.2069494584838,
-        "median_seconds": 125.09299999999348,
-        "p90_seconds": 253.06200000000536
+        "sample_count": 833,
+        "mean_seconds": 145.22492917166872,
+        "median_seconds": 125.45299999997951,
+        "p90_seconds": 253.0402000000002
       },
       "model": {
-        "sample_count": 14954,
-        "mean_seconds": 15.185888324194297,
-        "median_seconds": 12.140999999974156,
-        "p90_seconds": 27.058200000022783
+        "sample_count": 14975,
+        "mean_seconds": 15.185600534223802,
+        "median_seconds": 12.14100000000326,
+        "p90_seconds": 27.047000000008847
       }
     },
     "by_source_kind": {
@@ -682,23 +682,23 @@
         }
       },
       "deepresearch_bench_ii/evolution": {
-        "sample_count": 17,
-        "tokens": 3868170,
-        "input_tokens": 3518424,
-        "output_tokens": 349746,
-        "model_calls": 165,
-        "score_mean": 0.32791502701760616,
+        "sample_count": 19,
+        "tokens": 4454017,
+        "input_tokens": 4063179,
+        "output_tokens": 390838,
+        "model_calls": 186,
+        "score_mean": 0.30777012538822257,
         "slot_latency": {
-          "sample_count": 17,
-          "mean_seconds": 154.96952941176406,
+          "sample_count": 19,
+          "mean_seconds": 154.73015789473644,
           "median_seconds": 156.43699999997625,
-          "p90_seconds": 199.62799999999118
+          "p90_seconds": 194.4469999999972
         },
         "model_latency": {
-          "sample_count": 165,
-          "mean_seconds": 16.310666666667252,
-          "median_seconds": 13.89100000000326,
-          "p90_seconds": 27.862400000012702
+          "sample_count": 186,
+          "mean_seconds": 16.1605053763442,
+          "median_seconds": 13.898500000010245,
+          "p90_seconds": 25.89849999998114
         }
       },
       "deepresearch_bench_ii/validation": {
@@ -904,18 +904,18 @@
     },
     "official_metrics_by_source_kind": {
       "deepresearch_bench_ii/evolution": {
-        "sample_count": 17,
+        "sample_count": 19,
         "means": {
-          "Analysis": 0.2627630185634192,
-          "InformationRecall": 0.27176316014360197,
-          "Overall": 0.32791502701760616,
-          "Presentation": 0.9007469654528478
+          "Analysis": 0.25344506126647237,
+          "InformationRecall": 0.24893374548956312,
+          "Overall": 0.30777012538822257,
+          "Presentation": 0.9006683375104428
         },
         "metric_sample_counts": {
-          "Analysis": 17,
-          "InformationRecall": 17,
-          "Overall": 17,
-          "Presentation": 17
+          "Analysis": 19,
+          "InformationRecall": 19,
+          "Overall": 19,
+          "Presentation": 19
         }
       },
       "deepresearch_bench_ii/validation": {
@@ -994,5 +994,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T12:21:53.456025+00:00"
+  "observed_at": "2026-10-07T12:24:03.778895+00:00"
 }
