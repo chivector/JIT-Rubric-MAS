@@ -8,9 +8,9 @@
     "deferred": 1098,
     "failed": 54,
     "incomplete": 6,
-    "pending": 66,
+    "pending": 60,
     "started": 4,
-    "submitted": 30
+    "submitted": 36
   },
   "terminal_slots": 527,
   "active": 4,
@@ -20,9 +20,9 @@
     "statuses": {
       "deferred": 440,
       "failed": 33,
-      "pending": 66,
+      "pending": 60,
       "started": 4,
-      "submitted": 30
+      "submitted": 36
     },
     "complete": false
   },
@@ -680,5 +680,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T07:59:19.287713+00:00"
+  "observed_at": "2026-10-07T08:01:27.621196+00:00"
 }
