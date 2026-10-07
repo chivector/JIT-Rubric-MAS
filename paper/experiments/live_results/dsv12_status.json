@@ -4,23 +4,22 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 1059,
+    "complete": 1062,
     "failed": 134,
     "incomplete": 11,
-    "pending": 384,
+    "pending": 372,
     "started": 4,
-    "submitted": 133
+    "submitted": 142
   },
-  "terminal_slots": 1204,
+  "terminal_slots": 1207,
   "active": 4,
   "test_feedback_released": false,
   "test": {
     "registered_slots": 573,
     "statuses": {
       "failed": 91,
-      "pending": 348,
-      "started": 1,
-      "submitted": 133
+      "pending": 340,
+      "submitted": 142
     },
     "complete": false
   },
@@ -104,6 +103,18 @@
       "eligible": true,
       "selected_pool_operation_count": 0,
       "selected_agent_update_count": 0
+    },
+    {
+      "source": "deepresearch_bench_ii",
+      "run_id": 0,
+      "batch_index": 6,
+      "candidate_index": 2,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.30242203118996847,
+      "eligible": true,
+      "selected_pool_operation_count": 0,
+      "selected_agent_update_count": 2
     },
     {
       "source": "deepsearchqa",
@@ -482,9 +493,9 @@
       "agent_update_count": 4,
       "state_changed_count": 2,
       "fallback_count": 1,
-      "selected_candidate_index": null,
-      "selected_pool_operation_count": null,
-      "selected_agent_update_count": null
+      "selected_candidate_index": 2,
+      "selected_pool_operation_count": 0,
+      "selected_agent_update_count": 2
     },
     {
       "source": "deepsearchqa",
@@ -803,25 +814,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 1059,
+    "complete_slot_count": 1062,
     "tokens": {
-      "total": 285188797,
-      "input": 263423055,
-      "output": 21765742,
-      "model_calls": 17355
+      "total": 286126693,
+      "input": 264294275,
+      "output": 21832418,
+      "model_calls": 17386
     },
     "latency": {
       "slot": {
-        "sample_count": 1059,
-        "mean_seconds": 146.48335694051025,
-        "median_seconds": 130.45300000003772,
-        "p90_seconds": 245.54420000000394
+        "sample_count": 1062,
+        "mean_seconds": 146.431968926554,
+        "median_seconds": 130.48399999999674,
+        "p90_seconds": 245.2723000000027
       },
       "model": {
-        "sample_count": 17355,
-        "mean_seconds": 15.251047767214255,
+        "sample_count": 17386,
+        "mean_seconds": 15.24634665823094,
         "median_seconds": 12.312000000005355,
-        "p90_seconds": 27.024999999994186
+        "p90_seconds": 27.01500000001397
       }
     },
     "by_source_kind": {
@@ -866,23 +877,23 @@
         }
       },
       "deepresearch_bench_ii/validation": {
-        "sample_count": 197,
-        "tokens": 51065662,
-        "input_tokens": 46768101,
-        "output_tokens": 4297561,
-        "model_calls": 1980,
-        "score_mean": 0.2842280991436233,
+        "sample_count": 200,
+        "tokens": 52003558,
+        "input_tokens": 47639321,
+        "output_tokens": 4364237,
+        "model_calls": 2011,
+        "score_mean": 0.28162563656057854,
         "slot_latency": {
-          "sample_count": 197,
-          "mean_seconds": 140.1153756345186,
-          "median_seconds": 134.0,
-          "p90_seconds": 181.46559999997262
+          "sample_count": 200,
+          "mean_seconds": 139.93802500000078,
+          "median_seconds": 134.4529999999795,
+          "p90_seconds": 181.36239999997778
         },
         "model_latency": {
-          "sample_count": 1980,
-          "mean_seconds": 14.100793434344961,
-          "median_seconds": 12.765499999979511,
-          "p90_seconds": 21.81300000002375
+          "sample_count": 2011,
+          "mean_seconds": 14.077881650921299,
+          "median_seconds": 12.75,
+          "p90_seconds": 21.75
         }
       },
       "deepsearchqa/batch_evolution": {
@@ -1083,18 +1094,18 @@
         }
       },
       "deepresearch_bench_ii/validation": {
-        "sample_count": 197,
+        "sample_count": 200,
         "means": {
-          "Analysis": 0.2892554991539763,
-          "InformationRecall": 0.24588393766628286,
-          "Overall": 0.2842280991436233,
-          "Presentation": 0.8101281121585691
+          "Analysis": 0.29012499999999997,
+          "InformationRecall": 0.24219567860128863,
+          "Overall": 0.28162563656057854,
+          "Presentation": 0.8122619047619049
         },
         "metric_sample_counts": {
-          "Analysis": 197,
-          "InformationRecall": 197,
-          "Overall": 197,
-          "Presentation": 197
+          "Analysis": 200,
+          "InformationRecall": 200,
+          "Overall": 200,
+          "Presentation": 200
         }
       }
     }
@@ -1104,13 +1115,13 @@
       {
         "source": "deepresearch_bench_ii",
         "run_id": 0,
-        "position": 30,
-        "state_version": 2,
+        "position": 35,
+        "state_version": 3,
         "pool_size": 6,
         "structural_history_count": 0,
-        "applied_updates_count": 4,
-        "applied_proposals_count": 2,
-        "experience_count": 2
+        "applied_updates_count": 6,
+        "applied_proposals_count": 3,
+        "experience_count": 3
       },
       {
         "source": "deepsearchqa",
@@ -1158,5 +1169,5 @@
       "experience_count": 31
     }
   },
-  "observed_at": "2026-10-07T15:16:07.172263+00:00"
+  "observed_at": "2026-10-07T15:18:19.777164+00:00"
 }
