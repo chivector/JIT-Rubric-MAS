@@ -4,14 +4,14 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 894,
+    "complete": 897,
     "failed": 118,
     "incomplete": 10,
-    "pending": 607,
+    "pending": 604,
     "started": 4,
     "submitted": 92
   },
-  "terminal_slots": 1022,
+  "terminal_slots": 1025,
   "active": 4,
   "test_feedback_released": false,
   "test": {
@@ -689,25 +689,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 894,
+    "complete_slot_count": 897,
     "tokens": {
-      "total": 243946789,
-      "input": 226004466,
-      "output": 17942323,
-      "model_calls": 15632
+      "total": 244540103,
+      "input": 226525374,
+      "output": 18014729,
+      "model_calls": 15660
     },
     "latency": {
       "slot": {
-        "sample_count": 894,
-        "mean_seconds": 144.8879015659957,
-        "median_seconds": 126.61750000002212,
-        "p90_seconds": 252.13169999999815
+        "sample_count": 897,
+        "mean_seconds": 144.90123634336703,
+        "median_seconds": 126.65700000000652,
+        "p90_seconds": 251.7473999999929
       },
       "model": {
-        "sample_count": 15632,
-        "mean_seconds": 15.163132676561023,
+        "sample_count": 15660,
+        "mean_seconds": 15.165389144316844,
         "median_seconds": 12.14100000000326,
-        "p90_seconds": 27.0
+        "p90_seconds": 27.0151000000129
       }
     },
     "by_source_kind": {
@@ -732,23 +732,23 @@
         }
       },
       "deepresearch_bench_ii/evolution": {
-        "sample_count": 20,
-        "tokens": 4640536,
-        "input_tokens": 4227860,
-        "output_tokens": 412676,
-        "model_calls": 196,
-        "score_mean": 0.3185720953092876,
+        "sample_count": 21,
+        "tokens": 4801900,
+        "input_tokens": 4370818,
+        "output_tokens": 431082,
+        "model_calls": 206,
+        "score_mean": 0.307418059789683,
         "slot_latency": {
-          "sample_count": 20,
-          "mean_seconds": 157.3787999999986,
-          "median_seconds": 156.95249999998487,
-          "p90_seconds": 208.44979999997886
+          "sample_count": 21,
+          "mean_seconds": 155.33842857142804,
+          "median_seconds": 156.43699999997625,
+          "p90_seconds": 207.7029999999795
         },
         "model_latency": {
-          "sample_count": 196,
-          "mean_seconds": 16.385413265305516,
-          "median_seconds": 13.91400000001886,
-          "p90_seconds": 25.89849999998114
+          "sample_count": 206,
+          "mean_seconds": 16.164946601941004,
+          "median_seconds": 13.836000000039348,
+          "p90_seconds": 25.07850000000326
         }
       },
       "deepresearch_bench_ii/validation": {
@@ -912,23 +912,23 @@
         }
       },
       "writingbench/evolution": {
-        "sample_count": 33,
-        "tokens": 5280533,
-        "input_tokens": 4698206,
-        "output_tokens": 582327,
-        "model_calls": 299,
-        "score_mean": 8.151515151515152,
+        "sample_count": 35,
+        "tokens": 5712483,
+        "input_tokens": 5076156,
+        "output_tokens": 636327,
+        "model_calls": 317,
+        "score_mean": 8.16,
         "slot_latency": {
-          "sample_count": 33,
-          "mean_seconds": 129.14333333333454,
-          "median_seconds": 129.35900000002584,
-          "p90_seconds": 171.67780000000494
+          "sample_count": 35,
+          "mean_seconds": 131.2521142857166,
+          "median_seconds": 129.73399999999674,
+          "p90_seconds": 172.52500000002328
         },
         "model_latency": {
-          "sample_count": 299,
-          "mean_seconds": 14.55999331103609,
-          "median_seconds": 11.703000000008615,
-          "p90_seconds": 27.190800000017042
+          "sample_count": 317,
+          "mean_seconds": 14.810422712932775,
+          "median_seconds": 11.875,
+          "p90_seconds": 27.506399999989664
         }
       },
       "writingbench/validation": {
@@ -954,18 +954,18 @@
     },
     "official_metrics_by_source_kind": {
       "deepresearch_bench_ii/evolution": {
-        "sample_count": 20,
+        "sample_count": 21,
         "means": {
-          "Analysis": 0.2693442367745773,
-          "InformationRecall": 0.2609968621366536,
-          "Overall": 0.3185720953092876,
-          "Presentation": 0.8956349206349206
+          "Analysis": 0.25651832073769265,
+          "InformationRecall": 0.24925857125506,
+          "Overall": 0.307418059789683,
+          "Presentation": 0.900604686318972
         },
         "metric_sample_counts": {
-          "Analysis": 20,
-          "InformationRecall": 20,
-          "Overall": 20,
-          "Presentation": 20
+          "Analysis": 21,
+          "InformationRecall": 21,
+          "Overall": 21,
+          "Presentation": 21
         }
       },
       "deepresearch_bench_ii/validation": {
@@ -1044,5 +1044,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T13:06:12.878136+00:00"
+  "observed_at": "2026-10-07T13:08:23.732321+00:00"
 }
