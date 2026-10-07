@@ -4,14 +4,14 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 663,
+    "complete": 667,
     "failed": 69,
     "incomplete": 7,
-    "pending": 890,
+    "pending": 886,
     "started": 4,
     "submitted": 92
   },
-  "terminal_slots": 739,
+  "terminal_slots": 743,
   "active": 4,
   "test_feedback_released": false,
   "test": {
@@ -527,25 +527,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 663,
+    "complete_slot_count": 667,
     "tokens": {
-      "total": 188050938,
-      "input": 174856414,
-      "output": 13194524,
-      "model_calls": 13270
+      "total": 188974610,
+      "input": 175740940,
+      "output": 13233670,
+      "model_calls": 13306
     },
     "latency": {
       "slot": {
-        "sample_count": 663,
-        "mean_seconds": 153.0217194570137,
-        "median_seconds": 133.46899999998277,
-        "p90_seconds": 268.1564000000188
+        "sample_count": 667,
+        "mean_seconds": 152.578395802099,
+        "median_seconds": 132.31199999997625,
+        "p90_seconds": 268.1252000000153
       },
       "model": {
-        "sample_count": 13270,
-        "mean_seconds": 15.57783782969116,
-        "median_seconds": 12.40600000001723,
-        "p90_seconds": 27.878200000000664
+        "sample_count": 13306,
+        "mean_seconds": 15.559596046896278,
+        "median_seconds": 12.39100000000326,
+        "p90_seconds": 27.820499999987078
       }
     },
     "by_source_kind": {
@@ -630,23 +630,23 @@
         }
       },
       "deepsearchqa/evolution": {
-        "sample_count": 36,
-        "tokens": 6283760,
-        "input_tokens": 6018108,
-        "output_tokens": 265652,
-        "model_calls": 326,
-        "score_mean": 0.2150224044960887,
+        "sample_count": 38,
+        "tokens": 6939310,
+        "input_tokens": 6658812,
+        "output_tokens": 280498,
+        "model_calls": 344,
+        "score_mean": 0.2037054358383998,
         "slot_latency": {
-          "sample_count": 36,
-          "mean_seconds": 69.68227777777712,
-          "median_seconds": 65.32799999997951,
-          "p90_seconds": 82.29649999999674
+          "sample_count": 38,
+          "mean_seconds": 70.32894736841952,
+          "median_seconds": 66.13300000000163,
+          "p90_seconds": 84.17019999998739
         },
         "model_latency": {
-          "sample_count": 326,
-          "mean_seconds": 7.923306748466413,
-          "median_seconds": 6.844500000021071,
-          "p90_seconds": 11.991999999983818
+          "sample_count": 344,
+          "mean_seconds": 7.9911308139538075,
+          "median_seconds": 6.9060000000026776,
+          "p90_seconds": 12.245199999999022
         }
       },
       "deepsearchqa/validation": {
@@ -770,23 +770,23 @@
         }
       },
       "writingbench/validation": {
-        "sample_count": 82,
-        "tokens": 13190652,
-        "input_tokens": 11626960,
-        "output_tokens": 1563692,
-        "model_calls": 738,
-        "score_mean": 7.680487804878048,
+        "sample_count": 84,
+        "tokens": 13458774,
+        "input_tokens": 11870782,
+        "output_tokens": 1587992,
+        "model_calls": 756,
+        "score_mean": 7.7023809523809526,
         "slot_latency": {
-          "sample_count": 82,
-          "mean_seconds": 115.31976829268352,
-          "median_seconds": 114.78100000001723,
-          "p90_seconds": 155.6332000000024
+          "sample_count": 84,
+          "mean_seconds": 114.38896428571475,
+          "median_seconds": 114.03149999999732,
+          "p90_seconds": 155.1176000000007
         },
         "model_latency": {
-          "sample_count": 738,
-          "mean_seconds": 12.924527100271643,
-          "median_seconds": 10.484499999991385,
-          "p90_seconds": 23.972200000018372
+          "sample_count": 756,
+          "mean_seconds": 12.818025132275897,
+          "median_seconds": 10.460999999995693,
+          "p90_seconds": 23.75800000000163
         }
       }
     },
@@ -882,5 +882,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T10:51:30.123210+00:00"
+  "observed_at": "2026-10-07T10:53:42.683496+00:00"
 }
