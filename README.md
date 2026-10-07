@@ -14,6 +14,36 @@ decisions, and reusable agent harness profiles.
 > Software tests and bounded pilots are implementation evidence, not performance
 > claims.
 
+```mermaid
+flowchart LR
+    subgraph TASK[Per EVO task]
+        Q["Public task"] --> R["Rubric graph<br/>requirements and evidence expectations"]
+        R --> P["Global/local planning<br/>TeamSpec, roles, dependencies, budget"]
+        P --> C["Compose workflow<br/>Agent Pool or task-local profiles"]
+        C --> E["Execute<br/>shared ledger and Writer"]
+        E --> S["Hash and freeze submission"]
+        S --> J["Independent evaluation"]
+        J --> A["Alignment and attribution<br/>global + local evidence"]
+    end
+    subgraph BATCH[Batch-end evolution]
+        A --> K["Aggregate 5 EVO records<br/>same frozen input state"]
+        K --> U["Generate 3 candidate states"]
+        U --> V["10 fixed VAL per candidate<br/>read-only"]
+        V --> W["Select one winner"]
+    end
+    W -->|next batch state| Q
+    T["Held-out TEST / transfer<br/>read-only, no updates"] -.-> S
+
+    classDef state fill:#eef2ff,stroke:#4f46e5,color:#111827;
+    classDef stage fill:#f8fafc,stroke:#64748b,color:#111827;
+    class Q,R,P,C,E,S,J,A,K,U,V,W,T stage;
+    class W,U state;
+```
+
+In the registered batch protocol, the five EVO tasks in a batch share one frozen
+state and do not write to experience or the Agent Pool. Candidates are generated
+after the batch, VAL selects the winner, and TEST remains read-only.
+
 ## Method
 
 For each public task, JIT-Compose runs the following loop:
