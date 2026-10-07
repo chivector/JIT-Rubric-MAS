@@ -4,14 +4,14 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 954,
+    "complete": 957,
     "failed": 133,
     "incomplete": 11,
-    "pending": 527,
+    "pending": 524,
     "started": 4,
     "submitted": 96
   },
-  "terminal_slots": 1098,
+  "terminal_slots": 1101,
   "active": 4,
   "test_feedback_released": false,
   "test": {
@@ -79,6 +79,18 @@
       "eligible": true,
       "selected_pool_operation_count": 0,
       "selected_agent_update_count": 2
+    },
+    {
+      "source": "deepresearch_bench_ii",
+      "run_id": 0,
+      "batch_index": 4,
+      "candidate_index": 1,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.29464612965175796,
+      "eligible": true,
+      "selected_pool_operation_count": 0,
+      "selected_agent_update_count": 0
     },
     {
       "source": "deepsearchqa",
@@ -419,9 +431,9 @@
       "agent_update_count": 0,
       "state_changed_count": 0,
       "fallback_count": 0,
-      "selected_candidate_index": null,
-      "selected_pool_operation_count": null,
-      "selected_agent_update_count": null
+      "selected_candidate_index": 1,
+      "selected_pool_operation_count": 0,
+      "selected_agent_update_count": 0
     },
     {
       "source": "deepsearchqa",
@@ -727,25 +739,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 954,
+    "complete_slot_count": 957,
     "tokens": {
-      "total": 258636811,
-      "input": 239310737,
-      "output": 19326074,
-      "model_calls": 16258
+      "total": 259096582,
+      "input": 239721090,
+      "output": 19375492,
+      "model_calls": 16287
     },
     "latency": {
       "slot": {
-        "sample_count": 954,
-        "mean_seconds": 145.3745440251574,
-        "median_seconds": 128.42949999999837,
-        "p90_seconds": 248.75169999998184
+        "sample_count": 957,
+        "mean_seconds": 145.3010564263325,
+        "median_seconds": 128.25,
+        "p90_seconds": 248.4093999999808
       },
       "model": {
-        "sample_count": 16258,
-        "mean_seconds": 15.190322487390977,
+        "sample_count": 16287,
+        "mean_seconds": 15.185989992018335,
         "median_seconds": 12.187000000005355,
-        "p90_seconds": 27.004500000004207
+        "p90_seconds": 27.0
       }
     },
     "by_source_kind": {
@@ -790,23 +802,23 @@
         }
       },
       "deepresearch_bench_ii/validation": {
-        "sample_count": 139,
-        "tokens": 36209017,
-        "input_tokens": 33176935,
-        "output_tokens": 3032082,
-        "model_calls": 1402,
-        "score_mean": 0.2793446314751449,
+        "sample_count": 140,
+        "tokens": 36356299,
+        "input_tokens": 33305921,
+        "output_tokens": 3050378,
+        "model_calls": 1413,
+        "score_mean": 0.2778677458586173,
         "slot_latency": {
-          "sample_count": 139,
-          "mean_seconds": 134.11325179856135,
-          "median_seconds": 130.84399999998277,
-          "p90_seconds": 175.81840000003575
+          "sample_count": 140,
+          "mean_seconds": 134.0484928571432,
+          "median_seconds": 130.8279999999795,
+          "p90_seconds": 175.8152000000351
         },
         "model_latency": {
-          "sample_count": 1402,
-          "mean_seconds": 13.376808844509274,
+          "sample_count": 1413,
+          "mean_seconds": 13.359778485493404,
           "median_seconds": 12.172000000020489,
-          "p90_seconds": 20.1219000000041
+          "p90_seconds": 20.091000000038182
         }
       },
       "deepsearchqa/batch_evolution": {
@@ -950,23 +962,23 @@
         }
       },
       "writingbench/evolution": {
-        "sample_count": 35,
-        "tokens": 5712483,
-        "input_tokens": 5076156,
-        "output_tokens": 636327,
-        "model_calls": 317,
-        "score_mean": 8.16,
+        "sample_count": 37,
+        "tokens": 6024972,
+        "input_tokens": 5357523,
+        "output_tokens": 667449,
+        "model_calls": 335,
+        "score_mean": 8.172972972972973,
         "slot_latency": {
-          "sample_count": 35,
-          "mean_seconds": 131.2521142857166,
-          "median_seconds": 129.73399999999674,
-          "p90_seconds": 172.52500000002328
+          "sample_count": 37,
+          "mean_seconds": 130.6641351351376,
+          "median_seconds": 129.35900000002584,
+          "p90_seconds": 172.30300000001444
         },
         "model_latency": {
-          "sample_count": 317,
-          "mean_seconds": 14.810422712932775,
+          "sample_count": 335,
+          "mean_seconds": 14.75157910447651,
           "median_seconds": 11.875,
-          "p90_seconds": 27.506399999989664
+          "p90_seconds": 27.40640000000131
         }
       },
       "writingbench/validation": {
@@ -1007,18 +1019,18 @@
         }
       },
       "deepresearch_bench_ii/validation": {
-        "sample_count": 139,
+        "sample_count": 140,
         "means": {
-          "Analysis": 0.29216626698641085,
-          "InformationRecall": 0.2379254782730786,
-          "Overall": 0.2793446314751449,
-          "Presentation": 0.8096265844467283
+          "Analysis": 0.29275793650793647,
+          "InformationRecall": 0.23622601057112805,
+          "Overall": 0.2778677458586173,
+          "Presentation": 0.8099659863945579
         },
         "metric_sample_counts": {
-          "Analysis": 139,
-          "InformationRecall": 139,
-          "Overall": 139,
-          "Presentation": 139
+          "Analysis": 140,
+          "InformationRecall": 140,
+          "Overall": 140,
+          "Presentation": 140
         }
       }
     }
@@ -1028,7 +1040,7 @@
       {
         "source": "deepresearch_bench_ii",
         "run_id": 0,
-        "position": 20,
+        "position": 25,
         "state_version": 2,
         "pool_size": 6,
         "structural_history_count": 0,
@@ -1082,5 +1094,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T13:52:48.326248+00:00"
+  "observed_at": "2026-10-07T13:55:06.498966+00:00"
 }
