@@ -6,23 +6,23 @@
   "statuses": {
     "complete": 467,
     "deferred": 1098,
-    "failed": 54,
+    "failed": 55,
     "incomplete": 6,
-    "pending": 60,
+    "pending": 49,
     "started": 4,
-    "submitted": 36
+    "submitted": 46
   },
-  "terminal_slots": 527,
+  "terminal_slots": 528,
   "active": 4,
   "test_feedback_released": false,
   "test": {
     "registered_slots": 573,
     "statuses": {
       "deferred": 440,
-      "failed": 33,
-      "pending": 60,
+      "failed": 34,
+      "pending": 49,
       "started": 4,
-      "submitted": 36
+      "submitted": 46
     },
     "complete": false
   },
@@ -680,5 +680,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T08:01:27.621196+00:00"
+  "observed_at": "2026-10-07T08:03:43.664514+00:00"
 }
