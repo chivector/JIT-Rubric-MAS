@@ -7,9 +7,9 @@
     "complete": 1031,
     "failed": 134,
     "incomplete": 11,
-    "pending": 429,
+    "pending": 424,
     "started": 4,
-    "submitted": 116
+    "submitted": 121
   },
   "terminal_slots": 1176,
   "active": 4,
@@ -18,9 +18,9 @@
     "registered_slots": 573,
     "statuses": {
       "failed": 91,
-      "pending": 363,
+      "pending": 358,
       "started": 2,
-      "submitted": 117
+      "submitted": 122
     },
     "complete": false
   },
@@ -1145,5 +1145,5 @@
       "experience_count": 31
     }
   },
-  "observed_at": "2026-10-07T14:51:24.637472+00:00"
+  "observed_at": "2026-10-07T14:53:39.912411+00:00"
 }
