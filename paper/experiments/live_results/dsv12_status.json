@@ -4,14 +4,14 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 548,
+    "complete": 554,
     "failed": 66,
     "incomplete": 7,
-    "pending": 1008,
+    "pending": 1002,
     "started": 4,
     "submitted": 92
   },
-  "terminal_slots": 621,
+  "terminal_slots": 627,
   "active": 4,
   "test_feedback_released": false,
   "test": {
@@ -32,6 +32,18 @@
   },
   "registration_hash": "f48203b1ba89692c8cb82958b5275b46a1f250dbb5a24569f8bd4415df94e672",
   "batch_selections": [
+    {
+      "source": "deepresearch_bench_ii",
+      "run_id": 0,
+      "batch_index": 0,
+      "candidate_index": 1,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.3006341788214709,
+      "eligible": true,
+      "selected_pool_operation_count": 0,
+      "selected_agent_update_count": 2
+    },
     {
       "source": "deepsearchqa",
       "run_id": 0,
@@ -223,9 +235,9 @@
       "agent_update_count": 6,
       "state_changed_count": 3,
       "fallback_count": 0,
-      "selected_candidate_index": null,
-      "selected_pool_operation_count": null,
-      "selected_agent_update_count": null
+      "selected_candidate_index": 1,
+      "selected_pool_operation_count": 0,
+      "selected_agent_update_count": 2
     },
     {
       "source": "deepsearchqa",
@@ -427,25 +439,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 548,
+    "complete_slot_count": 554,
     "tokens": {
-      "total": 159304573,
-      "input": 147730779,
-      "output": 11573794,
-      "model_calls": 12085
+      "total": 160752599,
+      "input": 149089451,
+      "output": 11663148,
+      "model_calls": 12144
     },
     "latency": {
       "slot": {
-        "sample_count": 548,
-        "mean_seconds": 165.30097627737214,
-        "median_seconds": 151.4605000000156,
-        "p90_seconds": 284.4626000000018
+        "sample_count": 554,
+        "mean_seconds": 164.58068411552318,
+        "median_seconds": 151.13249999999243,
+        "p90_seconds": 284.129600000006
       },
       "model": {
-        "sample_count": 12085,
-        "mean_seconds": 16.089478527099825,
-        "median_seconds": 12.796999999991385,
-        "p90_seconds": 28.796999999991385
+        "sample_count": 12144,
+        "mean_seconds": 16.061378211462543,
+        "median_seconds": 12.78100000001723,
+        "p90_seconds": 28.75
       }
     },
     "by_source_kind": {
@@ -490,23 +502,23 @@
         }
       },
       "deepresearch_bench_ii/validation": {
-        "sample_count": 24,
-        "tokens": 6326925,
-        "input_tokens": 5807804,
-        "output_tokens": 519121,
-        "model_calls": 242,
-        "score_mean": 0.2775322049437395,
+        "sample_count": 26,
+        "tokens": 7002778,
+        "input_tokens": 6430708,
+        "output_tokens": 572070,
+        "model_calls": 264,
+        "score_mean": 0.2689006953823104,
         "slot_latency": {
-          "sample_count": 24,
-          "mean_seconds": 132.8670833333308,
+          "sample_count": 26,
+          "mean_seconds": 133.95299999999517,
           "median_seconds": 132.50750000000698,
-          "p90_seconds": 157.9451000000059
+          "p90_seconds": 160.72649999998976
         },
         "model_latency": {
-          "sample_count": 242,
-          "mean_seconds": 12.926045454548111,
-          "median_seconds": 11.90649999998277,
-          "p90_seconds": 18.782999999966705
+          "sample_count": 264,
+          "mean_seconds": 13.010215909092619,
+          "median_seconds": 11.96950000000652,
+          "p90_seconds": 18.80749999997206
         }
       },
       "deepsearchqa/batch_evolution": {
@@ -530,23 +542,23 @@
         }
       },
       "deepsearchqa/evolution": {
-        "sample_count": 24,
-        "tokens": 4161419,
-        "input_tokens": 3992699,
-        "output_tokens": 168720,
-        "model_calls": 217,
-        "score_mean": 0.15833333333333333,
+        "sample_count": 28,
+        "tokens": 4933592,
+        "input_tokens": 4728467,
+        "output_tokens": 205125,
+        "model_calls": 254,
+        "score_mean": 0.15357142857142855,
         "slot_latency": {
-          "sample_count": 24,
-          "mean_seconds": 70.82554166666766,
-          "median_seconds": 64.5,
-          "p90_seconds": 79.34999999999708
+          "sample_count": 28,
+          "mean_seconds": 71.37889285714274,
+          "median_seconds": 66.13300000000163,
+          "p90_seconds": 82.72949999999256
         },
         "model_latency": {
-          "sample_count": 217,
-          "mean_seconds": 8.108875576037756,
-          "median_seconds": 6.829000000027008,
-          "p90_seconds": 12.240399999998044
+          "sample_count": 254,
+          "mean_seconds": 8.114413385827293,
+          "median_seconds": 6.765500000008615,
+          "p90_seconds": 12.245199999999022
         }
       },
       "deepsearchqa/validation": {
@@ -707,18 +719,18 @@
         }
       },
       "deepresearch_bench_ii/validation": {
-        "sample_count": 24,
+        "sample_count": 26,
         "means": {
-          "Analysis": 0.23263888888888887,
-          "InformationRecall": 0.24777809152482974,
-          "Overall": 0.2775322049437395,
-          "Presentation": 0.8039682539682539
+          "Analysis": 0.2580128205128205,
+          "InformationRecall": 0.23213704174941546,
+          "Overall": 0.2689006953823104,
+          "Presentation": 0.8135531135531135
         },
         "metric_sample_counts": {
-          "Analysis": 24,
-          "InformationRecall": 24,
-          "Overall": 24,
-          "Presentation": 24
+          "Analysis": 26,
+          "InformationRecall": 26,
+          "Overall": 26,
+          "Presentation": 26
         }
       }
     }
@@ -728,13 +740,13 @@
       {
         "source": "deepresearch_bench_ii",
         "run_id": 0,
-        "position": 0,
-        "state_version": 0,
-        "pool_size": 0,
+        "position": 5,
+        "state_version": 1,
+        "pool_size": 6,
         "structural_history_count": 0,
-        "applied_updates_count": 0,
-        "applied_proposals_count": 0,
-        "experience_count": 0
+        "applied_updates_count": 2,
+        "applied_proposals_count": 1,
+        "experience_count": 1
       },
       {
         "source": "deepsearchqa",
@@ -782,5 +794,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T10:00:39.131581+00:00"
+  "observed_at": "2026-10-07T10:02:53.309038+00:00"
 }
