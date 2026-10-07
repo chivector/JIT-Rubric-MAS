@@ -4,15 +4,15 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 428,
+    "complete": 431,
     "deferred": 1098,
     "failed": 21,
     "incomplete": 6,
-    "pending": 169,
-    "started": 3
+    "pending": 165,
+    "started": 4
   },
-  "terminal_slots": 455,
-  "active": 3,
+  "terminal_slots": 458,
+  "active": 4,
   "test_feedback_released": false,
   "test": {
     "registered_slots": 573,
@@ -150,6 +150,18 @@
       "eligible": true,
       "selected_pool_operation_count": 0,
       "selected_agent_update_count": 2
+    },
+    {
+      "source": "researchrubrics",
+      "run_id": 0,
+      "batch_index": 6,
+      "candidate_index": 1,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.5017391031700101,
+      "eligible": true,
+      "selected_pool_operation_count": 0,
+      "selected_agent_update_count": 0
     },
     {
       "source": "writingbench",
@@ -304,9 +316,9 @@
       "agent_update_count": 0,
       "state_changed_count": 0,
       "fallback_count": 3,
-      "selected_candidate_index": null,
-      "selected_pool_operation_count": null,
-      "selected_agent_update_count": null
+      "selected_candidate_index": 1,
+      "selected_pool_operation_count": 0,
+      "selected_agent_update_count": 0
     },
     {
       "source": "writingbench",
@@ -339,25 +351,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 428,
+    "complete_slot_count": 431,
     "tokens": {
-      "total": 126318075,
-      "input": 117148417,
-      "output": 9169658,
-      "model_calls": 9984
+      "total": 127186512,
+      "input": 117931256,
+      "output": 9255256,
+      "model_calls": 10076
     },
     "latency": {
       "slot": {
-        "sample_count": 428,
-        "mean_seconds": 166.98748130841133,
-        "median_seconds": 153.76549999999406,
-        "p90_seconds": 287.79079999998794
+        "sample_count": 431,
+        "mean_seconds": 166.85281670533658,
+        "median_seconds": 153.31299999999464,
+        "p90_seconds": 287.21899999998277
       },
       "model": {
-        "sample_count": 9984,
-        "mean_seconds": 15.99581149839748,
-        "median_seconds": 12.632499999992433,
-        "p90_seconds": 28.22950000000129
+        "sample_count": 10076,
+        "mean_seconds": 15.943760917030612,
+        "median_seconds": 12.59299999999348,
+        "p90_seconds": 28.125
       }
     },
     "by_source_kind": {
@@ -482,23 +494,23 @@
         }
       },
       "researchrubrics/validation": {
-        "sample_count": 198,
-        "tokens": 54742811,
-        "input_tokens": 49609333,
-        "output_tokens": 5133478,
-        "model_calls": 6598,
-        "score_mean": 0.41623214689809096,
+        "sample_count": 201,
+        "tokens": 55611248,
+        "input_tokens": 50392172,
+        "output_tokens": 5219076,
+        "model_calls": 6690,
+        "score_mean": 0.415761239818254,
         "slot_latency": {
-          "sample_count": 198,
-          "mean_seconds": 216.90344444444392,
-          "median_seconds": 195.48449999999139,
-          "p90_seconds": 334.662699999995
+          "sample_count": 201,
+          "mean_seconds": 215.86967164179063,
+          "median_seconds": 194.90599999998813,
+          "p90_seconds": 332.4219999999914
         },
         "model_latency": {
-          "sample_count": 6598,
-          "mean_seconds": 16.809478175204763,
-          "median_seconds": 13.546999999991385,
-          "p90_seconds": 29.0
+          "sample_count": 6690,
+          "mean_seconds": 16.719893871450083,
+          "median_seconds": 13.429500000012922,
+          "p90_seconds": 28.876500000001403
         }
       },
       "writingbench/batch_evolution": {
@@ -607,7 +619,7 @@
       {
         "source": "researchrubrics",
         "run_id": 0,
-        "position": 30,
+        "position": 35,
         "state_version": 5,
         "pool_size": 6,
         "structural_history_count": 0,
@@ -630,7 +642,7 @@
     "latest": {
       "source": "researchrubrics",
       "run_id": 0,
-      "position": 30,
+      "position": 35,
       "state_version": 5,
       "pool_size": 6,
       "structural_history_count": 0,
@@ -639,5 +651,5 @@
       "experience_count": 16
     }
   },
-  "observed_at": "2026-10-07T07:06:07.933093+00:00"
+  "observed_at": "2026-10-07T07:08:13.002299+00:00"
 }
