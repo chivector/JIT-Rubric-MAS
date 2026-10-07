@@ -4,14 +4,14 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 493,
+    "complete": 497,
     "failed": 62,
     "incomplete": 6,
-    "pending": 1070,
-    "started": 2,
+    "pending": 1064,
+    "started": 4,
     "submitted": 92
   },
-  "terminal_slots": 561,
+  "terminal_slots": 565,
   "active": 4,
   "test_feedback_released": false,
   "test": {
@@ -202,6 +202,19 @@
     }
   ],
   "candidate_metrics": [
+    {
+      "source": "deepresearch_bench_ii",
+      "run_id": 0,
+      "batch_index": 0,
+      "candidate_count": 3,
+      "pool_operation_count": 0,
+      "agent_update_count": 6,
+      "state_changed_count": 3,
+      "fallback_count": 0,
+      "selected_candidate_index": null,
+      "selected_pool_operation_count": null,
+      "selected_agent_update_count": null
+    },
     {
       "source": "deepsearchqa",
       "run_id": 0,
@@ -402,28 +415,48 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 493,
+    "complete_slot_count": 497,
     "tokens": {
-      "total": 145131302,
-      "input": 134360032,
-      "output": 10771270,
-      "model_calls": 11546
+      "total": 146243273,
+      "input": 135390914,
+      "output": 10852359,
+      "model_calls": 11596
     },
     "latency": {
       "slot": {
-        "sample_count": 493,
-        "mean_seconds": 171.0733103448278,
-        "median_seconds": 159.625,
-        "p90_seconds": 294.81859999999875
+        "sample_count": 497,
+        "mean_seconds": 170.55721931589554,
+        "median_seconds": 158.78200000000652,
+        "p90_seconds": 292.9878000000028
       },
       "model": {
-        "sample_count": 11546,
-        "mean_seconds": 16.298717391304425,
-        "median_seconds": 12.89100000000326,
-        "p90_seconds": 29.288999999989755
+        "sample_count": 11596,
+        "mean_seconds": 16.279936788547843,
+        "median_seconds": 12.890500000008615,
+        "p90_seconds": 29.24199999999837
       }
     },
     "by_source_kind": {
+      "deepresearch_bench_ii/batch_evolution": {
+        "sample_count": 1,
+        "tokens": 611344,
+        "input_tokens": 548728,
+        "output_tokens": 62616,
+        "model_calls": 23,
+        "score_mean": null,
+        "slot_latency": {
+          "sample_count": 1,
+          "mean_seconds": 213.0,
+          "median_seconds": 213.0,
+          "p90_seconds": 213.0
+        },
+        "model_latency": {
+          "sample_count": 23,
+          "mean_seconds": 16.838999999995828,
+          "median_seconds": 14.421999999962281,
+          "p90_seconds": 23.975199999986216
+        }
+      },
       "deepresearch_bench_ii/evolution": {
         "sample_count": 5,
         "tokens": 898881,
@@ -485,23 +518,23 @@
         }
       },
       "deepsearchqa/validation": {
-        "sample_count": 112,
-        "tokens": 26069929,
-        "input_tokens": 25207491,
-        "output_tokens": 862438,
-        "model_calls": 1026,
-        "score_mean": 0.12863594738594739,
+        "sample_count": 115,
+        "tokens": 26570556,
+        "input_tokens": 25689645,
+        "output_tokens": 880911,
+        "model_calls": 1053,
+        "score_mean": 0.12962805310631398,
         "slot_latency": {
-          "sample_count": 112,
-          "mean_seconds": 72.52776785714507,
-          "median_seconds": 69.71899999999732,
-          "p90_seconds": 91.36959999999381
+          "sample_count": 115,
+          "mean_seconds": 72.50353043478454,
+          "median_seconds": 69.78099999998813,
+          "p90_seconds": 91.0743999999948
         },
         "model_latency": {
-          "sample_count": 1026,
-          "mean_seconds": 8.097692982455978,
-          "median_seconds": 7.3435000000026776,
-          "p90_seconds": 13.093999999997322
+          "sample_count": 1053,
+          "mean_seconds": 8.089356125355964,
+          "median_seconds": 7.312000000005355,
+          "p90_seconds": 13.09399999998277
         }
       },
       "researchrubrics/batch_evolution": {
@@ -702,5 +735,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T08:45:01.390479+00:00"
+  "observed_at": "2026-10-07T08:47:18.415819+00:00"
 }
