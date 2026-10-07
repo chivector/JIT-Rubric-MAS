@@ -3,6 +3,8 @@ runs/
 outputs/
 .runtime/
 .cache/
+.r/
+.tmp_*.json
 
 # Transient harness workspaces: one per concurrent (case, rollout), created
 # and removed by the runner. Never commit them.
