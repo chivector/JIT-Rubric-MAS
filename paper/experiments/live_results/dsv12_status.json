@@ -4,21 +4,23 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 464,
+    "complete": 467,
     "deferred": 1098,
-    "failed": 21,
+    "failed": 54,
     "incomplete": 6,
-    "pending": 133,
-    "started": 3
+    "pending": 96,
+    "started": 4
   },
-  "terminal_slots": 491,
-  "active": 3,
+  "terminal_slots": 527,
+  "active": 4,
   "test_feedback_released": false,
   "test": {
     "registered_slots": 573,
     "statuses": {
       "deferred": 440,
-      "pending": 133
+      "failed": 33,
+      "pending": 96,
+      "started": 4
     },
     "complete": false
   },
@@ -162,6 +164,18 @@
       "eligible": true,
       "selected_pool_operation_count": 0,
       "selected_agent_update_count": 0
+    },
+    {
+      "source": "researchrubrics",
+      "run_id": 0,
+      "batch_index": 7,
+      "candidate_index": 2,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.5170853427587571,
+      "eligible": true,
+      "selected_pool_operation_count": 0,
+      "selected_agent_update_count": 2
     },
     {
       "source": "writingbench",
@@ -329,9 +343,9 @@
       "agent_update_count": 4,
       "state_changed_count": 2,
       "fallback_count": 1,
-      "selected_candidate_index": null,
-      "selected_pool_operation_count": null,
-      "selected_agent_update_count": null
+      "selected_candidate_index": 2,
+      "selected_pool_operation_count": 0,
+      "selected_agent_update_count": 2
     },
     {
       "source": "writingbench",
@@ -364,25 +378,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 464,
+    "complete_slot_count": 467,
     "tokens": {
-      "total": 139422735,
-      "input": 129208079,
-      "output": 10214656,
-      "model_calls": 11192
+      "total": 140336478,
+      "input": 130034263,
+      "output": 10302215,
+      "model_calls": 11283
     },
     "latency": {
       "slot": {
-        "sample_count": 464,
-        "mean_seconds": 171.91638793103454,
-        "median_seconds": 160.14800000000105,
-        "p90_seconds": 296.08399999999676
+        "sample_count": 467,
+        "mean_seconds": 172.97674946466822,
+        "median_seconds": 160.48499999998603,
+        "p90_seconds": 299.7963999999862
       },
       "model": {
-        "sample_count": 11192,
-        "mean_seconds": 16.225497944960743,
-        "median_seconds": 12.859000000025844,
-        "p90_seconds": 28.982499999998247
+        "sample_count": 11283,
+        "mean_seconds": 16.32971284232924,
+        "median_seconds": 12.89100000000326,
+        "p90_seconds": 29.312999999994645
       }
     },
     "by_source_kind": {
@@ -507,23 +521,23 @@
         }
       },
       "researchrubrics/validation": {
-        "sample_count": 228,
-        "tokens": 63499970,
-        "input_tokens": 57570767,
-        "output_tokens": 5929203,
-        "model_calls": 7594,
-        "score_mean": 0.41701786609139024,
+        "sample_count": 231,
+        "tokens": 64413713,
+        "input_tokens": 58396951,
+        "output_tokens": 6016762,
+        "model_calls": 7685,
+        "score_mean": 0.41695521364151483,
         "slot_latency": {
-          "sample_count": 228,
-          "mean_seconds": 219.2499605263152,
-          "median_seconds": 197.75750000000698,
-          "p90_seconds": 340.8378000000085
+          "sample_count": 231,
+          "mean_seconds": 220.77891341991293,
+          "median_seconds": 200.39099999997416,
+          "p90_seconds": 348.56200000000536
         },
         "model_latency": {
-          "sample_count": 7594,
-          "mean_seconds": 17.080339610218758,
-          "median_seconds": 13.719000000011874,
-          "p90_seconds": 30.276200000007517
+          "sample_count": 7685,
+          "mean_seconds": 17.223223942745793,
+          "median_seconds": 13.812000000005355,
+          "p90_seconds": 30.687999999994645
         }
       },
       "writingbench/batch_evolution": {
@@ -632,13 +646,13 @@
       {
         "source": "researchrubrics",
         "run_id": 0,
-        "position": 35,
-        "state_version": 5,
+        "position": 40,
+        "state_version": 6,
         "pool_size": 6,
         "structural_history_count": 0,
-        "applied_updates_count": 10,
-        "applied_proposals_count": 16,
-        "experience_count": 16
+        "applied_updates_count": 12,
+        "applied_proposals_count": 19,
+        "experience_count": 19
       },
       {
         "source": "writingbench",
@@ -655,14 +669,14 @@
     "latest": {
       "source": "researchrubrics",
       "run_id": 0,
-      "position": 35,
-      "state_version": 5,
+      "position": 40,
+      "state_version": 6,
       "pool_size": 6,
       "structural_history_count": 0,
-      "applied_updates_count": 10,
-      "applied_proposals_count": 16,
-      "experience_count": 16
+      "applied_updates_count": 12,
+      "applied_proposals_count": 19,
+      "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T07:48:30.038871+00:00"
+  "observed_at": "2026-10-07T07:50:38.332722+00:00"
 }
