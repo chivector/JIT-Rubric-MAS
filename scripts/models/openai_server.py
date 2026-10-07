@@ -285,10 +285,26 @@ class OpenAIServerModel(Model):
 
         max_retries = self.max_attempts
         retry_delay = 5
+        initial_max_tokens = completion_kwargs.get("max_tokens")
+        # Keep retry behavior auditable without changing the request payload or
+        # model configuration used by a normal (non-507) call.  The list is
+        # replaced for every completion, so a reduced cap never leaks to the
+        # next request.
+        retry_audit = []
+        self.last_retry_metadata = {
+            "initial_max_tokens": initial_max_tokens,
+            "attempts": retry_audit,
+        }
 
         for attempt in range(max_retries):
+            attempt_audit = {
+                "attempt": attempt + 1,
+                "max_tokens": completion_kwargs.get("max_tokens"),
+            }
+            retry_audit.append(attempt_audit)
             try:
                 response = self.client.chat.completions.create(**completion_kwargs)
+                attempt_audit["status"] = "success"
 
                 usage = getattr(response, "usage", None)
                 input_tokens = None
@@ -388,7 +404,8 @@ class OpenAIServerModel(Model):
             except (APIStatusError, EmptyContentError) as e:
                 # Distinguish retriable from non-retriable status codes
                 status_code = getattr(e, "status_code", None)
-                retriable_codes = {429, 500, 502, 503, 504}
+                retriable_codes = {429, 500, 502, 503, 504, 507}
+                attempt_audit["status_code"] = status_code
 
                 if status_code is not None and status_code not in retriable_codes:
                     # Non-retriable errors (401 auth, 403 forbidden, etc.)
@@ -401,12 +418,23 @@ class OpenAIServerModel(Model):
                 if attempt < max_retries - 1:
                     # Use shorter delay for rate-limits, longer for server errors
                     delay = 10 if status_code == 429 else 30
+                    if status_code == 507:
+                        current_cap = completion_kwargs.get("max_tokens")
+                        if isinstance(current_cap, int) and current_cap > 0:
+                            # Keep a provider-safe floor of 4096, except when
+                            # the original cap is already below that floor.
+                            reduced_cap = min(current_cap, max(4096, current_cap // 2))
+                            completion_kwargs["max_tokens"] = reduced_cap
+                            attempt_audit["next_max_tokens"] = reduced_cap
+                        delay = 30
+                    attempt_audit["status"] = "retry"
                     logger.warning(
                         f"API status error (HTTP {status_code}): {e}. "
                         f"Retrying in {delay}s (attempt {attempt + 1}/{max_retries})..."
                     )
                     time.sleep(delay)
                 else:
+                    attempt_audit["status"] = "failed"
                     logger.error(f"Failed after {max_retries} retries.")
                     self._record_api_failure_and_maybe_exit(e)
                     raise

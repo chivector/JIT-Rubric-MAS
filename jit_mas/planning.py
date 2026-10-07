@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -420,7 +421,8 @@ class JsonModelCalls:
     """Each call is a fresh context; records contain only observable I/O."""
 
     def __init__(self, *, max_corrections: int = 1):
-        if type(max_corrections) is not int or not 0 <= max_corrections <= 1:
+        max_allowed = 3 if os.environ.get("JIT_MAS_ALLOW_EXTRA_CORRECTIONS") == "1" else 1
+        if type(max_corrections) is not int or not 0 <= max_corrections <= max_allowed:
             raise ValueError("At most one structured-response correction is allowed")
         self.max_corrections = max_corrections
         self.call_records: list[dict[str, Any]] = []

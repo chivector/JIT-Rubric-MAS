@@ -131,6 +131,7 @@ class AgentPoolOperation(Record):
     operation_id: str = Field(min_length=1)
     kind: Literal["add", "delete", "prune", "split", "merge", "specialize", "reorganize"]
     source_task_id: str = Field(min_length=1)
+    source_task_ids: list[str] = Field(default_factory=list)
     base_pool_version: int = Field(ge=0)
     target_agent_ids: list[str] = Field(default_factory=list)
     base_agent_versions: dict[str, int] = Field(default_factory=dict)
@@ -191,6 +192,7 @@ class AgentEvolutionUpdate(Record):
     pool_agent_id: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
     base_agent_version: int = Field(ge=1)
     source_task_id: str = Field(min_length=1)
+    source_task_ids: list[str] = Field(default_factory=list)
     lessons: list[AgentMemoryLesson] = Field(default_factory=list)
     prompt: str | None = Field(default=None, min_length=1, max_length=6000)
     skills: dict[str, str] | None = None

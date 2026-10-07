@@ -112,7 +112,7 @@ def test_conflicting_public_positions_use_regular_revision_without_guessing_a_ru
     assert ledger.snapshot()["model_calls"] == 2
 
 
-@pytest.mark.parametrize("cap,expected_cap", [(4096, 4096), (16000, 8192)])
+@pytest.mark.parametrize("cap,expected_cap", [(4096, 4096), (16000, 16000)])
 def test_both_global_stages_send_actual_distinct_strict_schema_and_audit_it(cap, expected_cap):
     task, result, config, ledger = inputs(cap=cap)
     models = Models([{"issues": []}, {"answer": "Complete revised scene."}])

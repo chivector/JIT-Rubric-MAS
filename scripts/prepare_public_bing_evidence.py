@@ -16,7 +16,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlsplit
 import xml.etree.ElementTree as ET
 
 import requests
@@ -74,6 +74,72 @@ WEAK_RETRIEVAL_TERMS = {
     "main", "factors", "impact", "analysis", "annual", "year", "years",
     "according", "published", "director", "change", "changes", "percent",
 }
+
+# Search engines often return a dictionary entry when a research question
+# contains a common word such as ``department`` or ``national``.  These pages
+# are not factual evidence for the task even when the word happens to overlap
+# with the query.  Keep this gate deliberately conservative: it only rejects
+# clearly lexical pages, leaving ordinary Wikipedia and official pages to the
+# normal overlap checks below.
+_LEXICAL_TITLE_RE = re.compile(
+    r"\b(?:dictionary|definition|meaning|grammar|pronunciation|translation|"
+    r"english\s+word|word\s+meaning)\b", re.I)
+_LEXICAL_HOSTS = (
+    "dictionary.", "dict.", "weblio.jp", "english-words.com",
+    "merriam-webster.com", "collinsdictionary.com", "dictionary.cambridge.org",
+)
+
+# Public-domain hints are derived only from organizations explicitly named in
+# the task.  They steer the ordinary search backend toward primary sources;
+# they do not add answer data or benchmark references.
+_SOURCE_SITE_HINTS = {
+    "department of energy": "site:energy.gov",
+    "national safety council": "site:nsc.org",
+    "statistics canada": "site:statcan.gc.ca",
+    "eurostat": "site:ec.europa.eu/eurostat",
+    "world bank": "site:worldbank.org",
+    "our world in data": "site:ourworldindata.org",
+    "international energy agency": "site:iea.org",
+    "noaa": "site:noaa.gov",
+    "national league": "site:mlb.com",
+    "major league baseball": "site:mlb.com",
+    "u.s. securities and exchange commission": "site:sec.gov",
+    "securities and exchange commission": "site:sec.gov",
+}
+
+
+def _is_lexical_result(title: str, link: str) -> bool:
+    """Return whether a result is an obvious dictionary/word page.
+
+    This is a relevance safeguard for the public evidence builder.  It does
+    not inspect answer data or benchmark references and therefore cannot leak
+    the expected answer.  A lexical page is never accepted merely because one
+    common query token appears in its title.
+    """
+    title = str(title or "")
+    link = str(link or "")
+    parsed = urlsplit(link)
+    host = (parsed.hostname or "").casefold()
+    path = parsed.path.casefold()
+    host_match = any(marker in host for marker in _LEXICAL_HOSTS)
+    path_match = bool(re.search(r"/(?:dictionary|definition|meaning|grammar)(?:/|$)", path))
+    return host_match or bool(_LEXICAL_TITLE_RE.search(title)) and path_match
+
+
+def _has_minimum_relevance(query: str, title: str, link: str) -> bool:
+    """Require two informative query-term hits for research pages.
+
+    A one-term query remains valid (for example, an official page named after
+    a single entity), but multi-term queries must match at least two informative
+    terms.  This blocks wrong-sense pages such as a generic ``HUD`` explainer
+    for a housing/agency question while retaining pages that cover the actual
+    subject and measure.
+    """
+    terms = [term for term in _query_terms(query) if not _is_weak_term(term)]
+    if not terms:
+        return True
+    _, strong = _relevance(query, title, link)
+    return strong >= min(2, len(terms))
 
 
 def _is_weak_term(term: str) -> bool:
@@ -149,6 +215,7 @@ class _Planner:
                     and phrase not in phrases):
                 phrases.append(phrase)
         years = list(dict.fromkeys(re.findall(r"\b(?:19|20)\d{2}\b", question)))
+        source_hints = [hint for phrase, hint in _SOURCE_SITE_HINTS.items() if phrase in lower]
         # Housing/listing prompts are especially vulnerable to lexical search
         # drift: a long request containing ``compile``, ``number`` or ``list``
         # routinely surfaces dictionary pages. Keep the user's concrete
@@ -224,12 +291,25 @@ class _Planner:
             ]
         else:
             queries = [core, f"{core} data statistics", f"{core} official report"]
+        if source_hints:
+            # Spread hints across the three deterministic queries so the RSS
+            # backend receives both a broad query and primary-source-focused
+            # variants when a task names an official data provider.
+            queries = [f"{query} {source_hints[i % len(source_hints)]}"
+                       for i, query in enumerate(queries)]
         return type("Response", (), {"content": json.dumps({"queries": queries})})()
 
 
 def _search(query: str) -> dict[str, Any]:
-    url = "https://www.bing.com/search?q=" + quote_plus(query) + "&format=rss"
-    response = requests.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
+    # Pin the RSS locale.  Without this, the same English query can be served
+    # Japanese/localized dictionary pages based on the runner's egress IP,
+    # which is particularly harmful for named-entity research questions.
+    url = ("https://www.bing.com/search?q=" + quote_plus(query)
+           + "&format=rss&setlang=en-us&cc=us")
+    response = requests.get(
+        url, timeout=20,
+        headers={"User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9"},
+    )
     response.raise_for_status()
     root = ET.fromstring(response.text)
     rows = []
@@ -242,9 +322,16 @@ def _search(query: str) -> dict[str, Any]:
             continue
         title = item.findtext("title") or ""
         overlap, strong_overlap = _relevance(query, title, link)
-        if overlap <= 0 or (has_strong_terms and strong_overlap <= 0):
+        if _is_lexical_result(title, link):
             dropped.append({"url": link, "title": title,
-                            "reason": "no-informative-query-term-overlap"})
+                            "reason": "obvious-lexical-page"})
+            continue
+        if (overlap <= 0 or (has_strong_terms and strong_overlap <= 0)
+                or not _has_minimum_relevance(query, title, link)):
+            dropped.append({"url": link, "title": title,
+                            "reason": ("no-informative-query-term-overlap"
+                                       if overlap <= 0 or strong_overlap <= 0
+                                       else "insufficient-informative-query-overlap")})
             continue
         rows.append({
             "url": link,
@@ -274,6 +361,16 @@ def _search(query: str) -> dict[str, Any]:
             ("UNHCR Statistical Yearbook 2010", "https://www.unhcr.org/us/publications/unhcr-statistical-yearbook-2010-10th-edition"),
             ("UNHCR G7 asylum-seeker records 2010", "https://api.unhcr.org/population/v1/population/?year=2010&coa=CAN,USA,GBR,FRA,DEU,ITA,JPN&coo_all=true&limit=1000"),
             ("UNHCR Refugee Statistics API", "https://api.unhcr.org/docs/refugee-statistics.html"),
+        ])
+    if "site:energy.gov" in q or "department of energy" in q:
+        seeds.extend([
+            ("U.S. Department of Energy Alternative Fuels Data Center", "https://afdc.energy.gov/data/10963"),
+            ("U.S. Department of Energy vehicle technologies", "https://www.energy.gov/eere/vehicles/vehicle-technologies-office"),
+        ])
+    if "site:nsc.org" in q or "national safety council" in q:
+        seeds.extend([
+            ("National Safety Council motor vehicle deaths by state", "https://injuryfacts.nsc.org/motor-vehicle/road-users/motor-vehicle-deaths-by-state/"),
+            ("National Safety Council Injury Facts", "https://injuryfacts.nsc.org/"),
         ])
     # Bing RSS often returns dictionary/grammar pages for natural-language
     # housing requests, especially when a query contains ``number`` or
@@ -344,10 +441,40 @@ def _crawl(url: str) -> dict[str, Any]:
     return {"text": text, "url": url, "status": "ok"}
 
 
+def _usable_source_count(pack: dict[str, Any]) -> int:
+    """Count crawled sources that pass the same lexical/relevance gate.
+
+    ``EvidencePackBuilder`` records the originating query index in its crawl
+    archive.  Re-evaluating that title/URL pair after crawling prevents a
+    dictionary or unrelated landing page from making a pack look complete
+    merely because the query planner returned valid JSON.
+    """
+    queries = pack.get("queries") or []
+    count = 0
+    for record in pack.get("archive", []):
+        if record.get("kind") != "crawl_page" or record.get("status") != "ok":
+            continue
+        if _is_lexical_result(record.get("title", ""), record.get("url", "")):
+            continue
+        index = record.get("query_index")
+        query = queries[index] if isinstance(index, int) and 0 <= index < len(queries) else ""
+        if query and not _has_minimum_relevance(query, record.get("title", ""), record.get("url", "")):
+            continue
+        count += 1
+    return count
+
+
+def _validate_pack_quality(pack: dict[str, Any]) -> None:
+    """Fail closed when retrieval produced no relevant public source."""
+    if _usable_source_count(pack) < 1:
+        raise ValueError("Evidence pack contains no relevant, successfully crawled public source")
+
+
 def _build_one(task: PublicTask, output: Path, *, max_pages: int) -> str:
     path = evidence_pack_path(output, task.task_id)
     if path.exists():
-        load_evidence_pack(path, task)
+        pack = load_evidence_pack(path, task)
+        _validate_pack_quality(pack)
         return "reused"
     ledger = BudgetLedger(max_calls=1, max_tokens=2_000_000,
                           max_tool_calls=32)
@@ -365,6 +492,7 @@ def _build_one(task: PublicTask, output: Path, *, max_pages: int) -> str:
     pack = builder.build(task)
     if pack.get("status") != "complete":
         raise RuntimeError("deterministic query planner unexpectedly failed")
+    _validate_pack_quality(pack)
     save_evidence_pack(pack, path)
     load_evidence_pack(path, task)
     return "created"

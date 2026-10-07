@@ -76,7 +76,7 @@ def refinement_config(cap=8192):
                      models={"exec": ModelConfig(max_tokens=cap), "global": ModelConfig(max_tokens=16000)})
 
 
-@pytest.mark.parametrize("execution_cap,expected", [(4096, 4096), (16000, 8192)])
+@pytest.mark.parametrize("execution_cap,expected", [(4096, 4096), (16000, 16000)])
 def test_two_global_calls_use_existing_ledger_and_public_data(execution_cap, expected):
     task, result = public_fixture()
     ledger = BudgetLedger(None, 2_000_000, 0, timeout_seconds=900)

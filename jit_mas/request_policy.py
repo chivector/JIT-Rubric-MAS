@@ -19,13 +19,14 @@ _gates = {}
 _gates_lock = threading.Lock()
 
 
-def request_gate(limit):
+def request_gate(limit, *, endpoint=None):
     if limit is None:
         return None
+    key = limit if endpoint is None else (endpoint.rstrip("/"), limit)
     with _gates_lock:
-        if limit not in _gates:
-            _gates[limit] = threading.BoundedSemaphore(limit)
-        return _gates[limit]
+        if key not in _gates:
+            _gates[key] = threading.BoundedSemaphore(limit)
+        return _gates[key]
 
 
 def prepare_context(messages, *, output_tokens, context_window=None, margin=2048,

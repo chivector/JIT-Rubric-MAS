@@ -1,279 +1,192 @@
-<div align="center">
+# JIT-Compose
 
-<img src="assets/jit-agent-logo.png" alt="JIT-Agent" width="380">
+**Evolving Multi-Agent Workflow Synthesis for Open-Ended Generation**
 
-**Scaling Harness Intelligence via *Just-in-Time* Harness Evolution**
+JIT-Compose (Just-in-Time Composition of Agent Teams and Workflows) is an
+experience-driven framework for constructing a task-specific
+multi-agent writing workflow and improving the experience used to construct later
+workflows. It keeps the model parameters and evaluator fixed. What changes across
+tasks is versioned synthesis experience: predicted requirements, organization
+decisions, and reusable agent harness profiles.
 
-[![GitHub](https://img.shields.io/badge/GitHub-bingreeky%2FJIT-181717?style=flat-square&logo=github)](https://github.com/bingreeky/JIT)
-[![arXiv](https://img.shields.io/badge/arXiv-2608.25593-b31b1b.svg?style=flat-square)](https://arxiv.org/abs/2608.25593)
-[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-JIT--Agent-ffbd45?style=flat-square)](https://huggingface.co/JIT-Agent)
-[![License](https://img.shields.io/badge/License-see%20LICENSE-blue?style=flat-square)](LICENSE)
+> This repository is a working research implementation. The formal benchmark
+> campaign is not complete, and the result tables are intentionally unfilled.
+> Software tests and bounded pilots are implementation evidence, not performance
+> claims.
 
-</div>
+## Method
 
-## JIT-Rubric-MAS
+For each public task, JIT-Compose runs the following loop:
 
-This repository extends [upstream JIT](https://github.com/bingreeky/JIT) with
-rubric prediction, task-conditioned team planning, execution, attribution, and
-dual evolution of Meta-Agent organization experience and a persistent Agent Pool.
-Meta selects reusable agents and adapts their goals and topology; agents retain and
-update their own prompts, skills, memory, reasoning and harness policies. Both layers
-share atomic, versioned snapshots. See [the extension guide](docs/jit_mas.md).
-MAS design is budget-aware: planners receive live shared token usage and reservations,
-record each selected role's cost estimates and quality trade-offs in `budget_plan`, and
-check that expected execution plus later-stage reserves fit the remaining resources.
-Roles receive refreshed token budgets, and evolution uses their observed costs alongside
-quality feedback. Estimated calls do not impose an additional collaboration-round cap.
-By default, task execution uses single-pass shared-ledger coordination: task-conditioned
-Analyst/Evidence contributions feed a deterministic ledger, and the Writer reads
-the completed snapshot once before independent evaluation. Each execution role
-has at most one model call. The optional `iterative_shared_ledger` mode returns
-tool results and new ledger inputs to active roles for further calls, including
-Writer revisions, within the configured resource limits. The cooperative scheduler
-may reactivate completed peers when public messages or revised artifacts require
-clarification; finite call ceilings, token budgets, and timeouts remain binding. See the
-[executor contract and migration guide](docs/jit_mas_single_pass.md).
-The original JIT description and results below belong to the upstream project;
-they are not performance claims for this extension.
+1. **Predict requirements.** Meta predicts task-specific quality requirements,
+   importance, confidence, evidence expectations, applicability, and their typed
+   relationships as a rubric graph.
+2. **Plan the team.** Global and local planning turn those requirements into a
+   `TeamSpec` with roles, rubric responsibilities, inputs, outputs, dependencies,
+   tools, verification responsibilities, and a resource-aware budget plan.
+3. **Compose the workflow.** The system selects and adapts reusable full-agent
+   harness profiles from the Agent Pool. If no profile fits, it can record a
+   complete task-local profile. The selected profiles and team design are frozen
+   before execution.
+4. **Execute and submit.** The default executor uses a single-pass structured
+   shared ledger: Analyst and Evidence roles contribute requirements, outlines,
+   source spans, and provenance; the Writer reads the completed ledger once and
+   submits the artifact. `iterative_shared_ledger` is available when a registered
+   run needs bounded follow-up calls. A submitted artifact is hashed and frozen
+   before evaluation feedback is released.
+5. **Attribute feedback.** Independent criterion-level evaluation is aligned with
+   the frozen predicted requirements and the observed coordination records. Meta
+   performs global analysis; each agent receives a validated, scoped rubric subset
+   for local attribution and reflection. These records are evidence-linked
+   hypotheses, not causal proof.
+6. **Evolve directly.** After attribution, structurally valid proposals update
+   versioned experience atomically. There is no accept/hold/reject quality gate or
+   paired-validation promotion step. The Agent Pool may add, prune, split, merge,
+   specialize, or reorganize reusable harness profiles. Held-out validation and
+   test tasks are read-only and never update either layer.
 
-This public source distribution excludes benchmark data, credentials, local
-environments, and run outputs. Dataset helpers and provenance remain in
-[`dataset/`](dataset/); acquire benchmark data separately from its upstream
-sources and follow their licenses. Synthetic tests in `tests/jit_mas/fixtures/`
-are included, so offline verification does not require those downloads.
+The construction stage does not perform attribution or modify the persistent Pool.
+Pool operations and profile updates happen only after a complete evolution task or
+batch has been evaluated. See the [implementation guide](docs/jit_mas.md) and the
+[single-pass executor contract](docs/jit_mas_single_pass.md) for the precise
+contracts and limits.
 
+## Registered evaluation protocol
 
-## What is JIT-Agent?
+The current overview is the independent, empty-start protocol in
+[`paper/experiments/experiment_plan_v5_ZH.md`](paper/experiments/experiment_plan_v5_ZH.md):
 
-**JIT-Agent is a compact meta-agent that writes your agent harness on the fly.** Instead of
-precompiling one general-purpose scaffold and hoping it transfers, JIT-Agent takes a task
-spec, a protocol, a tool/skill registry, and a few retrieved prior harnesses, and emits an
-**executable, task-specific harness that wraps any off-the-shelf agentic LLM** —
-***Model-as-a-Harness***.
+- ResearchRubrics, DeepSearchQA, and WritingBench each start with an empty
+  experience store and Agent Pool state.
+- Each source has three fixed order runs. Every trajectory contains 40 evolution
+  tasks in eight batches of five. The five tasks in a batch share one frozen input
+  state; no experience or Pool update occurs between them.
+- After a batch, Meta produces three candidates from the same batch input. Each
+  candidate is evaluated on the source's fixed ten validation tasks, and the
+  registered selection rule chooses one winner for the next batch. The final
+  selected state is the eighth-batch winner (`C40`).
+- DeepResearch Bench II, IFEval, and IFBench are test-only transfer targets. Test
+  feedback cannot affect evolution or selection, and the sources are reported
+  separately rather than as one cross-benchmark leaderboard.
 
-<div align="center">
-<img src="assets/method_overview.png" alt="Overview of JIT-Agent" width="100%">
-</div>
-
-<div align="center"><sub><b>Overview of JIT-Agent.</b> Given a task, JIT-Agent composes a
-problem-specific agent harness by selecting and instantiating four modules: memory,
-planning, action, and capability. Different task structures therefore induce distinct
-executable protocols and state organizations.</sub></div>
-
-Every harness is factored into **four modules — memory, planning, action, capability
-orchestration** — implemented against the shared interfaces in
-[**HarnessFactory**](harness_factory/), so generation means **emitting structured code
-rather than free-form agent programs**. As traces and feedback come back, JIT-Agent revises
-the harness and updates the archive: **harnesses keep improving at test time while the
-generator itself stays frozen.**
-
-<div align="center">
-<img src="assets/leaderboard.png" alt="JIT-Agent leaderboard across four representative agent benchmarks" width="100%">
-</div>
-
-**Results.** The resulting **JIT-Agent-27B** lifts a wide range of backbone agents across
-deep research, daily work, planning, and workspace tasks.
-
-> **Building the scaffold turns out to be a trainable, transferable axis of agent
-> intelligence — orthogonal to scaling the base model.**
-
----
+The registered inventory is 360 evolution slots, 2,160 validation slots, and
+2,751 test slots (5,271 nominal task slots), plus 216 candidate-generation
+operations. These are task slots or planned operations, not API-request or
+completed-work guarantees. Exact task IDs,
+hashes, budgets, and release conditions live under
+[`paper/experiments/`](paper/experiments/). No formal performance result should be
+inferred until the complete test inventory is sealed and scored.
 
 ## Repository layout
 
-| Directory | What it holds |
+| Directory | Purpose |
 |---|---|
-| [`jit/`](jit/) | The meta agent: generation / repair prompts, best-of-N selection |
-| [`scripts/`](scripts/) | The agent kernel, tools, models, evaluation engine, and the two runners |
-| [`harness_factory/`](harness_factory/) | Hand-written harness implementations and their design write-ups |
-| [`benchmark/`](benchmark/) | One adapter, config and evaluator per benchmark |
-| [`dataset/`](dataset/) | Dataset helpers and download/provenance documentation |
+| [`jit_mas/`](jit_mas/) | JIT-Compose schemas, planning, execution, attribution, experience, and Agent Pool evolution |
+| [`scripts/run_jit_mas.py`](scripts/run_jit_mas.py) | Offline smoke, native evolution, frozen evaluation, freeze, and rollback entry point |
+| [`scripts/run_independent_batch_experiment.py`](scripts/run_independent_batch_experiment.py) | Registered batch-campaign runner |
+| [`docs/`](docs/) | Implementation, runtime, quality, and protocol notes |
+| [`paper/`](paper/) | Manuscript, experiment plans, manifests, and audit records |
+| [`benchmark/`](benchmark/) | Benchmark adapters and evaluators inherited from the JIT runtime |
+| [`dataset/`](dataset/) | Dataset provenance and preparation helpers; benchmark data is not bundled |
+| [`tests/jit_mas/`](tests/jit_mas/) | Offline regression tests and synthetic fixtures |
 
-Each directory has its own README with the details.
+The original JIT generation and HarnessFactory paths remain in `jit/`,
+`harness_factory/`, and `scripts/` as inherited controls and compatibility code.
+Their upstream descriptions and results are not results for JIT-Compose.
 
-## JIT-MAS extension
+## Quick start
 
-The incremental rubric-driven team loop, offline smoke, pinned ResearchRubrics adapter,
-and small native-run instructions are documented in [docs/jit_mas.md](docs/jit_mas.md).
-Run `python -m scripts.run_jit_mas --mode smoke` for synthetic software verification.
-This does not run a real benchmark, call paid APIs, or train model parameters.
-
-The frozen [joint six-benchmark subset protocol](paper/experiments/experiment_plan_v5_ZH.md)
-uses one shared evolution trajectory across ResearchRubrics, DeepSearchQA and
-WritingBench, followed by the same frozen generator state on all six benchmarks.
-It selects 60 evolution, 30 validation and 273 test tasks from the unchanged v4
-parent partitions. Three source-order runs and one artifact per task/state give
-2,541 nominal core task slots, not API requests. Terminal-state and extra
-mechanism conditions are not enabled by default. There is no Dev partition;
-unselected tasks, including former RR quarantine, remain unused this round. See the
-[exact task numbers](paper/experiments/task_assignments_v5.md) and
-[machine-readable assignments](paper/experiments/joint_task_splits_v5.json).
-Verify all memberships and mixed source orders without private data or API calls:
-`python -m scripts.prepare_joint_subset --check paper/experiments/joint_task_splits_v5.json`.
-The [full v4 parent plan](paper/experiments/experiment_plan_v4_ZH.md) is retained
-as immutable provenance, not an instruction to run the full pool.
-
-The [independent evolution protocol](paper/experiments/experiment_plan_v5_independent_ZH.md)
-reuses those task memberships and registers separate source trajectories with
-3,381 task slots. Its status is `PROTOCOL_FROZEN_NOT_RUN`; the launch guide lists
-the remaining formal-run prerequisites. The [dual evolution implementation note](paper/experiments/dual_evolution_agent_pool_ZH.md)
-describes the shared Meta and Agent Pool state and its current limits.
-
-The historical [three-benchmark implementation](paper/experiments/benchmark_plan_v3_ZH.md)
-includes full-validation checkpoint selection,
-shared evidence packs, metered benchmark-specific judges, and sealed test
-submission before feedback release. Run
-`python -m scripts.run_benchmark_experiment --mode evolve --smoke --output outputs/checkpoint_smoke`
-and `python -m scripts.run_benchmark_test --mode smoke --campaign outputs/test_smoke`
-to verify those paths offline. These v3 smoke tests are not a six-benchmark v5
-execution campaign; no formal model results or final evolved generator are claimed.
-
-## Setup
-
-**1. Clone the repository**
+Use Python 3.11 or later. Create an environment with either:
 
 ```bash
-git clone https://github.com/chivector/JIT-Rubric-MAS.git
-cd JIT-Rubric-MAS
+conda env create -f environment.yml
+conda activate jit
 ```
 
-**2. Environment** (Python 3.11)
+or:
 
 ```bash
-conda env create -f environment.yml && conda activate jit
+python -m venv .venv
+# activate .venv using the shell for your platform
+python -m pip install -r requirements.txt
 ```
 
-or, in an existing environment: `pip install -r requirements.txt`. Serving a local meta
-model (vLLM/SGLang + torch) is deliberately not included — the pipeline only ever talks
-HTTP to it.
+Copy `.env.example` to `.env` when using hosted models. The native JIT-MAS
+configuration uses five independent `MAS_*` roles (Meta, Global, Local, Exec, and
+Judge); the complete endpoint, key, timeout, and token settings are documented in
+[`configs/jit_mas.native.example.yaml`](configs/jit_mas.native.example.yaml).
 
-**3. Credentials**
+### Offline verification
+
+The smoke path uses synthetic fixtures and makes no paid requests, downloads, or
+parameter updates:
 
 ```bash
-cp .env.example .env   # then fill it in
+python -m pytest tests/jit_mas -q
+python -m scripts.run_jit_mas \
+  --mode smoke \
+  --state outputs/smoke/experience.sqlite \
+  --output outputs/smoke/runs
 ```
 
-Anything already exported in the shell wins over `.env`, and every model role can also be
-overridden per run on the command line.
+Smoke verifies the wiring for planning, harness reuse, shared-ledger execution,
+evaluation, attribution, and atomic dual evolution. It does not estimate benchmark
+quality.
 
-| Group | Keys | Used for |
-|---|---|---|
-| Execution model | `OPENAI_API_BASE`, `OPENAI_API_KEY`, `EXEC_MODEL` | runs the generated harness's agent loop |
-| Judge model | `JUDGE_MODEL`, optional `JUDGE_API_*` | grades produced artifacts (falls back to the execution endpoint) |
-| Meta model | `META_MODEL`, `META_API_BASE`, `META_API_KEY`, `META_TOKENIZER` | writes the harness (JIT pipeline only) |
-| Tools | `SERPER_API_KEY`, `JINA_API_KEY` | `web_search` / `crawl_page` |
+### Small native run
 
-**4. Data**
+Prepare the pinned ResearchRubrics data separately, configure the five `MAS_*`
+roles, and use the example config:
 
-Only synthetic JIT-MAS test fixtures ship in this fork. Real benchmark data must
-be obtained separately; see [dataset/README.md](dataset/README.md) for sources.
-The fetch script covers the large assets described in the upstream guide.
-
-```bash
-python scripts/check_datasets.py        # present / partial / missing, per benchmark
-bash scripts/fetch_datasets.sh travel   # one benchmark ("all" ≈ 1 GB)
+```powershell
+python -m scripts.prepare_researchrubrics --download --output-dir dataset/researchrubrics-local --seed 0 --evolution-size 5 --validation-size 0
+python -m scripts.run_jit_mas --mode evolve --config configs/jit_mas.native.example.yaml --data dataset/researchrubrics-local/processed_data.jsonl --splits dataset/researchrubrics-local/splits.json --state outputs/native/experience.sqlite --output outputs/native/runs --limit 1 --unsafe-local
+python -m scripts.run_jit_mas --mode evaluate --config configs/jit_mas.native.example.yaml --data dataset/researchrubrics-local/processed_data.jsonl --splits dataset/researchrubrics-local/splits.json --state outputs/native/experience.sqlite --output outputs/native/test --limit 1 --unsafe-local
 ```
 
-## Usage
+`--unsafe-local` is required because this checkout does not include a trusted
+generated-code sandbox. Use a disposable environment with no sensitive files or
+credentials. Native runs are implementation checks, not formal campaign results.
 
-All modes share the same benchmark adapters, execution model, judge, and scoring path.
-The **meta model** writes a harness, the **execution model** runs it, and the **judge
-model** grades the result. Configure credentials in `.env`; CLI flags override them.
+### State and artifacts
 
-| Goal | Entry point | Meta model | Selection |
-|---|---|---|---|
-| Test a fixed HarnessFactory design | `scripts.run_seed_harness` | None | None |
-| Use a hosted API as the meta-agent | `scripts.run_jit` | OpenAI-compatible API | `judge` |
-| Evaluate the JIT checkpoint | `serve_meta_model.sh` + `scripts.run_jit` | Local JIT-27B | `logprob` |
+```powershell
+python -m scripts.run_jit_mas --mode freeze --state outputs/native/experience.sqlite --output outputs/native/frozen-v1.json
+python -m scripts.run_jit_mas --mode rollback --state outputs/native/experience.sqlite --version 0
+```
 
-**1. Test a fixed HarnessFactory design.** No meta model is called; the selected harness
-is executed and scored directly.
+Run directories retain frozen plan hashes, generated harness and profile
+identities, execution traces, immutable submissions, per-criterion evaluation,
+alignment and attribution, reflection and Pool decisions, update receipts, and
+budget records. `freeze` and `rollback` operate on Meta experience, full harness
+profiles, and Pool structure as one versioned snapshot.
+
+## Data and inherited controls
+
+Only synthetic JIT-MAS fixtures are included. Obtain real benchmark data from the
+upstream sources and follow their licenses; see [`dataset/README.md`](dataset/README.md)
+for provenance and checks.
+
+The inherited JIT runner remains available for compatibility:
 
 ```bash
 python -m scripts.run_seed_harness --bench xbench --list-harnesses
-python -m scripts.run_seed_harness --bench xbench \
-    --harness plan_and_execute --max-samples 5
+python -m scripts.run_seed_harness --bench xbench --harness plan_and_execute --max-samples 5
+python -m scripts.run_jit --bench xbench --meta-model provider-model --meta-base https://api.provider.com/v1 --selector judge --rollouts 3 --max-samples 5
 ```
 
-See the [HarnessFactory guide](harness_factory/README.md) for the eleven included designs.
-
-**2. Use a hosted API model as the meta-agent.** Hosted APIs usually do not expose
-`prompt_logprobs`, so use judge selection explicitly. `META_API_KEY` is read from `.env`.
-
-```bash
-python -m scripts.run_jit --bench xbench \
-    --meta-model provider-model --meta-base https://api.provider.com/v1 \
-    --selector judge --rollouts 3 --max-samples 5
-```
-
-**3. Evaluate the JIT checkpoint.** Serve the checkpoint, then use its tokenizer for the
-published log-probability selector.
-
-```bash
-MODEL=JIT-Agent/jit-27b SERVED_NAME=jit TP=4 \
-    bash scripts/serve_meta_model.sh
-```
-
-```bash
-python -m scripts.run_jit --bench xbench \
-    --meta-model jit --meta-base http://127.0.0.1:8000/v1 \
-    --selector logprob --tokenizer JIT-Agent/jit-27b \
-    --rollouts 3 --meta-temperature 1.0 --max-samples 5
-```
-
-Drop `--max-samples` for a full run. `MODEL` may also be a local checkpoint path;
-`SERVED_NAME` must match `--meta-model`. The shell wrapper
-`bash scripts/run_jit.sh xbench` reads the same settings from the environment.
-
-**Key arguments**
-
-| Arguments | Purpose |
-|---|---|
-| `--bench`, `--dataset-path` | Select the benchmark and optionally override its data path. |
-| `--meta-model/base/key` | Configure the harness-generating model; JIT runs only. |
-| `--exec-model/base/key` | Configure the model that runs the harness. |
-| `--judge-model/base/key` | Configure the benchmark evaluator. |
-| `--rollouts`, `--meta-temperature` | Control candidate count and generation diversity. |
-| `--selector`, `--tokenizer` | Use `judge` for hosted APIs or `logprob` with a local tokenizer. |
-| `--harness-refs {desc,code}` | Choose design descriptions or sampled source harnesses as references. |
-| `--max-samples`, `--cases`, `--output` | Control smoke tests, case selection, and output location. |
-| `--workers-gen`, `--workers-exec` | Tune generation and execution concurrency independently. |
-
-Supported benchmarks are `xbench`, `deepsearchqa`, `agentif`, `officebench`, `odyssey`,
-`shopping`, and `travel`.
-
-**Output and resume.** JIT runs separate generation, selection, and execution artifacts:
-
-```
-summary.json    headline metrics + how the run was configured
-generate/       the N candidate harnesses per case, with prompts and responses
-select/         the pick per case, the rule that produced it, per-candidate scores
-execute/        the harness that actually ran, its trajectory, and the numbers you report
-```
-
-Fixed-harness runs write `summary.json`, `scores.jsonl`, and per-case reports directly.
-Re-running an identical command resumes completed work and retries only infrastructure
-failures; `--skip-generate` and `--skip-select` reuse earlier JIT phases.
-
-Detailed documentation: [JIT pipeline](jit/README.md) ·
-[HarnessFactory](harness_factory/README.md) · [CLI and runtime](scripts/README.md).
-Run either entry point with `--help` for the full flag list.
+Those commands exercise the original JIT/HarnessFactory pipeline. They are useful
+controls and smoke paths, but they do not run the JIT-Compose evolution loop.
+Detailed component documentation is available in [`jit/README.md`](jit/README.md),
+[`harness_factory/README.md`](harness_factory/README.md), and
+[`scripts/README.md`](scripts/README.md).
 
 ## Citation
 
-If you find JIT-Agent useful, please cite:
-
-```bibtex
-@misc{zhang2026jitagentscalingharnessintelligence,
-      title={JIT-Agent: Scaling Harness Intelligence via Just-in-Time Harness Evolution},
-      author={Guibin Zhang and Leo Lu and Fangzhou Xie and Kang Zhu and Junhao Wang and Zhifei Xie and Zhaochen Yu and Zihang Liu and Zhongxiang Sun and Qiankun Li and Yue Liao and Heng Chang and Xiaobin Hu and Qibing Ren and Wangchunshu Zhou and Shuicheng Yan},
-      year={2026},
-      eprint={2608.25593},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2608.25593},
-}
-```
+The manuscript title is **JIT-Compose: Evolving Multi-Agent Workflow Synthesis for
+Open-Ended Generation**. Citation metadata will be finalized with the paper
+release. Do not cite the inherited upstream JIT-Agent paper as a result for this
+method.
 
 ## License
 

@@ -3,7 +3,7 @@
 import pytest
 from types import SimpleNamespace
 import httpx
-from openai import APIConnectionError
+from openai import APIConnectionError, APIStatusError
 
 from scripts.models.base import Model
 from scripts.models.openai_server import (
@@ -103,3 +103,80 @@ def test_fallback_token_estimate_includes_tool_schema_and_native_arguments():
         tool_calls = [Call()]
 
     assert _estimate_output_tokens(Message()) > 0
+
+
+def _status_error(status_code):
+    request = httpx.Request("POST", "https://offline.example/v1/chat/completions")
+    response = httpx.Response(status_code, request=request)
+    return APIStatusError(f"HTTP {status_code}", response=response, body=None)
+
+
+class _CompletionMessage:
+    content = "ok"
+    tool_calls = None
+    reasoning = None
+    reasoning_content = None
+
+    def model_dump(self, include=None):
+        return {"role": "assistant", "content": self.content}
+
+
+class _CompletionResponse:
+    usage = SimpleNamespace(prompt_tokens=3, completion_tokens=2)
+    choices = [SimpleNamespace(message=_CompletionMessage())]
+
+
+def _fixture_model(events, *, max_tokens=16000, max_attempts=3):
+    model = OpenAIServerModel.__new__(OpenAIServerModel)
+    Model.__init__(model, max_tokens=max_tokens)
+    model.model_id = "offline-fixture"
+    model.max_attempts = max_attempts
+    model.custom_role_conversions = None
+    calls = []
+
+    def create(**kwargs):
+        calls.append(dict(kwargs))
+        event = events.pop(0)
+        if isinstance(event, BaseException):
+            raise event
+        return event
+
+    model.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=create))
+    )
+    return model, calls
+
+
+def test_http_507_retries_with_reduced_output_cap(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr("scripts.models.openai_server.time.sleep", sleeps.append)
+    model, calls = _fixture_model([_status_error(507), _CompletionResponse()])
+
+    result = model([{"role": "user", "content": "Offline request"}])
+
+    assert result.content == "ok"
+    assert [call["max_tokens"] for call in calls] == [16000, 8000]
+    assert sleeps == [30]
+    assert model.last_retry_metadata["attempts"][0]["status_code"] == 507
+    assert model.last_retry_metadata["attempts"][0]["next_max_tokens"] == 8000
+
+
+def test_http_507_retry_floor_and_auth_fail_fast(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr("scripts.models.openai_server.time.sleep", sleeps.append)
+    model, calls = _fixture_model(
+        [_status_error(507), _status_error(507), _status_error(507)]
+    )
+    with pytest.raises(APIStatusError) as caught:
+        model([{"role": "user", "content": "Offline request"}])
+    assert caught.value.status_code == 507
+    assert [call["max_tokens"] for call in calls] == [16000, 8000, 4096]
+    assert sleeps == [30, 30]
+
+    sleeps.clear()
+    model, calls = _fixture_model([_status_error(401), _CompletionResponse()])
+    with pytest.raises(APIStatusError) as caught:
+        model([{"role": "user", "content": "Offline request"}])
+    assert caught.value.status_code == 401
+    assert len(calls) == 1
+    assert sleeps == []

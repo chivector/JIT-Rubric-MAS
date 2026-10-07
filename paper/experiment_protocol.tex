@@ -1,22 +1,25 @@
-\section{Joint Cross-Benchmark Experiment Protocol}
+\section{Independent Batched Evolution Experiment Protocol}
 \label{app:concrete-protocol}
 
 \paragraph{Protocol and evidence status.}
-The v5 subset design is specified in \texttt{experiments/joint\_protocol\_v5.json};
-its exact task membership and joint source orders are recorded in
-\texttt{experiments/joint\_task\_splits\_v5.json}, with the human-readable
-index \texttt{experiments/task\_assignments\_v5.md}. This is an experimental
+The stratified v6 independent batch amendment is specified in
+\path{experiments/independent_protocol_v6_stratified.json}; its exact task membership
+and source orders are recorded in \path{experiments/joint_task_splits_v6_stratified.json},
+with the human-readable index \path{experiments/task_assignments_v6_stratified.md}.
+This is an experimental
 protocol, not a report of completed model experiments. Metadata generation
 and software checks do not establish end-to-end support for new benchmarks
 in the older v3 execution driver, nor supply empirical measurements.
-The v1--v4 registrations remain immutable historical provenance; v5 does not
-silently reinterpret their runs or results.
+The v1--v5 registrations and the already-started original v6 registration
+remain immutable historical provenance. This amendment uses a separate
+registration and starts each trajectory from zero; it does not reinterpret
+or continue their runs, learned states or results.
 
 \paragraph{Benchmark roles and exact membership.}
-ResearchRubrics (RR), DeepSearchQA (DSQA), and WritingBench (WB) jointly
+ResearchRubrics (RR), DeepSearchQA (DSQA), and WritingBench (WB) independently
 supply evolution tasks and fixed validation tasks. DeepResearch Bench II,
 IFEval, and single-turn IFBench supply external test tasks only. No separate
-development split is reserved in v5. Unselected tasks are unused reserves,
+development split is reserved in v6. Unselected tasks are unused reserves,
 not development data or automatically scheduled additional tests.
 
 \begin{table}[t]
@@ -25,41 +28,68 @@ not development data or automatically scheduled additional tests.
 \toprule
 Benchmark & Evol. & Val. & Test \\
 \midrule
-ResearchRubrics & 20 & 10 & 33 \\
-DeepSearchQA & 20 & 10 & 50 \\
-WritingBench & 20 & 10 & 50 \\
+ResearchRubrics & 40 & 10 & 33 \\
+DeepSearchQA & 40 & 10 & 50 \\
+WritingBench & 40 & 10 & 50 \\
 DR Bench II & 0 & 0 & 40 \\
 IFEval & 0 & 0 & 50 \\
 IFBench & 0 & 0 & 50 \\
 \midrule
-Total & 60 & 30 & 273 \\
+Total & 120 & 30 & 273 \\
 \bottomrule
 \end{tabular}
-\caption{Custom v5 subset allocations, not author-provided
+\caption{Custom v6 subset allocations, not author-provided
 training/validation/test splits or full-dataset leaderboard evaluation.
-There are 363 selected unique tasks and 2,611 unused reserve tasks.}
+There are 423 selected tasks and 2,551 unused reserve tasks.}
 \label{tab:benchmark-subsets}
 \end{table}
 
-Sampling occurs only within the corresponding frozen v4 parent partition:
-evolution from evolution, validation from validation, and test from test.
-Deterministic public-metadata strata and fixed hash ranks, never scores,
-define membership before new execution. RR retains all 33 clean held-out
+Frozen v4 parent boundaries and exposure exclusions constrain the amendment.
+DSQA and WB resample 40 evolution, 10 validation and 50 test tasks within
+their respective eligible parent partitions. RR retains all 30 parent
+evolution tasks, reselects 10 of its 20 parent validation tasks and transfers
+the remaining 10 to evolution. Its 33 historically clean-designated test
+tasks remain fixed, including members with subsequently registered exposure.
+The historical label does not assert that all retained tasks are currently
+unexposed or suitable for a new blind confirmation test.
+Deterministic public-domain quotas and fixed hash ranks, never scores,
+define membership before new execution. RR retains all 33 historically clean-designated
 test tasks; its 18 historically exposed/reserved tasks are not selected
 in this track and retain their exposure flags in the v4 parent inventory.
-Historical pilot or gated-update scores are not new v5 measurements.
+Historical pilot or gated-update scores are not new v6 measurements.
 
 WB uses the pinned 1,000-task release, not the earlier 1,239-task release.
-Its subset uses public-language/domain strata and deterministic ranks.
+Its subset balances public top-level domain quotas, then language within
+each domain, with deterministic ranks.
 Official WB index 1 was exposed during inventory preparation and remains
 eligible only for evolution or unused reserve, never validation or test;
-the subset does not force its selection. IFEval samples 50 of its 541
+the stratified selection preserves that restriction. IFEval samples 50 of its 541
 evaluation prompts regardless of the hosting service's split label;
 IFBench samples 50 of the pinned 300-task single-turn release, not its
 training constraints or multi-turn variant. DR Bench II samples 40 of 132
-tasks, with 20 English and 20 Chinese; translated-pair structure is not
-assumed. The unused 2,611 tasks cannot be added after inspecting outcomes
+tasks with balanced public-theme quotas and 20 English and 20 Chinese;
+translated-pair structure is not assumed. The five transfer-test tasks
+registered as exposed during development on 2026-10-04, and any additional
+known transfer-benchmark exposures in that register, are excluded before resampling.
+The extent of incidental exposure in some historical runs is unknown;
+retained historical test members are not claimed to be a new blind test.
+IFEval and IFBench do not provide trusted domain fields, so
+their fixed-hash samples do not imply domain balance.
+The unused 2,551 tasks cannot be added after inspecting outcomes
 without a new outcome-independent registration and exposure audit.
+
+Evolution (training), validation and test subsets each aim for equal domain
+quotas and similar domain proportions, subject to available inventory,
+intact duplicate-question groups and fixed historical boundaries. RR uses
+the release's public \texttt{domain}; DSQA uses \texttt{problem\_category}.
+RR's parent validation pool covers only nine of its ten domains and lacks
+Hypotheticals \& Philosophy, so its ten-task validation subset cannot
+cover that domain. Its retained evolution members and fixed test set also
+limit exact balance. The manifest reports observed domain/language counts,
+capacity-constrained quota deviations, deviations from the equal ideal
+$N/K$ over all release domains, and unavailable strata. Zero deviation from
+capacity-constrained quotas does not establish uniformity of fixed RR
+subsets or imply that a rare domain appears in every subset.
 
 Native IDs, release-relative row references and question hashes in the
 versioned manifest define ``which questions,'' not arbitrary ranges or
@@ -71,37 +101,46 @@ amendment. Question disjointness alone does not prove topic or pretraining
 disjointness. Private reference data are not redistributed in public task
 indexes.
 
-\paragraph{One joint trajectory per run.}
-Each run starts from one empty shared rubric/organization/execution
-experience store and the same fixed JIT generator archive. All three source
-benchmarks update that same store. Four stages each contain five RR, five
-DSQA and five WB tasks, interleaved according to the frozen joint schedule.
+\paragraph{Nine independent source trajectories.}
+Each source/run starts from an empty rubric/organization/execution experience
+store and the same fixed JIT generator archive. Source benchmarks do not
+share evolved state. Each of the three sources has three runs and 40
+evolution tasks, giving nine trajectories and eight five-task batches per
+trajectory.
 The three source-order seeds are 20261001, 20261002 and 20261003; they do not
 change memberships or constitute guaranteed provider sampling seeds.
-Every source task appears once per run, giving 60 source slots.
+Every source task appears once per source/run, giving 40 source slots per
+trajectory. The five tasks in one batch all read the same unchanged
+experience and Agent Pool state; no attribution, persistent update or
+evolution occurs between these tasks. After all five terminate, global
+RubricGraph attribution and local role reflection inform three candidate
+states, each branching from that same batch input state. The meta-agent
+integrates the batch evidence and may evolve its design experience and full
+agent harness prototypes. Pool Add, Delete/Prune, Split, Merge, Specialize
+and Reorganize operations occur only during this evolution step. Construction
+can create and record a temporary harness without mutating the Pool.
 
-Checkpoints are taken at positions $0,15,30,45,60$. Positions
+Batch boundaries occur at positions $5,10,15,20,25,30,35,40$. Positions
 count attempted source slots, not successful updates or database versions.
 Failed execution, incomplete evaluation or no valid proposal still consume
 their registered slot; no replacement task or quality-triggered retry is
 introduced. Interrupted requests require journal recovery rather than
-fresh sampling. The first structurally and evidentially valid attributed
-proposal updates experience directly, at most once per source, without
-per-item accept/hold/reject selection. Evolution continues from the latest
-state, not a provisional validation winner; there is no rollback, early
-stopping or extra source pass.
+fresh sampling. Structural and provenance checks precede candidate
+publication. The next batch waits for its three candidates' validation and
+starts from the selected whole-state winner. There is no extra source pass.
 
-\paragraph{Entire joint validation set at every checkpoint.}
-Every one of the five checkpoints generates one artifact
-for every fixed validation task: $10+10+10=30$ tasks and 30 evaluation
-slots per checkpoint. Validation is neither the most recent source batch
+\paragraph{Fixed source validation after every batch.}
+Each of the three candidates generates one artifact for every one of its
+source's fixed ten validation tasks, giving 30 evaluation slots per batch
+and $8\times3\times10=240$ per trajectory. The initial state is not a
+fourth candidate and receives no validation slots. Validation is neither the most recent source batch
 nor an expanding window. Snapshot stores are read-only, attribution is
 disabled, and validation feedback cannot become experience or enter source
 actors. Identical full-state and execution identities may reuse cached
 outcomes with explicit provenance, not gain extra sampling opportunities.
 
-Eligibility requires at least 90\% completion separately on each source
-benchmark: 9/10 RR, 9/10 DSQA and 9/10 WB slots. For task $t$, fixed
+Eligibility requires at least 9/10 complete evaluations on the candidate's
+own source validation set. For task $t$, fixed
 theoretical bounds $L_t,H_t$ define selection-only normalization
 \begin{equation}
 N_t(Q)=\begin{cases}
@@ -117,28 +156,28 @@ observing outcomes, not fitted by checkpoint or benchmark test performance.
 Out-of-range purported scores are invalid, not silently repaired.
 
 Let $\widetilde N= N_t(Q)$ for a complete evaluation and zero otherwise.
-The single global selection objective is
+For source $b$, the selection objective for one batch candidate is
 \begin{equation}
-U(C)=\frac{1}{3}\sum_{b\in\{\mathrm{RR,DSQA,WB}\}}
-\frac{1}{|V_b|}\sum_{t\in V_b}\widetilde N_{C,t}.
+U_b(C)=\frac{1}{|V_b|}\sum_{t\in V_b}\widetilde N_{C,t}.
 \end{equation}
-Thus each source benchmark has equal weight. Missing native scores remain
+No cross-source validation aggregation selects a candidate. Missing native scores remain
 null; the zero is solely a conservative
 selection surrogate, not an invented official measurement. Completion
 and feasible score intervals are reported separately.
 
-After all four stages, assess all five candidates, including $C_0$, and
-select among the eligible states. Form the maximum-relative tie set with tolerance $10^{-12}$, then
-prefer more complete evaluations, earlier source position and lexical
-state hash. Select one whole-state winner per run. No eligible checkpoint
-makes that run inconclusive, not replaceable by a favorable extra run.
-Do not select a different checkpoint for each benchmark or tune using
-validation feedback during the registered trajectory.
+After each batch, select among its three eligible candidates. Form the
+maximum-relative tie set with tolerance $10^{-12}$, then prefer more complete
+evaluations, earlier candidate index and lexical state hash. The winner
+feeds the next batch; the eighth batch winner is the final selected state.
+No eligible candidate makes the trajectory inconclusive rather than
+replaceable by a favorable extra run. Validation scores select a state but
+do not enter agent reflection or persistent experience.
 
 \paragraph{One reusable generator version, not new weights.}
-For a given run, the identical selected shared-state hash is used on all
-six benchmarks. JIT still generates a task-conditioned MAS from the new
-public task and applicable shared experience; the selected object is not
+For a given source/run, the identical selected state hash is used on its
+own source test subset and each of the three transfer benchmarks. JIT still
+generates a task-conditioned MAS from the new public task and applicable
+source experience; the selected object is not
 a fixed Analyst/Evidence/Writer team for every possible task. Task-level
 execution remains single-pass shared-ledger coordination, without iterative
 inter-agent negotiation.
@@ -147,23 +186,24 @@ The released reusable meta-agent package binds model serving identity,
 generator code and prompts, configuration, tool/retrieval policy, the
 selected \texttt{ExperienceSnapshot}, and data/code/protocol hashes.
 The snapshot contains reusable experience, not newly trained model
-weights. All three joint trajectories are evaluated and reported. A single
-default deployment package is predefined as run 0's joint-validation
-winner; test results do not choose the deployment run. Separately evolved
-per-benchmark states are an optional mechanism control, never the main
-method disguised as a universal generator.
+weights. All nine source trajectories are evaluated and reported. Each
+source's default package is predefined as its run 0 eighth-batch winner;
+test results do not choose a deployment source or run. The main experiment
+uses independently evolved per-source states and reports their transfer
+performance separately.
 
 \paragraph{Frozen tests, controls and scoring.}
-Each of the three selected states generates one artifact per task on all
-six test subsets. Each static control generates one artifact per task in
+For each source, its three selected states generate one artifact per task
+on that source's test set and all three transfer test sets. Each static
+control generates one artifact per task across all six subsets in
 total, shared across run comparisons rather than relabeled as three
 independent observations. The five core methods are initial and selected
 \method, direct one-call generation, matched-backbone native JIT and a
 rubric-guided fixed single-pass MAS. Identical inputs, evidence, backbone
 and resource ceilings apply across comparable conditions. A matched JIT
 proxy backbone is not claimed to be the original JIT-27B checkpoint.
-Terminal-state, G/GO, independently evolved ablations and per-benchmark
-evolution controls are excluded from the mandatory subset inventory.
+Terminal-state, G/GO and mechanism ablations are excluded from the mandatory
+subset inventory.
 They require a separate frozen registration before execution and are not
 automatically enabled.
 
@@ -185,7 +225,7 @@ prompts and model substitutions must be disclosed, not represented as
 official leaderboard reproductions. Do not average the six native score
 scales into a purported overall leaderboard score.
 
-For benchmark-level effects, average the three selected trajectories and
+For each source--benchmark effect, average that source's three selected trajectories and
 compare with the single shared static-control artifact on each task, then
 use paired whole-task uncertainty, not rubric/call-level pseudoreplication.
 Report each trajectory separately too. A single artifact per state/task
@@ -194,23 +234,34 @@ evolution order, not a controlled provider sampling seed. Small subsets
 can yield wide intervals and do not establish full-dataset or SOTA results.
 Missing evaluation remains null with completion,
 failure counts and feasible bounds rather than complete-case superiority.
-The selected-versus-initial contrasts form separate Holm families: four
-research/writing benchmarks for primary effects and two instruction-following
-benchmarks for diagnostics. The selected-versus-matched-JIT/rubric-fixed
-contrasts likewise form separate families of eight primary and four
+The selected-versus-initial contrasts form separate Holm families: six
+primary research/writing contrasts (three source self-tests and three
+source-to-DR-Bench-II transfers) and six instruction diagnostic contrasts
+(three sources by IFEval/IFBench). The selected-versus-matched-JIT/rubric-fixed
+contrasts likewise form separate families of twelve primary and twelve
 diagnostic comparisons. No mechanism-test family is included in this
 mandatory subset track; additional contrasts require their own registration.
 
 \paragraph{Resources and execution boundary.}
-Three trajectories entail $3\times60=180$ evolution slots and
-$3\times5\times30=450$ validation slots. Testing all five core methods
-requires $273\times(3+4)=1,911$ artifact slots: three selected states and
-four shared static controls. The total is 2,541 nominal task slots before
-identical-state reuse, versus 61,134 for the same five-method v4 accounting,
-a 95.8\% reduction. These are not API requests, token ceilings, guaranteed
+Nine trajectories entail $9\times40=360$ evolution slots and
+$9\times8\times3\times10=2,160$ validation slots. Their
+$9\times8\times3=216$ candidate-generation jobs are accounted separately
+from task-artifact slots. Selected-state testing requires
+$3\times(33+50+50)+9\times(40+50+50)=1,659$ artifact slots. The four
+shared static controls require $4\times273=1,092$, giving 2,751 test slots
+and 5,271 nominal task slots before identical-state reuse. These are not API requests, token ceilings, guaranteed
 successes or executed results. Evidence preparation, scoring, human audits
 and optional separately registered experiments require their own accounting.
-This protocol does not authorize an automatic suite run.
+The user has authorized the amended campaign; this registration itself
+records planned work rather than completed results.
+
+Independent trajectories, five-task frozen batches, three candidate-generation
+jobs and their validation tasks may run concurrently where dependencies
+permit. A short request pressure test completed 80/80 requests with 64 task
+workers, generator capacity 64 and judge capacity 16 (global fallback 80).
+This checks transport at those capacities, not sustained complete-task
+performance. Next-batch release still waits for its own validation winner,
+and test scoring still waits for the global submission seal.
 
 The MAS generator is budget-aware at design time: its frozen policy receives
 the task token ceiling, per-response ceiling, and live consumed/reserved/remaining
@@ -229,7 +280,7 @@ Freeze per-task public evidence, serving metadata, prompts, code, resource
 ceilings and any retry policy before running the amended execution
 inventory. Private criteria and target answers remain evaluator-only.
 Previously implemented v3 evidence/resource boundaries are provenance,
-not evidence that v5 adapters and the joint driver have executed. Generated
+not evidence that the v6 campaign has completed. Generated
 Python local execution still requires explicit unsafe-local opt-in and is
 not an OS sandbox. No SOTA or performance claim follows from the present
 protocol, manifest checks, synthetic smoke tests or historical API probes.

@@ -1,120 +1,75 @@
-# 六 benchmark 评测、三 benchmark 独立进化：小子集协议 v5
+# 六 benchmark 评测、四 benchmark 独立进化：分批候选协议 v7
 
-目的：在可承担的工作量内，验证 **ResearchRubrics、DeepSearchQA、WritingBench 分别独立进化的 MAS 生成 meta-agent** 能否改善各自任务，并在三个纯 TEST benchmark 上分别评价全部三个来源的迁移表现。沿用 [原联合 v5 方案](experiment_plan_v5_joint_ZH.md) 的题数与划分、三个题序种子、五个核心方法及统一 token/超时预算；本版采用任务内多次调用与 VAL/TEST 并行调度。不运行全量 benchmark，不将三个源 benchmark 的经验合并成一个通用版本。
+本文件是 [主实验方案](experiment_plan_v5_ZH.md) 的详细执行约束。目标是分别验证 ResearchRubrics、DeepSearchQA、WritingBench、DeepResearch Bench II 从零进化的 Ours MAS，并在 IFEval、IFBench 上评价迁移表现。每个进化 benchmark 只运行一次；旧 v5/v6 注册、运行记录、题号和经验不接续。
 
 ## 题目与用途
 
-| Benchmark | EVO：更新经验 | VAL：选版本 | TEST：最终评价 |
+| Benchmark | EVO：更新经验 | VAL：选版本 | TEST（本源/迁移） |
 |---|---:|---:|---:|
-| ResearchRubrics | 20 | 10 | 33 |
-| DeepSearchQA | 20 | 10 | 50 |
-| WritingBench | 20 | 10 | 50 |
-| DeepResearch Bench II | 0 | 0 | 40（20 英文、20 中文） |
+| ResearchRubrics | 40 | 10 | 33 |
+| DeepSearchQA | 40 | 10 | 50 |
+| WritingBench | 40 | 10 | 50 |
+| DeepResearch Bench II | 40 | 10 | 40（20 英文、20 中文） |
 | IFEval | 0 | 0 | 50 |
 | IFBench | 0 | 0 | 50 |
-| **合计** | **60** | **30** | **273** |
+| **合计** | **160** | **40 个固定 VAL 题** | **273 个 TEST 题** |
 
-共 **363 道不同题目**，没有 Dev。其余 2,611 道是 unused/reserve，不用于本次调试或默认追加测试。
+VAL 是每个 benchmark 固定的 10 道题，但在 8 个批次、3 个候选中重复评估，形成 960 个 VAL 评估槽位。四个进化 benchmark 各有一条独立轨迹，共四条轨迹；不设置三个 run，也不把单次运行拆成重复样本。
 
-- 具体原始题号沿用 [task_assignments_v5.md](task_assignments_v5.md)；稳定 task ID、原始记录号、父分区与三个 run 的题序沿用 [joint_task_splits_v5.json](joint_task_splits_v5.json)。本版只复用其中的题目成员及本 benchmark 的相对题序，不采用联合进化调度或联合 checkpoint。题号按固定原始文件从 1 开始，CSV 不计表头；不能重排文件后重新编号。
-- 只在 v4 对应父分区内，使用公开元数据分层和固定哈希抽样；EVO/VAL/TEST 不跨区，不依据答案、私有 rubric 或实验结果挑题。所有 run 使用相同成员，只改变进化顺序。
-- RR 保留全部 33 道 clean test；原 18 道历史曝光/隔离题不进入此次选中测试，v4 记录不删除。WritingBench 原始第 1 题保留曝光标记，只能进入 EVO 或 unused，不强制必选。
-- DeepResearch Bench II、IFEval、IFBench 保持纯 TEST 用途，不参与进化、VAL 或来源筛选；因此本版是三个源 benchmark 独立进化、六个 benchmark 评测，不是六个 benchmark 各自训练。
-- 原联合 v5 及 v1-v4 文件保留为历史记录，本版不能重新解释历史运行结果。未来使用 reserve 必须另行冻结注册，并审计是否已被研究过程暴露。
+## 分层划分
 
-## 进化与 VAL
+EVO、VAL、TEST 在每个 benchmark 内分别按完整可用库存的领域比例分层，并尽量使三个子集接近总体分布，避免训练集中单一领域而验证/测试集中换成另一领域。优先使用公开字段：ResearchRubrics 的 `domain`、DeepSearchQA 的 `problem_category`、WritingBench 的一级领域与语言、DeepResearch Bench II 的公开主题与语言。DeepResearch Bench II 的 TEST 固定保留 20 道英文和 20 道中文，并在各语言内尽量保持主题比例。
 
-1. **三个源 benchmark 在每个 run 内分别从空经验库起步，分别培养生成器。** rubric / organization / execution 经验均按 `benchmark × run` 隔离，不共享、不合并、不从其他来源接续进化；模型底座、生成机制、prompt 和资源上限仍匹配。三个固定题序种子为 `20261001/20261002/20261003`，对应 run 0/1/2；共 `3 benchmark × 3 run = 9` 条独立轨迹。
-2. 每条轨迹一次遍历**本 benchmark 的 20 道 EVO**，共四个阶段，每阶段 5 题；保存 `C0、C5、C10、C15、C20` 五个候选。题序从原 v5 对应 run 的冻结 EVO 序列中过滤本 benchmark 的 task ID，保持其相对顺序，每连续 5 题为一个阶段。checkpoint 位置只按本轨迹已尝试题数计。失败或无有效提案仍消耗该题位置，不补题、不回滚、不早停。
-3. **每个 checkpoint 只评本 benchmark 的全部固定 10 道 VAL，每题运行一条完整任务轨迹并提交一份最终产物。** 轨迹内部可多次调用模型、工具和协作，不将“每题一份产物”解释为“一次模型调用”。不是最近一批，也不是累计变化的 VAL；不评其他 benchmark 的 VAL 来选本源版本。VAL 不写经验，不把反馈交给源题执行 agent；冻结 checkpoint 后可异步评价，无须阻塞后续 EVO。
-4. 每个候选至少 `9/10` 完整评分才有本轨迹筛选资格。按固定理论范围归一化（RR 保留有符号权重范围；DSQA `[0,1]`；WritingBench `[1,10]`），**仅在本 benchmark 的固定 10 道 VAL 内取平均**，不计算跨 benchmark 等权平均。缺失原生得分为 null，仅筛选用标注的下界；不能用观察到的最高/最低分归一化。
-5. 全部四阶段结束、且本轨迹五个候选的 **50 个 VAL 槽位全部进入成功或失败终态**后，**每个 benchmark、每个 run 从自己的五个候选中选一个完整状态**；最大值相对容差 `1e-12` 内，依次按完整评价数量、较早位置、状态哈希打破平局。不能只在较早完成的候选之间先选版。共最多 9 个 Selected 状态。没有合格候选则报告对应 `benchmark × run` 不确定，不追加有利 run，不借用其他 benchmark 或其他 run 的状态替代。
-6. 经验仍直接写入，不恢复 accept/hold/reject。生成、独立评价、执行后归因和 shared-ledger 记录机制保留；任务内执行采用下述多次调用规则，取消单次调用与单轮通信约束。每条轨迹只能从自己的 20 道 EVO 写入或检索经验；其他 benchmark 的 EVO、所有 VAL/TEST 及 unused 均不能成为该经验库的来源。
+领域库存不足、子集容量过小、固定成员、重复组或曝光隔离导致无法接近总体比例时，采用确定性的最小配额偏差规则。注册中必须冻结稳定 task ID、原始记录号、子集、领域/语言标签、题序和抽样种子，并报告每个子集的领域计数、理想配额偏差、覆盖率及原因。重复组保持完整，曝光边界优先于均衡目标。
 
-## Budget-aware MAS 生成与双层进化
+IFEval 和 IFBench 没有可信的统一领域字段：优先使用可用公开类别；若无法可靠分层，则使用固定哈希抽样并明确披露不能保证领域均衡。已登记开发曝光题不得进入正式 TEST；历史未知曝光保留审计限制。
 
-**MAS 生成 Meta-Agent 必须主动兼顾任务质量与 token 开销。** 全局分析、Agent Pool 选择和团队协调读取冻结的任务总 token 预算、单次输出上限，以及实时账本中的已用、在途预留和剩余 token，优先组织足以覆盖重要要求的团队。新增角色、重复推理、长上下文、额外检查或协作应有预期质量收益，并为最终综合和有效 JSON 输出保留空间；简单任务可以复用一个成熟 Agent。取消固定调用次数硬上限，并不意味着鼓励无限调用或耗尽 token 上限。
+## 分批进化与选版
 
-团队的 `budget_plan` 记录预计输入/输出 token、调用数、工具数、通信量、后续阶段预留及质量—成本权衡；计划与预留必须符合实时余量。预计调用数属于规划估计，不能变成隐含的固定调用次数或协作轮数限制。Meta 层学习如何以合理成本选择成员、分配职责和组织通信；Agent 层在保留的 skill、memory 和 harness 上形成避免重复工作、筛选必要上下文、有效交接及适时完成的角色经验。局部方法由 Agent 选择，同时遵守任务预算与已安装执行规则。
+1. 每个 benchmark 从独立空经验库和空 Agent Pool 起步。四条轨迹使用相同的六个初始角色原型（writer、searcher、critic、planner、analyst、generalist），不共享经验、Pool、harness、checkpoint 或测试反馈。模型、prompt、工具清单、token/时间预算和并发限制在运行前冻结。
+2. 每条轨迹的 40 道 EVO 按固定顺序分为 8 批，每批 5 题。一批内所有题读取同一个冻结状态，题间不做归因、经验提交或 Pool 更新；失败和不完整反馈仍消耗题位，不补题或重采样。
+3. 一批 5 题全部终态后，基于完整执行记录、judge 反馈和全部 rubrics 做全局/局部归因与角色反思，从同一批输入状态生成 3 个互不接续的候选。候选可 Add、Delete/Prune、Split、Merge、Specialize、Reorganize Pool，或新建、修改、保留临时 harness。
+4. 每个候选只在本 benchmark 固定的 10 道 VAL 上执行一条完整轨迹；3 个候选共 30 个 VAL 槽位。VAL 使用不可变快照，不写经验；反馈只进入选版服务。候选至少 9/10 道完整评分才有资格。
+5. 本批全部 VAL 槽位终态后，按预注册的官方指标归一化和固定平局规则选择一个 winner，作为下一批唯一输入。如果 3 个候选都未达到 9/10 完整评分，则该 benchmark 轨迹标记为不确定并停止；不借用其他来源、补题、重抽或挑选有利候选，对应 C40、本源 TEST 和迁移 TEST 标记缺失/不确定。C0 是共同初始化下的空经验初态，不额外执行 C0 VAL；保存 C5/C10/C15/C20/C25/C30/C35/C40 及所有候选，最终 Selected 固定为 C40。
 
-EVO 的角色反思接收自身真实输入/输出 token、模型/工具调用与通信成本，结合质量反馈和相关事件更新成本经验，不把较短输出或较少调用自动视为更好。每条 `benchmark × run` 轨迹只更新自己的两层状态，VAL/TEST 不写入成本经验。规划估计不是实际账单或确定的质量收益；报告同时列出原生质量、真实 token 和预算耗尽/失败，展示匹配上限下的质量—成本关系，未知价格保持 null。构造、局部规划、执行、通信与重试成本全部计量，评分和 EVO 更新成本另列。
+## Ours-only TEST 与官方指标
 
-**本版仍按既定 VAL 质量及平局规则选 checkpoint**，不在观察结果后加入 token 惩罚或按成本重选；budget-aware 策略随代码、prompt 和配置在正式执行前冻结。不同 token 预算或去除预算意识的额外对照需单独注册，不新增当前 3,381 个槽位。
+正式 TEST 只运行 Ours 的最终 Selected，不运行 Initial、Direct、matched JIT、固定 rubric-MAS、Terminal、G/GO 或其他外部方法。四个进化 benchmark 使用各自 C40 做本源 TEST；IFEval 和 IFBench 分别测试四个来源的 C40，形成 `4 来源 × 2 目标` 迁移矩阵。TEST 不参与进化、选版、调参或按质量重试；全部产物、失败和缺失统一封存后评分。
 
-## 任务内执行与调用策略
+评分器版本、代码哈希、配置和输入快照在 TEST 前冻结。各 benchmark 保留官方原生指标：
 
-**每个执行角色按任务需要调用模型，不设每角色、团队或单任务的固定模型调用次数上限。** 贡献者可以多次请求允许的外部工具，工具结果及其来源写入账本后，可以再次调用该贡献者解释结果、补充证据或修正贡献；Writer 也可以使用该任务允许的外部工具、重复读取更新后的账本，并在最终提交前多轮修订。
+- ResearchRubrics：官方加权任务分数；
+- DeepSearchQA：任务级 F1，并单独记录 precision、recall 和 fully-correct；
+- WritingBench：官方 author checklist 的 1–10 分及任务宏平均；
+- DeepResearch Bench II：**Overall、InformationRecall、Analysis、Presentation**，另报 blocked-source 和缺失情况；
+- IFEval：官方 strict accuracy，必要时附 loose/instruction-level；
+- IFBench：官方 loose accuracy，必要时附 strict/instruction-level。
 
-任务执行期间允许通过结构化 shared ledger 进行澄清、互相追问、补充证据、讨论和反馈，也允许 Writer 多轮改稿；不预设固定协作轮数。公开贡献、工具结果、问题与回复、修订事件均留下可审计记录，角色的私有对话历史不自动共享。执行前规划和执行后归因仍是独立阶段，它们的实际调用同样计量，不用“一次调用”约束任何执行角色。
+DeepResearch Bench II 的 EVO/VAL 只使用运行前冻结的公开 rubric 与 scorer/judge 合约；TEST 使用冻结的官方评分器和独立输入快照。TEST 的答案、rubric、官方分数和反馈不会进入 EVO/VAL，也不会用于调整候选或选版。
 
-停止条件为任务完成并提交，或达到预先冻结的 token、执行时间及已注册成本预算；预算不足、超时或失败如实记录，不因质量低而重开整题。单任务 token 上限、单次输出上限、请求/执行超时、最大角色数和任务内并发角色数沿用统一冻结设置；**模型调用次数、工具调用次数及协作轮数作为观测成本报告，不作为固定次数硬上限**。API 的并发、每分钟请求数和 token 速率限制只控制吞吐与排队，不限制一条任务轨迹最终可以发起多少次调用。
+不把不同 benchmark 的分数合并成总排行榜。单次运行不报告 run 间方差；可对逐题结果报告任务级 bootstrap 区间，并把 C40 的结果、失败/缺失和迁移来源分开呈现。
 
-工具权限按任务预先固定，所有方法使用匹配的允许工具与公开证据范围；Writer 与贡献者适用相同访问边界。允许再次读取工具结果、使用已有公开证据或补充允许来源，不允许访问私有评分答案、VAL/TEST 评价反馈或其他任务的执行状态。主轨道若冻结为离线公开证据，则多轮调用仍限于该证据与已允许工具，不自动开放额外联网。
+## 资源、延迟与进化曲线
 
-**“每题一次”统一指一条完整任务执行轨迹、一份最终提交产物。** 单条轨迹内部的模型调用、工具调用、讨论和改稿均属于该槽位，不新增独立样本；产物提交并封存后不得根据评分继续修改、补证据或挑选重试答案。传输失败、限流与任务恢复使用事先冻结的工程重试规则，已成功调用及账本事件不得因恢复而被整题重放；同一槽位只接纳一份最终产物，全部尝试和实际成本保留记录。
+每个 EVO、候选 VAL、候选生成和 TEST 槽位都记录：输入/输出/总 token、模型与工具调用数、重试、队列和限流等待、执行 latency、端到端 wall-clock、并发度、超时、失败、缓存/恢复来源、实际成本和成本来源。候选生成、judge、归因、工具调用和协作通信单独计账，未知价格保留 null。
 
-Initial 与 Selected 使用相同的多次调用执行器、工具权限及预算，只在经验状态上不同。固定 rubric-MAS 保留固定组织与不进化的设定，使用相同的多次调用、shared-ledger 和工具规则；Direct 与原生 JIT 保留各自方法的执行组织，在匹配的 token/时间/成本预算和工具权限下运行，不强制所有方法调用次数相同。
+每个 C0/C5…C40、每批候选和 winner 保留可直接画曲线的事件：Agent Pool 总数及各角色数、Add/Delete/Prune/Split/Merge/Specialize/Reorganize 次数、harness 新建/修改/删除/保留次数、memory/rubric/evidence 条目数、RubricGraph 节点/边（可用时）、VAL 分数、完成率、token、latency、cost、失败率、状态哈希和版本号。
 
-原 single-pass 文档及旧配置中的 `AgentSpec.max_calls=1`、`team_max_calls=3`、`max_model_calls=200`、零协作轮数和仅一批工具/Writer 禁用外部工具规则不适用于本版；`max_tool_calls=0` 也不能作为新的统一调用次数限制，任务是否允许工具由冻结工具清单决定。当前正式 campaign 使用 `iterative_shared_ledger`，配置已取消模型/工具调用次数硬上限，并冻结单题 token/时间预算及并发限制；具体身份见 [运行登记](independent_v5_execution_20261006_ZH.md)。旧执行器的历史结果仍按原契约解释。
+## 工程修复与结果审计
 
-## 工程并行调度
+运行监控若触发预注册工程阈值（崩溃、格式失败率、token 超预算、latency/限流、服务故障、数据泄漏或分层约束无法执行），立即记录事件并允许版本化修复。修复须记录触发条件、原因、代码/prompt/config diff、影响阶段和新版本哈希；受影响阶段按同一冻结 split 重跑，保留原始轨迹和修订轨迹，并在报告/附录中同时披露。
 
-**按依赖就绪启动任务，VAL 和 TEST 的独立工作尽量并行。** 并行调度改变等待时间，不改变题目成员、轨迹题序、经验更新、选版规则或最终产物库存。
+TEST 产生任何官方分数后，禁止根据分数修改实现、题目、split、scorer、选版规则或静默删除失败；不得挑选最有利 checkpoint。必要的协议修订须在重新运行前冻结，并预先指定主结果和修订前后比较方式。
 
-| 工作单元 | 可以并行的范围 | 必须等待的依赖 |
-|---|---|---|
-| EVO | 九条 `benchmark × run` 轨迹之间 | 同一轨迹按冻结题序完成当前题的评价、归因与经验提交，再执行下一题 |
-| VAL | 来源、run、checkpoint、题目之间；也可与后续 EVO 和已就绪 TEST 同时执行 | 对应 checkpoint 的完整状态已经冻结；只能读取该快照 |
-| 静态方法 TEST 生成 | 四种方法、六个 benchmark、各道题之间；可与 EVO/VAL 同时执行 | 方法代码、prompt、空经验初态、工具权限与预算已冻结 |
-| Selected TEST 生成 | 来源、run、本源/迁移目标、题目之间；可与其他轨迹尚未完成的 VAL 同时执行 | 该来源该 run 完成进化及全部候选 VAL，Selected 已正式确定并冻结 |
-| TEST 评分与统计 | 封存后可按题目、方法、来源及 benchmark 并行评分 | 全部必跑 TEST 槽位的产物或失败/缺失状态已统一封存 |
+## 工作量与封存
 
-1. **异步 VAL 使用不可变快照。** 保存 `C0/C5/C10/C15/C20` 时，同时冻结经验、模型身份、代码、prompt、配置、工具策略与状态哈希，然后将该候选的 10 道 VAL 放入任务队列；后续 EVO 可立即继续。VAL 进程不读活动经验库，不写回经验，评分仅交给隔离的选择服务，不向 EVO agent 或人工调参流程回流。
-2. **选版屏障按轨迹设置。** 每条轨迹只等待自己的四个 EVO 阶段和 50 个 VAL 槽位全部结算，然后按固定规则选版；异步返回顺序、吞吐差异与较早完成时间不成为选择依据。失败和超时按预注册规则进入终态，并保留 null；不能为赶工静默取消较慢候选。
-3. **VAL 与 TEST 可重叠。** 四种静态方法的 TEST 在身份冻结后即可启动；某条轨迹的 Selected 一旦确定，即可启动它的本源 TEST 及三个迁移 TEST，不等待其他八条轨迹选版。生成 worker 只接收该状态和公开测试输入，不接收 VAL 评分内容；尚未选定的候选不提前生成额外 TEST 来辅助选版。
-4. **保留全局 TEST 评分屏障。** 全部 2,751 个必跑 TEST 槽位先封存产物及哈希，失败或无合格 Selected 的槽位则封存失败/缺失状态；封存清单完整后才启动 TEST 评分和释放反馈。TEST 生成可与 VAL 并行，TEST 分数不会参与尚在进行的进化或选择。封存后的评分调用可以并行，其反馈仍不授权修改已提交答案。
-5. **统一并发、限流和预算调度。** 使用共享任务队列及有界 worker 池，区分评测任务并发与单题角色并发；按模型 endpoint 的最大在途请求、请求速率和 token 速率调节吞吐。执行前记录 worker 数、限流参数、工程重试、超时与调度策略；不得按得分改变优先级或只完成有利条件。排队/限流等待时间与实际执行时间分别记录，任务自身执行计时从获得资源并开始执行起算，任何排队期限须事先固定。
-6. **隔离状态并支持幂等恢复。** 每个槽位具有冻结协议、阶段、源 benchmark、run、checkpoint/Selected 状态哈希、目标 benchmark、task ID、方法及产物编号组成的唯一身份。任务级 shared ledger、调用账单和产物目录彼此隔离；缓存仅在完整状态与执行身份一致时复用。结果按槽位原子提交，防止并发或恢复导致重复计样；来源、复用和失败记录进入统一库存。
-
-## TEST 与基线
-
-**每个源 benchmark 使用自己独立进化、由自己 VAL 选出的版本做本源 TEST。** 三个纯 TEST benchmark 均测试全部三个来源，形成完整的 `3 来源 × 3 目标` 迁移矩阵；每个来源的三个 run 都报告，不通过 TEST 比较后挑来源，也不在目标 benchmark 上重新选 checkpoint：
-
-| TEST benchmark | 每个 run 使用的 Selected 状态 | 评价用途 |
-|---|---|---|
-| ResearchRubrics | 同一 run 的 ResearchRubrics VAL winner | 本源独立测试 |
-| DeepSearchQA | 同一 run 的 DeepSearchQA VAL winner | 本源独立测试 |
-| WritingBench | 同一 run 的 WritingBench VAL winner | 本源独立测试 |
-| DeepResearch Bench II | 同一 run 的 RR、DSQA、WritingBench VAL winner 分别测试 | 三个来源的研究报告迁移 |
-| IFEval | 同一 run 的 RR、DSQA、WritingBench VAL winner 分别测试 | 三个来源的指令遵循迁移诊断 |
-| IFBench | 同一 run 的 RR、DSQA、WritingBench VAL winner 分别测试 | 三个来源的指令遵循迁移诊断 |
-
-全部九个来源—目标组合在执行前固定，不依据目标答案、评分或实验结果删减。目标测试使用各来源 Selected 的完整冻结状态，不针对目标增删经验或调参；只适配公开任务输入和评分接口。若某来源在某个 run 没有合格 Selected，对应的本源测试及三个目标上的该来源迁移测试同样报告不确定，不换来源或 run 补齐。迁移结果按来源分别报告，不合并经验、不根据目标 TEST 选一个最佳来源作为主结果。
-
-三个 run 都报告；默认发布包预先指定为 **run 0 的三个独立 VAL winner，分别标明进化来源**，不看 TEST 挑版本，不合并三份经验。包内冻结生成模型身份、代码、prompt、配置、工具/检索策略和三个独立经验快照；这是三个经验增强的生成器版本，不是新训练的权重，也不是固定团队，遇到新题仍生成任务条件化 MAS。run 0 某来源没有合格状态时，不发布该来源版本，也不改用其他 run 替代。
-
-五个核心方法为 **Initial、Selected、Direct、原生 JIT、固定 rubric-MAS**。三个本源 TEST benchmark 每题仅测试本源三个 run 的 Selected，**每题共 3 份 Selected 产物**；三个纯 TEST benchmark 每题测试 `3 来源 × 3 run` 的 Selected，**每题共 9 份 Selected 产物**，每个状态每题运行一条可包含多次调用的完整轨迹，提交一份最终产物。四种静态方法每题各提交一份，跨三个 run 及迁移来源共享，不冒充多份独立样本。底座、允许的公开输入、证据材料和 token/时间/已注册成本预算匹配，实际调用次数可以不同。答案生成及封存后的评分按上述调度并行；全部答案先按冻结库存提交并封存，再评分；TEST 无经验更新、补题或按质量重试。
-
-Terminal 对照、G/GO、额外进化消融和外部 MAS 基线不在本次必跑库存内；需要时单独注册，不自动启动。采用代理底座的原生 JIT 不冒称原始 JIT-27B 复现。
-
-## 工作量与报告
-
-| 阶段 | 名义任务单元 |
+| 阶段 | 名义槽位 |
 |---|---:|
-| EVO | `3 benchmark × 3 run × 20 = 180` |
-| VAL | `3 benchmark × 3 run × 5 checkpoint × 10 × 1 = 450` |
-| 本源 TEST（133 题） | `133 × (3 Selected + 4 static) × 1 = 931` |
-| 外部迁移 TEST（140 题） | `140 × (3 来源 × 3 run + 4 static) × 1 = 1,820` |
-| **合计** | **3,381** |
+| EVO | 160 |
+| VAL | 960（4 benchmark × 8 批 × 3 候选 × 10） |
+| Ours TEST | 573（173 本源 + 400 迁移） |
+| **合计** | **1,693** |
 
-EVO 与 VAL 工作量保持不变。TEST 合计 **2,751** 个任务单元，其中本源 Selected 为 `133 × 3 = 399`，迁移 Selected 为 `140 × 3 × 3 = 1,260`，四种静态方法为 `273 × 4 = 1,092`。三个外部 benchmark 测试全部来源使总工作量较原联合 v5 的 2,541 增加 **840**；较 v4 按同样五个核心方法计算的 61,134 个任务单元，减少约 **94.5%**。这是逻辑任务/产物槽位，不是 API 调用次数或 token 上限；允许任务内多次调用与并行调度后，仍为 **3,381 个逻辑槽位**，但实际 API 调用数和费用可能增加，不能由槽位减幅推断费用减幅。相同完整状态的合法缓存复用记录来源并扣除实际成本，证据准备、评分调用和人工审计另外计量。
+另有 `4 benchmark × 8 批 × 3 候选 = 96` 次候选生成。逻辑槽位不是 API 调用次数或 token 上限。全部槽位按冻结身份原子封存，记录失败/缺失、实际成本、状态哈希、评分器版本和恢复来源；正式结果只来自身份匹配的真实运行记录。
 
-四个研究/写作 benchmark 保持主对照族，两个指令遵循 benchmark 保持独立诊断族，各自做 Holm 校正。由于外部迁移逐来源报告，Selected 对 Initial 的主比较族为 **6 项**（RR、DSQA、WritingBench 各 1 项本源比较，加 DR Bench II 的 3 项来源比较），诊断族为 **6 项**（IFEval、IFBench 各 3 项来源比较）；与 matched JIT、固定 rubric-MAS 的两类次要比较合并后，分别组成 **12 项主比较族与 12 项诊断比较族**。校正族在执行前固定，不挑来源缩小检验数量。
-
-各数据集保留原生指标，不平均成跨量纲排行榜。报告全部 run、逐题配对差值、整题 bootstrap 区间、失败/缺失和成本；缺失不得静默删除或作为正常得分。每项结果标明进化来源、本源测试或外部迁移。每个迁移来源分别报告三个 run 及其题级配对统计，不将三个来源合并成九个同一状态的重复运行；静态对照的同题产物在这些比较中共享。不把三个来源的 VAL 分数用于比较、挑选一个“全局最好”生成器。
-
-工程成本另报模型/工具调用数、输入/输出 tokens、已知计费、各角色再次调用与 Writer 修订次数、超时/失败、缓存与恢复来源，以及排队、限流等待、单题执行时间、评分时间、端到端 wall-clock 和实际并发度。重复账本读取与通信记录按真实事件计量，不沿用“只读一次”的计账假设；未知价格保持 null。并行提升的是吞吐，不能将多个并行角色、调用或修订当独立统计样本。
-
-这是 **subset track**：小样本区间可能较宽；单状态单题一份产物不能估计该状态生成方差；三个种子只控制进化题序，不保证服务端采样种子。不能将结果冒称官方全量、全面优于其他方法或 SOTA；也不能将按来源独立进化与分别迁移的结果描述为同一个通用生成器在六个 benchmark 上的表现。
-
-原 [joint_protocol_v5.json](joint_protocol_v5.json) 仍记录联合进化协议，仅作历史参照，**不是本独立进化版的机器可读注册**。当前正式 campaign 使用 [independent_protocol_v5.json](independent_protocol_v5.json)，已冻结九条独立轨迹、题序、checkpoint、VAL 选择、完整迁移矩阵、产物库存、多次调用执行契约和并发配置，并通过 `scripts/run_independent_experiment.py` 执行真实 API 实验。旧 single-pass 执行器及 v3 运行记录仍属历史；正式结果只由与本独立进化版冻结身份匹配的真实运行记录产生。EVO/VAL、TEST 封存与评分及论文统计分别登记，不把进行中的工程快照解释为最终性能。
+现有 v6 机器协议和执行器仍按旧的三来源、多 run 拓扑解释；正式运行本协议前，必须另行生成四来源、单次运行、Ours-only 的 v7 manifest、协议哈希和执行身份，不能直接复用旧注册。

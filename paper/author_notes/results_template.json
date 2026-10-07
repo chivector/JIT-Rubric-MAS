@@ -1,29 +1,31 @@
 {
   "status": "UNFILLED_TEMPLATE_NOT_EMPIRICAL_RESULTS",
   "formal_protocol": {
-    "specification": "experiments/joint_protocol_v5.json",
-    "split_manifest": "experiments/joint_task_splits_v5.json",
+    "specification": "experiments/independent_protocol_v6.json",
+    "split_manifest": "experiments/joint_task_splits_v6.json",
     "parent_split_manifest": "experiments/joint_task_splits_v4.json",
-    "checkpoint_rule_provenance": "experiments/protocol_v2.json",
+    "checkpoint_rule_provenance": "experiments/independent_protocol_v6.json; eight five-question batches, three candidates after each batch",
     "inherited_researchrubrics_split": "experiments/splits_v2.json",
-    "status": "SUBSET_PROTOCOL_FROZEN_NOT_RUN",
+    "status": "SPECIFIED_NOT_RUN",
     "pilot_scores_allowed_in_main_table": false,
-    "launch_allowed": false,
-    "archived_protocols": ["experiments/protocol_v1.json", "experiments/protocol_v2.json", "experiments/benchmark_suite_v3.json", "experiments/joint_protocol_v4.json"],
+    "launch_allowed": true,
+    "launch_authorization": "Explicit user instruction to continue the amended campaign",
+    "archived_protocols": ["experiments/protocol_v1.json", "experiments/protocol_v2.json", "experiments/benchmark_suite_v3.json", "experiments/joint_protocol_v4.json", "experiments/joint_protocol_v5.json", "experiments/independent_protocol_v5.json"],
     "planned_counts": {
-      "researchrubrics": {"evolution": 20, "validation": 10, "test": 33},
-      "deepsearchqa": {"evolution": 20, "validation": 10, "test": 50},
-      "writingbench": {"evolution": 20, "validation": 10, "test": 50},
+      "researchrubrics": {"evolution": 40, "validation": 10, "test": 33},
+      "deepsearchqa": {"evolution": 40, "validation": 10, "test": 50},
+      "writingbench": {"evolution": 40, "validation": 10, "test": 50},
       "deepresearch_bench_ii": {"evolution": 0, "validation": 0, "test": 40},
       "ifeval": {"evolution": 0, "validation": 0, "test": 50},
       "ifbench": {"evolution": 0, "validation": 0, "test": 50}
     },
-    "track": "Fixed nested public-metadata subset; controlled shared evidence, not full official leaderboard results",
-    "nominal_core_task_attempts_before_state_reuse": 2541,
-    "nominal_core_slots": {"evolution": 180, "validation": 450, "selected_test": 819, "four_static_controls_test": 1092},
+    "track": "Independent per-source evolution from zero; frozen five-question batches and three VAL-selected candidates; controlled shared evidence, not full official leaderboard results",
+    "nominal_core_task_attempts_before_state_reuse": 5271,
+    "nominal_core_slots": {"evolution": 360, "validation": 2160, "selected_test": 1659, "four_static_controls_test": 1092, "test_total": 2751},
+    "candidate_generation_jobs_accounted_separately": 216,
     "core_methods": ["ours_initial", "ours_selected", "direct", "jit_matched", "rubric_fixed"],
-    "selected_unique_tasks": 363,
-    "unused_tasks": 2611,
+    "selected_unique_tasks": 423,
+    "unused_tasks": 2551,
     "excluded_from_core_slot_total": "Terminal states, mechanism ablations and G/GO are not enabled. Evidence preparation and judge calls counted separately; slots are not API calls",
     "formal_results_executed": false
   },
@@ -82,9 +84,9 @@
   "results": [],
   "result_record_schema": {
     "benchmark": "string",
-    "source_benchmarks": "list; shared RR/DSQA/WritingBench source for every joint-selected state",
-    "test_slice": "clean_unseen; historical exposed/reserved tasks are unused in v5",
-    "generator_bundle_sha256": "string; identical across all target benchmarks for a run",
+    "source_benchmarks": "list; exactly one of RR/DSQA/WritingBench for each independently selected state",
+    "test_slice": "clean_unseen; historical RR exposed/reserved tasks are unused in v6",
+    "generator_bundle_sha256": "string; identical across source self-test and all transfer benchmarks for a source/run",
     "task_id": "string",
     "method": "string",
     "condition": "string",
@@ -118,7 +120,7 @@
     "attribution_repair_utility": null,
     "crossed_experience_states": null,
     "stage_isolated_guidance_control": {
-      "status": "NOT_ENABLED_IN_V5_CORE",
+      "status": "NOT_ENABLED_IN_V6_CORE",
       "shared_pre_negotiation_rubric_hash": null,
       "shared_background_hash": null,
       "rubric_free_constructor_input_audit": null,
@@ -129,45 +131,58 @@
     "content_matched_link_index_control": null,
     "cross_contribution_moderation": null
   },
-  "notes": "Populate exclusively from actual sealed runs under joint_protocol_v5. One shared RR/DSQA/WritingBench experience trajectory per seed; the same selected generator bundle applies to all six subsets. Full fixed30-task VAL selects a state from5 checkpoints. Default deployment remains predeclared run0 winner. RR18 formerly quarantined tasks are unused. VAL and TEST use1 artifact per task/state; source-order replicates do not estimate same-state answer variance. Small subset confidence intervals may be wide; do not claim full-benchmark/SOTA results. Native missing scores stay null. No formal campaign or new model weights are implied by this template or v3 software tests.",
-  "schema_version": "5.0",
+  "notes": "Populate exclusively from actual sealed runs under independent_protocol_v6. Each of three source benchmarks starts from zero for each of three runs, giving nine independent trajectories. Forty EVO questions form eight batches: all five questions read one unchanged state, then three candidates branch from that state and each runs the same ten source VAL questions; a whole-state winner feeds the next batch. The eighth-batch winner is the final state. Each source/run package applies unchanged to its self-test and the three transfer benchmarks; default packages use run 0 for each source. RR18 formerly quarantined tasks remain unused; the ten unselected original RR VAL tasks moved to EVO with user authorization, preserving current VAL/TEST. VAL and TEST use one artifact per task/state; source-order replicates do not estimate same-state answer variance. Small subset confidence intervals may be wide; no full-benchmark/SOTA result is implied. Missing native scores stay null. Interrupted historical v5 runs and request stress checks are not new campaign results.",
+  "schema_version": "6.0",
   "paper_identity": {
     "method_name": "JIT-Compose",
     "title": "JIT-Compose: Evolving Multi-Agent Workflow Synthesis for Open-Ended Generation",
     "implementation_package": "jit_mas",
-    "editorial_version": "v5"
+    "editorial_version": "v6"
   },
   "checkpoint_selection_plan": {
-    "independent_evolution_runs": 3,
+    "independent_evolution_runs": 9,
+    "runs_per_source": 3,
     "order_seeds": [20261001, 20261002, 20261003],
-    "joint_source_positions": [0, 15, 30, 45, 60],
-    "joint_source_task_attempts_per_run": 60,
-    "validation_tasks_at_every_checkpoint": 30,
-    "shared_store_per_run": true,
+    "source_batch_boundaries": [5, 10, 15, 20, 25, 30, 35, 40],
+    "source_task_attempts_per_trajectory": 40,
+    "batches_per_trajectory": 8,
+    "batch_size": 5,
+    "candidates_per_batch": 3,
+    "candidates_per_trajectory": 24,
+    "validation_tasks_per_candidate": 10,
+    "validation_slots_per_batch": 30,
+    "validation_slots_per_trajectory": 240,
+    "initial_state_validation": false,
+    "shared_store_across_sources": false,
+    "start_from_zero_per_source_run": true,
     "default_deployment_run_id": 0,
     "per_benchmark": {
       "researchrubrics": {
-        "source_task_attempts_per_run": 20,
-        "validation_tasks_at_every_checkpoint": 10,
+        "source_task_attempts_per_run": 40,
+        "validation_tasks_per_candidate": 10,
         "minimum_complete_validation_evaluations": 9,
         "validation_denominator": 10
       },
       "deepsearchqa": {
-        "source_task_attempts_per_run": 20,
-        "validation_tasks_at_every_checkpoint": 10,
+        "source_task_attempts_per_run": 40,
+        "validation_tasks_per_candidate": 10,
         "minimum_complete_validation_evaluations": 9,
         "validation_denominator": 10
       },
       "writingbench": {
-        "source_task_attempts_per_run": 20,
-        "validation_tasks_at_every_checkpoint": 10,
+        "source_task_attempts_per_run": 40,
+        "validation_tasks_per_candidate": 10,
         "minimum_complete_validation_evaluations": 9,
         "validation_denominator": 10
       }
     },
     "validation_artifact_repeats": 1,
-    "selection": "Fixed theoretical task-range normalization, mean within each benchmark, then 1/3 equal benchmark weights; every benchmark must pass its own completion threshold. Maximum-relative1e-12 tie, then completion/position/hash",
-    "continue_from": "latest trajectory state, not validation winner",
+    "selection": "After each batch, select among exactly three candidates using fixed theoretical task-range normalization and the mean of ten fixed source VAL tasks; eligibility requires 9/10 complete. Maximum-relative 1e-12 tie, then completion/candidate index/state hash",
+    "continue_from": "Each batch VAL winner, before its next five-question batch starts",
+    "final_selected_state": "Eighth-batch winner; no global selection across previous batches",
+    "intra_batch_evolution": false,
+    "candidate_branching": "All three candidates use the same batch input state and five completed task records",
+    "ineligible_batch": "Trajectory inconclusive; preserve missing downstream scores without resampling",
     "early_stopping": false,
     "test_repeats_per_evolved_state": 1,
     "static_test_repeats_per_task_total": 1,
@@ -175,9 +190,10 @@
     "actual_selection_records": []
   },
   "statistical_families": {
-    "primary": "Holm across four research/writing selected-minus-initial contrasts",
-    "instruction_diagnostics": "Separate Holm family across IFEval/IFBench selected-minus-initial contrasts",
-    "secondary_baselines": "Holm across eight research/writing JIT/fixed contrasts, separately four instruction diagnostic contrasts",
+    "primary": "Holm across six selected-minus-initial contrasts: three source self-tests plus three source-to-DR Bench II transfers",
+    "instruction_diagnostics": "Separate Holm family across six selected-minus-initial contrasts: three sources by IFEval/IFBench",
+    "secondary_baselines": "Separate Holm families across twelve primary and twelve instruction diagnostic selected-minus-JIT/fixed contrasts",
+    "family_sizes": {"primary": 6, "instruction_diagnostics": 6, "secondary_primary": 12, "secondary_instruction": 12},
     "researchrubrics_mechanisms": "Not enabled; requires separate registration before additional testing",
     "units": {"researchrubrics": 33, "deepsearchqa": 50, "writingbench": 50, "deepresearch_bench_ii": 40, "ifeval": 50, "ifbench": 50},
     "bootstrap_repeats": 10000,
@@ -185,9 +201,14 @@
     "seed": 20261001
   },
   "experience_update_policy": {
-    "mode": "direct_after_attribution",
-    "proposal_order": "first_reconciled_proposal",
-    "quality_promotion_gate": false,
+    "mode": "three_post_batch_candidates_then_source_VAL_selection",
+    "intra_batch_updates": false,
+    "candidate_base": "One frozen full experience and Agent Pool state for all five EVO tasks and all three candidate branches",
+    "construction_attribution": false,
+    "temporary_harness_creation": "Record during construction without Pool writes; consider retention during post-batch evolution",
+    "post_batch_attribution": "Formal RubricGraph global attribution, local role reflection and meta integration of all five records",
+    "pool_updates": "Full harness prototypes and Add, Delete/Prune, Split, Merge, Specialize, Reorganize only during post-batch evolution",
+    "quality_promotion_gate": "Fixed ten-task source VAL chooses one candidate after each batch",
     "contract_checks": [
       "schema",
       "source_provenance",
@@ -196,5 +217,15 @@
       "duplicate_identity"
     ],
     "frozen_test_writes": false
+  },
+  "concurrency_preflight": {
+    "scope": "Short request pressure test; no complete-task performance guarantee",
+    "task_workers": 64,
+    "generator_capacity": 64,
+    "judge_capacity": 16,
+    "global_fallback_capacity": 80,
+    "request_checks_passed": 80,
+    "request_checks_total": 80,
+    "formal_campaign_completed": false
   }
 }

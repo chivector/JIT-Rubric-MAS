@@ -205,7 +205,8 @@ def _validate_hierarchy(profiles: dict[str, AgentProfile]) -> None:
             parent_id = profiles[parent_id].parent_agent_id
 
 
-def _inherited_profile(profile, sources, operation, source_task_id):
+def _inherited_profile(profile, sources, operation, source_task_id, source_task_ids=None):
+    current_tasks = list(source_task_ids) if source_task_ids is not None else [source_task_id]
     inherited_lessons = {}
     inherited_skills = {}
     conflicting_skills = set()
@@ -225,9 +226,9 @@ def _inherited_profile(profile, sources, operation, source_task_id):
             inherited_lessons[lesson.lesson_id] = lesson
             inherited_tasks.extend(lesson.source_task_ids)
             inherited_evidence.update(lesson.evidence + lesson.counterevidence)
-    if source_task_id not in profile.source_task_ids:
+    if not set(current_tasks) <= set(profile.source_task_ids):
         raise ValueError("Structural profile requires current task provenance")
-    if not set(profile.source_task_ids) <= set(inherited_tasks) | {source_task_id}:
+    if not set(profile.source_task_ids) <= set(inherited_tasks) | set(current_tasks):
         raise ValueError("Structural profile invented historical task provenance")
     if (not profile.evidence or not any(item.strip() for item in profile.evidence)
             or not set(profile.evidence) <= inherited_evidence | set(operation.evidence)):
@@ -238,7 +239,9 @@ def _inherited_profile(profile, sources, operation, source_task_id):
         if previous is not None:
             if previous != lesson:
                 raise ValueError("Structural operation rewrote inherited memory provenance")
-        elif (lesson.source_task_ids != [source_task_id]
+        elif ((not lesson.source_task_ids or len(lesson.source_task_ids) != len(set(lesson.source_task_ids))
+               or not set(lesson.source_task_ids) <= set(current_tasks)
+               if source_task_ids is not None else lesson.source_task_ids != [source_task_id])
               or not set(lesson.evidence + lesson.counterevidence) <= set(operation.evidence)):
             raise ValueError("Structural memory lesson has invalid provenance")
         known_lessons[lesson.lesson_id] = lesson
@@ -248,7 +251,7 @@ def _inherited_profile(profile, sources, operation, source_task_id):
     if operation.kind != "specialize":
         result.skills = {**inherited_skills, **profile.skills}
     result.memory = [lesson.model_copy(deep=True) for lesson in known_lessons.values()]
-    result.source_task_ids = list(dict.fromkeys([*inherited_tasks, source_task_id]))
+    result.source_task_ids = list(dict.fromkeys([*inherited_tasks, *current_tasks]))
     result.evidence = list(dict.fromkeys([
         *(evidence for source in sources for evidence in source.evidence),
         *profile.evidence, *operation.evidence]))
@@ -256,9 +259,13 @@ def _inherited_profile(profile, sources, operation, source_task_id):
 
 
 def apply_evolution(pool: AgentPoolSnapshot, updates=(), operations=(), observations=(), *,
-                    source_task_id: str) -> AgentPoolSnapshot:
+                    source_task_id: str, source_task_ids=None) -> AgentPoolSnapshot:
     if not isinstance(source_task_id, str) or not source_task_id.strip():
         raise ValueError("Agent evolution requires a nonempty source task ID")
+    batch_tasks = list(source_task_ids) if source_task_ids is not None else [source_task_id]
+    if (not batch_tasks or any(not isinstance(task_id, str) or not task_id.strip() for task_id in batch_tasks)
+            or len(batch_tasks) != len(set(batch_tasks)) or source_task_id not in batch_tasks):
+        raise ValueError("Agent evolution requires distinct real source task IDs")
     changes = [AgentEvolutionUpdate.model_validate(
         update.model_dump(mode="json") if hasattr(update, "model_dump") else update)
         for update in (updates or ())]
@@ -278,7 +285,10 @@ def apply_evolution(pool: AgentPoolSnapshot, updates=(), operations=(), observat
     local_changed = set()
     update_ids = set(result.applied_updates)
     for update in changes:
-        if update.source_task_id != source_task_id:
+        update_tasks = update.source_task_ids or [update.source_task_id]
+        if (update.source_task_id not in batch_tasks or update.source_task_id not in update_tasks
+                or not set(update_tasks) <= set(batch_tasks) or len(update_tasks) != len(set(update_tasks))
+                or source_task_ids is None and update_tasks != [source_task_id]):
             raise ValueError("Agent evolution source task mismatch")
         if update.update_id in update_ids or update.pool_agent_id in changed:
             raise ValueError("Duplicate Agent evolution update or member")
@@ -287,11 +297,14 @@ def apply_evolution(pool: AgentPoolSnapshot, updates=(), operations=(), observat
         profile = profiles[update.pool_agent_id]
         if profile.version != update.base_agent_version:
             raise ValueError(f"Stale Agent Pool member version: {update.pool_agent_id}")
-        if source_task_id in profile.source_task_ids:
+        if set(update_tasks).intersection(profile.source_task_ids):
             raise ValueError("Agent already learned from this source task")
         known_lessons = {lesson.lesson_id for lesson in profile.memory}
         for lesson in update.lessons:
-            if (lesson.lesson_id in known_lessons or lesson.source_task_ids != [source_task_id]
+            if (lesson.lesson_id in known_lessons
+                    or (not lesson.source_task_ids or len(lesson.source_task_ids) != len(set(lesson.source_task_ids))
+                        or not set(lesson.source_task_ids) <= set(update_tasks)
+                        if source_task_ids is not None else lesson.source_task_ids != [source_task_id])
                     or not set(lesson.evidence + lesson.counterevidence) <= set(update.evidence)):
                 raise ValueError("Agent memory lesson has invalid provenance or duplicate identity")
             known_lessons.add(lesson.lesson_id)
@@ -301,7 +314,7 @@ def apply_evolution(pool: AgentPoolSnapshot, updates=(), operations=(), observat
             value = getattr(update, field)
             if value is not None:
                 setattr(profile, field, value)
-        profile.source_task_ids.append(source_task_id)
+        profile.source_task_ids.extend(update_tasks)
         profile.evidence = list(dict.fromkeys([*profile.evidence, *update.evidence]))
         result.applied_updates.append(update.update_id)
         changed.add(update.pool_agent_id)
@@ -316,7 +329,11 @@ def apply_evolution(pool: AgentPoolSnapshot, updates=(), operations=(), observat
     structural_targets = set()
     created_ids = set()
     for operation in structures:
-        if operation.source_task_id != source_task_id:
+        operation_tasks = operation.source_task_ids or [operation.source_task_id]
+        if (operation.source_task_id not in batch_tasks or operation.source_task_id not in operation_tasks
+                or not set(operation_tasks) <= set(batch_tasks)
+                or len(operation_tasks) != len(set(operation_tasks))
+                or source_task_ids is None and operation_tasks != [source_task_id]):
             raise ValueError("Agent Pool operation source task mismatch")
         if operation.base_pool_version != result.version:
             raise ValueError("Stale Agent Pool operation base version")
@@ -401,16 +418,19 @@ def apply_evolution(pool: AgentPoolSnapshot, updates=(), operations=(), observat
                     raise ValueError("Agent Pool hierarchy contains a cycle or unknown parent")
                 for output in ready:
                     inherited = [profiles[output.parent_agent_id]] if output.parent_agent_id is not None else []
-                    profiles[output.pool_agent_id] = _inherited_profile(output, inherited, operation, source_task_id)
+                    profiles[output.pool_agent_id] = _inherited_profile(output, inherited, operation,
+                        operation.source_task_id, operation_tasks if source_task_ids is not None else None)
                     pending.remove(output)
         elif operation.kind == "split":
             for output in outputs:
-                profile = _inherited_profile(output, sources, operation, source_task_id)
+                profile = _inherited_profile(output, sources, operation, operation.source_task_id,
+                    operation_tasks if source_task_ids is not None else None)
                 if profile.parent_agent_id is None:
                     profile.parent_agent_id = targets[0]
                 profiles[profile.pool_agent_id] = profile
         elif operation.kind in {"merge", "specialize"}:
-            output = _inherited_profile(outputs[0], sources, operation, source_task_id)
+            output = _inherited_profile(outputs[0], sources, operation, operation.source_task_id,
+                operation_tasks if source_task_ids is not None else None)
             if operation.kind == "merge" and output.parent_agent_id is None:
                 parent_ids = {profile.parent_agent_id for profile in sources} - set(targets)
                 if len(parent_ids) == 1:
@@ -444,7 +464,7 @@ def apply_evolution(pool: AgentPoolSnapshot, updates=(), operations=(), observat
     _validate_hierarchy(profiles)
     measurement_keys = {(item.task_id, item.agent_id) for item in result.observations}
     for observation in measurements:
-        if observation.task_id != source_task_id:
+        if observation.task_id not in batch_tasks:
             raise ValueError("Agent Pool observation changed its source task")
         key = (observation.task_id, observation.agent_id)
         if key in measurement_keys:

@@ -18,6 +18,7 @@ class ModelConfig(Record):
     key_env: str = ""
     max_tokens: int = Field(default=4096, ge=1)
     timeout: float = Field(default=120, gt=0)
+    max_inflight_requests: int | None = Field(default=None, ge=1)
     temperature: float = 0
     frequency_penalty: float | None = Field(default=None, ge=-2, le=2)
     thinking: Literal["enabled", "disabled"] | None = None
@@ -181,7 +182,10 @@ class NativeModels:
                                   http_trust_env=cfg.http_trust_env, **options)
         model.client = model.client.with_options(max_retries=0, timeout=cfg.timeout)
         from .request_policy import RequestPolicyModel, request_gate
-        model = RequestPolicyModel(model, gate=request_gate(self.config.max_inflight_requests),
+        gate = (request_gate(cfg.max_inflight_requests, endpoint=cfg.endpoint)
+                if cfg.max_inflight_requests is not None
+                else request_gate(self.config.max_inflight_requests))
+        model = RequestPolicyModel(model, gate=gate,
             ledger=ledger, timeout=cfg.timeout, expected_model=cfg.expected_response_model)
         return MeteredModel(model, ledger, stage, agent_id, cfg.max_tokens,
                             context_window=cfg.context_window, context_margin=cfg.context_margin,

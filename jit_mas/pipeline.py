@@ -148,7 +148,9 @@ def code_fingerprint():
                      "run_benchmark_test.py", "prepare_benchmark_suite.py", "prepare_benchmark_evidence.py",
                      "summarize_benchmark_suite.py", "run_independent_experiment.py",
                      "preflight_independent_experiment.py", "verify_instruction_checkers.py",
-                     "prepare_independent_protocol.py", "prepare_public_evidence.py"):
+                     "prepare_independent_protocol.py", "prepare_public_evidence.py",
+                     "prepare_batch_subset.py", "run_independent_batch_experiment.py",
+                     "run_independent_test_release.py", "summarize_independent_paper.py"):
         path = root / "scripts" / filename
         if path.is_file():
             files.append((path.relative_to(root).as_posix(), digest(path.read_text(encoding="utf-8"))))

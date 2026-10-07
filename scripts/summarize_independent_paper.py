@@ -15,6 +15,7 @@ import sqlite3
 from statistics import mean
 
 from jit_mas.checkpoints import CheckpointIntegrityError
+from jit_mas.independent_batch_campaign import slot_registry as batch_slot_registry, state_sources
 from jit_mas.independent_protocol import RUN_IDS, SOURCES, slot_registry
 from jit_mas.schemas import ExperienceSnapshot, digest
 from jit_mas.token_usage import merge_usage, summarize_budget, summarize_outcome
@@ -24,6 +25,11 @@ COMPARATORS = ("ours_initial", "jit_matched", "rubric_fixed")
 FAMILY_SIZES = {"primary_main": 6, "primary_diagnostic": 6,
                 "secondary_main": 12, "secondary_diagnostic": 12}
 REGISTERED_TEST_SLOTS = 2751
+
+
+def _registered_test_slots(registry):
+    return int(registry.get("counts", {}).get("test", sum(
+        row.get("kind") == "test" for row in registry.get("artifacts", []))))
 
 
 def read_json(path):
@@ -79,7 +85,14 @@ def load_test_data(directory):
                        for source, run_id, position, state_hash, snapshot, identity_hash in database.execute(
                            "SELECT source,run_id,position,state_hash,snapshot,identity_hash FROM checkpoints")}
     registration = metadata["registration"]
-    registry = slot_registry(registration["protocol"])["artifacts"]
+    protocol = registration["protocol"]
+    batch_protocol = protocol.get("version", "").startswith("jit-compose-independent-batch-protocol-v")
+    v7 = protocol.get("version") == "jit-compose-independent-batch-protocol-v7"
+    if batch_protocol:
+        expected_schema = "independent-batch-campaign-v7" if v7 else "independent-batch-campaign-v6"
+        require(registration.get("schema") == expected_schema, "Batch campaign registration schema mismatch")
+    registry = (batch_slot_registry if batch_protocol else slot_registry)(protocol)["artifacts"]
+    registered_test_slots = sum(row.get("kind") == "test" for row in registry)
     require([json.loads(row[0]) for row in rows] == registry, "Registered slot inventory changed")
     tests = [{**json.loads(body), "status": status, "result": json.loads(result) if result else {},
               "result_hash": result_hash, "started_at": started, "finished_at": finished}
@@ -87,15 +100,15 @@ def load_test_data(directory):
              if json.loads(body)["kind"] == "test"]
     seal = metadata.get("test_seal")
     require(seal is not None, "Global TEST seal is required before reading evaluation receipts")
-    require(len(tests) == REGISTERED_TEST_SLOTS and all(row["status"] in {"submitted", "failed", "missing"} for row in tests),
+    require(len(tests) == registered_test_slots and all(row["status"] in {"submitted", "failed", "missing"} for row in tests),
             "Global TEST inventory is not terminal")
-    require(seal == {"registration_hash": digest(registration), "required_test_slots": REGISTERED_TEST_SLOTS,
+    require(seal == {"registration_hash": digest(registration), "required_test_slots": registered_test_slots,
                      "submission_hashes": {row["slot_id"]: row["result_hash"] for row in tests}},
             "Global TEST seal differs from registered inventory")
     report_path = directory / "test_report.json"
     require(report_path.is_file(), "Published test_report.json is required before reading evaluation receipts")
     published = read_json(report_path)
-    require(published.get("schema") == "independent-test-report-v5"
+    require(published.get("schema") in {"independent-test-report-v5", "independent-test-report-v7"}
             and published.get("test_feedback_released") is True
             and published.get("slots") == published.get("evaluated") == len(tests),
             "Published TEST report does not release the complete inventory")
@@ -106,18 +119,27 @@ def load_test_data(directory):
                **{name: execution[name] for name in ("launch_file_sha256", "configuration_file_sha256", "joint_manifest_sha256")},
                "evolution_runner_sha256": execution["runner_sha256"]}
     require(read_json(directory / "test_adapter_identity.json") == adapter, "TEST adapter execution identity mismatch")
-    require(execution["initial_snapshot_hash"] == digest(ExperienceSnapshot()), "Static initial state identity mismatch")
+    if any(row["source"] == "static" for row in tests):
+        require(execution["initial_snapshot_hash"] == digest(ExperienceSnapshot()), "Static initial state identity mismatch")
     states = {}
     for key, selection in selections.items():
         require(selection.get("registration_hash") == digest(registration)
                 and (selection.get("source"), selection.get("run_id")) == key, "Selection registration identity mismatch")
         selected = selection.get("selected")
         if selected:
+            if batch_protocol:
+                require(selected.get("position") == 40, "Batch TEST state must be the final batch winner")
             checkpoint = checkpoints.get((*key, selected["position"]))
             require(checkpoint is not None and checkpoint[0] == selected["state_hash"]
                     and checkpoint[2] == digest(registration)
-                    and digest(ExperienceSnapshot.model_validate_json(checkpoint[1])) == checkpoint[0],
+                    and digest(json.loads(checkpoint[1])) == checkpoint[0],
                     "Selected checkpoint identity mismatch")
+            snapshot = ExperienceSnapshot.model_validate_json(checkpoint[1])
+            if batch_protocol:
+                trajectory = next((row for row in protocol["trajectories"]
+                                   if (row["source"], row["run_id"]) == key), None)
+                require(trajectory is not None and state_sources(snapshot)
+                        <= set(trajectory["evolution_task_ids"]), "Selected state contains history outside source EVO")
             states[key] = checkpoint[0]
     expected_paths = {f"{digest(row['slot_id'])}.json" for row in tests if row["status"] == "submitted"}
     require({path.name for path in (directory / "test_evaluations").glob("*.json")} == expected_paths,
@@ -138,7 +160,7 @@ def load_test_data(directory):
             expected_state = execution["initial_snapshot_hash"] if row["source"] == "static" else states.get((row["source"], row["run_id"]))
             require(expected_state is not None and result.get("state_hash") == expected_state,
                     "TEST result state differs from selected or initial state")
-        receipt, score, status = None, None, row["status"]
+        receipt, score, status, official_metrics = None, None, row["status"], None
         usage = summarize_budget(result.get("budget"))
         unattempted = status == "missing" and row["started_at"] is None
         audit = {"known_unattempted": unattempted, "stages": {} if unattempted else {"generation": budget_audit(result.get("budget"))}}
@@ -163,6 +185,15 @@ def load_test_data(directory):
             if status == "complete":
                 evaluation = receipt.get("evaluation", {})
                 official = receipt.get("official_score")
+                official_metrics = evaluation.get("official_metrics")
+                if row["target"] == "deepresearch_bench_ii" and not isinstance(official_metrics, dict):
+                    dimensions = evaluation.get("dimensions", {})
+                    official_metrics = {
+                        "Overall": official,
+                        "InformationRecall": (dimensions.get("info_recall") or {}).get("score"),
+                        "Analysis": (dimensions.get("analysis") or {}).get("score"),
+                        "Presentation": (dimensions.get("presentation") or {}).get("score"),
+                    }
                 require(evaluation.get("complete") is True and evaluation.get("score") == official
                         and evaluation.get("task_id") == row["task_id"]
                         and evaluation.get("evaluator_version") == evaluation.get("raw", {}).get("evaluator_version")
@@ -187,7 +218,8 @@ def load_test_data(directory):
             group["complete"] += 1
             group["scores"].append(receipt["official_score"])
         observations.append({**{name: row[name] for name in ("source", "run_id", "target", "method", "task_id")},
-                             "native_score": score, "status": status, "token_usage": usage, "budget_audit": audit})
+                             "native_score": score, "official_metrics": official_metrics,
+                             "status": status, "token_usage": usage, "budget_audit": audit})
     for group in groups.values():
         group["mean_official_score"] = sum(group["scores"]) / group["slots"] if group["complete"] == group["slots"] else None
     published_groups = {(row["source"], row["run_id"], row["target"], row["method"]): row
@@ -228,6 +260,9 @@ def task_statistics(values, *, seed, iterations, inferential):
 
 
 def paired_comparisons(observations, *, seed, iterations):
+    # Ours-only v7 deliberately has no baseline rows or inferential contrasts.
+    if not any(row["method"] in COMPARATORS for row in observations):
+        return []
     scores = {(row["source"], row["run_id"], row["target"], row["method"], row["task_id"]): row["native_score"]
               for row in observations}
     require(len(scores) == len(observations), "Duplicate condition-task observations")
@@ -284,20 +319,38 @@ def summarize(directory, *, seed=0, iterations=10000):
     for key, rows in sorted(groups.items(), key=lambda item: str(item[0])):
         values = [row["native_score"] for row in rows if row["native_score"] is not None]
         statuses = Counter(row["status"] for row in rows)
+        metric_rows = [row.get("official_metrics") for row in rows
+                       if isinstance(row.get("official_metrics"), dict)]
+        official_metric_means = None
+        if metric_rows:
+            names = ("Overall", "InformationRecall", "Analysis", "Presentation")
+            official_metric_means = {name: (mean([item[name] for item in metric_rows
+                                                  if isinstance(item.get(name), (int, float))])
+                                            if any(isinstance(item.get(name), (int, float)) for item in metric_rows)
+                                            else None)
+                                     for name in names}
         conditions.append({"source": key[0], "run_id": key[1], "target": key[2], "method": key[3],
             "registered_slots": len(rows), "complete": statuses["complete"], "failed": statuses["failed"],
             "missing": statuses["missing"], "native_mean_all_complete": mean(values) if len(values) == len(rows) else None,
             "native_mean_complete_descriptive": mean(values) if values else None,
             "token_usage": merge_usage(row["token_usage"] for row in rows),
             "cost_accounting": cost_accounting(rows),
-            "task_scores": [{name: row[name] for name in ("task_id", "native_score", "status")} for row in rows]})
+            "official_metric_means": official_metric_means,
+            "task_scores": [{**{name: row[name] for name in ("task_id", "native_score", "status")},
+                             "official_metrics": row.get("official_metrics")} for row in rows]})
+    protocol = registration["protocol"]
+    ours_only = protocol.get("version") == "jit-compose-independent-batch-protocol-v7"
     return {"schema": "independent-paper-summary-v1", "registration_sha256": digest(registration),
         "protocol_sha256": registration["protocol"]["protocol_sha256"], "seed": seed, "iterations": iterations,
-        "statistical_unit": "Task; three run differences are averaged within each source-target-task before resampling",
-        "inference": "Two-sided sign-flip; exact up to 16 tasks, otherwise Monte Carlo with plus-one correction",
-        "missing_policy": "Null; full means and inferential tests require every registered task and all three runs",
-        "cost_policy": "Each physical TEST slot counted once; static artifacts shared across sources and runs",
-        "family_sizes": FAMILY_SIZES, "conditions": conditions, "token_usage": usage, "cost_accounting": cost_accounting(observations),
+        "statistical_unit": ("Task; one registered run per source; no cross-method inference" if ours_only else
+                             "Task; three run differences are averaged within each source-target-task before resampling"),
+        "inference": ("Descriptive Ours-only results; no comparator or p-value claims" if ours_only else
+                      "Two-sided sign-flip; exact up to 16 tasks, otherwise Monte Carlo with plus-one correction"),
+        "missing_policy": ("Null; full means require every registered task" if ours_only else
+                           "Null; full means and inferential tests require every registered task and all three runs"),
+        "cost_policy": ("Each physical TEST slot counted once; no static baseline artifacts" if ours_only else
+                        "Each physical TEST slot counted once; static artifacts shared across sources and runs"),
+        "family_sizes": {} if ours_only else FAMILY_SIZES, "conditions": conditions, "token_usage": usage, "cost_accounting": cost_accounting(observations),
         "comparisons": paired_comparisons(observations, seed=seed, iterations=iterations)}
 
 
@@ -310,6 +363,17 @@ def markdown(report):
              "|---|---:|---|---|---:|---:|---:|---:|---:|"]
     for row in report["conditions"]:
         lines.append("| " + " | ".join(display(row[key]) for key in ("source", "run_id", "target", "method", "complete", "failed", "missing", "native_mean_all_complete", "native_mean_complete_descriptive")) + " |")
+    drb_rows = [row for row in report["conditions"]
+                if row["target"] == "deepresearch_bench_ii" and row.get("official_metric_means")]
+    if drb_rows:
+        lines += ["", "## DeepResearch Bench II official metrics", "",
+                  "| Source | Run | Method | Overall | InformationRecall | Analysis | Presentation |",
+                  "|---|---:|---|---:|---:|---:|---:|"]
+        for row in drb_rows:
+            metrics = row["official_metric_means"]
+            lines.append("| " + " | ".join(display(value) for value in
+                (row["source"], row["run_id"], row["method"], metrics.get("Overall"),
+                 metrics.get("InformationRecall"), metrics.get("Analysis"), metrics.get("Presentation"))) + " |")
     lines += ["", "## Paired differences", "", "Complete-pair results are descriptive when any registered pair is missing.", "",
               "| Source | Target | Comparator | Task clusters | Full difference | Full 95% CI | Descriptive difference | Sign-flip p | Holm p |",
               "|---|---|---|---:|---:|---|---:|---:|---:|"]

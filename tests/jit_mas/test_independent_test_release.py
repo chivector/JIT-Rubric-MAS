@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from jit_mas.schemas import ExperienceSnapshot, digest
+from jit_mas.schemas import ExperienceSnapshot, SplitManifest, digest
 from jit_mas.checkpoints import CheckpointIntegrityError
 from scripts.run_independent_test_release import IndependentTestReleaseRunner
 
@@ -43,6 +43,12 @@ def test_test_split_is_target_only_and_immutable(tmp_path):
     assert path.exists()
     assert instance._test_tasks("deepresearch_bench_ii") == ["drb:1"]
     assert instance._test_tasks("researchrubrics") == ["rr:1", "rr:2"]
+    document = json.loads(path.read_text(encoding="utf-8"))
+    manifest = SplitManifest.model_validate(document["runtime_split_manifest"])
+    assert manifest.evolution == []
+    assert manifest.validation == []
+    assert manifest.test == ["drb:1"]
+    assert manifest.stream == []
     path.write_text("{}", encoding="utf-8")
     with pytest.raises(CheckpointIntegrityError):
         instance._split_path("deepresearch_bench_ii")

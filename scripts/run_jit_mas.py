@@ -84,14 +84,24 @@ def make_pipeline(config, store, output, *, data=None, splits=None, fixture_mode
             # requests can use the registered bounded parallelism.  The same
             # ledger is shared by every child, preserving accounting.
             if dataset is not None and dataset.name == "researchrubrics":
-                parallel = config.judge_parallel if judge is not None else 1
+                # Keep the evaluator identity stable between the identity-only
+                # factory call (judge=None) used by receipt validation and the
+                # real scored call.  The previous branch encoded parallel=1
+                # for the former and parallel=config.judge_parallel for the
+                # latter, causing valid ResearchRubrics receipts to fail batch
+                # binding after evaluation.
+                parallel = config.judge_parallel
                 kwargs["max_parallel_judgments"] = parallel
                 if parallel > 1:
                     ledger = getattr(judge, "ledger", None)
                     if ledger is None:
-                        raise ValueError("Parallel judge evaluation requires a metered judge")
-                    kwargs["judge_factory"] = lambda: provider.create(
-                        "judge", f"judge-rubric-{uuid.uuid4().hex[:12]}", ledger, "evaluation")
+                        # Identity-only construction never evaluates a rubric;
+                        # a no-op factory preserves the same evaluator identity
+                        # without creating an unmetered judge.
+                        kwargs["judge_factory"] = lambda: None
+                    else:
+                        kwargs["judge_factory"] = lambda: provider.create(
+                            "judge", f"judge-rubric-{uuid.uuid4().hex[:12]}", ledger, "evaluation")
         if dataset is not None:
             return dataset.evaluator(judge, judge_id=judge_id, checker=checker, **kwargs)
         return ResearchRubricsAdapter(judge=judge, judge_id=judge_id, **kwargs)

@@ -50,6 +50,9 @@ def validation_result(source, outcome):
 class IndependentEnvironment:
     """Validate inputs before requests and create isolated per-slot pipelines."""
 
+    protocol_builder = staticmethod(build_protocol)
+    runner_path = Path(__file__)
+
     def __init__(self, launch_path, output, *, require_preflight=True):
         self.launch_path = Path(launch_path).resolve()
         self.output = Path(output).resolve()
@@ -60,7 +63,8 @@ class IndependentEnvironment:
         raw_config = yaml.safe_load(self.config_path.read_text(encoding="utf-8")) or {}
         self.config = MASConfig.model_validate(resolve_env_placeholders(raw_config))
         self.joint = _read(self.joint_path)
-        self.protocol = build_protocol(self.joint)
+        self.protocol = self.protocol_builder(self.joint)
+        registered_sources = tuple(self.protocol.get("sources", SOURCES))
         self.workers = self.document.get("workers", 2)
         if type(self.workers) is not int or self.workers < 2:
             raise ValueError("Independent scheduling requires at least two task workers")
@@ -108,7 +112,7 @@ class IndependentEnvironment:
                                     "dataset_sha256": dataset.dataset_sha256, "evidence": evidence_hash,
                                     "checker_source_root": str(checker_root) if checker_root else None,
                                     "checker_source": checker_hash}
-            if name in SOURCES:
+            if name in registered_sources:
                 for task_id in membership["validation"]:
                     self.bounds[task_id] = ([1.0, 10.0] if name == "writingbench" else
                                             [dataset.lower_bounds[task_id], dataset.upper_bounds[task_id]])
@@ -121,7 +125,7 @@ class IndependentEnvironment:
             "software_test_only": False, "configuration": self.config.model_dump(mode="json"),
             "configuration_file_sha256": file_hash(self.config_path),
             "launch_file_sha256": file_hash(self.launch_path), "code_fingerprint": code_fingerprint(),
-            "runner_sha256": file_hash(__file__), "joint_manifest_sha256": file_hash(self.joint_path),
+            "runner_sha256": file_hash(self.runner_path), "joint_manifest_sha256": file_hash(self.joint_path),
             "materials": self.materials, "served_models": self.served_models,
             "preflight": self.preflight, "workers": self.workers,
             "initial_snapshot_hash": digest(ExperienceSnapshot()),
@@ -145,6 +149,11 @@ class IndependentEnvironment:
         if not config.unsafe_local:
             raise ValueError("Native harness execution must be explicitly configured with unsafe_local")
 
+    def _trajectory_axes(self):
+        sources = tuple(self.protocol.get("sources", SOURCES))
+        runs = tuple(self.protocol.get("run_ids", RUN_IDS))
+        return sources, runs
+
     def _validate_preflight(self, base):
         if self.preflight.get("passed") is not True or not self.preflight.get("report_path"):
             raise ValueError("Formal execution requires a completed synthetic preflight report")
@@ -157,8 +166,13 @@ class IndependentEnvironment:
             raise CheckpointIntegrityError("Frozen synthetic preflight report hash mismatch")
         if report.get("report_sha256") and report["report_sha256"] != content_digest:
             raise CheckpointIntegrityError("Synthetic preflight self-hash mismatch")
-        if report.get("passed") is not True or report.get("synthetic_only") is not True:
-            raise ValueError("Preflight must pass on synthetic tasks without experimental data")
+        if report.get("passed") is not True:
+            raise ValueError("Provider preflight did not pass")
+        if report.get("synthetic_only") is True:
+            if report.get("network_requests") not in (0, None):
+                raise ValueError("Synthetic preflight cannot contain network requests")
+        elif report.get("provider_report", {}).get("passed") is not True:
+            raise ValueError("Non-synthetic preflight must bind a passed provider report")
         if report.get("configuration_sha256") != digest(self.config.model_dump(mode="json")):
             raise CheckpointIntegrityError("Preflight was performed under a different execution configuration")
         if report.get("code_fingerprint") != code_fingerprint():
@@ -177,7 +191,7 @@ class IndependentEnvironment:
                    or file_hash(self.config_path) != self.identity["configuration_file_sha256"]
                    or file_hash(self.joint_path) != self.identity["joint_manifest_sha256"]
                    or code_fingerprint() != self.identity["code_fingerprint"]
-                   or file_hash(__file__) != self.identity["runner_sha256"])
+                   or file_hash(self.runner_path) != self.identity["runner_sha256"])
         for material in self.materials.values():
             changed = changed or file_hash(material["data"]) != material["dataset_sha256"]
             if material["evidence_dir"]:
@@ -206,8 +220,8 @@ class IndependentEnvironment:
 
     def initialize(self):
         self.campaign = IndependentCampaign(self.output, self.protocol, self.identity, self.bounds)
-        for source in SOURCES:
-            for run_id in RUN_IDS:
+        for source, run_id in ((source, run_id) for source in self._trajectory_axes()[0]
+                               for run_id in self._trajectory_axes()[1]):
                 self._split(source, run_id)
                 state_path = self.trajectory_directory(source, run_id) / "experience.sqlite"
                 store = ExperienceStore(state_path)
@@ -286,8 +300,8 @@ class IndependentEnvironment:
         return {"slot_id": claim["slot_id"], "status": status}
 
     def freeze_ready(self):
-        for source in SOURCES:
-            for run_id in RUN_IDS:
+        for source, run_id in ((source, run_id) for source in self._trajectory_axes()[0]
+                               for run_id in self._trajectory_axes()[1]):
                 evolution = self.campaign.records(kind="evolution", source=source, run_id=run_id)
                 terminal = 0
                 for row in evolution:
@@ -393,8 +407,8 @@ class IndependentEnvironment:
                         future.result()
                         active.pop(future)
             if phase == "full":
-                for source in SOURCES:
-                    for run_id in RUN_IDS:
+                for source, run_id in ((source, run_id) for source in self._trajectory_axes()[0]
+                                       for run_id in self._trajectory_axes()[1]):
                         self.campaign.select_trajectory(source, run_id)
             report = self.campaign.status(phase=phase)
             completed = report["terminal_slots"] if phase == "first-stage" else sum(

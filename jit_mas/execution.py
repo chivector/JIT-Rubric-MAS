@@ -947,7 +947,14 @@ def _contributor_compactness_warnings(parsed, *, closed_book=False):
 
 def _correctable_execution_shape_error(error, response, *, observed_ids, allowed_tools,
                                       peer_ids, synthesizer):
-    """Permit one model-authored shape repair without recalling an authority violation."""
+    """Permit one model-authored shape repair without recalling an authority violation.
+
+    An evidence citation that is not in the role's observed event set is a
+    recoverable protocol error.  The model can remove that citation on the one
+    correction turn, but the correction gate must still reject unauthorized
+    tools, recipients, or final-answer authority.  This keeps validation before
+    dispatch while allowing an otherwise valid completion to repair stale IDs.
+    """
     prefixes = (
         "Expected a complete JSON object", "Response must be a JSON object",
         "Unknown execution response fields: ",
@@ -961,8 +968,15 @@ def _correctable_execution_shape_error(error, response, *, observed_ids, allowed
         "ledger.outline must be", "ledger needs evidence_spans and source_references lists",
         "Each source reference needs source_id and locator", "Source IDs must be unique",
         "Each evidence span needs text and a declared source_ref",
+        "Completion cites evidence not observed by this agent",
+        "Checkpoint cites evidence not observed by this agent",
     )
-    if not str(error).startswith(prefixes):
+    error_text = str(error)
+    citation_error = error_text.startswith((
+        "Completion cites evidence not observed by this agent",
+        "Checkpoint cites evidence not observed by this agent",
+    ))
+    if not error_text.startswith(prefixes):
         return False
     content = getattr(response, "content", response)
     try:
@@ -1000,15 +1014,29 @@ def _correctable_execution_shape_error(error, response, *, observed_ids, allowed
             completions.append(arguments)
         elif name == "send_message" and arguments.get("recipient") not in peer_ids:
             return False
+    has_unobserved_citation = False
     for completion in completions:
         citations = [completion.get("evidence_ids", [])]
         checkpoints = completion.get("checkpoints", {})
         if isinstance(checkpoints, dict):
             citations.extend(check.get("evidence_ids", []) for check in checkpoints.values()
                              if isinstance(check, dict))
-        if any(isinstance(ids, list) and any(isinstance(item, str) and item not in observed_ids
-                                          for item in ids) for ids in citations):
-            return False
+        has_unobserved_citation = has_unobserved_citation or any(
+            isinstance(ids, list)
+            and any(isinstance(item, str) and item not in observed_ids for item in ids)
+            for ids in citations
+        )
+
+    # Citation provenance is the one semantic validation failure that can be
+    # repaired in place: no event from the rejected response has been accepted
+    # yet, and the correction prompt tells the model to drop (rather than
+    # invent) the unobserved IDs.  Other shape errors still require a response
+    # that contains no unobserved citation, preserving the authority guard for
+    # a response that mixes an unrelated malformed shape with stale evidence.
+    if citation_error:
+        return has_unobserved_citation
+    if has_unobserved_citation:
+        return False
     return True
 
 
@@ -1618,6 +1646,12 @@ def _continue_agent_iterative(agent, team, ctx, services, state, *, one_turn,
                     "fixed-pack IDs to hide duplication. Preserve every supported span and actual locator "
                     "while consolidating duplicate entries yourself before returning. "
                     "If no sources were observed, ledger source_references/evidence_spans must be empty arrays. "
+                    "An unobserved evidence citation is correctable once: remove every such ID from answer "
+                    "and checkpoint evidence_ids (use [] when none remain), state the limitation, and never "
+                    "guess, substitute, or cite task_background. "
+                    "Use only evidence IDs present in this agent's observed evidence set. If a citation ID "
+                    "is not observed, replace the affected answer or checkpoint evidence_ids with [] and "
+                    "state the limitation instead of citing task_background or inventing a label. "
                     + ("This run is closed book: do not convert remembered citations into source objects. "
                        "Keep source_references=[] and evidence_spans=[]; move useful remembered claims, "
                        "citation details and limitations into ledger.outline as nonempty strings, "

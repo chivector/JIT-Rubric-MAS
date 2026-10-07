@@ -19,7 +19,7 @@ from jit_mas.experience import ExperienceStore
 from jit_mas.independent_campaign import TERMINAL, coordinator_lock
 from jit_mas.independent_protocol import SOURCES
 from jit_mas.pipeline import write_json
-from jit_mas.schemas import ExperienceSnapshot, digest, utc_now
+from jit_mas.schemas import ExperienceSnapshot, SplitManifest, digest, utc_now
 from jit_mas.token_usage import merge_usage, summarize_budget, summarize_outcome
 from scripts.mas_baseline_methods import run_direct
 from scripts.run_benchmark_experiment import file_hash
@@ -28,7 +28,7 @@ from scripts.run_jit_mas import make_pipeline
 from jit_mas.test_release import score_with_pipeline
 
 
-MAX_WORKERS = 16
+MAX_WORKERS = 64
 
 
 def _read(path: Path):
@@ -38,9 +38,9 @@ def _read(path: Path):
 class IndependentTestReleaseRunner:
     """Coordinator for independent unscored TEST submission and scoring."""
 
-    def __init__(self, launch_config, output, *, require_preflight=True):
-        self.environment = IndependentEnvironment(launch_config, output,
-                                                  require_preflight=require_preflight)
+    def __init__(self, launch_config, output, *, require_preflight=True, environment=None):
+        self.environment = environment or IndependentEnvironment(launch_config, output,
+                                                                 require_preflight=require_preflight)
         self.environment.initialize()
         self.campaign = self.environment.campaign
         self.output = Path(output).resolve()
@@ -106,8 +106,10 @@ class IndependentTestReleaseRunner:
             self.campaign.finish(claim, result, status="failed")
 
     def _select_ready_trajectories(self):
-        for source in SOURCES:
-            for run_id in range(3):
+        sources = tuple(self.campaign.protocol.get("sources", SOURCES))
+        run_ids = tuple(self.campaign.protocol.get("run_ids", sorted({row["run_id"] for row in self.campaign.protocol["trajectories"]})))
+        for source in sources:
+            for run_id in run_ids:
                 if self.campaign.selection(source, run_id) is not None:
                     continue
                 try:
@@ -119,15 +121,21 @@ class IndependentTestReleaseRunner:
                         raise
 
     def _test_tasks(self, target):
-        if target in SOURCES:
-            return list(self.campaign.trajectories[target, 0]["test_task_ids"])
+        sources = tuple(self.campaign.protocol.get("sources", SOURCES))
+        if target in sources:
+            run_id = next(iter(self.campaign.protocol.get("run_ids", (0,))))
+            return list(self.campaign.trajectories[target, run_id]["test_task_ids"])
         return list(self.campaign.protocol["target_test_tasks"][target])
 
     def _split_path(self, target):
         path = self.output / "test_runtime_splits" / f"{target}.json"
-        document = {"version": "jit-compose-independent-test-split-v5",
-                    "benchmark": target, "evolution": [], "validation": [],
-                    "test": self._test_tasks(target), "stream": []}
+        # ``make_pipeline`` validates runtime splits with the strict
+        # ``SplitManifest`` schema.  Keep the adapter-specific wrapper outside
+        # that schema; putting ``version``/``benchmark`` beside the split lists
+        # makes Pydantic reject every TEST slot before any model call.
+        manifest = SplitManifest(seed=0, evolution=[], validation=[],
+                                 test=self._test_tasks(target), stream=[])
+        document = {"runtime_split_manifest": manifest.model_dump(mode="json")}
         with self._split_lock:
             if path.exists() and _read(path) != document:
                 raise CheckpointIntegrityError("Independent TEST runtime split changed")
@@ -154,6 +162,7 @@ class IndependentTestReleaseRunner:
         profiles = list(snapshot.agent_pool.profiles)
         for operation in snapshot.agent_pool.structural_history:
             observed.add(operation.source_task_id)
+            observed.update(operation.source_task_ids)
             profiles.extend(operation.profiles)
         for profile in profiles:
             observed.update(profile.source_task_ids)
@@ -272,9 +281,10 @@ class IndependentTestReleaseRunner:
             self._select_ready_trajectories()
         test_records = self.campaign.records(kind="test")
         terminal = sum(row["status"] in TERMINAL for row in test_records)
+        test_count = len(test_records)
         return {"submitted": states.count("submitted"), "failed": states.count("failed"),
                 "claimed": len(states), "test_slots": len(test_records),
-                "terminal": terminal, "sealed": terminal == len(test_records) == 2751}
+                "terminal": terminal, "sealed": terminal == len(test_records) == test_count}
 
     def seal(self):
         self._assert_adapter_identity()
@@ -360,7 +370,9 @@ class IndependentTestReleaseRunner:
             row["mean_official_score"] = (sum(row["scores"]) / row["slots"]
                                            if row["complete"] == row["slots"] else None)
         complete = sum(bool(r.get("complete")) for r in results)
-        report = {"schema": "independent-test-report-v5", "slots": len(test_rows),
+        report_schema = ("independent-test-report-v7" if self.campaign.protocol.get("version", "").endswith("-v7")
+                         else "independent-test-report-v5")
+        report = {"schema": report_schema, "slots": len(test_rows),
                   "evaluated": len(test_rows), "complete": complete,
                   "incomplete_or_failed": len(test_rows) - complete,
                   "token_usage": merge_usage([

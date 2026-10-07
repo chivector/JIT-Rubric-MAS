@@ -179,6 +179,12 @@ class MeteredModel:
             except Exception:
                 pass
         context_record = None
+        reset_usage = False
+        if hasattr(self.model, "reset_token_counters"):
+            # Native transports reset counters before each attempt.  The flag
+            # distinguishes fresh exception usage from a provider's stale
+            # successful-call counters below.
+            reset_usage = True
         if self.context_window is not None:
             from .request_policy import prepare_context
             prepared, context_record = prepare_context(messages, output_tokens=limit,
@@ -196,6 +202,8 @@ class MeteredModel:
                     counts = self.model.get_token_counts() if hasattr(self.model, "get_token_counts") else {}
                     counts = counts or {}
                 except Exception:
+                    counts = {}
+                if not reset_usage and "estimated" not in counts:
                     counts = {}
                 self.ledger.settle(ticket, counts.get("input_token_count"),
                     counts.get("output_token_count"), error=type(exc).__name__,

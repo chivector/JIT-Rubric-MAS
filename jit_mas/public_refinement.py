@@ -703,7 +703,13 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         raise ValueError("A draft may undergo public refinement only once")
     policy = knowledge_policy_prompt(knowledge_policy)
     execution_spec = config.models.get("exec")
-    output_cap = min(execution_spec.max_tokens if execution_spec is not None else 8192, 8192)
+    # Honor the frozen execution model's per-response budget.  The previous
+    # hard 8,192-token cap could truncate structured public-review JSON even
+    # when the configured native model budget was larger, making an otherwise
+    # valid task terminally unparsable.  Keep the historical fallback for
+    # configs without an exec model, but let the registered config determine
+    # the actual ceiling.
+    output_cap = execution_spec.max_tokens if execution_spec is not None else 8192
     global_spec = config.models.get("global")
     request_timeout = global_spec.timeout if global_spec is not None else config.execution_timeout
     guarded = config.public_refinement_guard
@@ -884,6 +890,12 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
             if remaining is not None and remaining <= 0:
                 raise TimeoutError("Task wall-clock budget exhausted before public refinement")
             model = models.create("global", agent_id, ledger, "inference")
+            # Public review/revision uses the registered exec response budget.
+            # NativeModels wraps the global role in MeteredModel, whose own
+            # max_tokens would otherwise silently clamp this call back to the
+            # generator's 8,192-token cap and truncate structured JSON.
+            if output_cap > getattr(model, "max_tokens", 0):
+                model.max_tokens = output_cap
             model_call_options["timeout"] = (min(request_timeout, remaining)
                                              if remaining is not None else request_timeout)
             record["model_call_options"] = copy.deepcopy(model_call_options)

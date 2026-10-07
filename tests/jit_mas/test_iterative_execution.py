@@ -632,19 +632,26 @@ def test_unknown_prose_fields_cannot_hide_fabricated_evidence_from_correction():
     assert not [event for event in services.events if event["kind"] == "protocol_warning"]
 
 
-def test_fabricated_evidence_id_does_not_receive_ledger_shape_correction():
+def test_fabricated_evidence_id_gets_one_ledger_shape_correction():
     team = make_team(contributors=True)
     malformed = {"answer": "Research contribution", "continue": False,
                  "evidence_ids": ["invented-event"],
                  "ledger": {"requirements": ["Explain assumptions"], "outline": [3],
                              "evidence_spans": [], "source_references": []}}
-    searcher = ScriptedModel([malformed])
-    writer = ScriptedModel([{"answer": "Must never run"}])
+    corrected = {"answer": "Research contribution with its limitation.", "continue": False,
+                 "evidence_ids": [],
+                 "ledger": {"requirements": ["Explain assumptions"],
+                            "outline": ["State the central claim and its limitation."],
+                            "evidence_spans": [], "source_references": []}}
+    searcher = ScriptedModel([malformed, corrected])
+    writer = ScriptedModel([{"answer": "The guide states the claim and its limitation."}])
     services, context = make_services(team, {"searcher": searcher, "writer": writer})
     result = run_team("Write a guide.", context, team, services)
-    assert result.terminated_reason == "error"
-    assert len(searcher.calls) == 1
-    assert not [event for event in services.events if event["kind"] == "protocol_warning"]
+    assert result.terminated_reason == "final_answer"
+    assert len(searcher.calls) == 2
+    warnings = [event for event in services.events if event["kind"] == "protocol_warning"]
+    assert len(warnings) == 1
+    assert "unobserved evidence citation is correctable once" in searcher.calls[1][-1]["content"]
 
 
 def test_final_tool_payload_is_checked_after_merging_completion_fields():
@@ -892,18 +899,22 @@ def test_new_peer_message_is_delivered_and_citable_on_next_turn():
     assert published["message"] in result.metadata["observed_evidence_ids"]
 
 
-def test_peer_observation_published_during_call_cannot_be_cited_before_delivery():
+def test_peer_observation_published_during_call_gets_correction_before_delivery():
     team = make_team(contributors=True)
 
     def unsupported_completion(messages):
         unseen = services.event("searcher", "retrieved", {"output": "Evidence published after call started"})
         return {"answer": "Unsupported guide", "evidence_ids": [unseen]}
 
-    model = ScriptedModel([unsupported_completion])
+    model = ScriptedModel([unsupported_completion,
+                           {"answer": "Guide with an explicit evidence limitation.",
+                            "evidence_ids": []}])
     services, context = make_services(team, {"writer": model})
     result = run_writer(team, services, context)
-    assert result.answer is None and result.terminated_reason == "error"
-    assert "not observed" in str(result.trajectory[-1].error)
+    assert result.answer == "Guide with an explicit evidence limitation."
+    assert result.terminated_reason == "final_answer"
+    assert len(model.calls) == 2
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == 1
 
 
 def test_unknown_message_recipient_fails_before_external_tool_dispatch():
@@ -1034,14 +1045,22 @@ def test_repeated_missing_checkpoint_fails_after_one_correction():
     assert not any(event["kind"] == "final_answer" for event in services.events)
 
 
-def test_missing_checkpoint_does_not_recall_fabricated_evidence():
+def test_missing_checkpoint_correction_drops_fabricated_evidence():
     team = make_team(checkpoints=["accuracy"])
-    model = ScriptedModel([{"answer": "An unsupported answer.", "evidence_ids": ["invented"]}])
+    model = ScriptedModel([
+        {"answer": "An unsupported answer.", "evidence_ids": ["invented"]},
+        {"answer": "An answer with an explicit limitation.", "evidence_ids": [],
+         "checkpoints": {"accuracy": {"status": "unverified",
+                                         "reason": "No observed evidence was available.",
+                                         "evidence_ids": []}}},
+    ])
     services, context = make_services(team, {"writer": model})
     result = run_writer(team, services, context)
-    assert result.answer is None and result.terminated_reason == "error"
-    assert len(model.calls) == 1
-    assert "evidence not observed" in str(result.trajectory[0].error)
+    assert result.answer == "An answer with an explicit limitation."
+    assert result.terminated_reason == "final_answer"
+    assert len(model.calls) == 2
+    assert result.metadata["checkpoint_reports"]["accuracy"]["status"] == "unverified"
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == 1
 
 
 def test_missing_checkpoint_correction_keeps_configured_role_call_ceiling():
@@ -1103,17 +1122,19 @@ def test_checkpoint_correction_still_requires_every_exact_assigned_checkpoint():
     assert not any(event["kind"] == "final_answer" for event in services.events)
 
 
-@pytest.mark.parametrize("invalid, error", [
-    ({"answer": "Unsupported guide", "evidence_ids": ["unseen"]}, "Completion cites evidence not observed"),
+@pytest.mark.parametrize("invalid, error, correctable", [
+    ({"answer": "Unsupported guide", "evidence_ids": ["unseen"]},
+     "Completion cites evidence not observed", True),
     ({"answer": "Unsupported guide", "checkpoints": {"accuracy": {
         "status": "passed", "reason": "Cited a source", "evidence_ids": ["unseen"]}}},
-     "Checkpoint cites evidence not observed"),
+     "Checkpoint cites evidence not observed", True),
     ({"tools": [{"name": "send_message", "arguments": {
-        "recipient": "invented", "content": "Please help"}}]}, "exact peer agent_id"),
+        "recipient": "invented", "content": "Please help"}}]},
+     "exact peer agent_id", False),
 ])
 @pytest.mark.parametrize("after_checkpoint_correction", [False, True])
-def test_unrelated_protocol_errors_fail_without_a_checkpoint_correction(
-        invalid, error, after_checkpoint_correction):
+def test_protocol_errors_allow_one_evidence_correction_but_reject_authority_errors(
+        invalid, error, correctable, after_checkpoint_correction):
     team = make_team(contributors=True, checkpoints=["accuracy"])
     replies = [invalid, {"answer": "This must never run", "checkpoints": {"accuracy": True}}]
     if after_checkpoint_correction:
@@ -1121,12 +1142,23 @@ def test_unrelated_protocol_errors_fail_without_a_checkpoint_correction(
     model = ScriptedModel(replies)
     services, context = make_services(team, {"writer": model})
     result = run_writer(team, services, context)
-    assert result.answer is None and result.terminated_reason == "error"
-    assert len(model.calls) == len(result.trajectory) == 1 + after_checkpoint_correction
-    assert error in str(result.trajectory[-1].error)
-    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == after_checkpoint_correction
-    assert "writer" not in services.artifacts
-    assert not any(event["kind"] == "final_answer" for event in services.events)
+    should_recover = correctable and not after_checkpoint_correction
+    if should_recover:
+        assert result.answer == "This must never run"
+        assert result.terminated_reason == "final_answer"
+    else:
+        assert result.answer is None and result.terminated_reason == "error"
+    expected_calls = 1 + after_checkpoint_correction + should_recover
+    assert len(model.calls) == len(result.trajectory) == expected_calls
+    error_step = result.trajectory[0] if should_recover else result.trajectory[-1]
+    assert error in str(error_step.error)
+    assert len([event for event in services.events if event["kind"] == "protocol_warning"]) == (
+        after_checkpoint_correction or should_recover)
+    if should_recover:
+        assert any(event["kind"] == "final_answer" for event in services.events)
+    else:
+        assert "writer" not in services.artifacts
+        assert not any(event["kind"] == "final_answer" for event in services.events)
 
 
 def test_checkpoint_correction_does_not_reset_repeated_no_progress_protection():

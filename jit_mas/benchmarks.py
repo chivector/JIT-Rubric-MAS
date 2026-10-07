@@ -495,12 +495,23 @@ class DeepResearchBenchIIEvaluator(_MeteredEvaluator):
         satisfied = sum(row["native_score"] == 1 for row in unique)
         blocked = sum(row["native_score"] == -1 for row in unique)
         result = self._base(task_id, feedback, score=satisfied / len(unique), model_calls=calls)
+        dimensions = {axis: self._dimension(feedback, axis) for axis in DRBII_DIMENSIONS}
+        # Keep the benchmark's published names alongside the adapter's native
+        # dimension keys.  The values are identical and remain null when a
+        # dimension is incomplete, so downstream TEST receipts can expose the
+        # official metric set without reinterpreting the judge output.
+        official_metrics = {
+            "Overall": result["score"],
+            "InformationRecall": dimensions["info_recall"]["score"],
+            "Analysis": dimensions["analysis"]["score"],
+            "Presentation": dimensions["presentation"]["score"],
+        }
         result.update(native_score_counts={str(n): sum(row["native_score"] == n for row in unique)
                                           for n in (-1, 0, 1)},
                       blocked_rate=blocked / len(unique) if complete else None,
                       judged_item_count=len(feedback), criterion_count=len(unique),
                       duplicate_item_count=len(feedback) - len(unique),
-                      dimensions={axis: self._dimension(feedback, axis) for axis in DRBII_DIMENSIONS},
+                      dimensions=dimensions, official_metrics=official_metrics,
                       batch_size=self.batch_size, failed_count=sum(row["status"] != "ok" for row in feedback),
                       adapter_deviations=["adapted prompt", "one metered attempt per batch",
                                           "strict response validation", "oversize report rejected, not truncated"])
@@ -569,7 +580,10 @@ class WritingBenchEvaluator(_MeteredEvaluator):
             else:
                 for row in feedback:
                     row.update(status="error", score=None, native_score=None, error_type=type(exc).__name__)
-            return self._base(task_id, feedback, model_calls=calls)
+            result = self._base(task_id, feedback, model_calls=calls)
+            result["official_metrics"] = {name: None for name in
+                                           ("Overall", "InformationRecall", "Analysis", "Presentation")}
+            return result
 
 
 def _checker_results(prediction, private_record, checker):
