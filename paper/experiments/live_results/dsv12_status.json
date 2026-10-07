@@ -4,13 +4,13 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 143,
+    "complete": 147,
     "failed": 8,
     "incomplete": 2,
-    "pending": 1568,
-    "started": 4
+    "pending": 1565,
+    "started": 3
   },
-  "terminal_slots": 151,
+  "terminal_slots": 155,
   "active": 4,
   "test_feedback_released": false,
   "registration_hash": "f48203b1ba89692c8cb82958b5275b46a1f250dbb5a24569f8bd4415df94e672",
@@ -23,6 +23,16 @@
       "complete_evaluations": 10,
       "minimum_complete": 9,
       "selection_utility": 0.15444444444444444,
+      "eligible": true
+    },
+    {
+      "source": "deepsearchqa",
+      "run_id": 0,
+      "batch_index": 1,
+      "candidate_index": 2,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.1279120879120879,
       "eligible": true
     },
     {
@@ -48,5 +58,5 @@
   ],
   "final_report_available": false,
   "paper_summary_available": true,
-  "observed_at": "2026-10-07T02:51:19.153361+00:00"
+  "observed_at": "2026-10-07T02:53:23.787024+00:00"
 }
