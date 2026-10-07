@@ -4,14 +4,14 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 416,
+    "complete": 419,
     "deferred": 1098,
     "failed": 20,
     "incomplete": 6,
-    "pending": 181,
+    "pending": 178,
     "started": 4
   },
-  "terminal_slots": 442,
+  "terminal_slots": 445,
   "active": 4,
   "test_feedback_released": false,
   "test": {
@@ -339,25 +339,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 416,
+    "complete_slot_count": 419,
     "tokens": {
-      "total": 122870908,
-      "input": 114033338,
-      "output": 8837570,
-      "model_calls": 9600
+      "total": 123831801,
+      "input": 114917485,
+      "output": 8914316,
+      "model_calls": 9693
     },
     "latency": {
       "slot": {
-        "sample_count": 416,
-        "mean_seconds": 163.03966346153854,
-        "median_seconds": 151.13249999999243,
-        "p90_seconds": 268.96149999999034
+        "sample_count": 419,
+        "mean_seconds": 164.12086157517913,
+        "median_seconds": 151.51500000001397,
+        "p90_seconds": 274.8189999999944
       },
       "model": {
-        "sample_count": 9600,
-        "mean_seconds": 15.512831562500063,
-        "median_seconds": 12.5,
-        "p90_seconds": 26.87660000000033
+        "sample_count": 9693,
+        "mean_seconds": 15.645750541628026,
+        "median_seconds": 12.546999999991385,
+        "p90_seconds": 27.48399999999674
       }
     },
     "by_source_kind": {
@@ -482,23 +482,23 @@
         }
       },
       "researchrubrics/validation": {
-        "sample_count": 186,
-        "tokens": 51295644,
-        "input_tokens": 46494254,
-        "output_tokens": 4801390,
-        "model_calls": 6214,
-        "score_mean": 0.41066634317713374,
+        "sample_count": 189,
+        "tokens": 52256537,
+        "input_tokens": 47378401,
+        "output_tokens": 4878136,
+        "model_calls": 6307,
+        "score_mean": 0.4128448103213362,
         "slot_latency": {
-          "sample_count": 186,
-          "mean_seconds": 211.29430107526815,
-          "median_seconds": 193.7109999999957,
-          "p90_seconds": 299.8979999999865
+          "sample_count": 189,
+          "mean_seconds": 212.9252962962958,
+          "median_seconds": 194.60900000002584,
+          "p90_seconds": 318.7813999999956
         },
         "model_latency": {
-          "sample_count": 6214,
-          "mean_seconds": 16.11360444158371,
-          "median_seconds": 13.33650000000489,
-          "p90_seconds": 27.047000000011757
+          "sample_count": 6307,
+          "mean_seconds": 16.309024100206283,
+          "median_seconds": 13.437000000005355,
+          "p90_seconds": 27.94439999999596
         }
       },
       "writingbench/batch_evolution": {
@@ -639,5 +639,5 @@
       "experience_count": 16
     }
   },
-  "observed_at": "2026-10-07T06:51:34.057075+00:00"
+  "observed_at": "2026-10-07T06:53:38.644916+00:00"
 }
