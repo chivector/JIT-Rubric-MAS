@@ -4,14 +4,14 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 486,
+    "complete": 489,
     "failed": 62,
     "incomplete": 6,
-    "pending": 1075,
+    "pending": 1072,
     "started": 4,
     "submitted": 92
   },
-  "terminal_slots": 554,
+  "terminal_slots": 557,
   "active": 4,
   "test_feedback_released": false,
   "test": {
@@ -389,25 +389,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 486,
+    "complete_slot_count": 489,
     "tokens": {
-      "total": 143230821,
-      "input": 132621314,
-      "output": 10609507,
-      "model_calls": 11454
+      "total": 143682787,
+      "input": 133025443,
+      "output": 10657344,
+      "model_calls": 11482
     },
     "latency": {
       "slot": {
-        "sample_count": 486,
-        "mean_seconds": 171.412619341564,
-        "median_seconds": 159.86749999999302,
-        "p90_seconds": 295.98399999999674
+        "sample_count": 489,
+        "mean_seconds": 171.08975869120675,
+        "median_seconds": 159.625,
+        "p90_seconds": 295.83399999999676
       },
       "model": {
-        "sample_count": 11454,
-        "mean_seconds": 16.309144840230566,
+        "sample_count": 11482,
+        "mean_seconds": 16.29981780177678,
         "median_seconds": 12.89100000000326,
-        "p90_seconds": 29.280999999988126
+        "p90_seconds": 29.279499999989632
       }
     },
     "by_source_kind": {
@@ -452,23 +452,23 @@
         }
       },
       "deepsearchqa/evolution": {
-        "sample_count": 22,
-        "tokens": 3681273,
-        "input_tokens": 3525646,
-        "output_tokens": 155627,
-        "model_calls": 198,
-        "score_mean": 0.17272727272727273,
+        "sample_count": 23,
+        "tokens": 3794734,
+        "input_tokens": 3632663,
+        "output_tokens": 162071,
+        "model_calls": 208,
+        "score_mean": 0.16521739130434782,
         "slot_latency": {
-          "sample_count": 22,
-          "mean_seconds": 70.5042727272746,
-          "median_seconds": 64.5,
-          "p90_seconds": 74.87109999999812
+          "sample_count": 23,
+          "mean_seconds": 71.18752173913147,
+          "median_seconds": 66.125,
+          "p90_seconds": 79.97799999999698
         },
         "model_latency": {
-          "sample_count": 198,
-          "mean_seconds": 8.108737373737368,
+          "sample_count": 208,
+          "mean_seconds": 8.128677884615591,
           "median_seconds": 6.812500000014552,
-          "p90_seconds": 11.881299999996557
+          "p90_seconds": 12.19059999997262
         }
       },
       "deepsearchqa/validation": {
@@ -572,23 +572,23 @@
         }
       },
       "writingbench/evolution": {
-        "sample_count": 10,
-        "tokens": 1485729,
-        "input_tokens": 1320785,
-        "output_tokens": 164944,
-        "model_calls": 88,
-        "score_mean": 8.24,
+        "sample_count": 12,
+        "tokens": 1824234,
+        "input_tokens": 1617897,
+        "output_tokens": 206337,
+        "model_calls": 106,
+        "score_mean": 8.299999999999999,
         "slot_latency": {
-          "sample_count": 10,
-          "mean_seconds": 151.52799999999698,
-          "median_seconds": 149.78899999998976,
-          "p90_seconds": 195.06089999999963
+          "sample_count": 12,
+          "mean_seconds": 148.78499999999863,
+          "median_seconds": 145.20299999999406,
+          "p90_seconds": 182.67339999999967
         },
         "model_latency": {
-          "sample_count": 88,
-          "mean_seconds": 17.75629545454616,
-          "median_seconds": 12.101999999998952,
-          "p90_seconds": 30.96739999998826
+          "sample_count": 106,
+          "mean_seconds": 17.234735849057543,
+          "median_seconds": 12.312999999994645,
+          "p90_seconds": 30.82050000000163
         }
       },
       "writingbench/validation": {
@@ -689,5 +689,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T08:40:23.672517+00:00"
+  "observed_at": "2026-10-07T08:42:39.860204+00:00"
 }
