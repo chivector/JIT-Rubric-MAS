@@ -6,12 +6,12 @@
   "statuses": {
     "complete": 424,
     "deferred": 1098,
-    "failed": 20,
+    "failed": 21,
     "incomplete": 6,
-    "pending": 173,
+    "pending": 172,
     "started": 4
   },
-  "terminal_slots": 450,
+  "terminal_slots": 451,
   "active": 4,
   "test_feedback_released": false,
   "test": {
@@ -639,5 +639,5 @@
       "experience_count": 16
     }
   },
-  "observed_at": "2026-10-07T06:59:52.303334+00:00"
+  "observed_at": "2026-10-07T07:04:03.088746+00:00"
 }
