@@ -4,21 +4,21 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 897,
-    "failed": 118,
+    "complete": 900,
+    "failed": 126,
     "incomplete": 10,
-    "pending": 604,
-    "started": 4,
+    "pending": 595,
+    "started": 2,
     "submitted": 92
   },
-  "terminal_slots": 1025,
+  "terminal_slots": 1036,
   "active": 4,
   "test_feedback_released": false,
   "test": {
     "registered_slots": 573,
     "statuses": {
-      "failed": 83,
-      "pending": 398,
+      "failed": 91,
+      "pending": 390,
       "submitted": 92
     },
     "complete": false
@@ -689,25 +689,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 897,
+    "complete_slot_count": 900,
     "tokens": {
-      "total": 244540103,
-      "input": 226525374,
-      "output": 18014729,
-      "model_calls": 15660
+      "total": 245244005,
+      "input": 227168333,
+      "output": 18075672,
+      "model_calls": 15691
     },
     "latency": {
       "slot": {
-        "sample_count": 897,
-        "mean_seconds": 144.90123634336703,
-        "median_seconds": 126.65700000000652,
-        "p90_seconds": 251.7473999999929
+        "sample_count": 900,
+        "mean_seconds": 144.8805422222225,
+        "median_seconds": 126.76600000000326,
+        "p90_seconds": 251.36309999998778
       },
       "model": {
-        "sample_count": 15660,
-        "mean_seconds": 15.165389144316844,
+        "sample_count": 15691,
+        "mean_seconds": 15.162614811038283,
         "median_seconds": 12.14100000000326,
-        "p90_seconds": 27.0151000000129
+        "p90_seconds": 27.0
       }
     },
     "by_source_kind": {
@@ -732,23 +732,23 @@
         }
       },
       "deepresearch_bench_ii/evolution": {
-        "sample_count": 21,
-        "tokens": 4801900,
-        "input_tokens": 4370818,
-        "output_tokens": 431082,
-        "model_calls": 206,
-        "score_mean": 0.307418059789683,
+        "sample_count": 24,
+        "tokens": 5505802,
+        "input_tokens": 5013777,
+        "output_tokens": 492025,
+        "model_calls": 237,
+        "score_mean": 0.30210851678640754,
         "slot_latency": {
-          "sample_count": 21,
-          "mean_seconds": 155.33842857142804,
-          "median_seconds": 156.43699999997625,
-          "p90_seconds": 207.7029999999795
+          "sample_count": 24,
+          "mean_seconds": 153.25775000000067,
+          "median_seconds": 152.80399999998917,
+          "p90_seconds": 202.17189999998664
         },
         "model_latency": {
-          "sample_count": 206,
-          "mean_seconds": 16.164946601941004,
-          "median_seconds": 13.836000000039348,
-          "p90_seconds": 25.07850000000326
+          "sample_count": 237,
+          "mean_seconds": 15.850523206750044,
+          "median_seconds": 13.828000000037719,
+          "p90_seconds": 25.06600000000326
         }
       },
       "deepresearch_bench_ii/validation": {
@@ -954,18 +954,18 @@
     },
     "official_metrics_by_source_kind": {
       "deepresearch_bench_ii/evolution": {
-        "sample_count": 21,
+        "sample_count": 24,
         "means": {
-          "Analysis": 0.25651832073769265,
-          "InformationRecall": 0.24925857125506,
-          "Overall": 0.307418059789683,
-          "Presentation": 0.900604686318972
+          "Analysis": 0.2640947343491848,
+          "InformationRecall": 0.2477460585913469,
+          "Overall": 0.30210851678640754,
+          "Presentation": 0.8769179894179895
         },
         "metric_sample_counts": {
-          "Analysis": 21,
-          "InformationRecall": 21,
-          "Overall": 21,
-          "Presentation": 21
+          "Analysis": 24,
+          "InformationRecall": 24,
+          "Overall": 24,
+          "Presentation": 24
         }
       },
       "deepresearch_bench_ii/validation": {
@@ -1044,5 +1044,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T13:08:23.732321+00:00"
+  "observed_at": "2026-10-07T13:10:33.823194+00:00"
 }
