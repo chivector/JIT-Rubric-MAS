@@ -4,22 +4,23 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 962,
+    "complete": 965,
     "failed": 133,
     "incomplete": 11,
-    "pending": 519,
-    "started": 4,
-    "submitted": 96
+    "pending": 514,
+    "started": 3,
+    "submitted": 99
   },
-  "terminal_slots": 1106,
+  "terminal_slots": 1109,
   "active": 4,
   "test_feedback_released": false,
   "test": {
     "registered_slots": 573,
     "statuses": {
       "failed": 91,
-      "pending": 386,
-      "submitted": 96
+      "pending": 382,
+      "started": 1,
+      "submitted": 99
     },
     "complete": false
   },
@@ -739,25 +740,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 963,
+    "complete_slot_count": 965,
     "tokens": {
-      "total": 260533364,
-      "input": 241062902,
-      "output": 19470462,
-      "model_calls": 16343
+      "total": 260912846,
+      "input": 241397710,
+      "output": 19515136,
+      "model_calls": 16362
     },
     "latency": {
       "slot": {
-        "sample_count": 963,
-        "mean_seconds": 145.37603946002088,
-        "median_seconds": 128.25,
-        "p90_seconds": 247.85619999998602
+        "sample_count": 965,
+        "mean_seconds": 145.53411606217625,
+        "median_seconds": 128.35899999999674,
+        "p90_seconds": 247.75939999999247
       },
       "model": {
-        "sample_count": 16343,
-        "mean_seconds": 15.192602459768851,
-        "median_seconds": 12.187999999994645,
-        "p90_seconds": 26.98499999998603
+        "sample_count": 16362,
+        "mean_seconds": 15.203294829483081,
+        "median_seconds": 12.202999999979511,
+        "p90_seconds": 27.013500000012566
       }
     },
     "by_source_kind": {
@@ -782,23 +783,23 @@
         }
       },
       "deepresearch_bench_ii/evolution": {
-        "sample_count": 28,
-        "tokens": 6821512,
-        "input_tokens": 6253043,
-        "output_tokens": 568469,
-        "model_calls": 277,
-        "score_mean": 0.3046062984898687,
+        "sample_count": 30,
+        "tokens": 7200994,
+        "input_tokens": 6587851,
+        "output_tokens": 613143,
+        "model_calls": 296,
+        "score_mean": 0.3019777833524489,
         "slot_latency": {
-          "sample_count": 28,
-          "mean_seconds": 153.91175000000035,
-          "median_seconds": 150.57000000002154,
-          "p90_seconds": 209.94339999997757
+          "sample_count": 30,
+          "mean_seconds": 158.4274999999994,
+          "median_seconds": 154.20300000000861,
+          "p90_seconds": 215.7444999999716
         },
         "model_latency": {
-          "sample_count": 277,
-          "mean_seconds": 15.88293862815777,
-          "median_seconds": 13.828000000037719,
-          "p90_seconds": 25.06600000000326
+          "sample_count": 296,
+          "mean_seconds": 16.429668918917347,
+          "median_seconds": 14.235000000015134,
+          "p90_seconds": 26.304999999993015
         }
       },
       "deepresearch_bench_ii/validation": {
@@ -1004,18 +1005,18 @@
     },
     "official_metrics_by_source_kind": {
       "deepresearch_bench_ii/evolution": {
-        "sample_count": 28,
+        "sample_count": 30,
         "means": {
-          "Analysis": 0.26654548658501553,
-          "InformationRecall": 0.2505763894641876,
-          "Overall": 0.3046062984898687,
-          "Presentation": 0.8781320861678005
+          "Analysis": 0.2638738266950341,
+          "InformationRecall": 0.25079339134154316,
+          "Overall": 0.3019777833524489,
+          "Presentation": 0.8551455026455026
         },
         "metric_sample_counts": {
-          "Analysis": 28,
-          "InformationRecall": 28,
-          "Overall": 28,
-          "Presentation": 28
+          "Analysis": 30,
+          "InformationRecall": 30,
+          "Overall": 30,
+          "Presentation": 30
         }
       },
       "deepresearch_bench_ii/validation": {
@@ -1094,5 +1095,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T13:59:34.625435+00:00"
+  "observed_at": "2026-10-07T14:01:47.273989+00:00"
 }
