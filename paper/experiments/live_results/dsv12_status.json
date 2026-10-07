@@ -5,13 +5,13 @@
   "registered_slots": 1725,
   "statuses": {
     "complete": 930,
-    "failed": 129,
+    "failed": 130,
     "incomplete": 10,
-    "pending": 559,
-    "started": 1,
+    "pending": 555,
+    "started": 4,
     "submitted": 96
   },
-  "terminal_slots": 1069,
+  "terminal_slots": 1070,
   "active": 4,
   "test_feedback_released": false,
   "test": {
@@ -343,6 +343,18 @@
       "eligible": true,
       "selected_pool_operation_count": 0,
       "selected_agent_update_count": 0
+    },
+    {
+      "source": "writingbench",
+      "run_id": 0,
+      "batch_index": 6,
+      "candidate_index": 1,
+      "complete_evaluations": 10,
+      "minimum_complete": 9,
+      "selection_utility": 0.7622222222222221,
+      "eligible": true,
+      "selected_pool_operation_count": 0,
+      "selected_agent_update_count": 2
     }
   ],
   "candidate_metrics": [
@@ -1070,5 +1082,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T13:32:36.854263+00:00"
+  "observed_at": "2026-10-07T13:34:49.697939+00:00"
 }
