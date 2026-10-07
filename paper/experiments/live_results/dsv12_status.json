@@ -4,14 +4,14 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 612,
+    "complete": 617,
     "failed": 68,
     "incomplete": 7,
-    "pending": 942,
+    "pending": 937,
     "started": 4,
     "submitted": 92
   },
-  "terminal_slots": 687,
+  "terminal_slots": 692,
   "active": 4,
   "test_feedback_released": false,
   "test": {
@@ -477,25 +477,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 612,
+    "complete_slot_count": 617,
     "tokens": {
-      "total": 175849536,
-      "input": 163281596,
-      "output": 12567940,
-      "model_calls": 12752
+      "total": 176648301,
+      "input": 163991534,
+      "output": 12656767,
+      "model_calls": 12799
     },
     "latency": {
       "slot": {
-        "sample_count": 612,
-        "mean_seconds": 158.40542647058803,
-        "median_seconds": 143.2965000000113,
-        "p90_seconds": 276.58999999999355
+        "sample_count": 617,
+        "mean_seconds": 157.89464343598036,
+        "median_seconds": 142.75,
+        "p90_seconds": 275.32499999999413
       },
       "model": {
-        "sample_count": 12752,
-        "mean_seconds": 15.817849749059086,
-        "median_seconds": 12.578000000008615,
-        "p90_seconds": 28.32639999998209
+        "sample_count": 12799,
+        "mean_seconds": 15.79728486600528,
+        "median_seconds": 12.577999999979511,
+        "p90_seconds": 28.28200000000652
       }
     },
     "by_source_kind": {
@@ -580,23 +580,23 @@
         }
       },
       "deepsearchqa/evolution": {
-        "sample_count": 28,
-        "tokens": 4933592,
-        "input_tokens": 4728467,
-        "output_tokens": 205125,
-        "model_calls": 254,
-        "score_mean": 0.15357142857142855,
+        "sample_count": 29,
+        "tokens": 5044313,
+        "input_tokens": 4833500,
+        "output_tokens": 210813,
+        "model_calls": 263,
+        "score_mean": 0.1482758620689655,
         "slot_latency": {
-          "sample_count": 28,
-          "mean_seconds": 71.37889285714274,
-          "median_seconds": 66.13300000000163,
-          "p90_seconds": 82.72949999999256
+          "sample_count": 29,
+          "mean_seconds": 70.4563448275861,
+          "median_seconds": 66.125,
+          "p90_seconds": 82.23099999999394
         },
         "model_latency": {
-          "sample_count": 254,
-          "mean_seconds": 8.114413385827293,
-          "median_seconds": 6.765500000008615,
-          "p90_seconds": 12.245199999999022
+          "sample_count": 263,
+          "mean_seconds": 8.007775665400173,
+          "median_seconds": 6.6560000000172295,
+          "p90_seconds": 12.221599999989849
         }
       },
       "deepsearchqa/validation": {
@@ -720,23 +720,23 @@
         }
       },
       "writingbench/validation": {
-        "sample_count": 76,
-        "tokens": 12153460,
-        "input_tokens": 10718863,
-        "output_tokens": 1434597,
-        "model_calls": 682,
-        "score_mean": 7.726315789473685,
+        "sample_count": 80,
+        "tokens": 12841504,
+        "input_tokens": 11323768,
+        "output_tokens": 1517736,
+        "model_calls": 720,
+        "score_mean": 7.6875,
         "slot_latency": {
-          "sample_count": 76,
-          "mean_seconds": 115.51669736842105,
+          "sample_count": 80,
+          "mean_seconds": 115.14397500000014,
           "median_seconds": 114.03149999999732,
-          "p90_seconds": 158.43799999999464
+          "p90_seconds": 156.40040000000158
         },
         "model_latency": {
-          "sample_count": 682,
-          "mean_seconds": 12.988508797654514,
-          "median_seconds": 10.531500000011874,
-          "p90_seconds": 23.853700000012758
+          "sample_count": 720,
+          "mean_seconds": 12.907511111111631,
+          "median_seconds": 10.500499999994645,
+          "p90_seconds": 23.726800000009828
         }
       }
     },
@@ -832,5 +832,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T10:29:28.209242+00:00"
+  "observed_at": "2026-10-07T10:31:41.344963+00:00"
 }
