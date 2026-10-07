@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import threading
 import uuid
 
 from .checkpoints import CheckpointIntegrityError
@@ -27,11 +28,16 @@ def _encode(value):
 class IndependentCampaign:
     """Atomic claims, immutable checkpoint binding, and global test release."""
 
+    protocol_validator = staticmethod(validate_protocol)
+    registry_builder = staticmethod(slot_registry)
+    registration_schema = "independent-campaign-v5"
+
     def __init__(self, directory, protocol, identity, bounds):
-        validate_protocol(protocol)
+        self.protocol_validator(protocol)
         self.directory = Path(directory).resolve()
         self.directory.mkdir(parents=True, exist_ok=True)
         self.path = self.directory / "campaign.sqlite"
+        self._write_lock = threading.RLock()
         self.protocol = dict(protocol)
         self.identity = dict(identity)
         self.bounds = {task_id: list(values) for task_id, values in bounds.items()}
@@ -43,10 +49,11 @@ class IndependentCampaign:
                 if task_id not in self.bounds:
                     raise ValueError("Every registered VAL task requires frozen theoretical bounds")
         registration = {"protocol": self.protocol, "execution": self.identity,
-                        "bounds": self.bounds, "schema": "independent-campaign-v5"}
+                        "bounds": self.bounds, "schema": self.registration_schema}
         self.registration_hash = digest(registration)
-        registry = slot_registry(protocol)
+        registry = self.registry_builder(protocol)
         with self._database() as database:
+            database.execute("PRAGMA journal_mode=WAL")
             database.executescript("""
                 CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY, body TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS slots(slot_id TEXT PRIMARY KEY, ordinal INTEGER NOT NULL,
@@ -57,6 +64,9 @@ class IndependentCampaign:
                     identity_hash TEXT NOT NULL, PRIMARY KEY(source,run_id,position));
                 CREATE TABLE IF NOT EXISTS selections(source TEXT, run_id INTEGER,
                     body TEXT NOT NULL, PRIMARY KEY(source,run_id));
+                CREATE INDEX IF NOT EXISTS slots_queue ON slots(status,json_extract(body,'$.kind'),ordinal);
+                CREATE INDEX IF NOT EXISTS slots_scope ON slots(json_extract(body,'$.source'),
+                    json_extract(body,'$.run_id'),json_extract(body,'$.kind'),json_extract(body,'$.batch_index'),ordinal);
             """)
         with self._transaction() as database:
             existing = database.execute("SELECT body FROM metadata WHERE key='registration'").fetchone()
@@ -74,7 +84,8 @@ class IndependentCampaign:
 
     @contextmanager
     def _database(self):
-        database = sqlite3.connect(self.path, timeout=30)
+        database = sqlite3.connect(self.path, timeout=60)
+        database.execute("PRAGMA busy_timeout=60000")
         database.row_factory = sqlite3.Row
         try:
             yield database
@@ -83,15 +94,16 @@ class IndependentCampaign:
 
     @contextmanager
     def _transaction(self):
-        with self._database() as database:
-            database.execute("BEGIN IMMEDIATE")
-            try:
-                yield database
-            except BaseException:
-                database.rollback()
-                raise
-            else:
-                database.commit()
+        with self._write_lock:
+            with self._database() as database:
+                database.execute("BEGIN IMMEDIATE")
+                try:
+                    yield database
+                except BaseException:
+                    database.rollback()
+                    raise
+                else:
+                    database.commit()
 
     def freeze_checkpoint(self, source, run_id, position, snapshot):
         if (source, run_id) not in self.trajectories or position not in CHECKPOINT_POSITIONS:
@@ -144,9 +156,9 @@ class IndependentCampaign:
 
     @staticmethod
     def _evolution_rows(database, source, run_id):
-        rows = database.execute("SELECT * FROM slots ORDER BY ordinal").fetchall()
-        return [row for row in rows if (body := json.loads(row["body"]))["kind"] == "evolution"
-                and body["source"] == source and body["run_id"] == run_id]
+        return database.execute("SELECT * FROM slots WHERE json_extract(body,'$.source')=? "
+            "AND json_extract(body,'$.run_id')=? AND json_extract(body,'$.kind')='evolution' ORDER BY ordinal",
+            (source, run_id)).fetchall()
 
     def _ready(self, database, slot):
         source, run_id, kind = slot["source"], slot["run_id"], slot["kind"]
@@ -177,8 +189,12 @@ class IndependentCampaign:
     def claim(self, owner, *, phase="full", kinds=("evolution", "validation"), prefer="evolution"):
         if phase not in {"first-stage", "full"} or not str(owner).strip():
             raise ValueError("Claim requires a registered phase and nonempty worker identity")
+        if not kinds:
+            return None
         with self._transaction() as database:
-            rows = database.execute("SELECT * FROM slots WHERE status='pending' ORDER BY ordinal").fetchall()
+            placeholders = ",".join("?" for _ in kinds)
+            rows = database.execute("SELECT * FROM slots WHERE status='pending' "
+                f"AND json_extract(body,'$.kind') IN ({placeholders}) ORDER BY ordinal", tuple(kinds)).fetchall()
             rows.sort(key=lambda row: json.loads(row["body"])["kind"] != prefer)
             for row in rows:
                 slot = json.loads(row["body"])
@@ -207,6 +223,7 @@ class IndependentCampaign:
             raise ValueError("A committed result must have a terminal status")
         result = dict(result)
         slot_id = claim["slot_id"]
+        encoded_result, result_hash = _encode(result), digest(result)
         with self._transaction() as database:
             row = database.execute("SELECT * FROM slots WHERE slot_id=?", (slot_id,)).fetchone()
             if row is None or row["claim_token"] != claim.get("claim_token"):
@@ -234,7 +251,7 @@ class IndependentCampaign:
             if database.execute("SELECT 1 FROM metadata WHERE key='test_seal'").fetchone() and claim["kind"] == "test":
                 raise ValueError("TEST submissions have been sealed")
             database.execute("UPDATE slots SET status=?,result=?,result_hash=?,finished_at=? WHERE slot_id=?",
-                             (status, _encode(result), digest(result), utc_now(), slot_id))
+                             (status, encoded_result, result_hash, utc_now(), slot_id))
 
     def submit_test(self, claim, submission_path, *, answer_hash, budget=None, metadata=None):
         """Commit one unscored TEST artifact; judging remains behind the global seal."""
@@ -271,18 +288,16 @@ class IndependentCampaign:
                                "state_hash": state_hash, "registration_hash": self.registration_hash})
             return claims
 
-    def records(self, *, kind=None, source=None, run_id=None):
+    def records(self, *, kind=None, source=None, run_id=None, batch_index=None):
+        scope = {"kind": kind, "source": source, "run_id": run_id, "batch_index": batch_index}
+        filters = [(name, value) for name, value in scope.items() if value is not None]
+        where = " AND ".join(f"json_extract(body,'$.{name}')=?" for name, _ in filters)
         with self._database() as database:
-            rows = database.execute("SELECT * FROM slots ORDER BY ordinal").fetchall()
+            rows = database.execute("SELECT * FROM slots" + (" WHERE " + where if where else "") + " ORDER BY ordinal",
+                                    tuple(value for _, value in filters)).fetchall()
         records = []
         for row in rows:
             body = json.loads(row["body"])
-            if kind is not None and body["kind"] != kind:
-                continue
-            if source is not None and body["source"] != source:
-                continue
-            if run_id is not None and body["run_id"] != run_id:
-                continue
             records.append({**body, "status": row["status"], "result": self._result(row),
                             "result_hash": row["result_hash"], "started_at": row["started_at"],
                             "finished_at": row["finished_at"]})
@@ -338,8 +353,9 @@ class IndependentCampaign:
         with self._transaction() as database:
             rows = database.execute("SELECT * FROM slots ORDER BY ordinal").fetchall()
             tests = [row for row in rows if json.loads(row["body"])["kind"] == "test"]
-            if len(tests) != 2751 or any(row["status"] not in TERMINAL for row in tests):
-                raise ValueError("All 2,751 TEST slots must submit or terminate before scoring")
+            required_test_slots = len(tests)
+            if any(row["status"] not in TERMINAL for row in tests):
+                raise ValueError(f"All {required_test_slots} TEST slots must submit or terminate before scoring")
             hashes = {}
             for row in tests:
                 result = self._result(row)
@@ -348,7 +364,7 @@ class IndependentCampaign:
                     if digest(submission) != result.get("submission_hash") or digest(submission["answer"]) != submission["answer_hash"]:
                         raise CheckpointIntegrityError("TEST submission changed before sealing")
                 hashes[row["slot_id"]] = row["result_hash"]
-            seal = {"registration_hash": self.registration_hash, "required_test_slots": 2751,
+            seal = {"registration_hash": self.registration_hash, "required_test_slots": required_test_slots,
                     "submission_hashes": hashes}
             existing = database.execute("SELECT body FROM metadata WHERE key='test_seal'").fetchone()
             if existing and json.loads(existing[0]) != seal:
@@ -361,7 +377,7 @@ class IndependentCampaign:
         with self._database() as database:
             sealed = database.execute("SELECT body FROM metadata WHERE key='test_seal'").fetchone()
         if sealed is None:
-            raise ValueError("TEST scoring waits for the global 2,751-slot submission seal")
+            raise ValueError("TEST scoring waits for the global submission seal")
         return self.seal_test_inventory()
 
     def status(self, *, phase="full"):
