@@ -4,14 +4,14 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 913,
+    "complete": 915,
     "failed": 126,
     "incomplete": 10,
-    "pending": 576,
+    "pending": 574,
     "started": 4,
     "submitted": 96
   },
-  "terminal_slots": 1049,
+  "terminal_slots": 1051,
   "active": 4,
   "test_feedback_released": false,
   "test": {
@@ -715,25 +715,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 913,
+    "complete_slot_count": 915,
     "tokens": {
-      "total": 249464423,
-      "input": 231011489,
-      "output": 18452934,
-      "model_calls": 15860
+      "total": 249798954,
+      "input": 231309391,
+      "output": 18489563,
+      "model_calls": 15879
     },
     "latency": {
       "slot": {
-        "sample_count": 913,
-        "mean_seconds": 144.87106790799592,
+        "sample_count": 915,
+        "mean_seconds": 144.82290382513685,
         "median_seconds": 127.5,
-        "p90_seconds": 251.12239999998715
+        "p90_seconds": 251.0097999999882
       },
       "model": {
-        "sample_count": 15860,
-        "mean_seconds": 15.159381588903024,
+        "sample_count": 15879,
+        "mean_seconds": 15.156862648781525,
         "median_seconds": 12.14100000000326,
-        "p90_seconds": 27.001500000001403
+        "p90_seconds": 27.0
       }
     },
     "by_source_kind": {
@@ -958,23 +958,23 @@
         }
       },
       "writingbench/validation": {
-        "sample_count": 176,
-        "tokens": 28724846,
-        "input_tokens": 25340233,
-        "output_tokens": 3384613,
-        "model_calls": 1600,
-        "score_mean": 7.7875,
+        "sample_count": 178,
+        "tokens": 29059377,
+        "input_tokens": 25638135,
+        "output_tokens": 3421242,
+        "model_calls": 1619,
+        "score_mean": 7.783146067415731,
         "slot_latency": {
-          "sample_count": 176,
-          "mean_seconds": 117.86132954545461,
+          "sample_count": 178,
+          "mean_seconds": 117.91722471910097,
           "median_seconds": 114.41400000001886,
-          "p90_seconds": 163.39850000001024
+          "p90_seconds": 163.04510000001176
         },
         "model_latency": {
-          "sample_count": 1600,
-          "mean_seconds": 13.107030625000535,
+          "sample_count": 1619,
+          "mean_seconds": 13.10641074737536,
           "median_seconds": 10.39000000001397,
-          "p90_seconds": 25.140600000001744
+          "p90_seconds": 24.687399999983633
         }
       }
     },
@@ -1070,5 +1070,5 @@
       "experience_count": 19
     }
   },
-  "observed_at": "2026-10-07T13:19:18.550443+00:00"
+  "observed_at": "2026-10-07T13:21:29.236836+00:00"
 }
