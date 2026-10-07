@@ -4,13 +4,13 @@
   "phase": "full",
   "registered_slots": 1725,
   "statuses": {
-    "complete": 286,
+    "complete": 289,
     "failed": 12,
-    "incomplete": 3,
-    "pending": 1420,
+    "incomplete": 4,
+    "pending": 1416,
     "started": 4
   },
-  "terminal_slots": 301,
+  "terminal_slots": 305,
   "active": 4,
   "test_feedback_released": false,
   "registration_hash": "f48203b1ba89692c8cb82958b5275b46a1f250dbb5a24569f8bd4415df94e672",
@@ -90,25 +90,25 @@
   "test_report_available": false,
   "paper_summary_available": false,
   "metrics": {
-    "complete_slot_count": 286,
+    "complete_slot_count": 289,
     "tokens": {
-      "total": 82301755,
-      "input": 76416891,
-      "output": 5884864,
-      "model_calls": 6144
+      "total": 83253040,
+      "input": 77311962,
+      "output": 5941078,
+      "model_calls": 6213
     },
     "latency": {
       "slot": {
-        "sample_count": 286,
-        "mean_seconds": 142.17143706293683,
-        "median_seconds": 137.32050000000163,
-        "p90_seconds": 233.81249999998545
+        "sample_count": 289,
+        "mean_seconds": 142.11245674740454,
+        "median_seconds": 137.95300000000861,
+        "p90_seconds": 232.96859999998702
       },
       "model": {
-        "sample_count": 6144,
-        "mean_seconds": 13.004650065104215,
-        "median_seconds": 11.546999999991385,
-        "p90_seconds": 20.865699999994824
+        "sample_count": 6213,
+        "mean_seconds": 13.005326895219769,
+        "median_seconds": 11.577999999979511,
+        "p90_seconds": 20.875
       }
     },
     "by_source_kind": {
@@ -173,23 +173,23 @@
         }
       },
       "deepsearchqa/validation": {
-        "sample_count": 83,
-        "tokens": 18889421,
-        "input_tokens": 18260592,
-        "output_tokens": 628829,
-        "model_calls": 757,
-        "score_mean": 0.11430630948703238,
+        "sample_count": 84,
+        "tokens": 19181535,
+        "input_tokens": 18547609,
+        "output_tokens": 633926,
+        "model_calls": 766,
+        "score_mean": 0.11889790104075819,
         "slot_latency": {
-          "sample_count": 83,
-          "mean_seconds": 73.5338915662671,
-          "median_seconds": 69.82800000000861,
-          "p90_seconds": 94.14959999999846
+          "sample_count": 84,
+          "mean_seconds": 73.363476190478,
+          "median_seconds": 69.80449999999837,
+          "p90_seconds": 94.10739999999933
         },
         "model_latency": {
-          "sample_count": 757,
-          "mean_seconds": 8.347286657860023,
-          "median_seconds": 7.453000000008615,
-          "p90_seconds": 13.484400000004097
+          "sample_count": 766,
+          "mean_seconds": 8.325355091383976,
+          "median_seconds": 7.4064999999973224,
+          "p90_seconds": 13.47599999999511
         }
       },
       "researchrubrics/batch_evolution": {
@@ -233,23 +233,23 @@
         }
       },
       "researchrubrics/validation": {
-        "sample_count": 111,
-        "tokens": 30493962,
-        "input_tokens": 27605448,
-        "output_tokens": 2888514,
-        "model_calls": 3714,
-        "score_mean": 0.4088887526407369,
+        "sample_count": 113,
+        "tokens": 31153133,
+        "input_tokens": 28213502,
+        "output_tokens": 2939631,
+        "model_calls": 3774,
+        "score_mean": 0.4091079612393352,
         "slot_latency": {
-          "sample_count": 111,
-          "mean_seconds": 184.38348648648525,
+          "sample_count": 113,
+          "mean_seconds": 184.21961946902536,
           "median_seconds": 176.81299999999464,
-          "p90_seconds": 246.35900000002584
+          "p90_seconds": 244.23100000002302
         },
         "model_latency": {
-          "sample_count": 3714,
-          "mean_seconds": 13.063378567582234,
-          "median_seconds": 12.25,
-          "p90_seconds": 20.745499999995815
+          "sample_count": 3774,
+          "mean_seconds": 13.079117117117237,
+          "median_seconds": 12.257500000006985,
+          "p90_seconds": 20.76500000001397
         }
       },
       "writingbench/batch_evolution": {
@@ -390,5 +390,5 @@
       "experience_count": 6
     }
   },
-  "observed_at": "2026-10-07T04:25:53.053397+00:00"
+  "observed_at": "2026-10-07T04:27:59.703804+00:00"
 }
