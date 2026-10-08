@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import time
 import uuid
 from pathlib import Path
 
@@ -132,8 +133,31 @@ def write_json(path, value):
     if hasattr(value, "model_dump"):
         value = value.model_dump(mode="json")
     temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
-    temporary.write_text(json.dumps(value, indent=2, ensure_ascii=True, allow_nan=False), encoding="utf-8")
-    temporary.replace(path)
+    encoded = json.dumps(value, indent=2, ensure_ascii=True, allow_nan=False)
+    temporary.write_text(encoded, encoding="utf-8")
+    # Windows scanners and concurrent readers can briefly hold the destination
+    # open.  Keep the atomic replace semantics, but absorb a short transient
+    # sharing violation so one slot does not terminate the whole campaign.
+    try:
+        for attempt in range(8):
+            try:
+                temporary.replace(path)
+                break
+            except (PermissionError, FileNotFoundError):
+                if attempt == 7:
+                    raise
+                # A Windows scanner can remove a just-created temporary file
+                # between write and replace.  Recreate the same unique source
+                # before the next atomic attempt.
+                if not temporary.exists():
+                    temporary.write_text(encoded, encoding="utf-8")
+                time.sleep(0.15 * (attempt + 1))
+    finally:
+        if temporary.exists():
+            try:
+                temporary.unlink()
+            except OSError:
+                pass
 
 
 def code_fingerprint():

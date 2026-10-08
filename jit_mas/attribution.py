@@ -360,6 +360,7 @@ class RubricAttributor(JsonModelCalls):
         self.last_global_outline: AttributionOutline | None = None
         self.last_local_findings: dict[str, Findings] = {}
         self.last_alignments: dict[str, RubricAlignment] = {}
+        self.last_alignment_warnings: list[dict] = []
         self.last_credit_assignments: dict[str, RubricCreditAssignment] = {}
         self._scoring_context: dict | None = None
 
@@ -368,11 +369,28 @@ class RubricAttributor(JsonModelCalls):
         evaluated = {r.rubric_id for r in feedback.rubrics}
 
         def validate(alignment):
-            for match in alignment.matches:
-                if (not match.predicted_ids or not match.evaluated_ids
-                        or not set(match.predicted_ids) <= predicted
+            valid_matches = []
+            for index, match in enumerate(alignment.matches):
+                if not match.predicted_ids or not match.evaluated_ids:
+                    # Provider aligners occasionally emit an empty-sided or
+                    # truncated match despite the schema prompt. Preserve the
+                    # auditable response as a warning, drop only that unusable
+                    # edge, and let bookkeeping classify its IDs as unmatched.
+                    self.last_alignment_warnings.append({
+                        "index": index,
+                        "predicted_ids": list(match.predicted_ids),
+                        "evaluated_ids": list(match.evaluated_ids),
+                        "reason": "empty_rubric_reference",
+                    })
+                    continue
+                # Unknown IDs indicate a model hallucination rather than an
+                # incomplete match. Keep the existing correction path so the
+                # provider gets a chance to repair the exact identifier.
+                if (not set(match.predicted_ids) <= predicted
                         or not set(match.evaluated_ids) <= evaluated):
                     raise ValueError("Alignment contains empty or unknown rubric references")
+                valid_matches.append(match)
+            alignment.matches[:] = valid_matches
 
         alignment = self.ask(self.global_model, "align", ALIGN_PROMPT,
                              {"prediction": graph, "feedback": feedback_view(feedback),
@@ -418,6 +436,7 @@ class RubricAttributor(JsonModelCalls):
             raise ValueError("Feedback task differs from submitted task")
         if not feedback.complete:
             raise ValueError("Attribution requires complete evaluation feedback")
+        self.last_alignment_warnings = []
         data, local_runs, events = self._execution_view(result)
         global_alignment = global_alignment or self.align(global_graph, feedback)
         planned_alignment = planned_alignment or self.align(planned_graph, feedback)

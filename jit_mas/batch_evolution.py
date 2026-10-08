@@ -57,7 +57,10 @@ on fixed VAL tasks; never read VAL or TEST answers or feedback here.
 Output discipline: return a compact complete JSON object. Never echo the supplied
 profiles, task reflections, evidence text or proposal bodies. Use terse rationales
 and expected-benefit/tradeoff strings (under 160 characters each); use empty lists
-when the evidence does not support a change. Close every JSON string and brace
+when the evidence does not support a change. Hard output budget: at most two new
+lessons per agent update, at most one pool operation, and never copy an inherited
+profile or lesson into the response. If a supported change cannot fit compactly,
+omit it rather than explaining it at length. Close every JSON string and brace
 before the response limit."""
 
 
@@ -109,6 +112,56 @@ def _scope_batch_experience(proposal):
         "experience_id": prefix + experience_id,
     })
     return proposal.model_copy(update={"experience": experience})
+
+
+def _scope_batch_memory_update(update):
+    """Scope newly proposed lessons and retain all cited lesson evidence.
+
+    Batch meta models often use a short, role-local lesson ID (for example
+    ``evidence_gap_handling``).  A later batch can legitimately propose a
+    lesson with the same short ID, but AgentPool identities are persistent per
+    member, so the unscoped ID would be rejected as a duplicate.  Prefixing by
+    the update's real source task keeps identities stable for retries while
+    preserving the source-task provenance that made the lesson eligible.
+
+    Models also occasionally put a lesson's ``counterevidence`` in the lesson
+    but omit it from the update-level evidence union.  ``apply_evolution``
+    intentionally enforces that union; adding the cited IDs here lets valid
+    batch evidence pass while the candidate validator still rejects IDs that
+    were not observed for the member.
+    """
+    prefix = f"{update.source_task_id}:"
+    lessons, evidence = [], list(update.evidence)
+    for lesson in update.lessons:
+        lesson_id = lesson.lesson_id
+        if not lesson_id.startswith(prefix):
+            lesson_id = prefix + lesson_id
+        lessons.append(lesson.model_copy(update={"lesson_id": lesson_id}))
+        evidence.extend(lesson.evidence)
+        evidence.extend(lesson.counterevidence)
+    return update.model_copy(update={"lessons": lessons,
+                                     "evidence": list(dict.fromkeys(evidence))})
+
+
+def _scope_batch_memory_operation(operation, pool):
+    """Scope new memory in structural profiles while preserving inherited IDs."""
+    inherited_ids = {lesson.lesson_id for profile in pool.profiles for lesson in profile.memory}
+    prefix = f"{operation.source_task_id}:"
+    profiles, evidence = [], list(operation.evidence)
+    for profile in operation.profiles:
+        lessons = []
+        for lesson in profile.memory:
+            inherited = lesson.lesson_id in inherited_ids
+            lesson_id = lesson.lesson_id if inherited else (
+                lesson.lesson_id if lesson.lesson_id.startswith(prefix)
+                else prefix + lesson.lesson_id)
+            lessons.append(lesson.model_copy(update={"lesson_id": lesson_id}))
+            if not inherited:
+                evidence.extend(lesson.evidence)
+                evidence.extend(lesson.counterevidence)
+        profiles.append(profile.model_copy(update={"memory": lessons}))
+    return operation.model_copy(update={"profiles": profiles,
+                                        "evidence": list(dict.fromkeys(evidence))})
 
 
 def _load_task(pipeline, snapshot, row):
@@ -173,6 +226,7 @@ def _reflect_task(pipeline, snapshot, loaded, output):
             "complete": True, "findings": [item.model_dump(mode="json") for item in findings],
             "alignments": {key: value.model_dump(mode="json")
                            for key, value in attributor.last_alignments.items()},
+            "alignment_warnings": list(attributor.last_alignment_warnings),
             "credit_assignments": {key: value.model_dump(mode="json")
                                    for key, value in attributor.last_credit_assignments.items()},
             "global_outline": (attributor.last_global_outline.model_dump(mode="json")
@@ -227,8 +281,16 @@ def candidate_batch_snapshot(base, decision, *, source_task_ids, proposals=(), o
         if proposal.source_task_id not in tasks or not set(proposal.experience.source_task_ids) <= set(tasks):
             raise ValueError("Batch experience invented source tasks")
         candidate = candidate_snapshot(candidate, proposal)
-    candidate.agent_pool = apply_evolution(base.agent_pool, decision.agent_updates,
-        decision.pool_operations, observations, source_task_id=tasks[0], source_task_ids=tasks)
+    # Meta-model output is batch-local and may use short lesson identities or
+    # omit counterevidence from the update-level evidence union.  Normalize it
+    # only at this batch boundary; direct single-task evolution continues to
+    # enforce the strict schema unchanged.
+    updates = [_scope_batch_memory_update(item) for item in decision.agent_updates]
+    pool = effective_pool(base.agent_pool)
+    operations = [_scope_batch_memory_operation(item, pool)
+                  for item in decision.pool_operations]
+    candidate.agent_pool = apply_evolution(base.agent_pool, updates,
+        operations, observations, source_task_id=tasks[0], source_task_ids=tasks)
     if digest(candidate) != digest(base):
         candidate.version = base.version + 1
         candidate.policy_versions = {**candidate.policy_versions, "experience_update": "batch-v1",
@@ -318,11 +380,21 @@ def _candidate(pipeline, base, task_ids, records, output, batch_id, index):
                     or not update.source_task_ids or not set(update.source_task_ids) <= set(group["source_task_ids"])
                     or not set(update.evidence) <= set(group["valid_evidence_ids"])):
                 raise ValueError("Batch agent update changed its identity, source tasks or local evidence")
+            lesson_evidence = {item for lesson in update.lessons
+                               for item in lesson.evidence + lesson.counterevidence}
+            if not lesson_evidence <= set(group["valid_evidence_ids"]):
+                raise ValueError("Batch agent lesson cites unavailable local evidence")
         for operation in decision.pool_operations:
             if (not operation.source_task_ids or not set(operation.source_task_ids) <= observed_tasks
                     or not set(operation.evidence) <= valid_ids):
                 raise ValueError("Batch Pool operation cites unavailable source tasks or evidence")
+            inherited_lessons = {lesson.lesson_id for profile in pool.profiles for lesson in profile.memory}
             for profile in operation.profiles:
+                profile_evidence = {item for lesson in profile.memory
+                                    if lesson.lesson_id not in inherited_lessons
+                                    for item in lesson.evidence + lesson.counterevidence}
+                if not profile_evidence <= valid_ids:
+                    raise ValueError("Batch retained profile cites unavailable evidence")
                 matching = [item for item in creations
                             if item["agent"]["pool_agent_id"] == profile.pool_agent_id]
                 if matching and (operation.kind != "add" or not any(item["selected"]

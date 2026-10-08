@@ -43,7 +43,10 @@ class IndependentBatchEnvironment(IndependentEnvironment):
     @staticmethod
     def _transport_identity():
         return {"model_attempts": max(1, int(os.getenv("JIT_MAS_MODEL_ATTEMPTS", "1"))),
-                "disable_keepalive": os.getenv("JIT_MAS_DISABLE_KEEPALIVE", "0") == "1"}
+                "disable_keepalive": os.getenv("JIT_MAS_DISABLE_KEEPALIVE", "0") == "1",
+                "batch_meta_max_tokens": max(0, int(os.getenv("JIT_MAS_BATCH_META_MAX_TOKENS", "0"))),
+                "batch_meta_corrections": max(1, int(os.getenv("JIT_MAS_BATCH_META_CORRECTIONS", "1"))),
+                "extra_corrections": os.getenv("JIT_MAS_ALLOW_EXTRA_CORRECTIONS", "0") == "1"}
 
     def assert_frozen(self):
         super().assert_frozen()

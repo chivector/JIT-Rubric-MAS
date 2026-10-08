@@ -128,6 +128,18 @@ class IndependentTestReleaseRunner:
         return list(self.campaign.protocol["target_test_tasks"][target])
 
     def _split_path(self, target):
+        # Source benchmarks with frozen evidence use the complete trajectory
+        # membership manifest.  The evidence loader validates the manifest
+        # against every task listed in that split, so handing it a TEST-only
+        # wrapper would reject an otherwise valid TEST request (the v7
+        # evidence packs contain EVO+VAL+TEST IDs).  Reuse the immutable
+        # source runtime split for these targets; static checker targets keep
+        # the TEST-only wrapper below.
+        material = self.environment.materials.get(target, {})
+        sources = tuple(self.campaign.protocol.get("sources", SOURCES))
+        if target in sources and material.get("evidence_dir"):
+            run_id = next(iter(self.campaign.protocol.get("run_ids", (0,))))
+            return self.environment._split(target, run_id)
         path = self.output / "test_runtime_splits" / f"{target}.json"
         # ``make_pipeline`` validates runtime splits with the strict
         # ``SplitManifest`` schema.  Keep the adapter-specific wrapper outside
