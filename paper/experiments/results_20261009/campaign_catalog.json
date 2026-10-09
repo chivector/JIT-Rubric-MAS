@@ -1,5 +1,5 @@
 {
-  "observed_at_utc": "2026-10-09T09:36:38.547791+00:00",
+  "observed_at_utc": "2026-10-09T09:48:01.575819+00:00",
   "campaigns": [
     {
       "name": "runs__dsqa507_replay",
@@ -5392,7 +5392,7 @@
           "source": "researchrubrics",
           "kind": "test",
           "status": "pending",
-          "count": 34
+          "count": 16
         },
         {
           "source": "researchrubrics",
@@ -5404,7 +5404,7 @@
           "source": "researchrubrics",
           "kind": "test",
           "status": "submitted",
-          "count": 53
+          "count": 71
         },
         {
           "source": "researchrubrics",
@@ -5430,7 +5430,7 @@
           "source": "researchrubrics",
           "target": "ifbench",
           "status": "pending",
-          "count": 34
+          "count": 16
         },
         {
           "source": "researchrubrics",
@@ -5442,7 +5442,7 @@
           "source": "researchrubrics",
           "target": "ifbench",
           "status": "submitted",
-          "count": 9
+          "count": 27
         },
         {
           "source": "researchrubrics",

@@ -11010,10 +11010,10 @@
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:234",
     "ordinal": 382,
-    "status": "started",
+    "status": "submitted",
     "started_at": "2026-10-09T09:35:03.968743+00:00",
-    "finished_at": null,
-    "result_hash": null,
+    "finished_at": "2026-10-09T09:36:56.250113+00:00",
+    "result_hash": "aff02d7d719fc1daa89fa95c9c674a1e38f086773e8e766189d0a22ba8469e38",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11024,8 +11024,16 @@
       "target": "ifbench",
       "task_id": "ifbench:234"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "9e3262741fe740e5cc62f8d80b431af26701bd8f71065f81a6c9581b95282ae0",
+      "submission_hash": "2a6b44bc728233900af5ec8a6aa3cc1d09743f2cfe56e421e45942033bceec76"
+    },
+    "budget": {
+      "tokens": 99590,
+      "model_calls": 8,
+      "wall_seconds": 111.21799999999348
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:150",
@@ -11058,10 +11066,10 @@
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:196",
     "ordinal": 384,
-    "status": "started",
+    "status": "submitted",
     "started_at": "2026-10-09T09:36:37.819584+00:00",
-    "finished_at": null,
-    "result_hash": null,
+    "finished_at": "2026-10-09T09:38:26.348169+00:00",
+    "result_hash": "acf727e9c647b622ca7b33fab24ac654f058e16d31aee94a0e11c76863e54c7b",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11072,16 +11080,24 @@
       "target": "ifbench",
       "task_id": "ifbench:196"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "8c57498a0d19919a78cbb9afbe1f14b94bdad2c412d3a664d4943e41f0dd44c2",
+      "submission_hash": "36a857c3c1d3e18db983ddb69aef69a975fd799084a3ddcc7859e24f2706e0ab"
+    },
+    "budget": {
+      "tokens": 87280,
+      "model_calls": 6,
+      "wall_seconds": 107.06199999997625
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:124",
     "ordinal": 385,
-    "status": "started",
+    "status": "submitted",
     "started_at": "2026-10-09T09:36:39.077156+00:00",
-    "finished_at": null,
-    "result_hash": null,
+    "finished_at": "2026-10-09T09:38:48.359273+00:00",
+    "result_hash": "26598ab5342a91b73c7e7272c2232ff53d99489fd3d27e0714a3fc44a59cc83b",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11092,16 +11108,24 @@
       "target": "ifbench",
       "task_id": "ifbench:124"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "46e279018776678efcdaad0baa73d3cda7ed039e7c96a9011245e4e21153bebc",
+      "submission_hash": "eb201153da7751e224ca4302c69b4ae4779a4335cb8c76804bc04e160ad6d1f9"
+    },
+    "budget": {
+      "tokens": 134510,
+      "model_calls": 8,
+      "wall_seconds": 128.25
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:166",
     "ordinal": 386,
-    "status": "started",
+    "status": "submitted",
     "started_at": "2026-10-09T09:36:54.383334+00:00",
-    "finished_at": null,
-    "result_hash": null,
+    "finished_at": "2026-10-09T09:39:12.681522+00:00",
+    "result_hash": "2a7b565074188a1a6dce52ce753672b77cc9ad59ba9039b8e5525b89b63483c1",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11112,16 +11136,24 @@
       "target": "ifbench",
       "task_id": "ifbench:166"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "dcb1b8064cc120a8a97198761db126a3ebbf988176d00634947db20f56ee577f",
+      "submission_hash": "d9be698e4aa1b2ccba371ca0128bb5f549bd79f7711f7a58b6dd68d96ee9bfab"
+    },
+    "budget": {
+      "tokens": 96942,
+      "model_calls": 8,
+      "wall_seconds": 137.10899999999674
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:59",
     "ordinal": 387,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:36:56.258634+00:00",
+    "finished_at": "2026-10-09T09:38:56.267675+00:00",
+    "result_hash": "3954afb35e054a5aa96e1ec8d7a3abea9d396a5135d6709e01ce5de00ff25afc",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11132,16 +11164,24 @@
       "target": "ifbench",
       "task_id": "ifbench:59"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "6942024b8f3606b29114bcce417cab6c09caca78221709196931312447f4a555",
+      "submission_hash": "bd794ffcbf7309b79e3caf9199516305d3ac933ae9d0b6723069719b5afa0c89"
+    },
+    "budget": {
+      "tokens": 73195,
+      "model_calls": 6,
+      "wall_seconds": 119.09399999998277
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:171",
     "ordinal": 388,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:38:26.355184+00:00",
+    "finished_at": "2026-10-09T09:40:39.129156+00:00",
+    "result_hash": "24f9c6eb50afb3582c44efa68f104fc2a619ec9e384f070de3b6e1fc93142ebf",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11152,16 +11192,24 @@
       "target": "ifbench",
       "task_id": "ifbench:171"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "509904b18f3db8697dd8c14fa1aca983ea9f9c555db0401a8dfcd6d5c7ca51f3",
+      "submission_hash": "917bf6adec872f9f9a96fbd677d28bc47b86f55391d337583a5e9d78a6413c27"
+    },
+    "budget": {
+      "tokens": 96247,
+      "model_calls": 8,
+      "wall_seconds": 131.48399999999674
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:236",
     "ordinal": 389,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:38:48.368330+00:00",
+    "finished_at": "2026-10-09T09:40:54.989119+00:00",
+    "result_hash": "f2d7b24e29b6ea29ce759967ea0de9a2a36ccd773c4ecbee406075d12a1c425e",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11172,16 +11220,24 @@
       "target": "ifbench",
       "task_id": "ifbench:236"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "0c1504709b9e6381dd7bcd84de8f6f3bcec8d5addb0ac9048c2ed7893b3d4eb2",
+      "submission_hash": "b810e879388dbf6f258d668fc2219e5da1138026c385629a76d445475702e667"
+    },
+    "budget": {
+      "tokens": 115932,
+      "model_calls": 8,
+      "wall_seconds": 125.34399999998277
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:154",
     "ordinal": 390,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:38:56.274829+00:00",
+    "finished_at": "2026-10-09T09:40:57.954636+00:00",
+    "result_hash": "e11363ea4fd07dd13f7f90ecde2be5a275ff0605ed9ebf568fe6028f96cc9867",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11192,16 +11248,24 @@
       "target": "ifbench",
       "task_id": "ifbench:154"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "4b0f535a62ccd2966bbae347d2c643e6692a9122127edc35277ec9c69c26ea6c",
+      "submission_hash": "fd440014874d361e82dc089d54a2b5f614f814ffdf9bd88a28e8c24ee60156a6"
+    },
+    "budget": {
+      "tokens": 93638,
+      "model_calls": 8,
+      "wall_seconds": 120.5
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:152",
     "ordinal": 391,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:39:12.689200+00:00",
+    "finished_at": "2026-10-09T09:40:56.490557+00:00",
+    "result_hash": "2a7abc5affff1e14ed896f831ab513d7b8956c346638a1f97bce7b453e1120a0",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11212,16 +11276,24 @@
       "target": "ifbench",
       "task_id": "ifbench:152"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "c2060dd8aec8b305dba105a5eb98a2c9ae1f88ac6c6a8e0844187548d99e5b70",
+      "submission_hash": "944d8de7e21548c56e3d033ea16e38116c37b4f0a5e15b2080735fa194046ef5"
+    },
+    "budget": {
+      "tokens": 68669,
+      "model_calls": 6,
+      "wall_seconds": 102.70299999997951
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:197",
     "ordinal": 392,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:40:39.145688+00:00",
+    "finished_at": "2026-10-09T09:42:56.923059+00:00",
+    "result_hash": "a90760801bf3100054193f078444ff70c522b71fe39e13e15b9f597c4168512d",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11232,16 +11304,24 @@
       "target": "ifbench",
       "task_id": "ifbench:197"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "e852302edc0257c020052d26900491ed6d15c4c39cdc038097192b7cbfd71ba2",
+      "submission_hash": "d17f4b2e95e87124418b19cbf7d7f0a6a1c02e5a7abf8a9142665b4f97f4c0d7"
+    },
+    "budget": {
+      "tokens": 66546,
+      "model_calls": 6,
+      "wall_seconds": 136.64000000001397
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:162",
     "ordinal": 393,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:40:54.996170+00:00",
+    "finished_at": "2026-10-09T09:43:29.749597+00:00",
+    "result_hash": "70e8d5f48a507b99c3d0d2b1af0a1ed4eb744240ebb1655eb328a8507e3acf74",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11252,16 +11332,24 @@
       "target": "ifbench",
       "task_id": "ifbench:162"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "965af6f41765ed5eb273db3ce435df9eb1c4173f55a442e9d034199a25af0ec3",
+      "submission_hash": "3e54a68e4dbdfbfebfc2b44777cf803d7d3b6786a2ec5b971114fe2ca447e4a5"
+    },
+    "budget": {
+      "tokens": 117505,
+      "model_calls": 8,
+      "wall_seconds": 153.51500000001397
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:174",
     "ordinal": 394,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:40:56.498659+00:00",
+    "finished_at": "2026-10-09T09:43:48.164278+00:00",
+    "result_hash": "b9b8385804fbd8609560b96d885edad32b4aa4fae3a3cd924c1740b902ec8b5f",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11272,16 +11360,24 @@
       "target": "ifbench",
       "task_id": "ifbench:174"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "91897dba0965290a94b373177eaaaf80e674ea0cc4ad0735a226d6554ad30033",
+      "submission_hash": "0232bda025cf4bdcd10c6912f9b9b97616a84db514f513c4b41341069f008d4f"
+    },
+    "budget": {
+      "tokens": 127741,
+      "model_calls": 9,
+      "wall_seconds": 170.40600000001723
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:72",
     "ordinal": 395,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:40:57.960977+00:00",
+    "finished_at": "2026-10-09T09:43:21.406587+00:00",
+    "result_hash": "823f0d552ab86ac0d2925f00d71cdc41b2b83a5d1abfd2db7700163382faccea",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11292,16 +11388,24 @@
       "target": "ifbench",
       "task_id": "ifbench:72"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "d6c7eed6992d8462b71832f76eabdd5978d406f14ddcf329f71e16d403f6dbad",
+      "submission_hash": "54c7e03db91465c4019ff108f33cc3964d6b35db88edcbc1e98fab0cf6ed2954"
+    },
+    "budget": {
+      "tokens": 64684,
+      "model_calls": 6,
+      "wall_seconds": 142.10899999999674
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:204",
     "ordinal": 396,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:42:56.932119+00:00",
+    "finished_at": "2026-10-09T09:44:39.531632+00:00",
+    "result_hash": "763dbe6cd6eb330685ae5fd3fdf8b277a4eee5a252d1e675b8fd75bc6bb29638",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11312,16 +11416,24 @@
       "target": "ifbench",
       "task_id": "ifbench:204"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "f4b5dc88c16149f8a38f54121a41c34d4447708729623a88e69c6252dfe4d663",
+      "submission_hash": "2bbbfd0bdd02981cf20bb2d9b0403640165c9fc881d65401bcc987a8cbede809"
+    },
+    "budget": {
+      "tokens": 66631,
+      "model_calls": 6,
+      "wall_seconds": 101.59399999998277
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:176",
     "ordinal": 397,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:43:21.412483+00:00",
+    "finished_at": "2026-10-09T09:46:25.897256+00:00",
+    "result_hash": "8a4ce9a858977286e081c1fc89d271d287acac614ae2b86cb5faaa830df7333c",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11332,16 +11444,24 @@
       "target": "ifbench",
       "task_id": "ifbench:176"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "82897c9c612496792da6285320c9fbcd5df8ef25dc9dd23276d209fd5d03b875",
+      "submission_hash": "6143553201a0ba77f550c09177ac0df320b13d1a306fd6ed4da6216a67e87978"
+    },
+    "budget": {
+      "tokens": 148470,
+      "model_calls": 9,
+      "wall_seconds": 183.375
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:135",
     "ordinal": 398,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:43:29.758447+00:00",
+    "finished_at": "2026-10-09T09:46:08.459222+00:00",
+    "result_hash": "92504b8fd1a0353679e5d9d025ccd3f5818e0f89505199a681fcbb0c6ce450d7",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11352,16 +11472,24 @@
       "target": "ifbench",
       "task_id": "ifbench:135"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "3747d0006c4bee588c4c8d67c6deb636fe7e4f7eb64189f2efee4a80311a0d34",
+      "submission_hash": "4c8a9eef81fb35ed5a7448b5a3e9dda251c6ae9700bc9d8d386d101cbad4cd4f"
+    },
+    "budget": {
+      "tokens": 119158,
+      "model_calls": 8,
+      "wall_seconds": 157.73399999999674
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:276",
     "ordinal": 399,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:43:48.172016+00:00",
+    "finished_at": "2026-10-09T09:46:10.045842+00:00",
+    "result_hash": "be381d59f2a5dd7b8524145f0f5e844bd0a46d69df520795faaeee9baf95e837",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11372,16 +11500,24 @@
       "target": "ifbench",
       "task_id": "ifbench:276"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "7f1e06d79641451a76b330e17bbbe0a8dcb23b07212ec5a6d533c94d62424a31",
+      "submission_hash": "0aaef936d890d1bd2dfc7fa54dd6066fbe1d25b3fc21b0cd66ef5ec83c19716e"
+    },
+    "budget": {
+      "tokens": 69842,
+      "model_calls": 6,
+      "wall_seconds": 140.56200000003446
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:262",
     "ordinal": 400,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:44:39.538624+00:00",
+    "finished_at": "2026-10-09T09:47:54.695897+00:00",
+    "result_hash": "7379ea1ed8fd17e66f8eaf68e931c95dc517a2307e923fbe054bb5a1c613eb83",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11392,14 +11528,22 @@
       "target": "ifbench",
       "task_id": "ifbench:262"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "7301a8698998aac9a45607203b8c48a044dbdd24acff5fcf51f78e5f2a8ceac0",
+      "submission_hash": "1d51cc8c427fb5d8c2ddc5212699be5c889abc04bda1d02da83c8bff63308da7"
+    },
+    "budget": {
+      "tokens": 127113,
+      "model_calls": 8,
+      "wall_seconds": 193.9220000000205
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:99",
     "ordinal": 401,
-    "status": "pending",
-    "started_at": null,
+    "status": "started",
+    "started_at": "2026-10-09T09:46:08.466222+00:00",
     "finished_at": null,
     "result_hash": null,
     "slot": {
@@ -11418,8 +11562,8 @@
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:76",
     "ordinal": 402,
-    "status": "pending",
-    "started_at": null,
+    "status": "started",
+    "started_at": "2026-10-09T09:46:10.052236+00:00",
     "finished_at": null,
     "result_hash": null,
     "slot": {
@@ -11438,8 +11582,8 @@
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:224",
     "ordinal": 403,
-    "status": "pending",
-    "started_at": null,
+    "status": "started",
+    "started_at": "2026-10-09T09:46:25.904258+00:00",
     "finished_at": null,
     "result_hash": null,
     "slot": {
@@ -11458,8 +11602,8 @@
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:71",
     "ordinal": 404,
-    "status": "pending",
-    "started_at": null,
+    "status": "started",
+    "started_at": "2026-10-09T09:47:54.704929+00:00",
     "finished_at": null,
     "result_hash": null,
     "slot": {

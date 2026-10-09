@@ -1,7 +1,7 @@
 {
   "name": "runtime__identity_check",
   "directory": "C:\\Users\\chizh\\Desktop\\JIT-main\\.runtime\\identity_check",
-  "observed_at_utc": "2026-10-09T09:36:38.547791+00:00",
+  "observed_at_utc": "2026-10-09T09:48:01.575819+00:00",
   "registration_sha256": "0db70f293d1eca14db489caf9fa300129e96dcb40514881fa0a122db66f513e8",
   "protocol_sha256": "677a6722ca185f27f2df6925f95d0b404227d7ec5d866ca7390fc72a8df38ed4",
   "protocol_version": "jit-compose-independent-batch-protocol-v7",

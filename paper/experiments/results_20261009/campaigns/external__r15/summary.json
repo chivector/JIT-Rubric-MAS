@@ -1,7 +1,7 @@
 {
   "name": "external__r15",
   "directory": "C:\\J\\r15",
-  "observed_at_utc": "2026-10-09T09:36:38.547791+00:00",
+  "observed_at_utc": "2026-10-09T09:48:01.575819+00:00",
   "registration_sha256": "896963f9884eb5e897c09564d06cd99d7c2cafaed225b020292c1242cfc37a3b",
   "protocol_sha256": "677a6722ca185f27f2df6925f95d0b404227d7ec5d866ca7390fc72a8df38ed4",
   "protocol_version": "jit-compose-independent-batch-protocol-v7",
