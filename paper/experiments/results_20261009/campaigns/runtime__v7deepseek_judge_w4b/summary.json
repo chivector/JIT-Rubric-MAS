@@ -1,0 +1,697 @@
+{
+  "name": "runtime__v7deepseek_judge_w4b",
+  "directory": "C:\\Users\\chizh\\Desktop\\JIT-main\\.runtime\\v7deepseek_judge_w4b",
+  "observed_at_utc": "2026-10-09T09:36:38.547791+00:00",
+  "registration_sha256": "e86fd15e08dd4a033b7014a10350dfc57f113ee22f8115a1661192f86c8eef86",
+  "protocol_sha256": "677a6722ca185f27f2df6925f95d0b404227d7ec5d866ca7390fc72a8df38ed4",
+  "protocol_version": "jit-compose-independent-batch-protocol-v7",
+  "configured_models": {
+    "exec": "deepseek-v4-flash-vision",
+    "global": "deepseek-v4-flash-vision",
+    "judge": "deepseek-v4-flash-vision",
+    "local": "deepseek-v4-flash-vision",
+    "meta": "deepseek-v4-flash-vision"
+  },
+  "registered_slots": 1725,
+  "slot_counts": [
+    {
+      "source": "deepresearch_bench_ii",
+      "kind": "batch_evolution",
+      "status": "pending",
+      "count": 8
+    },
+    {
+      "source": "deepresearch_bench_ii",
+      "kind": "evolution",
+      "status": "complete",
+      "count": 2
+    },
+    {
+      "source": "deepresearch_bench_ii",
+      "kind": "evolution",
+      "status": "failed",
+      "count": 1
+    },
+    {
+      "source": "deepresearch_bench_ii",
+      "kind": "evolution",
+      "status": "pending",
+      "count": 35
+    },
+    {
+      "source": "deepresearch_bench_ii",
+      "kind": "evolution",
+      "status": "started",
+      "count": 2
+    },
+    {
+      "source": "deepresearch_bench_ii",
+      "kind": "test",
+      "status": "pending",
+      "count": 140
+    },
+    {
+      "source": "deepresearch_bench_ii",
+      "kind": "validation",
+      "status": "pending",
+      "count": 240
+    },
+    {
+      "source": "deepsearchqa",
+      "kind": "batch_evolution",
+      "status": "failed",
+      "count": 1
+    },
+    {
+      "source": "deepsearchqa",
+      "kind": "batch_evolution",
+      "status": "missing",
+      "count": 7
+    },
+    {
+      "source": "deepsearchqa",
+      "kind": "evolution",
+      "status": "complete",
+      "count": 5
+    },
+    {
+      "source": "deepsearchqa",
+      "kind": "evolution",
+      "status": "missing",
+      "count": 35
+    },
+    {
+      "source": "deepsearchqa",
+      "kind": "test",
+      "status": "missing",
+      "count": 150
+    },
+    {
+      "source": "deepsearchqa",
+      "kind": "validation",
+      "status": "missing",
+      "count": 240
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "batch_evolution",
+      "status": "failed",
+      "count": 1
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "batch_evolution",
+      "status": "missing",
+      "count": 7
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "evolution",
+      "status": "complete",
+      "count": 5
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "evolution",
+      "status": "missing",
+      "count": 35
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "test",
+      "status": "missing",
+      "count": 133
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "validation",
+      "status": "missing",
+      "count": 240
+    },
+    {
+      "source": "writingbench",
+      "kind": "batch_evolution",
+      "status": "pending",
+      "count": 7
+    },
+    {
+      "source": "writingbench",
+      "kind": "batch_evolution",
+      "status": "started",
+      "count": 1
+    },
+    {
+      "source": "writingbench",
+      "kind": "evolution",
+      "status": "complete",
+      "count": 5
+    },
+    {
+      "source": "writingbench",
+      "kind": "evolution",
+      "status": "pending",
+      "count": 35
+    },
+    {
+      "source": "writingbench",
+      "kind": "test",
+      "status": "pending",
+      "count": 150
+    },
+    {
+      "source": "writingbench",
+      "kind": "validation",
+      "status": "pending",
+      "count": 240
+    }
+  ],
+  "test_counts": [
+    {
+      "source": "deepresearch_bench_ii",
+      "target": "deepresearch_bench_ii",
+      "status": "pending",
+      "count": 40
+    },
+    {
+      "source": "deepresearch_bench_ii",
+      "target": "ifbench",
+      "status": "pending",
+      "count": 50
+    },
+    {
+      "source": "deepresearch_bench_ii",
+      "target": "ifeval",
+      "status": "pending",
+      "count": 50
+    },
+    {
+      "source": "deepsearchqa",
+      "target": "deepsearchqa",
+      "status": "missing",
+      "count": 50
+    },
+    {
+      "source": "deepsearchqa",
+      "target": "ifbench",
+      "status": "missing",
+      "count": 50
+    },
+    {
+      "source": "deepsearchqa",
+      "target": "ifeval",
+      "status": "missing",
+      "count": 50
+    },
+    {
+      "source": "researchrubrics",
+      "target": "ifbench",
+      "status": "missing",
+      "count": 50
+    },
+    {
+      "source": "researchrubrics",
+      "target": "ifeval",
+      "status": "missing",
+      "count": 50
+    },
+    {
+      "source": "researchrubrics",
+      "target": "researchrubrics",
+      "status": "missing",
+      "count": 33
+    },
+    {
+      "source": "writingbench",
+      "target": "ifbench",
+      "status": "pending",
+      "count": 50
+    },
+    {
+      "source": "writingbench",
+      "target": "ifeval",
+      "status": "pending",
+      "count": 50
+    },
+    {
+      "source": "writingbench",
+      "target": "writingbench",
+      "status": "pending",
+      "count": 50
+    }
+  ],
+  "error_counts": [
+    {
+      "kind": "batch_evolution",
+      "target": "deepsearchqa",
+      "error_type": "FileNotFoundError",
+      "count": 1
+    },
+    {
+      "kind": "batch_evolution",
+      "target": "deepsearchqa",
+      "error_type": "NoEligibleBatchCandidate",
+      "count": 7
+    },
+    {
+      "kind": "batch_evolution",
+      "target": "researchrubrics",
+      "error_type": "FileNotFoundError",
+      "count": 1
+    },
+    {
+      "kind": "batch_evolution",
+      "target": "researchrubrics",
+      "error_type": "NoEligibleBatchCandidate",
+      "count": 7
+    },
+    {
+      "kind": "evolution",
+      "target": "deepresearch_bench_ii",
+      "error_type": "ValidationError",
+      "count": 1
+    },
+    {
+      "kind": "evolution",
+      "target": "deepsearchqa",
+      "error_type": "NoEligibleBatchCandidate",
+      "count": 35
+    },
+    {
+      "kind": "evolution",
+      "target": "researchrubrics",
+      "error_type": "NoEligibleBatchCandidate",
+      "count": 35
+    },
+    {
+      "kind": "test",
+      "target": "deepsearchqa",
+      "error_type": "NoEligibleSelectedState",
+      "count": 50
+    },
+    {
+      "kind": "test",
+      "target": "ifbench",
+      "error_type": "NoEligibleSelectedState",
+      "count": 100
+    },
+    {
+      "kind": "test",
+      "target": "ifeval",
+      "error_type": "NoEligibleSelectedState",
+      "count": 100
+    },
+    {
+      "kind": "test",
+      "target": "researchrubrics",
+      "error_type": "NoEligibleSelectedState",
+      "count": 33
+    },
+    {
+      "kind": "validation",
+      "target": "deepsearchqa",
+      "error_type": "CandidateGenerationFailed",
+      "count": 30
+    },
+    {
+      "kind": "validation",
+      "target": "deepsearchqa",
+      "error_type": "NoEligibleBatchCandidate",
+      "count": 210
+    },
+    {
+      "kind": "validation",
+      "target": "researchrubrics",
+      "error_type": "CandidateGenerationFailed",
+      "count": 30
+    },
+    {
+      "kind": "validation",
+      "target": "researchrubrics",
+      "error_type": "NoEligibleBatchCandidate",
+      "count": 210
+    }
+  ],
+  "selections": [
+    {
+      "batch_index": 0,
+      "candidates": [
+        {
+          "base_state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+          "batch_index": 0,
+          "candidate_index": 0,
+          "complete_evaluations": 0,
+          "eligible": false,
+          "minimum_complete": 9,
+          "official_scores": {
+            "deepsearchqa:183c5bab97c8eaefbd5a8cdafd5acd6e9bca22638f312a87c488fe528a654594": null,
+            "deepsearchqa:1dcefde97fd0db162a2f12b3f55080eae16bea131ec1afdb5b1214c9c6d7459e": null,
+            "deepsearchqa:3c8d821e03a139abe8123053ca0f1ccb432376ea0ba1d8717559cd8b47aaf3ae": null,
+            "deepsearchqa:59c365d5074b510e74ca88e62e8beaec346264745b6026cdf6946d83c1c7b8d3": null,
+            "deepsearchqa:6af69ad3cd0fa8134080dcd43593e2a76fdad3b17778517b9943b6e77c5c02bd": null,
+            "deepsearchqa:937b55ead19c5db27e851be28375408f5279d41ef0ca94592f51f2ddd77cdd87": null,
+            "deepsearchqa:95a5534b90c0b8e505171e022a5cf36e4b118ade9c667727fe72e08616702e2a": null,
+            "deepsearchqa:9b9fa49bb745cec76901dc373c479d654f7b1107f0427031192bdcbc6990b60a": null,
+            "deepsearchqa:b06b98f4463ab67bac229645a8dcce6a14ab92de883f976fdadbf8d6807ea0f4": null,
+            "deepsearchqa:b84ebbff041b25b36d8b0e283221b8f14f4325aef15695e60177113ebab3a474": null
+          },
+          "selection_utility": 0.0,
+          "slots": 10,
+          "state_hash": "0192779cb55f042e020764118ad0a1796be0838b4c14157fce30b321dd298906"
+        },
+        {
+          "base_state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+          "batch_index": 0,
+          "candidate_index": 1,
+          "complete_evaluations": 0,
+          "eligible": false,
+          "minimum_complete": 9,
+          "official_scores": {
+            "deepsearchqa:183c5bab97c8eaefbd5a8cdafd5acd6e9bca22638f312a87c488fe528a654594": null,
+            "deepsearchqa:1dcefde97fd0db162a2f12b3f55080eae16bea131ec1afdb5b1214c9c6d7459e": null,
+            "deepsearchqa:3c8d821e03a139abe8123053ca0f1ccb432376ea0ba1d8717559cd8b47aaf3ae": null,
+            "deepsearchqa:59c365d5074b510e74ca88e62e8beaec346264745b6026cdf6946d83c1c7b8d3": null,
+            "deepsearchqa:6af69ad3cd0fa8134080dcd43593e2a76fdad3b17778517b9943b6e77c5c02bd": null,
+            "deepsearchqa:937b55ead19c5db27e851be28375408f5279d41ef0ca94592f51f2ddd77cdd87": null,
+            "deepsearchqa:95a5534b90c0b8e505171e022a5cf36e4b118ade9c667727fe72e08616702e2a": null,
+            "deepsearchqa:9b9fa49bb745cec76901dc373c479d654f7b1107f0427031192bdcbc6990b60a": null,
+            "deepsearchqa:b06b98f4463ab67bac229645a8dcce6a14ab92de883f976fdadbf8d6807ea0f4": null,
+            "deepsearchqa:b84ebbff041b25b36d8b0e283221b8f14f4325aef15695e60177113ebab3a474": null
+          },
+          "selection_utility": 0.0,
+          "slots": 10,
+          "state_hash": "ee76ca21a1069859c881a9888eb06e15cb148bea4f0d2c337e8775d1fe4b424b"
+        },
+        {
+          "base_state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+          "batch_index": 0,
+          "candidate_index": 2,
+          "complete_evaluations": 0,
+          "eligible": false,
+          "minimum_complete": 9,
+          "official_scores": {
+            "deepsearchqa:183c5bab97c8eaefbd5a8cdafd5acd6e9bca22638f312a87c488fe528a654594": null,
+            "deepsearchqa:1dcefde97fd0db162a2f12b3f55080eae16bea131ec1afdb5b1214c9c6d7459e": null,
+            "deepsearchqa:3c8d821e03a139abe8123053ca0f1ccb432376ea0ba1d8717559cd8b47aaf3ae": null,
+            "deepsearchqa:59c365d5074b510e74ca88e62e8beaec346264745b6026cdf6946d83c1c7b8d3": null,
+            "deepsearchqa:6af69ad3cd0fa8134080dcd43593e2a76fdad3b17778517b9943b6e77c5c02bd": null,
+            "deepsearchqa:937b55ead19c5db27e851be28375408f5279d41ef0ca94592f51f2ddd77cdd87": null,
+            "deepsearchqa:95a5534b90c0b8e505171e022a5cf36e4b118ade9c667727fe72e08616702e2a": null,
+            "deepsearchqa:9b9fa49bb745cec76901dc373c479d654f7b1107f0427031192bdcbc6990b60a": null,
+            "deepsearchqa:b06b98f4463ab67bac229645a8dcce6a14ab92de883f976fdadbf8d6807ea0f4": null,
+            "deepsearchqa:b84ebbff041b25b36d8b0e283221b8f14f4325aef15695e60177113ebab3a474": null
+          },
+          "selection_utility": 0.0,
+          "slots": 10,
+          "state_hash": "894e79e6cbd80f34a6cfa282648cf27d2b93a335ec3884e1a5710c67f64881aa"
+        }
+      ],
+      "registration_hash": "e86fd15e08dd4a033b7014a10350dfc57f113ee22f8115a1661192f86c8eef86",
+      "run_id": 0,
+      "selected": null,
+      "source": "deepsearchqa",
+      "status": "inconclusive"
+    },
+    {
+      "batch_index": 0,
+      "candidates": [
+        {
+          "base_state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+          "batch_index": 0,
+          "candidate_index": 0,
+          "complete_evaluations": 0,
+          "eligible": false,
+          "minimum_complete": 9,
+          "official_scores": {
+            "683a58c9a7e7fe4e76958483": null,
+            "683a58c9a7e7fe4e7695849b": null,
+            "684397d188c1deceb49af31d": null,
+            "684397d188c1deceb49af329": null,
+            "6847465956a0f6376a60535d": null,
+            "6847465956a0f6376a605378": null,
+            "6847465956a0f6376a605391": null,
+            "6847465956a0f6376a6053fb": null,
+            "6847465956a0f6376a605425": null,
+            "6847465956a0f6376a60542d": null
+          },
+          "selection_utility": 0.0,
+          "slots": 10,
+          "state_hash": "0192779cb55f042e020764118ad0a1796be0838b4c14157fce30b321dd298906"
+        },
+        {
+          "base_state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+          "batch_index": 0,
+          "candidate_index": 1,
+          "complete_evaluations": 0,
+          "eligible": false,
+          "minimum_complete": 9,
+          "official_scores": {
+            "683a58c9a7e7fe4e76958483": null,
+            "683a58c9a7e7fe4e7695849b": null,
+            "684397d188c1deceb49af31d": null,
+            "684397d188c1deceb49af329": null,
+            "6847465956a0f6376a60535d": null,
+            "6847465956a0f6376a605378": null,
+            "6847465956a0f6376a605391": null,
+            "6847465956a0f6376a6053fb": null,
+            "6847465956a0f6376a605425": null,
+            "6847465956a0f6376a60542d": null
+          },
+          "selection_utility": 0.0,
+          "slots": 10,
+          "state_hash": "ee76ca21a1069859c881a9888eb06e15cb148bea4f0d2c337e8775d1fe4b424b"
+        },
+        {
+          "base_state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+          "batch_index": 0,
+          "candidate_index": 2,
+          "complete_evaluations": 0,
+          "eligible": false,
+          "minimum_complete": 9,
+          "official_scores": {
+            "683a58c9a7e7fe4e76958483": null,
+            "683a58c9a7e7fe4e7695849b": null,
+            "684397d188c1deceb49af31d": null,
+            "684397d188c1deceb49af329": null,
+            "6847465956a0f6376a60535d": null,
+            "6847465956a0f6376a605378": null,
+            "6847465956a0f6376a605391": null,
+            "6847465956a0f6376a6053fb": null,
+            "6847465956a0f6376a605425": null,
+            "6847465956a0f6376a60542d": null
+          },
+          "selection_utility": 0.0,
+          "slots": 10,
+          "state_hash": "894e79e6cbd80f34a6cfa282648cf27d2b93a335ec3884e1a5710c67f64881aa"
+        }
+      ],
+      "registration_hash": "e86fd15e08dd4a033b7014a10350dfc57f113ee22f8115a1661192f86c8eef86",
+      "run_id": 0,
+      "selected": null,
+      "source": "researchrubrics",
+      "status": "inconclusive"
+    }
+  ],
+  "batch_selections": [
+    {
+      "batch_index": 0,
+      "candidates": [
+        {
+          "base_state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+          "batch_index": 0,
+          "candidate_index": 0,
+          "complete_evaluations": 0,
+          "eligible": false,
+          "minimum_complete": 9,
+          "official_scores": {
+            "deepsearchqa:183c5bab97c8eaefbd5a8cdafd5acd6e9bca22638f312a87c488fe528a654594": null,
+            "deepsearchqa:1dcefde97fd0db162a2f12b3f55080eae16bea131ec1afdb5b1214c9c6d7459e": null,
+            "deepsearchqa:3c8d821e03a139abe8123053ca0f1ccb432376ea0ba1d8717559cd8b47aaf3ae": null,
+            "deepsearchqa:59c365d5074b510e74ca88e62e8beaec346264745b6026cdf6946d83c1c7b8d3": null,
+            "deepsearchqa:6af69ad3cd0fa8134080dcd43593e2a76fdad3b17778517b9943b6e77c5c02bd": null,
+            "deepsearchqa:937b55ead19c5db27e851be28375408f5279d41ef0ca94592f51f2ddd77cdd87": null,
+            "deepsearchqa:95a5534b90c0b8e505171e022a5cf36e4b118ade9c667727fe72e08616702e2a": null,
+            "deepsearchqa:9b9fa49bb745cec76901dc373c479d654f7b1107f0427031192bdcbc6990b60a": null,
+            "deepsearchqa:b06b98f4463ab67bac229645a8dcce6a14ab92de883f976fdadbf8d6807ea0f4": null,
+            "deepsearchqa:b84ebbff041b25b36d8b0e283221b8f14f4325aef15695e60177113ebab3a474": null
+          },
+          "selection_utility": 0.0,
+          "slots": 10,
+          "state_hash": "0192779cb55f042e020764118ad0a1796be0838b4c14157fce30b321dd298906"
+        },
+        {
+          "base_state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+          "batch_index": 0,
+          "candidate_index": 1,
+          "complete_evaluations": 0,
+          "eligible": false,
+          "minimum_complete": 9,
+          "official_scores": {
+            "deepsearchqa:183c5bab97c8eaefbd5a8cdafd5acd6e9bca22638f312a87c488fe528a654594": null,
+            "deepsearchqa:1dcefde97fd0db162a2f12b3f55080eae16bea131ec1afdb5b1214c9c6d7459e": null,
+            "deepsearchqa:3c8d821e03a139abe8123053ca0f1ccb432376ea0ba1d8717559cd8b47aaf3ae": null,
+            "deepsearchqa:59c365d5074b510e74ca88e62e8beaec346264745b6026cdf6946d83c1c7b8d3": null,
+            "deepsearchqa:6af69ad3cd0fa8134080dcd43593e2a76fdad3b17778517b9943b6e77c5c02bd": null,
+            "deepsearchqa:937b55ead19c5db27e851be28375408f5279d41ef0ca94592f51f2ddd77cdd87": null,
+            "deepsearchqa:95a5534b90c0b8e505171e022a5cf36e4b118ade9c667727fe72e08616702e2a": null,
+            "deepsearchqa:9b9fa49bb745cec76901dc373c479d654f7b1107f0427031192bdcbc6990b60a": null,
+            "deepsearchqa:b06b98f4463ab67bac229645a8dcce6a14ab92de883f976fdadbf8d6807ea0f4": null,
+            "deepsearchqa:b84ebbff041b25b36d8b0e283221b8f14f4325aef15695e60177113ebab3a474": null
+          },
+          "selection_utility": 0.0,
+          "slots": 10,
+          "state_hash": "ee76ca21a1069859c881a9888eb06e15cb148bea4f0d2c337e8775d1fe4b424b"
+        },
+        {
+          "base_state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+          "batch_index": 0,
+          "candidate_index": 2,
+          "complete_evaluations": 0,
+          "eligible": false,
+          "minimum_complete": 9,
+          "official_scores": {
+            "deepsearchqa:183c5bab97c8eaefbd5a8cdafd5acd6e9bca22638f312a87c488fe528a654594": null,
+            "deepsearchqa:1dcefde97fd0db162a2f12b3f55080eae16bea131ec1afdb5b1214c9c6d7459e": null,
+            "deepsearchqa:3c8d821e03a139abe8123053ca0f1ccb432376ea0ba1d8717559cd8b47aaf3ae": null,
+            "deepsearchqa:59c365d5074b510e74ca88e62e8beaec346264745b6026cdf6946d83c1c7b8d3": null,
+            "deepsearchqa:6af69ad3cd0fa8134080dcd43593e2a76fdad3b17778517b9943b6e77c5c02bd": null,
+            "deepsearchqa:937b55ead19c5db27e851be28375408f5279d41ef0ca94592f51f2ddd77cdd87": null,
+            "deepsearchqa:95a5534b90c0b8e505171e022a5cf36e4b118ade9c667727fe72e08616702e2a": null,
+            "deepsearchqa:9b9fa49bb745cec76901dc373c479d654f7b1107f0427031192bdcbc6990b60a": null,
+            "deepsearchqa:b06b98f4463ab67bac229645a8dcce6a14ab92de883f976fdadbf8d6807ea0f4": null,
+            "deepsearchqa:b84ebbff041b25b36d8b0e283221b8f14f4325aef15695e60177113ebab3a474": null
+          },
+          "selection_utility": 0.0,
+          "slots": 10,
+          "state_hash": "894e79e6cbd80f34a6cfa282648cf27d2b93a335ec3884e1a5710c67f64881aa"
+        }
+      ],
+      "registration_hash": "e86fd15e08dd4a033b7014a10350dfc57f113ee22f8115a1661192f86c8eef86",
+      "run_id": 0,
+      "selected": null,
+      "source": "deepsearchqa",
+      "status": "inconclusive"
+    },
+    {
+      "batch_index": 0,
+      "candidates": [
+        {
+          "base_state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+          "batch_index": 0,
+          "candidate_index": 0,
+          "complete_evaluations": 0,
+          "eligible": false,
+          "minimum_complete": 9,
+          "official_scores": {
+            "683a58c9a7e7fe4e76958483": null,
+            "683a58c9a7e7fe4e7695849b": null,
+            "684397d188c1deceb49af31d": null,
+            "684397d188c1deceb49af329": null,
+            "6847465956a0f6376a60535d": null,
+            "6847465956a0f6376a605378": null,
+            "6847465956a0f6376a605391": null,
+            "6847465956a0f6376a6053fb": null,
+            "6847465956a0f6376a605425": null,
+            "6847465956a0f6376a60542d": null
+          },
+          "selection_utility": 0.0,
+          "slots": 10,
+          "state_hash": "0192779cb55f042e020764118ad0a1796be0838b4c14157fce30b321dd298906"
+        },
+        {
+          "base_state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+          "batch_index": 0,
+          "candidate_index": 1,
+          "complete_evaluations": 0,
+          "eligible": false,
+          "minimum_complete": 9,
+          "official_scores": {
+            "683a58c9a7e7fe4e76958483": null,
+            "683a58c9a7e7fe4e7695849b": null,
+            "684397d188c1deceb49af31d": null,
+            "684397d188c1deceb49af329": null,
+            "6847465956a0f6376a60535d": null,
+            "6847465956a0f6376a605378": null,
+            "6847465956a0f6376a605391": null,
+            "6847465956a0f6376a6053fb": null,
+            "6847465956a0f6376a605425": null,
+            "6847465956a0f6376a60542d": null
+          },
+          "selection_utility": 0.0,
+          "slots": 10,
+          "state_hash": "ee76ca21a1069859c881a9888eb06e15cb148bea4f0d2c337e8775d1fe4b424b"
+        },
+        {
+          "base_state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+          "batch_index": 0,
+          "candidate_index": 2,
+          "complete_evaluations": 0,
+          "eligible": false,
+          "minimum_complete": 9,
+          "official_scores": {
+            "683a58c9a7e7fe4e76958483": null,
+            "683a58c9a7e7fe4e7695849b": null,
+            "684397d188c1deceb49af31d": null,
+            "684397d188c1deceb49af329": null,
+            "6847465956a0f6376a60535d": null,
+            "6847465956a0f6376a605378": null,
+            "6847465956a0f6376a605391": null,
+            "6847465956a0f6376a6053fb": null,
+            "6847465956a0f6376a605425": null,
+            "6847465956a0f6376a60542d": null
+          },
+          "selection_utility": 0.0,
+          "slots": 10,
+          "state_hash": "894e79e6cbd80f34a6cfa282648cf27d2b93a335ec3884e1a5710c67f64881aa"
+        }
+      ],
+      "registration_hash": "e86fd15e08dd4a033b7014a10350dfc57f113ee22f8115a1661192f86c8eef86",
+      "run_id": 0,
+      "selected": null,
+      "source": "researchrubrics",
+      "status": "inconclusive"
+    }
+  ],
+  "checkpoints": [
+    {
+      "source": "deepresearch_bench_ii",
+      "run_id": 0,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    },
+    {
+      "source": "deepsearchqa",
+      "run_id": 0,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    },
+    {
+      "source": "researchrubrics",
+      "run_id": 0,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    },
+    {
+      "source": "writingbench",
+      "run_id": 0,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    }
+  ],
+  "test_sealed": false,
+  "evaluation_receipts": 0,
+  "evaluation_errors": {},
+  "final_report_available": false,
+  "test_report": null
+}

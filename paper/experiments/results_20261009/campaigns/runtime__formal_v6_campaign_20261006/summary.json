@@ -1,0 +1,394 @@
+{
+  "name": "runtime__formal_v6_campaign_20261006",
+  "directory": "C:\\Users\\chizh\\Desktop\\JIT-main\\.runtime\\formal_v6_campaign_20261006",
+  "observed_at_utc": "2026-10-09T09:36:38.547791+00:00",
+  "registration_sha256": "5a90b954a1584b2288fef2f51821453dd4d4c26e4ae638a2175c58dbcd81f66b",
+  "protocol_sha256": "84e260f3d99d2e3a5e6a5c78cf0d5354a5e7817a54bc2f7bab6dab842a61488d",
+  "protocol_version": "jit-compose-independent-batch-protocol-v6",
+  "configured_models": {
+    "exec": "deepseek-v4-flash-vision",
+    "global": "deepseek-v4-flash-vision",
+    "judge": "gpt-5.6-sol",
+    "local": "deepseek-v4-flash-vision",
+    "meta": "deepseek-v4-flash-vision"
+  },
+  "registered_slots": 5343,
+  "slot_counts": [
+    {
+      "source": "deepsearchqa",
+      "kind": "batch_evolution",
+      "status": "complete",
+      "count": 1
+    },
+    {
+      "source": "deepsearchqa",
+      "kind": "batch_evolution",
+      "status": "pending",
+      "count": 23
+    },
+    {
+      "source": "deepsearchqa",
+      "kind": "evolution",
+      "status": "failed",
+      "count": 5
+    },
+    {
+      "source": "deepsearchqa",
+      "kind": "evolution",
+      "status": "pending",
+      "count": 115
+    },
+    {
+      "source": "deepsearchqa",
+      "kind": "test",
+      "status": "pending",
+      "count": 570
+    },
+    {
+      "source": "deepsearchqa",
+      "kind": "validation",
+      "status": "failed",
+      "count": 30
+    },
+    {
+      "source": "deepsearchqa",
+      "kind": "validation",
+      "status": "pending",
+      "count": 690
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "batch_evolution",
+      "status": "complete",
+      "count": 1
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "batch_evolution",
+      "status": "pending",
+      "count": 23
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "evolution",
+      "status": "failed",
+      "count": 5
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "evolution",
+      "status": "pending",
+      "count": 115
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "test",
+      "status": "pending",
+      "count": 519
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "validation",
+      "status": "failed",
+      "count": 25
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "validation",
+      "status": "pending",
+      "count": 690
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "validation",
+      "status": "started",
+      "count": 5
+    },
+    {
+      "source": "static",
+      "kind": "test",
+      "status": "pending",
+      "count": 1092
+    },
+    {
+      "source": "writingbench",
+      "kind": "batch_evolution",
+      "status": "complete",
+      "count": 1
+    },
+    {
+      "source": "writingbench",
+      "kind": "batch_evolution",
+      "status": "pending",
+      "count": 23
+    },
+    {
+      "source": "writingbench",
+      "kind": "evolution",
+      "status": "failed",
+      "count": 5
+    },
+    {
+      "source": "writingbench",
+      "kind": "evolution",
+      "status": "pending",
+      "count": 115
+    },
+    {
+      "source": "writingbench",
+      "kind": "test",
+      "status": "pending",
+      "count": 570
+    },
+    {
+      "source": "writingbench",
+      "kind": "validation",
+      "status": "failed",
+      "count": 2
+    },
+    {
+      "source": "writingbench",
+      "kind": "validation",
+      "status": "pending",
+      "count": 718
+    }
+  ],
+  "test_counts": [
+    {
+      "source": "deepsearchqa",
+      "target": "deepresearch_bench_ii",
+      "status": "pending",
+      "count": 120
+    },
+    {
+      "source": "deepsearchqa",
+      "target": "deepsearchqa",
+      "status": "pending",
+      "count": 150
+    },
+    {
+      "source": "deepsearchqa",
+      "target": "ifbench",
+      "status": "pending",
+      "count": 150
+    },
+    {
+      "source": "deepsearchqa",
+      "target": "ifeval",
+      "status": "pending",
+      "count": 150
+    },
+    {
+      "source": "researchrubrics",
+      "target": "deepresearch_bench_ii",
+      "status": "pending",
+      "count": 120
+    },
+    {
+      "source": "researchrubrics",
+      "target": "ifbench",
+      "status": "pending",
+      "count": 150
+    },
+    {
+      "source": "researchrubrics",
+      "target": "ifeval",
+      "status": "pending",
+      "count": 150
+    },
+    {
+      "source": "researchrubrics",
+      "target": "researchrubrics",
+      "status": "pending",
+      "count": 99
+    },
+    {
+      "source": "static",
+      "target": "deepresearch_bench_ii",
+      "status": "pending",
+      "count": 160
+    },
+    {
+      "source": "static",
+      "target": "deepsearchqa",
+      "status": "pending",
+      "count": 200
+    },
+    {
+      "source": "static",
+      "target": "ifbench",
+      "status": "pending",
+      "count": 200
+    },
+    {
+      "source": "static",
+      "target": "ifeval",
+      "status": "pending",
+      "count": 200
+    },
+    {
+      "source": "static",
+      "target": "researchrubrics",
+      "status": "pending",
+      "count": 132
+    },
+    {
+      "source": "static",
+      "target": "writingbench",
+      "status": "pending",
+      "count": 200
+    },
+    {
+      "source": "writingbench",
+      "target": "deepresearch_bench_ii",
+      "status": "pending",
+      "count": 120
+    },
+    {
+      "source": "writingbench",
+      "target": "ifbench",
+      "status": "pending",
+      "count": 150
+    },
+    {
+      "source": "writingbench",
+      "target": "ifeval",
+      "status": "pending",
+      "count": 150
+    },
+    {
+      "source": "writingbench",
+      "target": "writingbench",
+      "status": "pending",
+      "count": 150
+    }
+  ],
+  "error_counts": [
+    {
+      "kind": "evolution",
+      "target": "deepsearchqa",
+      "error_type": "FileNotFoundError",
+      "count": 5
+    },
+    {
+      "kind": "evolution",
+      "target": "researchrubrics",
+      "error_type": "FileNotFoundError",
+      "count": 5
+    },
+    {
+      "kind": "evolution",
+      "target": "writingbench",
+      "error_type": "FileNotFoundError",
+      "count": 5
+    },
+    {
+      "kind": "validation",
+      "target": "deepsearchqa",
+      "error_type": "FileNotFoundError",
+      "count": 30
+    },
+    {
+      "kind": "validation",
+      "target": "researchrubrics",
+      "error_type": "FileNotFoundError",
+      "count": 25
+    },
+    {
+      "kind": "validation",
+      "target": "writingbench",
+      "error_type": "FileNotFoundError",
+      "count": 2
+    }
+  ],
+  "selections": [],
+  "batch_selections": [],
+  "checkpoints": [
+    {
+      "source": "deepsearchqa",
+      "run_id": 0,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    },
+    {
+      "source": "deepsearchqa",
+      "run_id": 1,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    },
+    {
+      "source": "deepsearchqa",
+      "run_id": 2,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    },
+    {
+      "source": "researchrubrics",
+      "run_id": 0,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    },
+    {
+      "source": "researchrubrics",
+      "run_id": 1,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    },
+    {
+      "source": "researchrubrics",
+      "run_id": 2,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    },
+    {
+      "source": "writingbench",
+      "run_id": 0,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    },
+    {
+      "source": "writingbench",
+      "run_id": 1,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    },
+    {
+      "source": "writingbench",
+      "run_id": 2,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    }
+  ],
+  "test_sealed": false,
+  "evaluation_receipts": 0,
+  "evaluation_errors": {},
+  "final_report_available": false,
+  "test_report": null
+}

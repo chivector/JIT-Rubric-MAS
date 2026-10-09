@@ -1,0 +1,87 @@
+{
+  "name": "external__r16_rr",
+  "directory": "C:\\J\\r16_rr",
+  "observed_at_utc": "2026-10-09T09:36:38.547791+00:00",
+  "registration_sha256": "a39ce62b7f8a77f820212c87714ed6b3b04d1da93fcc2a0376468e1788a9b83e",
+  "protocol_sha256": "2fe98fc2381707c40f9f54eceda9f390ddf5a861130e0483648942ca51afd2f6",
+  "protocol_version": "jit-compose-independent-batch-protocol-v7",
+  "configured_models": {
+    "exec": "deepseek-v4-flash-vision",
+    "global": "deepseek-v4-flash-vision",
+    "judge": "gpt-5.6-sol",
+    "local": "deepseek-v4-flash-vision",
+    "meta": "deepseek-v4-flash-vision"
+  },
+  "registered_slots": 421,
+  "slot_counts": [
+    {
+      "source": "researchrubrics",
+      "kind": "batch_evolution",
+      "status": "pending",
+      "count": 8
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "evolution",
+      "status": "pending",
+      "count": 38
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "evolution",
+      "status": "started",
+      "count": 2
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "test",
+      "status": "pending",
+      "count": 133
+    },
+    {
+      "source": "researchrubrics",
+      "kind": "validation",
+      "status": "pending",
+      "count": 240
+    }
+  ],
+  "test_counts": [
+    {
+      "source": "researchrubrics",
+      "target": "ifbench",
+      "status": "pending",
+      "count": 50
+    },
+    {
+      "source": "researchrubrics",
+      "target": "ifeval",
+      "status": "pending",
+      "count": 50
+    },
+    {
+      "source": "researchrubrics",
+      "target": "researchrubrics",
+      "status": "pending",
+      "count": 33
+    }
+  ],
+  "error_counts": [],
+  "selections": [],
+  "batch_selections": [],
+  "checkpoints": [
+    {
+      "source": "researchrubrics",
+      "run_id": 0,
+      "position": 0,
+      "state_hash": "c52e772d2a6d6f191fc17d6004ae1ad2e61bfa514e7f2a6e70ace72d2c9f665d",
+      "experience_count": 0,
+      "pool_size": 0,
+      "snapshot_hash_valid": true
+    }
+  ],
+  "test_sealed": false,
+  "evaluation_receipts": 0,
+  "evaluation_errors": {},
+  "final_report_available": false,
+  "test_report": null
+}
