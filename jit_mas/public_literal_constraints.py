@@ -1,9 +1,11 @@
 """Finite public literal-frequency constraints, never benchmark metadata.
 
-Only positive English instructions about one ASCII word and an explicit digit
-minimum are recognized. Unsupported or ambiguous frequency-like instructions
-make the whole plan unknown. Counting is over the complete decoded artifact;
-it does not use the bounded diagnostic vocabulary or certify semantic quality.
+Only positive English instructions about one ASCII word and an explicit count
+are recognized. Supported counts are lower bounds and unqualified exact
+``once``/``twice``/``thrice`` or digit/English-number ``N times`` forms. Unsupported or
+ambiguous frequency-like instructions make the whole plan unknown. Counting is
+over the complete decoded artifact; it does not use the bounded diagnostic
+vocabulary or certify semantic quality.
 """
 
 from __future__ import annotations
@@ -16,32 +18,47 @@ from .public_word_slots import independent_positive_position_span
 from .schemas import digest
 
 
-PUBLIC_LITERAL_CONSTRAINT_VERSION = "public-literal-minimum-frequency-v1"
+PUBLIC_LITERAL_CONSTRAINT_VERSION = "public-literal-frequency-v2"
 MAX_MINIMUM_OCCURRENCES = 128
 COUNTING_BASIS = (
     "Complete decoded artifact only. PASS requires original-case standalone "
     "ASCII-letter lexical word occurrences within complete Unicode word/combining-mark "
     "units; internal ASCII/curly apostrophes and Unicode dash punctuation join such units. A separate "
-    "casefolded strict count is diagnostic only. FAIL requires even the broader "
-    "overlapping casefolded literal-substring occurrence count to be below the minimum. "
-    "Other cases are UNKNOWN. The broad count does not prove word compliance, "
-    "and these sufficient conditions are not a benchmark checker."
+    "casefolded strict count is diagnostic only. For lower bounds, FAIL requires even the broader "
+    "overlapping casefolded literal-substring occurrence count to be below the minimum. For exact "
+    "counts, PASS also requires the broad count to match; FAIL requires a strict over-count "
+    "or a broad under-count. Other cases are UNKNOWN. "
+    "The broad count does not prove word compliance, and these sufficient conditions are not a "
+    "benchmark checker."
 )
 _LITERAL = (r'(?:[A-Za-z]{1,64}|"[A-Za-z]{1,64}"|\u201c[A-Za-z]{1,64}\u201d|'
             r"'[A-Za-z]{1,64}'|\u2018[A-Za-z]{1,64}\u2019|`[A-Za-z]{1,64}`)")
 _ITEM_TEXT = (r"(?:the\s+)?(?:word|keyword|term)\s+" + _LITERAL
               + r"\s+at\s+least\s+[0-9]+\s+times?\b")
+_EXACT_QUANTIFIER = (r"(?:once|twice|thrice|(?:one|two|three|four|five|six|seven|eight|"
+                     r"nine|ten|[0-9]{1,3})\s+times?)")
+_EXACT_ITEM_TEXT = (r"(?:the\s+)?(?:word|keyword|term)\s+" + _LITERAL
+                    + r"\s+" + _EXACT_QUANTIFIER + r"\b"
+                    + r"(?:\s+in\s+your\s+response)?")
 _GROUP = re.compile(
     r"\b(?:(?:make\s+sure\s+to|please)\s+)?(?:use|include)\s+" + _ITEM_TEXT
     + r"(?:\s*,?\s+and\s+(?:(?:use|include)\s+)?" + _ITEM_TEXT + r")*", re.IGNORECASE)
+_EXACT_GROUP = re.compile(
+    r"\b(?:(?:make\s+sure\s+to|please)\s+)?(?:use|include)\s+"
+    + _EXACT_ITEM_TEXT
+    + r"(?:(?:\s*,\s*(?:and\s+)?|\s+and\s+)(?:(?:use|include)\s+)?"
+    + _EXACT_ITEM_TEXT + r")*", re.IGNORECASE)
 _ITEM = re.compile(
     r"\b(?:the\s+)?(?:word|keyword|term)\s+(?P<literal>" + _LITERAL + r")"
     + r"\s+at\s+least\s+(?P<minimum>[0-9]+)\s+times?\b", re.IGNORECASE)
+_EXACT_ITEM = re.compile(
+    r"\b(?:the\s+)?(?:word|keyword|term)\s+(?P<literal>" + _LITERAL + r")"
+    + r"\s+(?P<quantifier>" + _EXACT_QUANTIFIER + r")\b", re.IGNORECASE)
 _DIRECTIVE_SCAN = re.compile(r"\b(?:use|include)\s+(?:the\s+)?(?:word|keyword|term)\b",
                              re.IGNORECASE)
 _FREQUENCY_HINT = re.compile(
     r"\b(?:word|keyword|term)\b[^\r\n.!?]{0,256}?\b"
-    r"(?:at\s+least|at\s+most|exactly|no\s+(?:more|fewer)\s+than|times?|occurrences?)\b",
+    r"(?:at\s+least|at\s+most|exactly|no\s+(?:more|fewer)\s+than|times?|occurrences?|once|twice|thrice)\b",
     re.IGNORECASE)
 _UNSUPPORTED_FREQUENCY = re.compile(
     r"\b(?:repeat|mention|say|write|include|use|insert|add)\b[^\r\n.!?]{0,128}?"
@@ -57,7 +74,10 @@ _CASE_SCOPE = re.compile(r"\b(?:case[ -]sensitive|case[ -]insensitive|lower[ -]?
 _UNSUPPORTED_SCOPE = re.compile(
     r"\b(?:this|the)\s+(?:requirement|rule|constraint|minimum|count)\s+"
     r"(?:applies?|refers?)\s+(?:only\s+)?to\b|"
-    r"\b(?:only\s+count|count\s+only|not\s+counting|do\s+not\s+count)\b",
+    r"\b(?:only\s+count|count\s+only|not\s+counting|do\s+not\s+count)\b|"
+    r"\b(?:this|the)\s+(?:count|minimum|frequency)\b[^\r\n.!?]{0,64}"
+    r"\b(?:per|each|excludes?|excluding)\b|"
+    r"\bcount\s+(?:it|them|occurrences?)\s+(?:in|within|inside)\b",
     re.IGNORECASE)
 _EXAMPLE_HEADING = re.compile(
     r"(?im)^[ \t]*(?:examples?|samples?|quotations?|excerpts?|templates?|code|"
@@ -66,6 +86,27 @@ _EXAMPLE_INTRO = re.compile(
     r"\b(?:here\s+(?:is|are)|the\s+following|below\s+is|this\s+is)\s+"
     r"(?:(?:a|an|the)\s+)?(?:example|sample|quotation|excerpt|template|code)\b",
     re.IGNORECASE)
+
+_EXACT_COUNTS = {"once": 1, "twice": 2, "thrice": 3,
+                 "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+                 "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
+
+
+def _exact_count(quantifier):
+    folded = quantifier.casefold().strip()
+    if folded in _EXACT_COUNTS:
+        return _EXACT_COUNTS[folded]
+    words = re.fullmatch(r"(one|two|three|four|five|six|seven|eight|nine|ten)\s+times?", folded)
+    if words is not None:
+        return _EXACT_COUNTS[words.group(1)]
+    match = re.fullmatch(r"([0-9]{1,3})\s+times?", folded)
+    if match is None:
+        return None
+    digits = match.group(1)
+    if len(digits) > 1 and digits.startswith("0"):
+        return None
+    value = int(digits)
+    return value if value <= MAX_MINIMUM_OCCURRENCES else None
 
 
 def _lexical_units(text):
@@ -109,10 +150,12 @@ class LiteralMinimumRule:
     literal: str
     minimum: int
     span: PublicLiteralSpan
+    operator: str = ">="
 
     def audit(self):
-        return {"literal": self.literal, "minimum_occurrences": self.minimum,
-                "operator": ">=", "public_span": self.span.audit()}
+        count_field = "exact_occurrences" if self.operator == "==" else "minimum_occurrences"
+        return {"literal": self.literal, count_field: self.minimum,
+                "operator": self.operator, "public_span": self.span.audit()}
 
 
 @dataclass(frozen=True)
@@ -125,7 +168,7 @@ class PublicLiteralPlan:
                 "counting_basis": COUNTING_BASIS,
                 "rules": [rule.audit() for rule in self.rules],
                 "instruction_spans": [span.audit() for span in self.instruction_spans],
-                "limitations": "Only these finite positive literal minima are established; other public constraints and semantic correctness are not certified."}
+                "limitations": "Only these finite positive literal counts are established; other public constraints and semantic correctness are not certified."}
 
     def diagnose(self, answer):
         if not isinstance(answer, str):
@@ -146,8 +189,13 @@ class PublicLiteralPlan:
             folded = folded_counts[rule.literal.casefold()]
             broad = sum(1 for _ in re.finditer(r"(?=" + re.escape(rule.literal.casefold()) + r")",
                                               folded_answer))
-            status = ("pass" if exact >= rule.minimum else
-                      "fail" if broad < rule.minimum else "unknown")
+            if rule.operator == "==":
+                status = ("pass" if exact == rule.minimum and broad == rule.minimum else
+                          "fail" if exact > rule.minimum or broad < rule.minimum else
+                          "unknown")
+            else:
+                status = ("pass" if exact >= rule.minimum else
+                          "fail" if broad < rule.minimum else "unknown")
             rows.append({**rule.audit(), "exact_strict_count": exact,
                          "casefold_strict_count": folded,
                          "casefold_substring_count": broad, "status": status})
@@ -161,9 +209,10 @@ def public_literal_plan(task) -> PublicLiteralPlan | None:
     """Compile every recognized frequency instruction, or conservatively decline.
 
     Supported instructions begin a standalone sentence with Use/Include,
-    optionally Please/Make sure to. Further minima can be joined with and.
-    Literal argument quotes are allowed; prose quotations, copied examples,
-    negation, conditionals, count qualifiers and unsupported families decline.
+    optionally Please/Make sure to. Further minima or exact items can be joined
+    with and or comma-separated response wording. Literal argument quotes are
+    allowed; prose quotations, copied examples, negation, conditionals, exact
+    qualifiers such as ``exactly N`` and unsupported families decline.
     The shared scope helper remains a limited textual convention, not a general
     natural-language instruction classifier.
     """
@@ -176,7 +225,8 @@ def public_literal_plan(task) -> PublicLiteralPlan | None:
                                           for i, value in enumerate(constraints)]]
     rules, spans = [], []
     for source, text in sources:
-        groups = list(_GROUP.finditer(text))
+        groups = sorted([*_GROUP.finditer(text), *_EXACT_GROUP.finditer(text)],
+                        key=lambda group: group.start())
         for hint in (*_DIRECTIVE_SCAN.finditer(text), *_FREQUENCY_HINT.finditer(text),
                      *_UNSUPPORTED_FREQUENCY.finditer(text)):
             if not any(group.start() <= hint.start() and hint.end() <= group.end() for group in groups):
@@ -195,6 +245,18 @@ def public_literal_plan(task) -> PublicLiteralPlan | None:
                     return None
                 span = PublicLiteralSpan(source, item.start(), item.end(), item.group())
                 items.append(LiteralMinimumRule(literal, int(count), span))
+                start, end = item.span("literal")
+                masked[start:end] = " " * (end - start)
+            for item in _EXACT_ITEM.finditer(text, group.start(), group.end()):
+                count = _exact_count(item["quantifier"])
+                if count is None:
+                    return None
+                raw = item["literal"]
+                literal = raw[1:-1] if raw[0] in "\"\u201c'\u2018`" else raw
+                if not literal or not literal.isascii() or not literal.isalpha():
+                    return None
+                span = PublicLiteralSpan(source, item.start(), item.end(), item.group())
+                items.append(LiteralMinimumRule(literal, count, span, "=="))
                 start, end = item.span("literal")
                 masked[start:end] = " " * (end - start)
         masked_text = "".join(masked)

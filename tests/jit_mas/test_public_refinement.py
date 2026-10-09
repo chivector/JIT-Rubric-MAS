@@ -143,6 +143,89 @@ def test_empty_review_still_submits_only_the_revision():
     assert len(models.responses.requests) == 2
 
 
+@pytest.mark.parametrize("revision_mode", ["full", "patch"])
+def test_opt_in_empty_review_preserves_exact_draft_and_spends_only_remaining_review_call(revision_mode):
+    task, result = public_fixture()
+    result.answer = "The clock keeps time.\nIts hands move slow.\nThe room is still.\nThe hours go."
+    initial = result.answer
+    config = refinement_config().model_copy(update={
+        "public_skip_empty_revision": True, "public_revision_mode": revision_mode})
+    ledger = BudgetLedger(2, 2_000_000, 0)
+    ticket = ledger.reserve("inference", "writer", 30, 20)
+    ledger.settle(ticket, 30, 20)
+    models = Models([{"issues": []}])
+    snapshots = []
+    refine_public_answer(task, result, models, ledger, config,
+                         audit_writer=lambda value: snapshots.append(copy.deepcopy(value)))
+    audit = result.metadata["public_refinement"]
+    assert result.answer == initial
+    assert [agent for _, agent, _, _ in models.created] == ["public-review"]
+    assert ledger.snapshot()["model_calls"] == 2 and ledger.snapshot()["tokens"] == 100
+    assert audit["selection_reason"] == "validated_empty_public_review"
+    assert audit["revision"] is audit["revision_hash"] is None
+    assert audit["public_empty_review_shortcut"]["skipped_revision"] is True
+    assert len(audit["calls"]) == len(audit["budget_records"]) == 1
+    assert audit["answer_hash"] == audit["draft_hash"] == digest(initial)
+    assert audit["status"] == "completed" and audit == snapshots[-1]
+    assert audit["audit_hash"] == digest({key: value for key, value in audit.items() if key != "audit_hash"})
+
+
+def test_opt_in_empty_review_shortcut_does_not_skip_supported_repairs():
+    task, result = public_fixture()
+    models = Models([REVIEW, {"answer": REVISION}])
+    config = refinement_config().model_copy(update={"public_skip_empty_revision": True})
+    refine_public_answer(task, result, models, BudgetLedger(None, 2_000_000, 0), config)
+    assert result.answer == REVISION
+    assert len(models.responses.requests) == 2
+    assert result.metadata["public_refinement"]["public_empty_review_shortcut"]["skipped_revision"] is False
+
+
+def test_empty_review_cannot_skip_a_proven_literal_failure_even_without_structural_guard():
+    task = PublicTask(task_id="opaque", question="Use word shore twice.")
+    result = RunResult(answer="shore", terminated_reason="final_answer", metadata={})
+    models = Models([{"issues": []}, {"answer": "shore shore"}])
+    config = refinement_config().model_copy(update={"public_skip_empty_revision": True})
+    refine_public_answer(task, result, models, BudgetLedger(None, 2_000_000, 0), config)
+    assert result.answer == "shore shore"
+    audit = result.metadata["public_refinement"]
+    assert audit["public_input"]["draft_literal_constraint_diagnostics"]["status"] == "fail"
+    assert audit["public_empty_review_shortcut"]["skipped_revision"] is False
+    assert len(models.responses.requests) == 2
+
+
+def test_empty_review_cannot_submit_a_projected_initial_draft():
+    task, result = public_fixture()
+    result.metadata["public_positional_draft_projection"] = {"active": True}
+    models = Models([{"issues": []}, {"answer": REVISION}])
+    config = refinement_config().model_copy(update={"public_skip_empty_revision": True})
+    refine_public_answer(task, result, models, BudgetLedger(None, 2_000_000, 0), config)
+    assert result.answer == REVISION
+    assert len(models.responses.requests) == 2
+    assert result.metadata["public_refinement"]["public_empty_review_shortcut"]["skipped_revision"] is False
+
+
+def test_empty_review_still_runs_required_typed_numeric_construction():
+    task = PublicTask(task_id="opaque", question="Include exactly 2 numbers in the response.")
+    result = RunResult(answer="The plan uses 3 examples and 5 steps.",
+                       terminated_reason="final_answer", metadata={})
+    construction = {"opening": "", "number_slots": [
+        {"before": "The plan uses", "number": "3", "after": "examples."},
+        {"before": "It has", "number": "5", "after": "steps."}], "closing": ""}
+    models = Models([{"issues": []}, construction])
+    config = refinement_config().model_copy(update={
+        "public_skip_empty_revision": True, "public_numeric_construction": True,
+        "public_refinement_response_format": "json_schema"})
+    refine_public_answer(task, result, models, BudgetLedger(None, 2_000_000, 0), config)
+    assert result.answer == "The plan uses 3 examples. It has 5 steps."
+    assert len(models.responses.requests) == 2
+    assert result.metadata["public_refinement"]["public_empty_review_shortcut"]["skipped_revision"] is False
+
+
+def test_skip_empty_revision_requires_public_refinement():
+    with pytest.raises(ValueError, match="requires public_refinement"):
+        MASConfig(backend="scripted", public_skip_empty_revision=True)
+
+
 @pytest.mark.parametrize("bad_review", [
     "not json", '```json\n{"issues": []}\n```', '[]', '{"issues": [], "score": 9}',
     '{"issues": [], "issues": []}', '{"issues": [], "unused": NaN}',

@@ -53,6 +53,68 @@ def test_multiple_public_sources_are_all_retained_and_no_other_metadata_is_parse
     assert public_literal_plan(request).audit() == plan.audit()
 
 
+@pytest.mark.parametrize("quantifier,count", [
+    ("once", 1), ("twice", 2), ("thrice", 3), ("three times", 3),
+    ("one time", 1), ("ten times", 10), ("0 times", 0), ("128 times", 128),
+])
+def test_exact_literal_counts_retain_operator_and_original_span(quantifier, count):
+    question = f'Include keyword "shore" {quantifier} in your response.'
+    plan = public_literal_plan(task(question))
+    assert plan is not None
+    assert [(rule.literal, rule.minimum, rule.operator) for rule in plan.rules] == [("shore", count, "==")]
+    assert plan.audit()["rules"][0]["exact_occurrences"] == count
+    assert "minimum_occurrences" not in plan.audit()["rules"][0]
+    for span in (*plan.instruction_spans, *(rule.span for rule in plan.rules)):
+        assert question[span.start:span.end] == span.text
+
+
+def test_mixed_literal_rules_follow_original_source_order_and_preserve_constraints():
+    public = task("Include word tide once and include word gull twice. Use word sky at least 3 times.",
+                  ["Use word dune three times, word sand five times, and word reef seven times."])
+    plan = public_literal_plan(public)
+    assert plan is not None
+    assert [(rule.literal, rule.minimum, rule.operator) for rule in plan.rules] == [
+        ("tide", 1, "=="), ("gull", 2, "=="), ("sky", 3, ">="),
+        ("dune", 3, "=="), ("sand", 5, "=="), ("reef", 7, "=="),
+    ]
+    assert [span.source for span in plan.instruction_spans] == ["question", "question", "constraints[0]"]
+
+
+@pytest.mark.parametrize("question", [
+    "Use word shore once word tide twice.",
+    "Use word shore once\nword tide twice.",
+    "Use word shore 02 times.",
+    "Use word shore 129 times.",
+    "Use word shore once per paragraph.",
+    "Do not use word shore once.",
+    "If useful, use word shore once.",
+    'Discuss the quotation "Use word shore once."',
+    "Use word shore once. The word tide occurs twice.",
+    "Use word shore once. The word tide must not appear twice.",
+    "Use word shore once. The term tide should appear thrice.",
+    "Use word shore once. This count is per paragraph.",
+    "Use word shore once. Count it in the title only.",
+    "Use word shore once. The count excludes the title.",
+])
+def test_exact_compiler_declines_unsupported_continuations_and_scopes(question):
+    assert public_literal_plan(task(question)) is None
+
+
+def test_an_unsupported_exact_constraint_invalidates_rules_from_other_public_sources():
+    assert public_literal_plan(task("Use word shore once.", ["The word tide occurs twice."])) is None
+
+
+@pytest.mark.parametrize("answer,status", [
+    ("shore", "pass"), ("(shore).", "pass"), ("shore shore", "fail"),
+    ("nothing", "fail"), ("SHORE", "unknown"), ("shore Shore", "unknown"),
+    ("shore shores", "unknown"), ("shore-shore", "unknown"),
+    ("shore\u0301", "unknown"), ("xshore", "unknown"),
+])
+def test_exact_literal_diagnostics_require_sufficient_lower_and_upper_evidence(answer, status):
+    plan = public_literal_plan(task("Use word shore once."))
+    assert plan.diagnose(answer)["status"] == status
+
+
 @pytest.mark.parametrize("question", [
     "Do not use word shore at least 2 times.",
     "Never include word shore at least 2 times.",
@@ -254,6 +316,16 @@ def test_unknown_initial_or_revision_and_actual_improvement_do_not_select_initia
     checks = audit["public_candidate_guard"]["literal_candidate_checks"]
     assert checks["initial"]["status"] == initial_status
     assert checks["revision"]["status"] == revision_status
+
+
+def test_exact_literal_guard_preserves_valid_frequency_when_a_rewrite_repeats_it():
+    result, audit, models, ledger, snapshots = refine("Use word shore once.", "shore", "shore shore")
+    assert result.answer == "shore"
+    assert audit["selection_reason"] == "explicit_public_literal_count_regression"
+    checks = audit["public_candidate_guard"]["literal_candidate_checks"]
+    assert checks["initial"]["status"] == "pass" and checks["revision"]["status"] == "fail"
+    assert len(models.requests) == ledger.snapshot()["model_calls"] == 2
+    assert audit == snapshots[-1]
 
 
 @pytest.mark.parametrize("question", ["Write a short scene.",

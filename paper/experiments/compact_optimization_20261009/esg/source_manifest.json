@@ -1,0 +1,327 @@
+{
+  "source_additions": [
+    {
+      "source_id": "hm2024",
+      "url": "https://hmgroup.com/wp-content/uploads/2025/03/HM-Group-Annual-and-sustainability-report-2024.pdf",
+      "source_text_sha256": "4dacaa19c173ceacf23f2d4a2541c335fb822fb5e59b676e5ab869eb8b7eb6fd",
+      "archive_locator": "23d99aa73f3bcb101dc0300d3d6786734bf6ad9b2443b5b801d95787908d6846.json",
+      "sections": [
+        {
+          "span_start": 5632,
+          "span_end": 6208,
+          "sha256": "6c41fdd64b6813ae7f7cb95bfa2154ac7f431f32ddaa63d5fb3b6438c14c08b7"
+        },
+        {
+          "span_start": 62350,
+          "span_end": 62900,
+          "sha256": "4583b6f5295d1153f7d80b68aa8c3aa5a54c87b97f3bd5f6b73c2245e2ace8dd"
+        },
+        {
+          "span_start": 77930,
+          "span_end": 79170,
+          "sha256": "9a9716a729b79494996242a49c5a0725271bb4626fb2e6e89adacd129a25c72a"
+        },
+        {
+          "span_start": 252648,
+          "span_end": 255130,
+          "sha256": "2dc1d9808a48adfefc6a1f6c4a5eb9d8807c2953be501089281abe97d6b0b869"
+        },
+        {
+          "span_start": 653450,
+          "span_end": 654060,
+          "sha256": "0ea5c1361b5f7cca8fe19b40e515fa1c974aab76a5053a089680e926138a99e9"
+        },
+        {
+          "span_start": 220400,
+          "span_end": 223450,
+          "sha256": "8ad28f51adb68b791598e4ab4336f551396e08415d9b96502c1ff03acd3d5043"
+        },
+        {
+          "span_start": 261650,
+          "span_end": 263660,
+          "sha256": "a91d4364ea7c3f7c643d3deb496080faf7e7b184b02ddf13d9722c96f858e679"
+        },
+        {
+          "span_start": 342208,
+          "span_end": 344030,
+          "sha256": "76e37b81be3db3fb3f8bbd99bd255734638fb9628c007e70fcb91b7603495e5e"
+        },
+        {
+          "span_start": 355186,
+          "span_end": 357105,
+          "sha256": "c2019ac221e2194b2a19ec52cfab6ed9a9249d648c1fce1ffa657d7e183a8495"
+        },
+        {
+          "span_start": 366430,
+          "span_end": 367545,
+          "sha256": "a75167bcd7de69338dbaaf1b33ed8571be0c247e68cc004355fc8cc54f4a73eb"
+        }
+      ]
+    },
+    {
+      "source_id": "patagonia2025",
+      "url": "https://www.patagonia.com/media/pdf/patagonia-progress-report-2025.pdf",
+      "source_text_sha256": "b7412df050d0c24b1893efcaff84d195e296a300acaecc158e34e0c01b3610d9",
+      "archive_locator": "3e95fb3494d634be2c9a858e9d0b01642c5e682aede949a1bfaaf2fcc40ab2da.json",
+      "sections": [
+        {
+          "span_start": 11378,
+          "span_end": 12180,
+          "sha256": "415eebeffbc3a366a66dfbd6936c78a3f0f2d535ea68405b10f43f45136ce3f6"
+        },
+        {
+          "span_start": 27600,
+          "span_end": 31400,
+          "sha256": "be0c1d173d389211ddd6102caa4edc6c2aef2b30b77942a3eaf6842a15e0c168"
+        },
+        {
+          "span_start": 98850,
+          "span_end": 99500,
+          "sha256": "e4fe22c102c9fb0b997599ac9368798c1449219be09722ae297d3816805bfa29"
+        },
+        {
+          "span_start": 100230,
+          "span_end": 100850,
+          "sha256": "eaecb7023dde9702c72851bec93720923a43b4b1fd53423be46278c38bd20cdb"
+        },
+        {
+          "span_start": 118820,
+          "span_end": 120130,
+          "sha256": "bfd21688888bb795089640eebcfa1c5080b8a827678205b769ae128904ba98e9"
+        },
+        {
+          "span_start": 138100,
+          "span_end": 139100,
+          "sha256": "c357d2f82b44d6f3002a6cc5f147214f6d8e017350b89b0a208b82c4cd16617c"
+        },
+        {
+          "span_start": 158050,
+          "span_end": 159150,
+          "sha256": "f761c05fa74c73dc503d3641ba4ec9c062e727f70281d7874017c7be077409f8"
+        },
+        {
+          "span_start": 143900,
+          "span_end": 145200,
+          "sha256": "a0170cae56b672e8c9f3830e61fdec04e9c24236a978d926520f5da31433808b"
+        },
+        {
+          "span_start": 146300,
+          "span_end": 149300,
+          "sha256": "3bed7a5a20337cbbcd1dd89ad46855eb79c35c10320e68120796c7f3f6254b7e"
+        }
+      ]
+    },
+    {
+      "source_id": "frfinance2024",
+      "url": "https://www.fastretailing.com/eng/ir/library/pdf/ar2024_en.pdf",
+      "source_text_sha256": "2f95b11e8dea09c43d64b8bafc7f3badbf74f7e1d9290badf5cb41ab4cc10b79",
+      "archive_locator": "375298a22439c0479b2f2125ed265a1f22f8a2bad2de7f5e12f8d47e2103080e.json",
+      "sections": [
+        {
+          "span_start": 2450,
+          "span_end": 2950,
+          "sha256": "a73cd472ef160c87cc0466faae85119b127346c6758f37e2ad6d907b86e58bf7"
+        },
+        {
+          "span_start": 16640,
+          "span_end": 17120,
+          "sha256": "1295216d380ac9ba1c58693c64d4b39bd292b2a82f53dbf027ae77d196b8d550"
+        },
+        {
+          "span_start": 142550,
+          "span_end": 142980,
+          "sha256": "465258bfded6e56858b0115526654df374279dfa1bebd82cdec796f2c478755d"
+        },
+        {
+          "span_start": 171940,
+          "span_end": 173140,
+          "sha256": "7e9f8696a8bc45a6ac4fef79efd8740b013f550db370dcbedcd3e0297df809eb"
+        },
+        {
+          "span_start": 128728,
+          "span_end": 129010,
+          "sha256": "b99767367d4733a401907815fd72442bd8f9314d8cae66a5a989ed12690bc57f"
+        },
+        {
+          "span_start": 84800,
+          "span_end": 85800,
+          "sha256": "fe446bdb4300da49a23dc501ea0b216345958cde1e8bbe58ef1bc88e0d097088"
+        }
+      ]
+    },
+    {
+      "source_id": "fr2024",
+      "url": "https://www.fastretailing.com/eng/ir/library/pdf/ar2024_en_06.pdf",
+      "source_text_sha256": "e86499445630e5430620e206f38a72e6c51a1ecc5b003df887c599ce34bb10da",
+      "archive_locator": "241320156d3a67a8e635a0b260cffad2ca9da496d02a54266de86a23149ec2c3.json",
+      "sections": [
+        {
+          "span_start": 4700,
+          "span_end": 5430,
+          "sha256": "c0fa1f33df0c245472b50469141257e00bc780884f960caeaa0ae5a87613e986"
+        }
+      ]
+    },
+    {
+      "source_id": "frclimate2025",
+      "url": "https://www.fastretailing.com/eng/sustainability/environment/climatechange.html",
+      "source_text_sha256": "1b5817a44713b6a8b4c0f8143354eb36a64feae3376503b8c1e696417cad50b9",
+      "archive_locator": "26519701c145f49104dc3433f5518b684d155c94e852642298a498856d831145.json",
+      "sections": [
+        {
+          "span_start": 9992,
+          "span_end": 10920,
+          "sha256": "b9f2b7b220c9ba09769f14efb06334bc6ec944b7c77836e8eb64a63699e4057b"
+        },
+        {
+          "span_start": 13320,
+          "span_end": 17810,
+          "sha256": "a31b62874194359cdaf389edb5d55741bc2cef4c3b2f4bf3d23639c5139a56be"
+        }
+      ]
+    },
+    {
+      "source_id": "frenergy",
+      "url": "https://www.fastretailing.com/eng/sustainability/environment/energy.html",
+      "source_text_sha256": "eb9b15b9c1e7f9b6b7b4ae7303ce4347017c27b5d3de714659452d28093abf7e",
+      "archive_locator": "4ac9d9689e29fea23bfb495250b57c8c25b6a8e44d2ea90093302e0f9cc26543.json",
+      "sections": [
+        {
+          "span_start": 11027,
+          "span_end": 11915,
+          "sha256": "a6706e01f82cbb7ab1ed3052d15acdef95022de375a37bb81a513cbaf4b40d08"
+        }
+      ]
+    },
+    {
+      "source_id": "frratings",
+      "url": "https://www.fastretailing.com/eng/sustainability/report/evaluation.html",
+      "source_text_sha256": "5b5c81f0da02ca72639880eb50108068c12d60f0bbfe3aa47337c6abf9079897",
+      "archive_locator": "71637e19c67292d22720051907709e0ed687bbd4c31986a85b8ccdfe24244538.json",
+      "sections": [
+        {
+          "span_start": 3977,
+          "span_end": 5500,
+          "sha256": "0fd7d1e70fac5d4362a0a8b4c2293c690cc0890ca0e69d05aa13bd501cab5dc7"
+        },
+        {
+          "span_start": 5800,
+          "span_end": 6400,
+          "sha256": "26e83b547af91841308dcdedadb26255cec3ba20095f53e22ad4c4c0e514ac2b"
+        },
+        {
+          "span_start": 7483,
+          "span_end": 8190,
+          "sha256": "adc9a8de886c50c7108844d18b06b3d8f3c34c2edd618ed3a990f6ce192ee998"
+        }
+      ]
+    },
+    {
+      "source_id": "hmslavery",
+      "url": "https://hmgroup.com/wp-content/uploads/2025/03/HM-Group-Modern-slavery-statement-2024.pdf",
+      "source_text_sha256": "44473cbe8ce0fff5fd09bfcfa389df58611be0dec0fc0e321e449570966252a1",
+      "archive_locator": "78ce926c323555f2c78b2a0d48248ffe99d6395d97b221724612471de2d67d15.json",
+      "sections": [
+        {
+          "span_start": 13300,
+          "span_end": 14770,
+          "sha256": "86a151918acd93ad74ea1d5cba17a89360045fcbc5f75c0bc97db3386f2fe48d"
+        },
+        {
+          "span_start": 20285,
+          "span_end": 23200,
+          "sha256": "d892f58e0cd70c28c4ba3bd565ecf7ca6abb99fd44dabbb11f7f91d4cac099df"
+        }
+      ]
+    },
+    {
+      "source_id": "fla2025",
+      "url": "https://www.fairlabor.org/wp-content/uploads/2025/09/Patagonia_Post-Accreditation-Report_2025.pdf",
+      "source_text_sha256": "679b482bfa2b26ad121ddbc2e560b315837c1a0af66261ec3957e5111da1d03f",
+      "archive_locator": "7c68fd3f39323cadb1e9ed3ff9a84506a5ca50c7234730d95a17b222a2bb1061.json",
+      "sections": [
+        {
+          "span_start": 6970,
+          "span_end": 7570,
+          "sha256": "0c508e72d29015cbc6bb946441cbaeb52dfddd4ad670a2ca75ac5198d850f8e4"
+        }
+      ]
+    },
+    {
+      "source_id": "bcorp",
+      "url": "https://www.bcorporation.net/en-us/find-a-b-corp/company/patagonia-inc/",
+      "source_text_sha256": "f36fbd676f8bb1086895b9be5a1133e87aaa4c9db8e4f2d951d823046dd43c21",
+      "archive_locator": "631760007224248c14d38b5cb61529a9dddb7f34c0ae90bd0b2143824d0811c1.json",
+      "sections": [
+        {
+          "span_start": 2700,
+          "span_end": 4677,
+          "sha256": "9c39a34dc0d606540156af6a7cd5c9924ec53a86493621422b40f2c058c23411"
+        }
+      ]
+    },
+    {
+      "source_id": "blabdisclosure",
+      "url": "https://s3.amazonaws.com/blab-impact-published-production/FwqEOpz9x13JdhDqn2Lxp35D5iY6Zoht",
+      "source_text_sha256": "45de0d1fa364961e1096d34d999cfe0d331273127f6121b1d61f46b62be04017",
+      "archive_locator": "e78510eba19c411c3543c33d5d92f394c16efbec507a6a498decb80ef0b128bc.reextracted.json",
+      "sections": [
+        {
+          "span_start": 0,
+          "span_end": 700,
+          "sha256": "ebe1f79b495a12eab247e070cfc06091008ec3cced990167ff7d416a0408fb11"
+        },
+        {
+          "span_start": 4850,
+          "span_end": 6080,
+          "sha256": "875f05c8e2f706dfe580d30fc1dd6fc79ae037e15da6e0791b85c833e5366b78"
+        },
+        {
+          "span_start": 10390,
+          "span_end": 11300,
+          "sha256": "1a9b4810720fce706f1c569d69beed322ec02634600949b296dd64d1600505e4"
+        }
+      ]
+    },
+    {
+      "source_id": "hmwff",
+      "url": "https://hmgroup.com/news/hm-ranks-1st-in-fashion-revolutions-what-fuels-fashion-report/",
+      "source_text_sha256": "8ae876e906d4ca220925be676ec1f1c74f68394b928b284e7d95bb9c5a2d972f",
+      "archive_locator": "8ad4dcdcc5779ad831daa37c87f247778031afd2ab8a6e42f31a653caccb46d2.json",
+      "sections": [
+        {
+          "span_start": 0,
+          "span_end": 1967,
+          "sha256": "8ae876e906d4ca220925be676ec1f1c74f68394b928b284e7d95bb9c5a2d972f"
+        }
+      ]
+    },
+    {
+      "source_id": "fti2023",
+      "url": "https://www.fashionrevolution.org/fashion-transparency-index-2023/",
+      "source_text_sha256": "f05b1051b17d8f35e14c21ad9aec37f9c5de44b0c15ebab1b3dffed14cd6c068",
+      "archive_locator": "a0812aacf1ea74115a5bc7112df71d2e9c122fbbb7c8938f3e7844c4d6d0c1fa.json",
+      "sections": [
+        {
+          "span_start": 2280,
+          "span_end": 3260,
+          "sha256": "e93daa9a34dbffd65e3cb90f0d44307cce76f3331f4f9adf828999b36494c980"
+        },
+        {
+          "span_start": 4700,
+          "span_end": 5500,
+          "sha256": "c383069e39002728c560fda68801f7951727f4065aa4cdea9b076851570d36a6"
+        }
+      ]
+    }
+  ],
+  "source_additions_hash": "ff9889ebe39ef244a9390375f3683d30476b81694518b1b551d21ffebf5f758a",
+  "input_answer_hash": "4a30cfc25d40e44455210217ee3b5df102ddff7141ad7ffa3df55dffa8346f69",
+  "answer_hash": "20b70e18b06fdce8d9f50a1e1d0150de6422f5d88569a53f3f1cb16fcf0ec303",
+  "new_generation_model_calls": 0,
+  "new_generation_tokens": 0,
+  "basis": "frozen v6 arithmetic report derived from v5, with targeted public archive enrichment",
+  "word_count_whitespace": 3249,
+  "truncated": false,
+  "frozen_scoring_input_policy": "No component inputs, weights, category totals or ranks are changed"
+}

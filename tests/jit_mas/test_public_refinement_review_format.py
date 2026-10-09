@@ -7,7 +7,9 @@ from pydantic import ValidationError
 
 from jit_mas.budget import BudgetLedger, MeteredModel
 from jit_mas.config import MASConfig, ModelConfig
-from jit_mas.public_refinement import PublicReview, refine_public_answer
+from jit_mas.public_refinement import (PUBLIC_COVERAGE_REVISION_HINT,
+                                        PUBLIC_COVERAGE_REVIEW_HINT, PublicReview,
+                                        refine_public_answer)
 from jit_mas.output_contract import PUBLIC_ELIGIBILITY_SCOPE_PROMPT
 from jit_mas.schemas import PublicTask, digest
 from scripts.kernel.types import RunResult
@@ -53,6 +55,8 @@ def test_review_schema_and_ordinary_prose_object_transport_preserve_complete_art
                         audit_writer=lambda audit: snapshots.append(copy.deepcopy(audit)))
     assert all(PUBLIC_ELIGIBILITY_SCOPE_PROMPT in request["messages"][0]["content"]
                for request in models.requests)
+    assert PUBLIC_COVERAGE_REVIEW_HINT in models.requests[0]["messages"][0]["content"]
+    assert PUBLIC_COVERAGE_REVISION_HINT in models.requests[1]["messages"][0]["content"]
     expected_review = {"type": "json_schema", "json_schema": {
         "name": "PublicReview", "strict": True, "schema": PublicReview.model_json_schema()}}
     assert models.requests[0]["kwargs"]["response_format"] == expected_review

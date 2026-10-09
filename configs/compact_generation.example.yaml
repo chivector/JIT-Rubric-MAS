@@ -1,0 +1,14 @@
+backend: native_jit
+max_total_tokens: 100000
+task_timeout: 360
+max_inflight_requests: 1
+models:
+  exec:
+    model: ${MAS_EXEC_MODEL}
+    endpoint: ${MAS_EXEC_ENDPOINT}
+    key_env: MAS_EXEC_API_KEY
+    max_tokens: 4096
+    timeout: 240
+    temperature: 0
+    frequency_penalty: 0
+    context_policy: reject

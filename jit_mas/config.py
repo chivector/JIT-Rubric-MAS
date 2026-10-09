@@ -69,6 +69,7 @@ class MASConfig(Record):
     planning_response_format: Literal["json_object", "json_schema"] = "json_object"
     # Two public-only global review/revision calls before submission; same ledger.
     public_refinement: bool = False
+    public_skip_empty_revision: bool = False
     # Select a valid draft when an ordinary rewrite locally fails or loses its body.
     # This public-only selection never inspects evaluator scores or rescues execution.
     public_refinement_guard: bool = False
@@ -110,6 +111,8 @@ class MASConfig(Record):
 
     @model_validator(mode="after")
     def fixed_team_limits(self):
+        if self.public_skip_empty_revision and not self.public_refinement:
+            raise ValueError("Skipping empty public revisions requires public_refinement")
         if self.public_membership_attention_checks and not (
                 self.public_refinement and self.public_membership_observations):
             raise ValueError("Public membership attention checks require public_refinement "

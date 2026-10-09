@@ -5,7 +5,8 @@ consume the same task ledger as planning, generation and local execution. An
 invalid review/revision fails the attempt under the default policy. An optional
 public guard can retain an eligible initial artifact after a local revision
 validation failure or catastrophic body loss, without consulting an evaluator.
-An opt-in typed-response validation repair permits at most one additional call
+An opt-in empty-review shortcut preserves an eligible ordinary draft without
+a revision call. An opt-in typed-response validation repair permits at most one additional call
 under the same task ledger, output cap and strict construction contract.
 """
 
@@ -73,7 +74,7 @@ syntax; state each passage once and stop after the closing brace. Preserve every
 explicit public length and content requirement. The coordinator applies a
 transparent public structural guard and may retain the initial artifact after a
 local response-validation failure, catastrophic or Markdown-heading-only body loss or a sufficiently
-proven regression of compiled public literal minima. This guard is not an
+proven regression of compiled public literal counts. This guard is not an
 evaluator, a quality retry or permission to omit the finished artifact.
 When the draft contains multiple meaningful paragraphs, preserve their actual
 paragraph and line-break structure in the revised answer unless the original
@@ -83,15 +84,60 @@ a complete draft into one long line merely to simplify the response.
 """
 
 PUBLIC_LITERAL_HINT = """\npublic_literal_constraints contains only conservatively
-compiled minimum word-occurrence requirements from the original public task,
-with their exact public spans and complete-draft observations. Preserve these
-original requirements in the complete finished artifact. Strict original-case
-counts can establish a sufficient pass; a broader casefolded substring count
-below the minimum establishes a sufficient failure. All other observations are
-unknown, not proof of either compliance or noncompliance. Compounds, plural or
-embedded forms cannot establish the strict pass. Process notes are not the requested
-artifact, and lexical counts do not certify their meaning or relevance. Do not expand
-an unknown observation into a new requirement or guess a benchmark score.
+compiled literal-count requirements from the original public task, with their
+exact public spans and complete-draft observations. Preserve these original
+requirements in the complete finished artifact. For a >= rule, strict
+original-case counts can establish a sufficient pass; for an == rule, strict
+over-count establishes a failure. A broader casefolded substring count below
+the required count establishes a sufficient failure. All other observations
+are unknown, not proof of either compliance or noncompliance. Compounds, plural
+or embedded forms cannot establish the strict pass. Process notes are not the
+requested artifact, and lexical counts do not certify their meaning or
+relevance. Do not expand an unknown observation into a new requirement or
+guess a benchmark score.
+"""
+
+PUBLIC_COVERAGE_REVIEW_HINT = """\nPUBLIC COVERAGE MATRIX (private, before writing issues):
+Construct a source-grounded matrix from the original request, preserving every
+named entity, deliverable, metric, comparison axis, time window, format and
+conjunctive qualifier. For each requested entity/metric pair, mark PRESENT only
+when the draft gives the requested value or finding with its unit, period,
+scope/boundary and nearby source; otherwise mark EXPLICITLY UNAVAILABLE only
+when the draft clearly says that the supplied evidence does not disclose it and
+explains the resulting comparability limit. A silently omitted row is a
+material coverage defect. Check that every requested trend has the available
+years, every requested normalization has its formula and matching inputs, and
+every weighted ranking has reproducible component arithmetic plus its stated
+missing-data or sensitivity treatment. Check each requested controversy or
+audit for date, source type, finding/allegation, response and remediation when
+those fields are requested. Prioritize substantive omissions and unreproducible
+methods. Consolidate multiple passages with the same cause into one issue, such
+as all unsupported year mappings from one chart. Never spend an issue on a
+correct passage, a reassurance, or a finding whose repair is \"no repair needed\".
+Consolidate related omissions into a small number of actionable issues, but do
+not let a long table or a general limitation
+statement stand in for missing entity-level rows. This matrix is private:
+never publish it, hidden rubric labels or score guesses.
+"""
+
+PUBLIC_COVERAGE_REVISION_HINT = """\nPUBLIC COVERAGE COMPLETION:
+Use the review and original request to close supported coverage gaps before
+stylistic polishing. Keep every requested entity and metric visible in the
+final artifact. When the fixed public material does not disclose a requested
+value, retain an explicit entity-level entry such as \"not disclosed in the
+supplied evidence\" or \"not comparable from the supplied periods\", with the
+relevant scope, period and reason; do not silently drop the row or convert
+missing data to zero. For every included quantitative value retain its unit,
+year/period, organizational boundary, operational/value-chain scope and source
+near the claim. Show formulas and actual inputs for calculations, make weighted
+component totals reproducible, and state sensitivity or missing-data arithmetic
+rather than giving unexplained approximations. For a weighted framework, show
+the individual metric scores, any metric weights and the roll-up into each
+category before applying the category weights; an unexplained analyst category
+score is not a reproducible method. Preserve requested trend years,
+audit/controversy fields and bibliography details when supported. Do not add
+unsupported facts merely to fill a matrix, and do not publish the private
+coverage matrix or any process notes.
 """
 
 GROUNDED_PUBLIC_REVIEW_HINT = """\nAdditional public observation protocol:
@@ -773,7 +819,7 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
     literal_plan = None
     literal_initial_diagnostics = None
     title_scope = None
-    if guarded:
+    if guarded or config.public_skip_empty_revision:
         from .public_literal_constraints import public_literal_plan
         from .public_review_observations import artifact_observations, numeric_relation_observations
 
@@ -805,6 +851,13 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
             "validation_scope": "Complete queued-ID coverage, disposition consistency and public quote/link presence only; not semantic scope, affirmative membership or full eligibility verification",
         }
     eligibility = _guard_eligibility(result, positional_plan, numeric_construction_plan)
+    if config.public_skip_empty_revision:
+        audit["public_empty_review_shortcut"] = {
+            "version": "public-empty-review-shortcut-v1", "skipped_revision": False,
+            "eligibility": "Validated empty review, eligible ordinary text draft and no compiled literal failure",
+            "limitations": "An empty public review does not certify task compliance or semantic quality",
+        }
+        audit["organization"] = "one public review plus revision when needed; local AgentSpec caps unchanged"
     if guarded:
         audit["version"] = PUBLIC_REFINEMENT_GUARD_VERSION
         audit["selection_policy"] = "public_structural_guard_without_evaluator_or_retry"
@@ -814,7 +867,7 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
             "body_loss_limits": copy.deepcopy(_BODY_LOSS_LIMITS),
             "limitations": "Initial eligibility proves execution termination only. Structural counts do not certify semantic quality or all public constraints.",
             "public_literal_constraints": (literal_plan.audit() if literal_plan is not None else
-                {"status": "unknown", "reason": "No complete set of supported positive public literal minima"}),
+                {"status": "unknown", "reason": "No complete set of supported positive public literal counts"}),
             "literal_candidate_checks": {"initial": literal_initial_diagnostics, "revision": None},
             "empty_review_line_break_guard": None,
             "markdown_heading_only_guard": {"public_title_scope": title_scope,
@@ -972,7 +1025,8 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
         review_schema = (_membership_attention_review_schema(attention_queue, audit["draft"])
                          if attention_active else PublicReview)
         review = call("public-review", (PUBLIC_MEMBERSHIP_ATTENTION_HINT if attention_active else "")
-                      + REVIEW_PROMPT + (GROUNDED_PUBLIC_REVIEW_HINT if guarded else "")
+                      + PUBLIC_COVERAGE_REVIEW_HINT + REVIEW_PROMPT
+                      + (GROUNDED_PUBLIC_REVIEW_HINT if guarded else "")
                       + (PUBLIC_LITERAL_HINT if literal_plan else "") + compact_membership_hint,
                       public_input, review_schema)
         audit["review"] = review.model_dump(mode="json")
@@ -982,8 +1036,18 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
                 _membership_attention_review_links(attention_queue, audit["review"], audit["draft"]))
         audit["status"] = "reviewed"
         publish()
+        if (config.public_skip_empty_revision and not review.issues and eligibility["eligible"]
+                and isinstance(audit["draft"], str)
+                and (literal_initial_diagnostics is None
+                     or literal_initial_diagnostics["status"] != "fail")):
+            if ledger.remaining_seconds() == 0:
+                raise TimeoutError("Task wall-clock budget exhausted after public review")
+            audit["public_empty_review_shortcut"]["skipped_revision"] = True
+            audit["selection_policy"] = "copy_eligible_draft_after_empty_public_review"
+            return select(audit["draft"], "initial_draft", "validated_empty_public_review")
         revision_schema = PublicRevision
-        revision_instructions = REVISION_PROMPT + (PUBLIC_LITERAL_HINT if literal_plan else "")
+        revision_instructions = REVISION_PROMPT + PUBLIC_COVERAGE_REVISION_HINT \
+            + (PUBLIC_LITERAL_HINT if literal_plan else "")
         revision_payload = {**public_input, "review": audit["review"]}
         if guarded:
             from .public_review_observations import review_basis_observations
@@ -1018,7 +1082,8 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
                 from .public_text_patches import PATCH_REVISION_PROMPT, PublicPatchRevision
 
                 revision_schema = PublicPatchRevision
-                revision_instructions = PATCH_REVISION_PROMPT + (PUBLIC_LITERAL_HINT if literal_plan else "")
+                revision_instructions = (PATCH_REVISION_PROMPT + PUBLIC_COVERAGE_REVISION_HINT
+                                         + (PUBLIC_LITERAL_HINT if literal_plan else ""))
                 audit["public_patch_revision"] = {"version": "public-exact-text-patches-v1", "status": "requested"}
             else:
                 if guarded:
@@ -1122,8 +1187,11 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
                 audit["public_candidate_guard"]["literal_candidate_checks"]["revision"] = literal_revision_diagnostics
                 if (eligibility["eligible"] and literal_initial_diagnostics["status"] == "pass"
                         and literal_revision_diagnostics["status"] == "fail"):
+                    reason = ("explicit_public_literal_count_regression"
+                              if any(rule.operator == "==" for rule in literal_plan.rules)
+                              else "explicit_public_literal_minimum_regression")
                     return select(audit["draft"], "initial_draft",
-                                  "explicit_public_literal_minimum_regression")
+                                  reason)
             from .public_review_observations import empty_review_line_break_regression
 
             layout = empty_review_line_break_regression(task, audit["draft"], final_answer, audit["review"])
