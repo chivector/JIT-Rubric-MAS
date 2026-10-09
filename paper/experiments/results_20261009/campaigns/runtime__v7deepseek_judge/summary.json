@@ -1,7 +1,7 @@
 {
   "name": "runtime__v7deepseek_judge",
   "directory": "C:\\Users\\chizh\\Desktop\\JIT-main\\.runtime\\v7deepseek_judge",
-  "observed_at_utc": "2026-10-09T09:48:01.575819+00:00",
+  "observed_at_utc": "2026-10-09T11:28:53.652418+00:00",
   "registration_sha256": "b3a7bac5ae2a8cdf70bae93c94afca320da439de3d320e7472d50d903e1aac78",
   "protocol_sha256": "677a6722ca185f27f2df6925f95d0b404227d7ec5d866ca7390fc72a8df38ed4",
   "protocol_version": "jit-compose-independent-batch-protocol-v7",

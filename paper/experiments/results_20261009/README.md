@@ -11,10 +11,12 @@
 
 原始结果压缩包与文件级清单上传至 [GitHub Release](https://github.com/chivector/JIT-Rubric-MAS/releases/tag/experiment-results-20261009)。发布资产索引保存在 `release_assets.json`，完整归档范围与排除项目见 Release 的 `archive_index.json`。归档包括 `outputs/`、`.r/`、`C:\J` 的实验结果目录及相关 `.runtime` 实验材料；已有 `paper/experiments` 历史结果继续保存在 Git 中。
 
-SQLite 使用只读连接产生一致副本，包含已提交 WAL 内容，不直接复制运行中的主文件。文件级快照并非整个目录的同一事务；运行中的 r17 还会追加结果，最终报告及最终增量包将再次上传。原始 launch/config/split 和快照保留各自身份，不替换运行树的冻结文件。缓存、锁、WAL/SHM、依赖仓库、凭据文件与启动脚本不作为实验结果上传；出现凭据的文字副本会标记脱敏并记录原件与归档字节哈希。
+最终原始归档包含 59 个 family、71,142 个文件，共 3.22 GB，包含 RR 最终报告和评分 receipts。SQLite 使用只读连接产生一致副本，包含已提交 WAL 内容，不直接复制运行中的主文件；文件级快照并非整个目录的同一事务。原始 launch/config/split 和快照保留各自身份，不替换运行树的冻结文件。缓存、锁、WAL/SHM、依赖仓库、凭据文件与启动脚本不作为实验结果上传；出现凭据的文字副本会标记脱敏并记录原件与归档字节哈希。
 
-`rr-runtime.bundle` 保留 r17 所依赖、尚未进入 `main` 的四个代码提交。它的前置提交是 `2f03166e464b5c8222ddb788125d5fce99945180`，终点是 `a7a0df262a6f9fd35a33b20782d58225f126737d`。实际运行使用的未提交 RR recovery split 随 `r17_runtime_metadata` 资产保存，不能用 bundle 中的旧 split 替代。
+`rr-runtime.bundle` 保留 r17 所依赖、尚未进入 `main` 的四个代码提交。它的前置提交是 `2f03166e464b5c8222ddb788125d5fce99945180`，终点是 `a7a0df262a6f9fd35a33b20782d58225f126737d`。实际运行使用的未提交 RR recovery split 随 `r17_worktree_identity` 资产保存，不能用 bundle 中的旧 split 替代。
 
 最新 RR recovery v4 已选出 C40，state hash 为 `a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed`。原 r17 v3 最终选版仍为 inconclusive。恢复版运行时上下文为 65,536、margin 2,048、`oldest_turns`，冻结 launch 声明 131,072；这是带工程差异的恢复结果，须连同 provenance 报告。
+
+RR worker PID `36612` 已停止，finished 时间为上海时间 **2026-10-09 18:02:02**。133 TEST 已全部终态并 sealed：RR32 submitted/1 failed、IFEval12 submitted/38 failed、IFBench43 submitted/7 failed。87 条已提交答案的评分 receipts 全部 `evaluation_failed / AttributeError`，有效分数为 0，各组完整均值均为 `null`。剩余工作是建立独立版本化评分恢复，仅评这 87 份原答案，并保留旧 receipts 与 46 个生成失败；详细要求见交接文档 A。
 
 TEST 全部终态并封存后才评分。分母使用注册槽位数，缺失评分时完整均值保持 `null`；完整样本的描述性均值不能替代完整均值。不同 benchmark 的原生指标分别报告，历史和恢复版本不拼成一条新轨迹。

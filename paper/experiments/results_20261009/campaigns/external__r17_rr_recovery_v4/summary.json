@@ -1,7 +1,7 @@
 {
   "name": "external__r17_rr_recovery_v4",
   "directory": "C:\\J\\r17_rr_recovery_v4",
-  "observed_at_utc": "2026-10-09T09:48:01.575819+00:00",
+  "observed_at_utc": "2026-10-09T11:28:53.652418+00:00",
   "registration_sha256": "6b3013d96f761135343378382947aafcc8c0acb5b481b246edde2e63662015e4",
   "protocol_sha256": "468ae7ce1b2045ba39f778b32b5902ce77d2aff7f370a6486156b20e080fe17e",
   "protocol_version": "jit-compose-independent-batch-protocol-v7",
@@ -36,25 +36,13 @@
       "source": "researchrubrics",
       "kind": "test",
       "status": "failed",
-      "count": 42
-    },
-    {
-      "source": "researchrubrics",
-      "kind": "test",
-      "status": "pending",
-      "count": 16
-    },
-    {
-      "source": "researchrubrics",
-      "kind": "test",
-      "status": "started",
-      "count": 4
+      "count": 46
     },
     {
       "source": "researchrubrics",
       "kind": "test",
       "status": "submitted",
-      "count": 71
+      "count": 87
     },
     {
       "source": "researchrubrics",
@@ -74,25 +62,13 @@
       "source": "researchrubrics",
       "target": "ifbench",
       "status": "failed",
-      "count": 3
-    },
-    {
-      "source": "researchrubrics",
-      "target": "ifbench",
-      "status": "pending",
-      "count": 16
-    },
-    {
-      "source": "researchrubrics",
-      "target": "ifbench",
-      "status": "started",
-      "count": 4
+      "count": 7
     },
     {
       "source": "researchrubrics",
       "target": "ifbench",
       "status": "submitted",
-      "count": 27
+      "count": 43
     },
     {
       "source": "researchrubrics",
@@ -130,6 +106,12 @@
       "kind": "test",
       "target": "ifbench",
       "error_type": "JSONDecodeError",
+      "count": 4
+    },
+    {
+      "kind": "test",
+      "target": "ifbench",
+      "error_type": "RuntimeError",
       "count": 2
     },
     {
@@ -1198,11 +1180,76 @@
       "snapshot_hash_valid": true
     }
   ],
-  "test_sealed": false,
-  "evaluation_receipts": 0,
-  "evaluation_errors": {},
-  "final_report_available": false,
-  "test_report": null,
+  "test_sealed": true,
+  "evaluation_receipts": 87,
+  "evaluation_errors": {
+    "AttributeError": 87
+  },
+  "final_report_available": true,
+  "test_report": {
+    "schema": "independent-test-report-v7",
+    "slots": 133,
+    "evaluated": 133,
+    "complete": 0,
+    "incomplete_or_failed": 133,
+    "token_usage": {
+      "schema": "token-usage-v1",
+      "model_calls": 745,
+      "actual_model_calls": 707,
+      "estimated_model_calls": 38,
+      "input_tokens": 13021732,
+      "output_tokens": 1358984,
+      "total_tokens": 14380716,
+      "estimated_tokens": 2588233,
+      "unattributed_tokens": 0,
+      "usage_unknown": false,
+      "source": "mixed",
+      "by_stage": {
+        "inference": {
+          "model_calls": 745,
+          "actual_model_calls": 707,
+          "estimated_model_calls": 38,
+          "input_tokens": 13021732,
+          "output_tokens": 1358984,
+          "total_tokens": 14380716,
+          "estimated_tokens": 2588233
+        }
+      }
+    },
+    "by_condition": [
+      {
+        "source": "researchrubrics",
+        "run_id": 0,
+        "target": "researchrubrics",
+        "method": "ours_selected",
+        "scores": [],
+        "complete": 0,
+        "slots": 33,
+        "mean_official_score": null
+      },
+      {
+        "source": "researchrubrics",
+        "run_id": 0,
+        "target": "ifeval",
+        "method": "ours_selected",
+        "scores": [],
+        "complete": 0,
+        "slots": 50,
+        "mean_official_score": null
+      },
+      {
+        "source": "researchrubrics",
+        "run_id": 0,
+        "target": "ifbench",
+        "method": "ours_selected",
+        "scores": [],
+        "complete": 0,
+        "slots": 50,
+        "mean_official_score": null
+      }
+    ],
+    "test_feedback_released": true
+  },
   "recovery_provenance": {
     "created_at_utc": "2026-10-09T07:44:19.478637+00:00",
     "source_original_run": "C:\\J\\r17_rr_v3",

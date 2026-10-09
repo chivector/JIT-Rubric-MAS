@@ -11542,10 +11542,10 @@
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:99",
     "ordinal": 401,
-    "status": "started",
+    "status": "submitted",
     "started_at": "2026-10-09T09:46:08.466222+00:00",
-    "finished_at": null,
-    "result_hash": null,
+    "finished_at": "2026-10-09T09:48:44.232798+00:00",
+    "result_hash": "63bf03c691f1b39e1bd308fb489208ef0f340a0cd219e80d54cb8a366812245c",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11556,16 +11556,24 @@
       "target": "ifbench",
       "task_id": "ifbench:99"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "f78d8cba5ff1b033fd158e50b02e04527d01c18fdc075ef396b42bebced641b4",
+      "submission_hash": "97608a2355d5458a715a1e08445ed467f2f9033e4242f4436d5e3b2e3d6ecce2"
+    },
+    "budget": {
+      "tokens": 98166,
+      "model_calls": 8,
+      "wall_seconds": 154.51500000001397
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:76",
     "ordinal": 402,
-    "status": "started",
+    "status": "submitted",
     "started_at": "2026-10-09T09:46:10.052236+00:00",
-    "finished_at": null,
-    "result_hash": null,
+    "finished_at": "2026-10-09T09:48:34.863948+00:00",
+    "result_hash": "25f748c30ed6767d8908a5c5e1a003e065a7c15a6f3d593f03f39162472f70fa",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11576,16 +11584,24 @@
       "target": "ifbench",
       "task_id": "ifbench:76"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "be7346311ac930717a812e37515ccd9a933c6568f8ac66dbe0004b5e959b9d03",
+      "submission_hash": "1e06d9e01a36427ea5deebbec66b5f465ee1e552d61d57f01c482e5bc2733bd5"
+    },
+    "budget": {
+      "tokens": 80947,
+      "model_calls": 6,
+      "wall_seconds": 143.6720000000205
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:224",
     "ordinal": 403,
-    "status": "started",
+    "status": "submitted",
     "started_at": "2026-10-09T09:46:25.904258+00:00",
-    "finished_at": null,
-    "result_hash": null,
+    "finished_at": "2026-10-09T09:48:45.570777+00:00",
+    "result_hash": "c2883d9546f64722d329338848d726366e8c1dc5bdee01013cd9f0130320f747",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11596,16 +11612,24 @@
       "target": "ifbench",
       "task_id": "ifbench:224"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "a4773060345a151c2d5579dad999ec5ad398c2f80618243721c0558559f9355d",
+      "submission_hash": "e176f61aaddaebb232caae7d192f7998fc130ceb0facc1b7828fd647c33eabf5"
+    },
+    "budget": {
+      "tokens": 92789,
+      "model_calls": 8,
+      "wall_seconds": 138.18800000002375
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:71",
     "ordinal": 404,
-    "status": "started",
+    "status": "submitted",
     "started_at": "2026-10-09T09:47:54.704929+00:00",
-    "finished_at": null,
-    "result_hash": null,
+    "finished_at": "2026-10-09T09:49:47.533149+00:00",
+    "result_hash": "104d2fa721c526946e40df04c1e39d32081e28ec5eaeb5a9d7d7da7e75f58b58",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11616,16 +11640,24 @@
       "target": "ifbench",
       "task_id": "ifbench:71"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "f27b3e4cf7026a04a0fc9ed255794a4ba2e555e3d69b02abb45e378680e38b34",
+      "submission_hash": "87185e03bd9975e76d27912cc615e06df939f060e47457fbc51e6422a68005ef"
+    },
+    "budget": {
+      "tokens": 99320,
+      "model_calls": 8,
+      "wall_seconds": 111.34399999998277
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:126",
     "ordinal": 405,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:48:34.874948+00:00",
+    "finished_at": "2026-10-09T09:50:13.163585+00:00",
+    "result_hash": "9118de95772924ba84f2c120f9cc2a65fe6e316dad9e4cf62832dee076909764",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11636,16 +11668,24 @@
       "target": "ifbench",
       "task_id": "ifbench:126"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "3e6ecf3249cf0d647b38a074104cb456c39268a6d58c6a45241fd461f841d49e",
+      "submission_hash": "0415ec2a1f0b21e0825554b7f4ea121529fcd9a08809a250f6a974ee1a6dbe35"
+    },
+    "budget": {
+      "tokens": 69551,
+      "model_calls": 6,
+      "wall_seconds": 97.20300000003772
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:74",
     "ordinal": 406,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:48:44.238861+00:00",
+    "finished_at": "2026-10-09T09:50:20.889111+00:00",
+    "result_hash": "70ff85f7123e16bc9b737c3a04da089f0f5d03ef1f9dbf8771c053db96eff7f6",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11656,16 +11696,24 @@
       "target": "ifbench",
       "task_id": "ifbench:74"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "6fd59f0ce5e4d1211fdb23cf3ead8ab64dc9d4dbebb6fcdf0bafe87fbc6aa844",
+      "submission_hash": "a1c24b61f824d9777bfa835a975a73bb5ec16fa3ccb4ee9db5e6b95d47ad1b54"
+    },
+    "budget": {
+      "tokens": 70380,
+      "model_calls": 6,
+      "wall_seconds": 95.67200000002049
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:3",
     "ordinal": 407,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:48:45.577771+00:00",
+    "finished_at": "2026-10-09T09:50:51.580850+00:00",
+    "result_hash": "3f269a119ff12c32a23411832f122ff16344ba3b037a7e7a4ea1a0e864d5b91b",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11676,16 +11724,24 @@
       "target": "ifbench",
       "task_id": "ifbench:3"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "6e7337f5ebdcf127187d0524e9ddf410d206b084e9d084a3dab89495fa002556",
+      "submission_hash": "0391467b5f3e6cbd99ad3aae368c4367005f68184a7392db94f967544d86f0dd"
+    },
+    "budget": {
+      "tokens": 127307,
+      "model_calls": 8,
+      "wall_seconds": 125.04599999997299
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:252",
     "ordinal": 408,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "failed",
+    "started_at": "2026-10-09T09:49:47.540524+00:00",
+    "finished_at": "2026-10-09T09:52:44.607339+00:00",
+    "result_hash": "beae203a0e8ac65e18e73957ff239caf5c83c14f6e32c0183910f415527d8345",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11696,16 +11752,25 @@
       "target": "ifbench",
       "task_id": "ifbench:252"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "complete": false,
+      "score": null,
+      "error_type": "RuntimeError",
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed"
+    },
+    "budget": {
+      "tokens": 100988,
+      "model_calls": 5,
+      "wall_seconds": 175.78200000000652
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:0",
     "ordinal": 409,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:50:13.169585+00:00",
+    "finished_at": "2026-10-09T09:53:43.373360+00:00",
+    "result_hash": "11872ffdcec66c2fa3deb5c09070154284f15cb1e1f038f2961ac90e0ddbd6ce",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11716,16 +11781,24 @@
       "target": "ifbench",
       "task_id": "ifbench:0"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "4e818b85b8269d631fa48179b17878863d3cde1f2099f19711b1bebc1e8ae20a",
+      "submission_hash": "725ead67f95ab10aac5589b6382307ba603cd163e07f0b11885d85c514a6daf1"
+    },
+    "budget": {
+      "tokens": 117793,
+      "model_calls": 8,
+      "wall_seconds": 209.2029999999795
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:17",
     "ordinal": 410,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:50:20.893343+00:00",
+    "finished_at": "2026-10-09T09:53:48.209768+00:00",
+    "result_hash": "2d37ede0009cae6b128c12a470cc3b1e9b5f6d22afaeb498f9dfc56c9e109290",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11736,16 +11809,24 @@
       "target": "ifbench",
       "task_id": "ifbench:17"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "220e5df16a4ab309198b7b692b857c27a9e229846c511f7fbde161109a6c4815",
+      "submission_hash": "c59dfb701577e5c3d9635c90ceba248ad8eddc62884fbea455a1ec058c92b196"
+    },
+    "budget": {
+      "tokens": 97793,
+      "model_calls": 8,
+      "wall_seconds": 206.45300000003772
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:27",
     "ordinal": 411,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:50:51.588848+00:00",
+    "finished_at": "2026-10-09T09:53:58.330552+00:00",
+    "result_hash": "c3c1631272b9ff867f9f72c6f1c8b1ca2dc185d0085900da5af541c5cd54ea86",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11756,16 +11837,24 @@
       "target": "ifbench",
       "task_id": "ifbench:27"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "68cc430127f16e4a7751c1b7ea17cf76225ae2d91da912d3f6937945648a31b4",
+      "submission_hash": "189b05bfae82d19eddf1b7f6f8cedf6959ab251763b85e6c71fbd73708b72645"
+    },
+    "budget": {
+      "tokens": 100417,
+      "model_calls": 8,
+      "wall_seconds": 185.78100000001723
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:54",
     "ordinal": 412,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:52:44.623176+00:00",
+    "finished_at": "2026-10-09T09:54:19.679191+00:00",
+    "result_hash": "d0da0e024b584d106d80372533e9f287db551627873f6065e5033e2b188b4d61",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11776,16 +11865,24 @@
       "target": "ifbench",
       "task_id": "ifbench:54"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "eb8e5034028b49b05466528c8e0a39c92e5aeb3febafa752932305729e8ad8cc",
+      "submission_hash": "57374b3fa51513e77decfcc1746adda582ccfc6683b60f4b493ee800844cb0a5"
+    },
+    "budget": {
+      "tokens": 68341,
+      "model_calls": 6,
+      "wall_seconds": 93.78100000001723
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:288",
     "ordinal": 413,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "failed",
+    "started_at": "2026-10-09T09:53:43.381381+00:00",
+    "finished_at": "2026-10-09T09:57:10.543254+00:00",
+    "result_hash": "babbe6f1955f6f4809df6a6d8a02c5e310ff2cbaf98ccfd70d7e9b86ecc824bd",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11796,16 +11893,25 @@
       "target": "ifbench",
       "task_id": "ifbench:288"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "complete": false,
+      "score": null,
+      "error_type": "JSONDecodeError",
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed"
+    },
+    "budget": {
+      "tokens": 141533,
+      "model_calls": 7,
+      "wall_seconds": 205.98500000004424
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:186",
     "ordinal": 414,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:53:48.222430+00:00",
+    "finished_at": "2026-10-09T09:58:23.363752+00:00",
+    "result_hash": "b67eec7632e5726c430ab6f8f51bf90de0f328ecb1656d5cda821112b9015539",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11816,16 +11922,24 @@
       "target": "ifbench",
       "task_id": "ifbench:186"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "f125c61bbb73f1632ed33e0d62caafb7e007b133a08f1672b1af892761d6b420",
+      "submission_hash": "87cdfac8d56ab9031b9b565349566f1217e6b9988dd8c6785adf9a390fd3e23e"
+    },
+    "budget": {
+      "tokens": 95881,
+      "model_calls": 8,
+      "wall_seconds": 273.75
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:230",
     "ordinal": 415,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "failed",
+    "started_at": "2026-10-09T09:53:58.340898+00:00",
+    "finished_at": "2026-10-09T09:58:00.343277+00:00",
+    "result_hash": "17ef88f8d27575fbfaa65b898136b55262547623063a8eb3f46e17adb1736211",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11836,16 +11950,25 @@
       "target": "ifbench",
       "task_id": "ifbench:230"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "complete": false,
+      "score": null,
+      "error_type": "RuntimeError",
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed"
+    },
+    "budget": {
+      "tokens": 97030,
+      "model_calls": 5,
+      "wall_seconds": 240.92199999996228
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:257",
     "ordinal": 416,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:54:19.688402+00:00",
+    "finished_at": "2026-10-09T09:58:29.382151+00:00",
+    "result_hash": "091fbaddffd156fc15d3f29b3df1fa2e17577a5d12f1907b941170d8c155bcf2",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11856,16 +11979,24 @@
       "target": "ifbench",
       "task_id": "ifbench:257"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "8b62eef6793b627770e09096d6ce12e47c940f8eae762b55c56d50f6719c709d",
+      "submission_hash": "a2227fe968518378cc959128209b3dd39d183e15260b516d99f4aa6dbf99ddb3"
+    },
+    "budget": {
+      "tokens": 64086,
+      "model_calls": 6,
+      "wall_seconds": 248.4529999999795
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:81",
     "ordinal": 417,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:57:10.547390+00:00",
+    "finished_at": "2026-10-09T10:00:08.937269+00:00",
+    "result_hash": "703080131d1c3b56f612818563fd9126d686df64c89a97c04f6853c9ac5fb3f1",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11876,16 +12007,24 @@
       "target": "ifbench",
       "task_id": "ifbench:81"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "f7a291cbff054dee1f5e123b4db1b78ad308360213fd0e3ab470ad321e3e73bb",
+      "submission_hash": "f856349ca6dc6271fbc7d532dfb55fce8a1ba56fdc6e142c6a00b857db4d3cee"
+    },
+    "budget": {
+      "tokens": 71073,
+      "model_calls": 6,
+      "wall_seconds": 177.170999999973
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:161",
     "ordinal": 418,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:58:00.355495+00:00",
+    "finished_at": "2026-10-09T10:00:59.506513+00:00",
+    "result_hash": "01ebc46f445c1b8512626a6227320941035317b7ad22947c04b23a82a8eed085",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11896,16 +12035,24 @@
       "target": "ifbench",
       "task_id": "ifbench:161"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "7e5fd0ea4ebd9454f44bfd277b1f1c3d99c1ac4805a0a14b96ef875977035692",
+      "submission_hash": "e5d48aebc3960a9140b1228435dc615f78eb4fb02219d10ae7bc0ac308f1a086"
+    },
+    "budget": {
+      "tokens": 99072,
+      "model_calls": 8,
+      "wall_seconds": 178.23399999999674
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:217",
     "ordinal": 419,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "failed",
+    "started_at": "2026-10-09T09:58:23.370701+00:00",
+    "finished_at": "2026-10-09T10:01:38.548778+00:00",
+    "result_hash": "ece922035ea072edfe1b6f8d3fa8d7c6b5581f836cf8415a92c60050a2456ca9",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11916,16 +12063,25 @@
       "target": "ifbench",
       "task_id": "ifbench:217"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "complete": false,
+      "score": null,
+      "error_type": "JSONDecodeError",
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed"
+    },
+    "budget": {
+      "tokens": 102212,
+      "model_calls": 6,
+      "wall_seconds": 194.31300000002375
+    }
   },
   {
     "slot_id": "test:researchrubrics:run0:ifbench:ifbench:205",
     "ordinal": 420,
-    "status": "pending",
-    "started_at": null,
-    "finished_at": null,
-    "result_hash": null,
+    "status": "submitted",
+    "started_at": "2026-10-09T09:58:29.387160+00:00",
+    "finished_at": "2026-10-09T10:01:52.612228+00:00",
+    "result_hash": "8910bd968f9c5df14093dda339b867b716e266f27cdc803ca30d0dc048f54157",
     "slot": {
       "kind": "test",
       "method": "ours_selected",
@@ -11936,7 +12092,15 @@
       "target": "ifbench",
       "task_id": "ifbench:205"
     },
-    "result": {},
-    "budget": {}
+    "result": {
+      "state_hash": "a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed",
+      "answer_hash": "0494544ab18dde06926d71649e094c45de5eb4cd94092b1d4a8b9e5dcb60bfee",
+      "submission_hash": "13fa414deb6ed8e0b67de3c6b89b7384be3120fbc62c6fb3da495dcce7691fe3"
+    },
+    "budget": {
+      "tokens": 139016,
+      "model_calls": 9,
+      "wall_seconds": 202.2970000000205
+    }
   }
 ]

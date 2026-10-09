@@ -1,5 +1,5 @@
 {
-  "observed_at_utc": "2026-10-09T09:48:01.575819+00:00",
+  "observed_at_utc": "2026-10-09T11:28:53.652418+00:00",
   "campaigns": [
     {
       "name": "runs__dsqa507_replay",
@@ -5386,25 +5386,13 @@
           "source": "researchrubrics",
           "kind": "test",
           "status": "failed",
-          "count": 42
-        },
-        {
-          "source": "researchrubrics",
-          "kind": "test",
-          "status": "pending",
-          "count": 16
-        },
-        {
-          "source": "researchrubrics",
-          "kind": "test",
-          "status": "started",
-          "count": 4
+          "count": 46
         },
         {
           "source": "researchrubrics",
           "kind": "test",
           "status": "submitted",
-          "count": 71
+          "count": 87
         },
         {
           "source": "researchrubrics",
@@ -5424,25 +5412,13 @@
           "source": "researchrubrics",
           "target": "ifbench",
           "status": "failed",
-          "count": 3
-        },
-        {
-          "source": "researchrubrics",
-          "target": "ifbench",
-          "status": "pending",
-          "count": 16
-        },
-        {
-          "source": "researchrubrics",
-          "target": "ifbench",
-          "status": "started",
-          "count": 4
+          "count": 7
         },
         {
           "source": "researchrubrics",
           "target": "ifbench",
           "status": "submitted",
-          "count": 27
+          "count": 43
         },
         {
           "source": "researchrubrics",
@@ -5480,6 +5456,12 @@
           "kind": "test",
           "target": "ifbench",
           "error_type": "JSONDecodeError",
+          "count": 4
+        },
+        {
+          "kind": "test",
+          "target": "ifbench",
+          "error_type": "RuntimeError",
           "count": 2
         },
         {
@@ -5543,10 +5525,12 @@
           "count": 1
         }
       ],
-      "evaluation_receipts": 0,
-      "evaluation_errors": {},
-      "test_sealed": false,
-      "final_report_available": false
+      "evaluation_receipts": 87,
+      "evaluation_errors": {
+        "AttributeError": 87
+      },
+      "test_sealed": true,
+      "final_report_available": true
     },
     {
       "name": "external__r17_rr_v3",

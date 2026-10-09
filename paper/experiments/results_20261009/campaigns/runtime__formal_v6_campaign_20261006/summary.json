@@ -1,7 +1,7 @@
 {
   "name": "runtime__formal_v6_campaign_20261006",
   "directory": "C:\\Users\\chizh\\Desktop\\JIT-main\\.runtime\\formal_v6_campaign_20261006",
-  "observed_at_utc": "2026-10-09T09:48:01.575819+00:00",
+  "observed_at_utc": "2026-10-09T11:28:53.652418+00:00",
   "registration_sha256": "5a90b954a1584b2288fef2f51821453dd4d4c26e4ae638a2175c58dbcd81f66b",
   "protocol_sha256": "84e260f3d99d2e3a5e6a5c78cf0d5354a5e7817a54bc2f7bab6dab842a61488d",
   "protocol_version": "jit-compose-independent-batch-protocol-v6",

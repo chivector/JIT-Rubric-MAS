@@ -1,7 +1,7 @@
 {
   "name": "runs__dsqa507_replay",
   "directory": "C:\\Users\\chizh\\Desktop\\JIT-main\\.r\\dsqa507_replay",
-  "observed_at_utc": "2026-10-09T09:48:01.575819+00:00",
+  "observed_at_utc": "2026-10-09T11:28:53.652418+00:00",
   "registration_sha256": "22ad721dffd672bb5d60cb2af3bcb6d470a04a58b9a4ea8b06d262b67cb12e65",
   "protocol_sha256": "677a6722ca185f27f2df6925f95d0b404227d7ec5d866ca7390fc72a8df38ed4",
   "protocol_version": "jit-compose-independent-batch-protocol-v7",

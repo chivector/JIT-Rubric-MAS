@@ -1,7 +1,7 @@
 {
   "name": "runs__dsv10",
   "directory": "C:\\Users\\chizh\\Desktop\\JIT-main\\.r\\dsv10",
-  "observed_at_utc": "2026-10-09T09:48:01.575819+00:00",
+  "observed_at_utc": "2026-10-09T11:28:53.652418+00:00",
   "registration_sha256": "94ab50f999c1ef1a13d11b5dcd0ea5d5d29c3d331ce6ddf9d2f647cfe883359f",
   "protocol_sha256": "677a6722ca185f27f2df6925f95d0b404227d7ec5d866ca7390fc72a8df38ed4",
   "protocol_version": "jit-compose-independent-batch-protocol-v7",

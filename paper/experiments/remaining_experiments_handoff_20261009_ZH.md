@@ -1,6 +1,12 @@
 # 剩余实验交接与分工
 
-更新时间：2026-10-09，上海时间。A/B/C/D 为待分配的负责人代号。本轮已授权同步已有结果；当前 RR TEST 持续跟踪至进程结束。交接文档本身不启动新的模型实验。
+更新时间：2026-10-09 18:02:02，上海时间。A/B/C/D 为待分配的负责人代号。本轮已授权同步已有结果；RR TEST 已运行结束并封存。交接文档本身不启动新的模型实验。
+
+## RR 最终状态
+
+`C:\J\r17_rr_recovery_v4` 的 worker PID `36612` 已停止，finished 时间为上海时间 **2026-10-09 18:02:02**。全部 **133 TEST 槽位已终态并 sealed**：RR 为 32 submitted、1 failed；IFEval 为 12 submitted、38 failed；IFBench 为 43 submitted、7 failed。共 87 份原答案已提交、46 个生成失败；87 条评分 receipts 全部为 `evaluation_failed / AttributeError`，有效分数为 0，各组完整均值均为 `null`。
+
+原始归档已形成最终快照：59 个 family、71,142 个文件、3.22 GB。A 的剩余任务与 B 同类：保留原答案、46 个生成失败和旧评分 receipts，在独立版本中诊断并只恢复原答案评分。
 
 ## 当前采用的方案
 
@@ -12,18 +18,18 @@
 
 | 负责人 | 工作包 | 已有状态 | 剩余工作与验收 |
 |---|---|---|---|
-| A：RR / 当前协调者 | `C:\J\r17_rr_recovery_v4` | 40 EVO 槽位已终态（39 complete、1 failed），8 批完成；240 VAL 为 235 complete、5 failed；C40 candidate 1 已选中 | 等当前 133 TEST 全部终态，封存、评分、生成最终报告；保留失败和恢复差异；上传最终增量包 |
+| A：RR 评分恢复 | `C:\J\r17_rr_recovery_v4` | C40 candidate 1 已选中；133 TEST 已终态封存：87 submitted、46 failed；87 条评分全部 `AttributeError`，0 有效分数 | 诊断评分错误，建立独立版本化评分恢复，仅评原 87 份答案；保留原失败 receipts、46 个生成失败和上下文恢复差异；交付 RR/IFEval/IFBench 三组指标 |
 | B：WritingBench | `C:\J\r15` 中 WB 来源 | 有效 C40；150 TEST 生成终态为 142 submitted、8 failed；142 条评分全部 `AttributeError` | 诊断评分错误，建立单独的评分恢复版本，仅评原 142 份答案；保留原失败 receipts 和 8 个生成失败；交付 WB/IFEval/IFBench 三组指标 |
 | C：DeepSearchQA | `C:\J\r15` 中 DSQA 来源 | 最后有效 C30；第七批三候选均 `ContextLimitExceeded`，最终 inconclusive；150 TEST missing | 用合成任务验证上下文修复，冻结新版本/恢复规则与主结果身份；获得合法 C40 后完成 50+50+50 TEST、封存和评分 |
 | D：DRBII | `C:\J\r15` 中 DRBII 来源 | 最后有效 C5；第二批三候选均因 identity/source tasks/local evidence 校验失败，140 TEST missing | 验证候选更新修复并冻结新版本/恢复规则；获得合法 C40 后完成本源40（20英文+20中文）及两迁移各50，封存和评分 |
 
 可以并行做本地诊断和合成预检。真实模型阶段先协调共享服务的吞吐；当前冻结 generator 的请求并发为 1，不能通过多进程绕过限流。每个输出目录只允许一个 coordinator，来源之间不共享 experience、Agent Pool 或 checkpoint。
 
-## A：接管当前 RR
+## A：RR 只恢复评分
 
-唯一活动输出是 `C:\J\r17_rr_recovery_v4`。2026-10-09 启动的实际 Python worker PID 为 `36612`（PID 仅供本机核对，重启后会变）。运行代码工作树为 `C:\J\r17-worktree`，启动文件是其 `.runtime/continue_rr_v4_test.py`；该本机文件含凭据，不能传给他人或原样提交。
+已结束输出是 `C:\J\r17_rr_recovery_v4`，原 Python worker PID `36612` 已停止。运行代码工作树为 `C:\J\r17-worktree`，启动文件是其 `.runtime/continue_rr_v4_test.py`；该本机文件含凭据，不能传给他人或原样提交。
 
-当前脚本按 `submit(workers=4)` → `seal()` → `score(workers=4)` → paper summary 顺序执行。不要再启动同目录 TEST runner。主仓库的只读监控文件是 `.runtime/rr_test_followup_20261009/status.json` 与 `summary.md`；运行输出内旧 `status.json` 停在更早阶段，应以 campaign SQLite 与监控快照为准。
+原脚本已完成 `submit(workers=4)` → `seal()` → `score(workers=4)` → paper summary。不要再启动同目录 TEST runner。主仓库的只读监控文件是 `.runtime/rr_test_followup_20261009/status.json` 与 `summary.md`；运行输出内旧 `status.json` 停在更早阶段，应以 campaign SQLite、最终报告与监控快照为准。
 
 选中状态必须绑定：
 
@@ -36,11 +42,11 @@ state_hash = a782b141a78516681fe6d1b0665a98bd7ea6a85e8a5e9efb073f138fc7a9bfed
 registration_sha256 = 6b3013d96f761135343378382947aafcc8c0acb5b481b246edde2e63662015e4
 ```
 
-RR 本源生成已完成：32 submitted、1 `ContextLimitExceeded`。迁移 TEST 还在运行，IFEval 已出现连接、超时和 JSON 错误，具体分组见 [最新库存](results_20261009/campaign_catalog.json)。生成失败仍消耗原槽位，不能按完成率或分数补跑。
+原答案分布为 RR32、IFEval12、IFBench43；对应 87 个 `test_evaluations/*.json` 全部是 `evaluation_failed / AttributeError`。RR1、IFEval38、IFBench7 共 46 个生成失败保留原槽位，具体错误分组见 [最终库存](results_20261009/campaign_catalog.json)，不能按完成率或分数补跑。
 
 恢复上下文与原配置的差异已登记在 `recovery_runtime_provenance.json`：所有 model spec 实际使用 65,536 context、2,048 margin、`oldest_turns`，launch identity 为 131,072。原 `r17_rr_v3` 第八批候选完成数为 2/10、0/10、7/10，无有效 C40，继续保留 inconclusive，不能覆盖。
 
-验收文件：`test_continuation_submit.json`、`test_continuation_seal.json`、`test_report.json`、`test_continuation_finished.json`、`full_report.json`，以及同级 `r17_rr_recovery_v4_paper/paper_summary.{json,md}`。若进程退出且没有最终报告，先查 `test_continuation_error.json` 和 `logs/test_continuation.*.log`，记录停止点；核对 claim、已落盘 submission/complete 与评分 started 标记后，按同注册身份恢复。不能删除失败 receipt、seal 或 started 标记来强行重试。
+最终证据文件为 `test_continuation_submit.json`、`test_continuation_seal.json`、`test_report.json`、`test_continuation_finished.json`、`full_report.json`，以及同级 `r17_rr_recovery_v4_paper/paper_summary.{json,md}`。按 B 的恢复要求先在副本上诊断 `AttributeError`，新建版本化 scoring recovery 输出及清单，绑定原 slot_id、submission_hash、answer_hash、state_hash、原失败 receipt 和评分修复版本。只评原 87 份答案，保留原目录、46 个生成失败、seal 与 started 标记；不能直接重复 `--mode score` 或删除旧 receipts 强行重试。验收要求 87 条恢复评分逐项对应原答案，46 个生成失败继续计入固定分母。
 
 ## B：WritingBench 只恢复评分
 
