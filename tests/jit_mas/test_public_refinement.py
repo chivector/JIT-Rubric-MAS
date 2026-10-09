@@ -11,6 +11,7 @@ from jit_mas.config import MASConfig, ModelConfig
 from jit_mas.experience import ExperienceStore
 from jit_mas.offline import FixtureModels
 from jit_mas.public_refinement import PUBLIC_REFINEMENT_IDS, refine_public_answer
+from jit_mas.public_output_metrics import PUBLIC_DIAGNOSTICS_TRANSPORT_VERSION
 from jit_mas.schemas import PublicTask, digest
 from scripts.kernel.types import RunResult
 from scripts.models.base import ChatMessage
@@ -111,6 +112,7 @@ def test_two_global_calls_use_existing_ledger_and_public_data(execution_cap, exp
         payload = json.loads(request["messages"][1]["content"])
         assert payload["draft"] == DRAFT
         assert payload["public_diagnostics"]["characters"] == len(DRAFT)
+        assert payload["public_diagnostics"]["transport_projection"]["version"] == PUBLIC_DIAGNOSTICS_TRANSPORT_VERSION
     assert json.loads(requests[1]["messages"][1]["content"])["review"] == REVIEW
 
     audit = result.metadata["public_refinement"]
@@ -122,6 +124,9 @@ def test_two_global_calls_use_existing_ledger_and_public_data(execution_cap, exp
     assert audit["revision_hash"] == digest(audit["revision"])
     assert audit["answer_hash"] == digest(REVISION)
     assert audit["public_input_hash"] == digest(audit["public_input"])
+    assert "whitespace_tokens" in audit["public_input"]["public_diagnostics"]["sentence_chunk_tokens"]["chunks"][0]
+    assert all(row["diagnostics_transport"]["full_diagnostics_hash"] ==
+               digest(audit["public_input"]["public_diagnostics"]) for row in audit["calls"])
     assert audit["audit_hash"] == digest({k: v for k, v in audit.items() if k != "audit_hash"})
     assert audit["revision_public_diagnostics"]["nonempty_lines"] == 4
     assert [row["agent_id"] for row in audit["budget_records"]] == list(PUBLIC_REFINEMENT_IDS)

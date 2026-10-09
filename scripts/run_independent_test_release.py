@@ -32,7 +32,7 @@ MAX_WORKERS = 64
 
 
 def _read(path: Path):
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 class IndependentTestReleaseRunner:
@@ -135,11 +135,12 @@ class IndependentTestReleaseRunner:
         # evidence packs contain EVO+VAL+TEST IDs).  Reuse the immutable
         # source runtime split for these targets; static checker targets keep
         # the TEST-only wrapper below.
-        material = self.environment.materials.get(target, {})
+        environment = getattr(self, "environment", None)
+        material = getattr(environment, "materials", {}).get(target, {})
         sources = tuple(self.campaign.protocol.get("sources", SOURCES))
-        if target in sources and material.get("evidence_dir"):
+        if environment is not None and target in sources and material.get("evidence_dir"):
             run_id = next(iter(self.campaign.protocol.get("run_ids", (0,))))
-            return self.environment._split(target, run_id)
+            return environment._split(target, run_id)
         path = self.output / "test_runtime_splits" / f"{target}.json"
         # ``make_pipeline`` validates runtime splits with the strict
         # ``SplitManifest`` schema.  Keep the adapter-specific wrapper outside

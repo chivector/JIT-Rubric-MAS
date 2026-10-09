@@ -7,7 +7,10 @@ import pytest
 
 from jit_mas.schemas import ExperienceSnapshot, SplitManifest, digest
 from jit_mas.checkpoints import CheckpointIntegrityError
+from jit_mas.config import MASConfig
+from jit_mas.experience import ExperienceStore
 from scripts.run_independent_test_release import IndependentTestReleaseRunner
+from scripts.run_jit_mas import make_pipeline
 
 
 class FakeCampaign:
@@ -167,3 +170,38 @@ def test_evaluation_receipt_hash_detects_changed_score(tmp_path):
     path.write_text(json.dumps(result), encoding="utf-8")
     with pytest.raises(CheckpointIntegrityError, match="receipt changed"):
         instance._score_one(row)
+
+
+def test_score_saved_string_submission_path_without_actor_replay(tmp_path):
+    store = ExperienceStore(tmp_path / "state.sqlite")
+    try:
+        pipeline = make_pipeline(MASConfig(backend="scripted"), store, tmp_path / "runs")
+        task_id = pipeline.manifest.test[0]
+        submission = {"answer": "Boundary conditions: use the registered workload.",
+                      "answer_hash": digest("Boundary conditions: use the registered workload.")}
+        path = tmp_path / "submission.json"
+        path.write_text(json.dumps(submission), encoding="utf-8")
+        row = {"slot_id": "saved-submission", "task_id": task_id,
+               "source": "researchrubrics", "target": "researchrubrics", "run_id": 0,
+               "result_hash": "registered-result",
+               "result": {"submission_path": str(path), "submission_hash": digest(submission),
+                          "budget": {"model_calls": 2, "tokens": 100, "tool_calls": 0,
+                                     "reserved_tokens": 0}}}
+        instance = runner(tmp_path)
+        instance._ready_state = lambda actual: store.snapshot()
+        instance._pipeline = lambda actual, snapshot: (pipeline, None, tmp_path / "runs")
+
+        result = instance._score_one(row)
+
+        assert result["complete"] is True
+        assert result["official_score"] == 1.0
+        assert result["answer_hash"] == submission["answer_hash"]
+        assert result["submission_sha256"] == row["result"]["submission_hash"]
+        assert result["generation_budget"] == row["result"]["budget"]
+        assert result["evaluation_budget"]["model_calls"] == 1
+        assert all(call["role"] == "judge" for call in pipeline.models.calls)
+        assert len(pipeline.models.calls) == 1
+        assert instance._score_one(row) == result
+        assert len(pipeline.models.calls) == 1
+    finally:
+        store.close()

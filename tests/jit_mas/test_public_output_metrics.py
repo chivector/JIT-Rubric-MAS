@@ -1,9 +1,15 @@
 """Public-only diagnostics preserve the decoded artifact and expose units."""
 
 import pytest
+import copy
+import json
 
-from jit_mas.public_output_metrics import public_output_metrics
-from jit_mas.schemas import PublicTask
+from jit_mas.public_output_metrics import (
+    PUBLIC_DIAGNOSTICS_TRANSPORT_VERSION, public_output_metrics,
+    public_output_metrics_model_input,
+)
+from jit_mas.evidence import EVIDENCE_QUESTION_HEADER, EVIDENCE_SCOPE, EVIDENCE_TASK_CONSTRAINT
+from jit_mas.schemas import PublicTask, digest
 
 
 def test_counts_decoded_multilingual_artifact_and_public_terms_without_metadata():
@@ -188,3 +194,116 @@ def test_empty_artifact_returns_empty_counts_and_nontext_is_rejected():
     assert report["fanboys_lexical_diagnostics"]["different_lexical_types_present"] == 0
     with pytest.raises(TypeError):
         public_output_metrics({"question": "Write a passage."}, None)
+
+
+def test_transport_projection_keeps_counts_and_hashes_without_repeating_draft_tokens():
+    task = {"question": "Explain the supplied public mechanisms.", "constraints": []}
+    diagnostics = public_output_metrics(task, "Alpha beta 42.\nGamma delta 7.")
+    original = copy.deepcopy(diagnostics)
+    projected = public_output_metrics_model_input(task, diagnostics)
+    assert diagnostics == original
+    assert projected["characters"] == diagnostics["characters"]
+    assert projected["quoted_terms"] == diagnostics["quoted_terms"]
+    for name in ("english_word_frequencies", "numeric_token_diagnostics", "sentence_chunk_tokens"):
+        assert projected[name]["counting_basis"] == diagnostics[name]["counting_basis"]
+        assert projected[name]["transport_detail"] == "counts_only"
+    assert projected["numeric_token_diagnostics"]["total_numeric_tokens"] == 2
+    assert "tokens" not in projected["numeric_token_diagnostics"]
+    assert "frequencies" not in projected["english_word_frequencies"]
+    assert all("whitespace_tokens" not in row and "unicode_word_tokens" not in row
+               for row in projected["sentence_chunk_tokens"]["chunks"])
+    projection = projected["transport_projection"]
+    assert projection["version"] == PUBLIC_DIAGNOSTICS_TRANSPORT_VERSION
+    assert projection["full_diagnostics_hash"] == digest(diagnostics)
+    asserted = copy.deepcopy(projected)
+    expected_hash = asserted["transport_projection"].pop("model_input_hash")
+    assert digest(asserted) == expected_hash
+    assert public_output_metrics_model_input(task, diagnostics) == projected
+    assert "compliant" not in json.dumps(projected)
+
+
+@pytest.mark.parametrize("question", [
+    "Use ocean at least three times and include exactly two numbers.",
+    "关键词 ocean 至少出现三次，并使用两个数字。",
+])
+def test_transport_preserves_frequency_and_numeric_constraint_details(question):
+    task = {"question": question, "constraints": []}
+    diagnostics = public_output_metrics(task, "Ocean ocean ocean 12 34.")
+    projected = public_output_metrics_model_input(task, diagnostics)
+    assert projected["english_word_frequencies"]["frequencies"] == diagnostics["english_word_frequencies"]["frequencies"]
+    assert projected["numeric_token_diagnostics"]["tokens"] == diagnostics["numeric_token_diagnostics"]["tokens"]
+    assert projected["numeric_token_diagnostics"]["total_numeric_tokens"] == 2
+
+
+def test_transport_reports_requested_word_slot_with_both_token_conventions():
+    task = {"question": 'Place the word "ocean" as the third word in the second sentence.',
+            "constraints": []}
+    diagnostics = public_output_metrics(task, "First sentence ends.\nA blue ocean.")
+    projected = public_output_metrics_model_input(task, diagnostics)
+    sentences = projected["sentence_chunk_tokens"]
+    assert sentences["transport_detail"] == "requested_word_slots"
+    assert sentences["requested_word_slots"] == [{
+        "sentence_chunk_index_1_based": 2, "word_index_1_based": 3,
+        "requested_literal": "ocean", "chunk_observed": True,
+        "whitespace_token_observed": True, "whitespace_token": "ocean.", "whitespace_word_count": 3,
+        "unicode_word_token_observed": True, "unicode_word_token": "ocean", "unicode_word_count": 3,
+    }]
+    assert all("whitespace_tokens" not in row for row in sentences["chunks"])
+    assert sentences["total_chunks"] == 2
+
+
+@pytest.mark.parametrize("question", [
+    "Put an unusual keyword at the last word of every sentence.",
+    "Make the 257th word of the second sentence ocean.",
+    "第两个句子的第三个词必须为 ocean。",
+])
+def test_transport_retains_arrays_for_unsupported_position_rules(question):
+    task = {"question": question}
+    diagnostics = public_output_metrics(task, "A blue ocean.\nAnother clear ocean.")
+    projected = public_output_metrics_model_input(task, diagnostics)
+    assert projected["sentence_chunk_tokens"]["transport_detail"] == "full"
+    assert projected["sentence_chunk_tokens"]["chunks"] == diagnostics["sentence_chunk_tokens"]["chunks"]
+
+
+def test_transport_does_not_invent_unobserved_requested_word_slots():
+    task = {"question": 'Place the word "ocean" as the third word in the second sentence.'}
+    diagnostics = public_output_metrics(task, "One sentence.")
+    projected = public_output_metrics_model_input(task, diagnostics)
+    slot = projected["sentence_chunk_tokens"]["requested_word_slots"][0]
+    assert slot["chunk_observed"] is False
+    assert slot["whitespace_token_observed"] is slot["unicode_word_token_observed"] is False
+    assert slot["whitespace_token"] is slot["unicode_word_token"] is None
+
+
+def _task_with_evidence(question, source_text, *, task_id="evidence-routing"):
+    body = {"task_id": task_id, "sources": [{"url": "https://example.test/source",
+             "title": "Source", "text": source_text}], "scope": EVIDENCE_SCOPE}
+    rendered = json.dumps(body, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return PublicTask(task_id=task_id, question=question + EVIDENCE_QUESTION_HEADER + rendered,
+                      constraints=[EVIDENCE_TASK_CONSTRAINT])
+
+
+def test_valid_rendered_evidence_does_not_route_source_prose_as_diagnostic_rules():
+    source = "frequency numbers third word every sentence position 123"
+    task = _task_with_evidence("Write a short report.", source)
+    original_question = task.question
+    diagnostics = public_output_metrics(task, "Alpha beta 12.")
+    projected = public_output_metrics_model_input(task, diagnostics)
+    assert task.question == original_question
+    assert projected["english_word_frequencies"]["transport_detail"] == "counts_only"
+    assert projected["numeric_token_diagnostics"]["transport_detail"] == "counts_only"
+    assert projected["sentence_chunk_tokens"]["transport_detail"] == "counts_only"
+    assert projected["transport_projection"]["public_request_hash"] == digest({
+        "question": "Write a short report.", "constraints": []})
+
+
+def test_unvalidated_evidence_header_routes_conservatively():
+    task = PublicTask(task_id="evidence-routing", question=(
+        "Write a report." + EVIDENCE_QUESTION_HEADER
+        + "frequency numbers third word every sentence position 123"),
+        constraints=[EVIDENCE_TASK_CONSTRAINT])
+    diagnostics = public_output_metrics(task, "Alpha beta 12.")
+    projected = public_output_metrics_model_input(task, diagnostics)
+    assert projected["english_word_frequencies"]["transport_detail"] == "full"
+    assert projected["numeric_token_diagnostics"]["transport_detail"] == "full"
+    assert projected["sentence_chunk_tokens"]["transport_detail"] == "full"

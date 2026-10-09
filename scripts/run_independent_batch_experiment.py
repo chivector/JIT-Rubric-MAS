@@ -17,6 +17,7 @@ from jit_mas.independent_campaign import TERMINAL, coordinator_lock
 from jit_mas.pipeline import write_json
 from jit_mas.schemas import ExperienceSnapshot, digest, utc_now
 from scripts.eval.config import load_dotenv
+from scripts.models.openai_server import transport_retry_policy
 from scripts.run_independent_experiment import IndependentEnvironment, _read, validation_result
 
 
@@ -42,8 +43,14 @@ class IndependentBatchEnvironment(IndependentEnvironment):
 
     @staticmethod
     def _transport_identity():
+        action = os.getenv("MODULAR_AGENT_API_FAILURE_ACTION", "exit").strip().lower()
+        if action not in {"exit", "raise"}:
+            action = "exit"
         return {"model_attempts": max(1, int(os.getenv("JIT_MAS_MODEL_ATTEMPTS", "1"))),
                 "disable_keepalive": os.getenv("JIT_MAS_DISABLE_KEEPALIVE", "0") == "1",
+                "connection_retry_version": "bounded-exponential-jitter-v1",
+                "connection_retry": transport_retry_policy(),
+                "api_failure_action": action,
                 "batch_meta_max_tokens": max(0, int(os.getenv("JIT_MAS_BATCH_META_MAX_TOKENS", "0"))),
                 "batch_meta_corrections": max(1, int(os.getenv("JIT_MAS_BATCH_META_CORRECTIONS", "1"))),
                 "extra_corrections": os.getenv("JIT_MAS_ALLOW_EXTRA_CORRECTIONS", "0") == "1"}

@@ -7,8 +7,12 @@ tokenization, sentence segmentation, or counting rules.
 
 from __future__ import annotations
 
+import copy
 import re
 from collections import Counter
+
+from .evidence import EVIDENCE_TASK_CONSTRAINT, public_instruction_question
+from .schemas import digest
 
 
 _WORDS = re.compile(r"\w+(?:['\u2019-]\w+)*", re.UNICODE)
@@ -29,6 +33,35 @@ MAX_ENGLISH_FREQUENCY_TYPES = 1024
 MAX_SENTENCE_CHUNKS = 128
 MAX_SENTENCE_TOKEN_ITEMS = 4096
 MAX_NUMERIC_TOKEN_ITEMS = 1024
+PUBLIC_DIAGNOSTICS_TRANSPORT_VERSION = "public-artifact-diagnostics-transport-v1"
+_POSITION_DETAIL_HINT = re.compile(
+    r"\b(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|"
+    r"eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|"
+    r"eighteenth|nineteenth|twentieth|last|[0-9]+\s*-?\s*(?:st|nd|rd|th))\s+"
+    r"(?:word|sentence|line|paragraph|character)\b|"
+    r"\b(?:word|sentence|line|paragraph|character)\s+(?:position|index|number|[0-9])|"
+    r"\b(?:each|every)\s+(?:sentence|line)\b[^\n.!?]{0,100}\bword\b|"
+    r"第[^\n。！？]{0,16}[词詞字句段行]|[词詞字句段行][^\n。！？]{0,16}(?:位置|开头|開頭|结尾|結尾)",
+    re.IGNORECASE,
+)
+_FREQUENCY_DETAIL_HINT = re.compile(
+    r"\b(?:words?|keywords?|terms?|times?|occurrences?|frequenc\w*|repeat\w*|mention\w*)\b|"
+    r"出现|出現|重复|重複|频率|頻率|次数|次數|单词|單詞|词语|詞語|关键词|關鍵詞",
+    re.IGNORECASE,
+)
+_NUMERIC_DETAIL_HINT = re.compile(
+    r"\b(?:numbers?|numerals?|digits?|numeric|integers?|decimals?)\b|数字|數字|数值|數值|数词|數詞",
+    re.IGNORECASE,
+)
+
+
+def _public_diagnostic_request(task) -> dict:
+    question = public_instruction_question(task)
+    original = task.question if hasattr(task, "question") else task.get("question", "")
+    constraints = task.constraints if hasattr(task, "constraints") else task.get("constraints", [])
+    return {"question": question,
+            "constraints": [value for value in constraints
+                            if question == original or value != EVIDENCE_TASK_CONSTRAINT]}
 
 
 def _english_frequencies(answer: str) -> dict:
@@ -163,9 +196,8 @@ def public_output_metrics(task, answer: str) -> dict:
     """Describe decoded text using only its public request and constraints."""
     if not isinstance(answer, str):
         raise TypeError("The decoded artifact must be text")
-    question = task.question if hasattr(task, "question") else task.get("question", "")
-    constraints = task.constraints if hasattr(task, "constraints") else task.get("constraints", [])
-    request = "\n".join([question, *constraints])
+    public_request = _public_diagnostic_request(task)
+    request = "\n".join([public_request["question"], *public_request["constraints"]])
     terms = []
     for match in _QUOTES.finditer(request):
         term = next(value for value in match.groups() if value is not None).strip()
@@ -212,3 +244,67 @@ def public_output_metrics(task, answer: str) -> dict:
         "numeric_token_diagnostics": _numeric_tokens(answer),
         "fanboys_lexical_diagnostics": _fanboys(answer),
     }
+
+
+def public_output_metrics_model_input(task, diagnostics: dict) -> dict:
+    """Project mechanical details while retaining complete diagnostics in the audit."""
+    public_request = _public_diagnostic_request(task)
+    request = "\n".join([public_request["question"], *public_request["constraints"]])
+    projected = copy.deepcopy(diagnostics)
+    selection = {}
+    frequencies = projected.get("english_word_frequencies")
+    if frequencies is not None:
+        detail = bool(_FREQUENCY_DETAIL_HINT.search(request))
+        selection["english_word_frequencies"] = "full" if detail else "counts_only"
+        if not detail:
+            frequencies.pop("frequencies", None)
+        frequencies["transport_detail"] = selection["english_word_frequencies"]
+    numbers = projected.get("numeric_token_diagnostics")
+    if numbers is not None:
+        detail = bool(_NUMERIC_DETAIL_HINT.search(request))
+        selection["numeric_token_diagnostics"] = "full" if detail else "counts_only"
+        if not detail:
+            numbers.pop("tokens", None)
+        numbers["transport_detail"] = selection["numeric_token_diagnostics"]
+    sentences = projected.get("sentence_chunk_tokens")
+    if sentences is not None:
+        positional = bool(_POSITION_DETAIL_HINT.search(request))
+        position = None
+        if positional:
+            from .public_word_slots import position_plan
+
+            position = position_plan(public_request)
+        mode = "requested_word_slots" if position is not None else "full" if positional else "counts_only"
+        selection["sentence_chunk_tokens"] = mode
+        if mode != "full":
+            original_rows = sentences.get("chunks", [])
+            sentences["chunks"] = [{key: value for key, value in row.items()
+                                     if key not in {"whitespace_tokens", "unicode_word_tokens"}}
+                                    for row in original_rows]
+            if position is not None:
+                row = next((item for item in original_rows
+                            if item["chunk_index_1_based"] == position.sentence_index), None)
+                slot = {"sentence_chunk_index_1_based": position.sentence_index,
+                        "word_index_1_based": position.word_index,
+                        "requested_literal": position.keyword,
+                        "chunk_observed": row is not None}
+                for name in ("whitespace", "unicode_word"):
+                    tokens = row.get(name + "_tokens", []) if row is not None else []
+                    observed = position.word_index <= len(tokens)
+                    slot[name + "_token_observed"] = observed
+                    slot[name + "_token"] = tokens[position.word_index - 1] if observed else None
+                    count_name = "whitespace_word_count" if name == "whitespace" else "unicode_word_count"
+                    slot[count_name] = row.get(count_name) if row is not None else None
+                sentences["requested_word_slots"] = [slot]
+        sentences["transport_detail"] = mode
+    projection = {
+        "version": PUBLIC_DIAGNOSTICS_TRANSPORT_VERSION,
+        "full_diagnostics_hash": digest(diagnostics),
+        "public_request_hash": digest(public_request),
+        "detail_selection": selection,
+        "selection_basis": "Public question and constraint lexical hints route diagnostic detail; validated rendered fixed evidence is excluded from routing only. They do not classify instructions or establish compliance. Unsupported position hints retain all available token arrays.",
+        "omission_policy": "Counts and counting conventions remain. Omitted lexical detail is available in the intact draft and complete audit; omission is not evidence of absence. Source truncation flags describe the complete diagnostics, independently of this projection.",
+    }
+    projected["transport_projection"] = projection
+    projection["model_input_hash"] = digest(projected)
+    return projected

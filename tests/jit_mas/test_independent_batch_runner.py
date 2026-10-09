@@ -8,7 +8,7 @@ from jit_mas.checkpoints import CheckpointIntegrityError
 from jit_mas.independent_batch_campaign import state_sources
 from jit_mas.pipeline import write_json
 from jit_mas.schemas import AgentPoolOperation, ExperienceSnapshot, digest
-from scripts.run_independent_batch_experiment import IndependentBatchEnvironment
+from scripts.run_independent_batch_experiment import IndependentBatchEnvironment, IndependentEnvironment
 
 
 class RecordedCampaign:
@@ -123,3 +123,26 @@ def test_state_sources_includes_every_operation_source_task():
         base_pool_version=0, evidence=["feedback:first"], rationale="Observed change", expected_benefit="Coverage",
         token_cost_tradeoff="Recorded cost")]
     assert state_sources(snapshot) == {"first", "second"}
+
+
+@pytest.mark.parametrize("name, value", [
+    ("JIT_MAS_MODEL_ATTEMPTS", "2"),
+    ("JIT_MAS_RETRY_BASE_SECONDS", "2"),
+    ("JIT_MAS_RETRY_MAX_SECONDS", "20"),
+    ("JIT_MAS_RETRY_JITTER_SECONDS", "0"),
+    ("MODULAR_AGENT_API_FAILURE_ACTION", "raise"),
+])
+def test_frozen_transport_identity_rejects_changed_retry_settings(monkeypatch, name, value):
+    monkeypatch.setenv("JIT_MAS_MODEL_ATTEMPTS", "1")
+    monkeypatch.setenv("JIT_MAS_RETRY_BASE_SECONDS", "5")
+    monkeypatch.setenv("JIT_MAS_RETRY_MAX_SECONDS", "30")
+    monkeypatch.setenv("JIT_MAS_RETRY_JITTER_SECONDS", "1")
+    monkeypatch.setenv("MODULAR_AGENT_API_FAILURE_ACTION", "exit")
+    monkeypatch.setattr(IndependentEnvironment, "assert_frozen", lambda _self: None)
+    instance = IndependentBatchEnvironment.__new__(IndependentBatchEnvironment)
+    instance.identity = {"transport": instance._transport_identity()}
+    assert instance.identity["transport"]["connection_retry_version"] == "bounded-exponential-jitter-v1"
+    instance.assert_frozen()
+    monkeypatch.setenv(name, value)
+    with pytest.raises(CheckpointIntegrityError, match="transport retry"):
+        instance.assert_frozen()

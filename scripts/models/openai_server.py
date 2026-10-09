@@ -5,7 +5,9 @@ Adapted from Flash-Searcher FlashOAgents/models.py
 
 import json
 import logging
+import math
 import os
+import random
 import threading
 import time
 from typing import Dict, List, Optional
@@ -17,6 +19,49 @@ from .base import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+DEFAULT_RETRY_BASE_SECONDS = 5.0
+DEFAULT_RETRY_MAX_SECONDS = 30.0
+DEFAULT_RETRY_JITTER_SECONDS = 1.0
+MAX_RETRY_DELAY_SECONDS = 300.0
+
+
+def _retry_float(name: str, default: float) -> float:
+    raw = os.getenv(name, str(default)).strip()
+    try:
+        value = float(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite nonnegative number") from exc
+    if not math.isfinite(value) or value < 0:
+        raise ValueError(f"{name} must be a finite nonnegative number")
+    return value
+
+
+def transport_retry_policy() -> dict[str, float]:
+    """Return the bounded connection-retry policy from environment settings."""
+    base = _retry_float("JIT_MAS_RETRY_BASE_SECONDS", DEFAULT_RETRY_BASE_SECONDS)
+    maximum = _retry_float("JIT_MAS_RETRY_MAX_SECONDS", DEFAULT_RETRY_MAX_SECONDS)
+    jitter = _retry_float("JIT_MAS_RETRY_JITTER_SECONDS", DEFAULT_RETRY_JITTER_SECONDS)
+    if base > MAX_RETRY_DELAY_SECONDS or maximum > MAX_RETRY_DELAY_SECONDS:
+        raise ValueError(f"Retry delays cannot exceed {MAX_RETRY_DELAY_SECONDS:g} seconds")
+    if maximum < base:
+        raise ValueError("JIT_MAS_RETRY_MAX_SECONDS must be at least the retry base")
+    if jitter > maximum:
+        raise ValueError("JIT_MAS_RETRY_JITTER_SECONDS cannot exceed the retry cap")
+    return {"base_seconds": base, "max_seconds": maximum, "jitter_seconds": jitter}
+
+
+def _bounded_retry_delay(attempt: int, policy: dict[str, float]) -> float:
+    """Compute one bounded exponential delay with nonnegative random jitter."""
+    base = float(policy["base_seconds"])
+    maximum = float(policy["max_seconds"])
+    jitter_cap = float(policy["jitter_seconds"])
+    delay = min(maximum, base * (2 ** max(0, int(attempt))))
+    remaining = max(0.0, maximum - delay)
+    if jitter_cap and remaining:
+        delay += random.uniform(0.0, min(jitter_cap, remaining))
+    return min(maximum, delay)
 
 
 # Scope gate for EXEC_NATIVE_TOOLCALL: attach the native tools schema only on turns
@@ -120,6 +165,7 @@ class OpenAIServerModel(Model):
             kwargs["temperature"] = temperature
 
         super().__init__(**kwargs)
+        self.retry_policy = transport_retry_policy()
         self.model_id = model_id
         client_kwargs = dict(
             base_url=api_base,
@@ -284,7 +330,7 @@ class OpenAIServerModel(Model):
             completion_kwargs.pop('stop', None)
 
         max_retries = self.max_attempts
-        retry_delay = 5
+        retry_policy = getattr(self, "retry_policy", None) or transport_retry_policy()
         initial_max_tokens = completion_kwargs.get("max_tokens")
         # Keep retry behavior auditable without changing the request payload or
         # model configuration used by a normal (non-507) call.  The list is
@@ -293,6 +339,8 @@ class OpenAIServerModel(Model):
         retry_audit = []
         self.last_retry_metadata = {
             "initial_max_tokens": initial_max_tokens,
+            "max_attempts": max_retries,
+            "retry_policy": dict(retry_policy),
             "attempts": retry_audit,
         }
 
@@ -395,9 +443,13 @@ class OpenAIServerModel(Model):
                 raise
             except APIConnectionError as e:
                 if attempt < max_retries - 1:
-                    logger.warning(f"Network error: {e}. Retrying in {retry_delay}s...")
-                    time.sleep(retry_delay)
+                    delay = _bounded_retry_delay(attempt, retry_policy)
+                    attempt_audit["status"] = "retry"
+                    attempt_audit["retry_delay_seconds"] = delay
+                    logger.warning(f"Network error: {e}. Retrying in {delay:g}s...")
+                    time.sleep(delay)
                 else:
+                    attempt_audit["status"] = "failed"
                     logger.error(f"Failed after {max_retries} retries.")
                     self._record_api_failure_and_maybe_exit(e)
                     raise
@@ -450,13 +502,17 @@ class OpenAIServerModel(Model):
                 # glitch killed the whole case (status="error", score 0) and
                 # burned a full wrapper attempt to recover it.
                 if attempt < max_retries - 1:
+                    retry_delay = _bounded_retry_delay(attempt, retry_policy)
+                    attempt_audit["status"] = "retry"
+                    attempt_audit["retry_delay_seconds"] = retry_delay
                     logger.warning(
                         f"Malformed JSON in API response: {e}. "
-                        f"Retrying in {retry_delay}s "
+                        f"Retrying in {retry_delay:g}s "
                         f"(attempt {attempt + 1}/{max_retries})..."
                     )
                     time.sleep(retry_delay)
                 else:
+                    attempt_audit["status"] = "failed"
                     logger.error(f"Failed after {max_retries} retries: {e}")
                     self._record_api_failure_and_maybe_exit(e)
                     raise

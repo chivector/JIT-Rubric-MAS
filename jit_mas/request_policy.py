@@ -67,12 +67,14 @@ class RequestPolicyModel:
         if self.ledger is not None:
             self.ledger.end_request_wait(acquired=True)
         self.last_request_metadata = {"queue_seconds": waited}
+        provider_invoked = False
         try:
             remaining = self.ledger.remaining_seconds() if self.ledger is not None else None
             if remaining is not None and remaining <= 0:
                 raise TimeoutError("Task wall-clock budget exhausted before request")
             kwargs["timeout"] = min(kwargs.get("timeout", self.timeout), self.timeout,
                                     remaining if remaining is not None else self.timeout)
+            provider_invoked = True
             response = self.model(messages, **kwargs)
             raw = getattr(response, "raw", None)
             identity = {"response_model": getattr(raw, "model", None),
@@ -88,6 +90,9 @@ class RequestPolicyModel:
                 raise ValueError("Provider response model differs from the frozen serving identity")
             return response
         finally:
+            retry_metadata = getattr(self.model, "last_retry_metadata", None) if provider_invoked else None
+            if retry_metadata is not None:
+                self.last_request_metadata["transport_retry"] = copy.deepcopy(retry_metadata)
             if self.ledger is not None:
                 self.ledger.end_request()
             if self.gate is not None:

@@ -199,3 +199,50 @@ def test_context_policy_is_metered_with_the_actual_sent_messages():
     assert len(messages) == 5
     assert model.calls[0]["messages"] == messages
     assert ledger.snapshot()["records"][0]["context"]["removed_message_hashes"]
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_transport_retry_audit_is_durable_on_success_and_failure(failed):
+    class Model:
+        last_retry_metadata = {
+            "max_attempts": 2,
+            "attempts": [{"attempt": 1, "status": "retry", "retry_delay_seconds": 2},
+                         {"attempt": 2, "status": "failed" if failed else "success"}],
+        }
+
+        def __call__(self, messages, **kwargs):
+            if failed:
+                raise TimeoutError("synthetic provider timeout")
+            return ChatMessage(role="assistant", content="done")
+
+    provider = Model()
+    ledger = BudgetLedger()
+    model = MeteredModel(RequestPolicyModel(provider), ledger, "inference")
+    if failed:
+        with pytest.raises(TimeoutError, match="provider timeout"):
+            model([{"role": "user", "content": "Synthetic"}])
+    else:
+        model([{"role": "user", "content": "Synthetic"}])
+    audit = ledger.snapshot()["records"][0]["request"]["transport_retry"]
+    assert audit == provider.last_retry_metadata
+    provider.last_retry_metadata["attempts"][0]["retry_delay_seconds"] = 100
+    assert audit["attempts"][0]["retry_delay_seconds"] == 2
+
+
+def test_expired_task_does_not_record_previous_provider_retry_audit(monkeypatch):
+    calls = []
+
+    class Model:
+        last_retry_metadata = {"attempts": [{"status": "success"}]}
+
+        def __call__(self, messages, **kwargs):
+            calls.append(messages)
+            return ChatMessage(role="assistant", content="done")
+
+    ledger = BudgetLedger()
+    monkeypatch.setattr(ledger, "remaining_seconds", lambda: 0)
+    model = RequestPolicyModel(Model(), ledger=ledger)
+    with pytest.raises(TimeoutError, match="before request"):
+        model([{"role": "user", "content": "Synthetic"}])
+    assert not calls
+    assert "transport_retry" not in model.last_request_metadata

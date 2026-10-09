@@ -3,11 +3,12 @@
 import pytest
 from types import SimpleNamespace
 import httpx
-from openai import APIConnectionError, APIStatusError
+from openai import APIConnectionError, APIStatusError, APITimeoutError
 
 from scripts.models.base import Model
 from scripts.models.openai_server import (
     OpenAIServerModel, _estimate_input_tokens, _estimate_output_tokens,
+    transport_retry_policy,
 )
 
 
@@ -180,3 +181,93 @@ def test_http_507_retry_floor_and_auth_fail_fast(monkeypatch):
     assert caught.value.status_code == 401
     assert len(calls) == 1
     assert sleeps == []
+
+
+@pytest.mark.parametrize("error_type", [APIConnectionError, APITimeoutError])
+def test_connection_backoff_is_bounded_and_audited(monkeypatch, error_type):
+    sleeps = []
+    monkeypatch.setenv("JIT_MAS_RETRY_BASE_SECONDS", "2")
+    monkeypatch.setenv("JIT_MAS_RETRY_MAX_SECONDS", "8")
+    monkeypatch.setenv("JIT_MAS_RETRY_JITTER_SECONDS", "1")
+    monkeypatch.setenv("MODULAR_AGENT_API_FAILURE_ACTION", "raise")
+    monkeypatch.setattr("scripts.models.openai_server.time.sleep", sleeps.append)
+    monkeypatch.setattr("scripts.models.openai_server.random.uniform", lambda _lower, upper: upper)
+    error = error_type(request=httpx.Request("POST", "https://offline.example/v1"))
+    model, calls = _fixture_model([error, error, error, _CompletionResponse()], max_attempts=4)
+
+    assert model([{"role": "user", "content": "Offline request"}]).content == "ok"
+    assert len(calls) == 4
+    assert sleeps == [3, 5, 8]
+    assert all(call == calls[0] for call in calls)
+    assert [item["status"] for item in model.last_retry_metadata["attempts"]] == [
+        "retry", "retry", "retry", "success"]
+    assert model.last_retry_metadata["max_attempts"] == 4
+    assert [item["retry_delay_seconds"] for item in model.last_retry_metadata["attempts"][:3]] == sleeps
+
+
+def test_connection_retry_exhaustion_preserves_provider_error(monkeypatch):
+    monkeypatch.setenv("JIT_MAS_RETRY_BASE_SECONDS", "0")
+    monkeypatch.setenv("JIT_MAS_RETRY_MAX_SECONDS", "0")
+    monkeypatch.setenv("JIT_MAS_RETRY_JITTER_SECONDS", "0")
+    monkeypatch.setenv("MODULAR_AGENT_API_FAILURE_ACTION", "raise")
+    monkeypatch.setattr("scripts.models.openai_server.time.sleep", lambda _delay: None)
+    error = APIConnectionError(request=httpx.Request("POST", "https://offline.example/v1"))
+    model, calls = _fixture_model([error, error], max_attempts=2)
+    with pytest.raises(APIConnectionError) as caught:
+        model([{"role": "user", "content": "Offline request"}])
+    assert caught.value is error
+    assert len(calls) == 2
+    assert [item["status"] for item in model.last_retry_metadata["attempts"]] == ["retry", "failed"]
+
+
+def test_malformed_response_retry_uses_bounded_policy(monkeypatch):
+    import json
+
+    sleeps = []
+    monkeypatch.setenv("JIT_MAS_RETRY_BASE_SECONDS", "2")
+    monkeypatch.setenv("JIT_MAS_RETRY_MAX_SECONDS", "8")
+    monkeypatch.setenv("JIT_MAS_RETRY_JITTER_SECONDS", "0")
+    monkeypatch.setattr("scripts.models.openai_server.time.sleep", sleeps.append)
+    model, calls = _fixture_model([json.JSONDecodeError("bad json", "{", 0),
+                                   _CompletionResponse()], max_attempts=2)
+    assert model([{"role": "user", "content": "Offline request"}]).content == "ok"
+    assert len(calls) == 2
+    assert sleeps == [2]
+    assert model.last_retry_metadata["attempts"][0]["status"] == "retry"
+    assert model.last_retry_metadata["attempts"][0]["retry_delay_seconds"] == 2
+
+
+def test_malformed_response_retry_exhaustion_is_audited(monkeypatch):
+    import json
+
+    monkeypatch.setenv("JIT_MAS_RETRY_BASE_SECONDS", "2")
+    monkeypatch.setenv("JIT_MAS_RETRY_MAX_SECONDS", "8")
+    monkeypatch.setenv("JIT_MAS_RETRY_JITTER_SECONDS", "0")
+    monkeypatch.setenv("MODULAR_AGENT_API_FAILURE_ACTION", "raise")
+    monkeypatch.setattr("scripts.models.openai_server.time.sleep", lambda _delay: None)
+    malformed = json.JSONDecodeError("bad json", "{", 0)
+    model, calls = _fixture_model([malformed, malformed], max_attempts=2)
+    with pytest.raises(json.JSONDecodeError) as caught:
+        model([{"role": "user", "content": "Offline request"}])
+    assert caught.value is malformed
+    assert len(calls) == 2
+    assert [item["status"] for item in model.last_retry_metadata["attempts"]] == ["retry", "failed"]
+    assert model.last_retry_metadata["attempts"][0]["retry_delay_seconds"] == 2
+
+
+@pytest.mark.parametrize("name, value", [
+    ("JIT_MAS_RETRY_BASE_SECONDS", "nan"),
+    ("JIT_MAS_RETRY_BASE_SECONDS", "-1"),
+    ("JIT_MAS_RETRY_BASE_SECONDS", "invalid"),
+    ("JIT_MAS_RETRY_MAX_SECONDS", "inf"),
+    ("JIT_MAS_RETRY_MAX_SECONDS", "301"),
+    ("JIT_MAS_RETRY_MAX_SECONDS", "4"),
+    ("JIT_MAS_RETRY_JITTER_SECONDS", "31"),
+])
+def test_retry_policy_rejects_invalid_settings(monkeypatch, name, value):
+    monkeypatch.setenv("JIT_MAS_RETRY_BASE_SECONDS", "5")
+    monkeypatch.setenv("JIT_MAS_RETRY_MAX_SECONDS", "30")
+    monkeypatch.setenv("JIT_MAS_RETRY_JITTER_SECONDS", "1")
+    monkeypatch.setenv(name, value)
+    with pytest.raises(ValueError):
+        transport_retry_policy()

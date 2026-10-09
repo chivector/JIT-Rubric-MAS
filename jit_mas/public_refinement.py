@@ -22,7 +22,7 @@ from pydantic import (BaseModel, ConfigDict, Field, ValidationError, create_mode
 from .planning import knowledge_policy_prompt
 from .output_contract import (PUBLIC_CONSTRAINT_CONSTRUCTION_PROMPT,
                               PUBLIC_ELIGIBILITY_SCOPE_PROMPT)
-from .public_output_metrics import public_output_metrics
+from .public_output_metrics import public_output_metrics, public_output_metrics_model_input
 from .schemas import PublicTask, digest, utc_now
 
 
@@ -249,8 +249,13 @@ counting plurals or substrings as the literal word. Numeric token counts and
 decimal_digit_characters have different units: a multi-digit number is not
 several numbers. For a public requirement about numbers, inspect the actual
 numeric_token_diagnostics.tokens and its counting basis, not the digit count.
-For sentence-local positions, read the actual sentence_chunk_tokens.chunks
-arrays at the requested one-based position; array index is position minus one.
+For sentence-local positions, inspect sentence_chunk_tokens.requested_word_slots
+when present, otherwise its retained chunks arrays at the requested one-based
+position; array index is position minus one. transport_detail labels projected
+detail. Counts and conventions remain even when duplicated lexical arrays are
+omitted; use the intact draft for other checks. Projection omission is not
+evidence that a word or number is absent, and the full diagnostics hash binds
+the complete audit. Unsupported position hints retain available arrays.
 Do not invent a count or position from an impression of the prose. If the needed
 array prefix was truncated, report the missing observation precisely. Chunk
 boundaries can differ from linguistic sentences, especially for abbreviations
@@ -868,15 +873,23 @@ def refine_public_answer(task: PublicTask, result, models, ledger, config, *,
             # Some endpoints do not enforce the requested schema. The declared
             # transport option preserves identical local validation/rendering.
             response_format = {"type": "json_object"}
+        model_payload = copy.deepcopy(payload)
+        diagnostics_transport = None
+        if isinstance(model_payload.get("public_diagnostics"), dict):
+            model_payload["public_diagnostics"] = public_output_metrics_model_input(
+                task, model_payload["public_diagnostics"])
+            diagnostics_transport = copy.deepcopy(model_payload["public_diagnostics"]["transport_projection"])
         messages = [{"role": "system", "content": instructions + policy
                      + "\nReturn a JSON response instance that conforms to this schema; do not return the schema itself:\n" + json.dumps(schema.model_json_schema())},
-                    {"role": "user", "content": json.dumps({"phase": agent_id, **payload},
+                    {"role": "user", "content": json.dumps({"phase": agent_id, **model_payload},
                                                              ensure_ascii=False, allow_nan=False)}]
         record = {"agent_id": agent_id, "role": "global", "stage": "inference", "attempt": attempt,
                   "status": "started", "messages": copy.deepcopy(messages),
                   "input_hash": digest(messages), "output_cap": output_cap,
                   "response_format": copy.deepcopy(response_format),
                   "response_format_hash": digest(response_format)}
+        if diagnostics_transport is not None:
+            record["diagnostics_transport"] = diagnostics_transport
         model_call_options = {"max_tokens": output_cap, "response_format": response_format}
         if agent_id == "public-revision" and config.public_revision_frequency_penalty is not None:
             model_call_options["frequency_penalty"] = config.public_revision_frequency_penalty
