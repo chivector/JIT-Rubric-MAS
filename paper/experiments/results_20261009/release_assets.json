@@ -1,0 +1,518 @@
+{
+  "release_url": "https://github.com/chivector/JIT-Rubric-MAS/releases/tag/experiment-results-20261009",
+  "tag": "experiment-results-20261009",
+  "draft": false,
+  "verified_at_utc": "2026-10-09T11:48:00.058154+00:00",
+  "archive_families": 59,
+  "archived_files": 71142,
+  "compressed_bytes": 3221671398,
+  "removed_superseded_assets": [
+    "j_r15.tar.gz",
+    "j_r16_rr_v2.tar.gz",
+    "outputs.tar.gz",
+    "r_dsv11.tar.gz",
+    "r_dsv12.tar.gz",
+    "r_dsv13_gpt56_20261007.tar.gz",
+    "runtime_formal_v5_assets_20261004.tar.gz",
+    "runtime_formal_v6_assets_20261006.tar.gz",
+    "runtime_formal_v7_ours_assets_20261006.tar.gz"
+  ],
+  "assets": [
+    {
+      "name": "archive_index.json",
+      "bytes": 245472,
+      "sha256": "aac5d07f29d1da90f1e1ef0638a8ef289f20f466c003ea5bbcd797edf1ce9a99",
+      "github_digest": "sha256:aac5d07f29d1da90f1e1ef0638a8ef289f20f466c003ea5bbcd797edf1ce9a99",
+      "asset_id": 624804367,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/archive_index.json"
+    },
+    {
+      "name": "j_r14.tar.gz",
+      "bytes": 16601931,
+      "sha256": "f529512cd08871810dfda03d7756ba08259ae3edb62ebdf2b9ef4c29ff75eb2c",
+      "github_digest": "sha256:f529512cd08871810dfda03d7756ba08259ae3edb62ebdf2b9ef4c29ff75eb2c",
+      "asset_id": 624627829,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/j_r14.tar.gz"
+    },
+    {
+      "name": "j_r15.corrected-v2.tar.gz",
+      "bytes": 414748018,
+      "sha256": "5c626decc99fd8617fbc33c3d47bf0e9695749f94abdadd5f0e2bc87e7b3f2c4",
+      "github_digest": "sha256:5c626decc99fd8617fbc33c3d47bf0e9695749f94abdadd5f0e2bc87e7b3f2c4",
+      "asset_id": 624805612,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/j_r15.corrected-v2.tar.gz"
+    },
+    {
+      "name": "j_r15_paper.tar.gz",
+      "bytes": 7518,
+      "sha256": "6152751020aa50506f122b5580ac13dcc4c6fe79dea93bad53b6b8c8d2f55509",
+      "github_digest": "sha256:6152751020aa50506f122b5580ac13dcc4c6fe79dea93bad53b6b8c8d2f55509",
+      "asset_id": 624637011,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/j_r15_paper.tar.gz"
+    },
+    {
+      "name": "j_r16_rr.tar.gz",
+      "bytes": 1611210,
+      "sha256": "9537e828b7bf304e645df1ab605dcaa388b3b8c370783a2ab852dba8419e492c",
+      "github_digest": "sha256:9537e828b7bf304e645df1ab605dcaa388b3b8c370783a2ab852dba8419e492c",
+      "asset_id": 624637017,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/j_r16_rr.tar.gz"
+    },
+    {
+      "name": "j_r16_rr_v2.corrected-v2.tar.gz",
+      "bytes": 38480337,
+      "sha256": "27cff9edfd7f908f9fcc7c973bddfc0a15f6e79cf1a8963d9708818181f5d457",
+      "github_digest": "sha256:27cff9edfd7f908f9fcc7c973bddfc0a15f6e79cf1a8963d9708818181f5d457",
+      "asset_id": 624780360,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/j_r16_rr_v2.corrected-v2.tar.gz"
+    },
+    {
+      "name": "j_r16_rr_v2_paper.tar.gz",
+      "bytes": 2457,
+      "sha256": "d89a9e2a53b26f4396b42bd5cdc696ea12f10367a442076ca662992217409b2e",
+      "github_digest": "sha256:d89a9e2a53b26f4396b42bd5cdc696ea12f10367a442076ca662992217409b2e",
+      "asset_id": 624643392,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/j_r16_rr_v2_paper.tar.gz"
+    },
+    {
+      "name": "j_r17_rr_recovery_v4.tar.gz",
+      "bytes": 91635874,
+      "sha256": "ad5c1f0cff8bba69efdb2f6233b825958427854f610781e7021e02a5c69e2e02",
+      "github_digest": "sha256:ad5c1f0cff8bba69efdb2f6233b825958427854f610781e7021e02a5c69e2e02",
+      "asset_id": 624643404,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/j_r17_rr_recovery_v4.tar.gz"
+    },
+    {
+      "name": "j_r17_rr_recovery_v4_paper.tar.gz",
+      "bytes": 2869,
+      "sha256": "8f3e239112a3d182120faacf6b40843c8afced1ebe3ee1abef94f5a96370da14",
+      "github_digest": "sha256:8f3e239112a3d182120faacf6b40843c8afced1ebe3ee1abef94f5a96370da14",
+      "asset_id": 624789390,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/j_r17_rr_recovery_v4_paper.tar.gz"
+    },
+    {
+      "name": "j_r17_rr_v3.tar.gz",
+      "bytes": 242739233,
+      "sha256": "48bc349bb5374958fc376ef68ac37590b6c23cd53a8e9c5307e98022ec020a2c",
+      "github_digest": "sha256:48bc349bb5374958fc376ef68ac37590b6c23cd53a8e9c5307e98022ec020a2c",
+      "asset_id": 624651021,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/j_r17_rr_v3.tar.gz"
+    },
+    {
+      "name": "j_r17_rr_v3_paper.tar.gz",
+      "bytes": 2458,
+      "sha256": "2e82d10207835b9f24d4084ce1a5f19022cf1a92d7f055c63a3395cd2e815c75",
+      "github_digest": "sha256:2e82d10207835b9f24d4084ce1a5f19022cf1a92d7f055c63a3395cd2e815c75",
+      "asset_id": 624651003,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/j_r17_rr_v3_paper.tar.gz"
+    },
+    {
+      "name": "manifest.json",
+      "bytes": 65451804,
+      "sha256": "d66476845bb26d464fb0fb831e403a2e7a5675cbeb6f0d366d3abd7bdb9370f0",
+      "github_digest": "sha256:d66476845bb26d464fb0fb831e403a2e7a5675cbeb6f0d366d3abd7bdb9370f0",
+      "asset_id": 624802774,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/manifest.json"
+    },
+    {
+      "name": "outputs.corrected-v2.tar.gz",
+      "bytes": 412439069,
+      "sha256": "f7a8706e4523cfef77c1a06e29f88b7ad1100d43e46eda17d25194550ea17a09",
+      "github_digest": "sha256:f7a8706e4523cfef77c1a06e29f88b7ad1100d43e46eda17d25194550ea17a09",
+      "asset_id": 624796622,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/outputs.corrected-v2.tar.gz"
+    },
+    {
+      "name": "r17_runtime_metadata.tar.gz",
+      "bytes": 3111,
+      "sha256": "cc3ad5bb42b037ab31921f05a45969ecc471b18a7584841c29dd4a86fa87e107",
+      "github_digest": "sha256:cc3ad5bb42b037ab31921f05a45969ecc471b18a7584841c29dd4a86fa87e107",
+      "asset_id": 624662150,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r17_runtime_metadata.tar.gz"
+    },
+    {
+      "name": "r17_worktree_identity.tar.gz",
+      "bytes": 261334,
+      "sha256": "d60e1b12eaef03c2d190b6a8cf628abb3eaebb7985cc9236b70afbbf4a1da53f",
+      "github_digest": "sha256:d60e1b12eaef03c2d190b6a8cf628abb3eaebb7985cc9236b70afbbf4a1da53f",
+      "asset_id": 624662416,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r17_worktree_identity.tar.gz"
+    },
+    {
+      "name": "r_diag_pipeline.tar.gz",
+      "bytes": 65,
+      "sha256": "dc2f79f9ec2682c9b04836803188718b6a2e32737e2158bf3c740af8cbcf8aa0",
+      "github_digest": "sha256:dc2f79f9ec2682c9b04836803188718b6a2e32737e2158bf3c740af8cbcf8aa0",
+      "asset_id": 624562378,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_diag_pipeline.tar.gz"
+    },
+    {
+      "name": "r_dsqa507_replay.tar.gz",
+      "bytes": 724373,
+      "sha256": "2c20df9dd181da71d18a31b041d9cd5a6426c2589139ffb223c861d634f9ced3",
+      "github_digest": "sha256:2c20df9dd181da71d18a31b041d9cd5a6426c2589139ffb223c861d634f9ced3",
+      "asset_id": 624562379,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsqa507_replay.tar.gz"
+    },
+    {
+      "name": "r_dsv10.tar.gz",
+      "bytes": 7912337,
+      "sha256": "5b91c8754a8fbf1b78b67c0275f1a2eb134a6a07c9f58c12a266888b72009c90",
+      "github_digest": "sha256:5b91c8754a8fbf1b78b67c0275f1a2eb134a6a07c9f58c12a266888b72009c90",
+      "asset_id": 624562477,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv10.tar.gz"
+    },
+    {
+      "name": "r_dsv11.corrected-v2.tar.gz",
+      "bytes": 475050396,
+      "sha256": "cf3bd6362478cbde01e25a4be56d063d0c6d316b13aad3a409fbbbf50dc9ecbd",
+      "github_digest": "sha256:cf3bd6362478cbde01e25a4be56d063d0c6d316b13aad3a409fbbbf50dc9ecbd",
+      "asset_id": 624805614,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv11.corrected-v2.tar.gz"
+    },
+    {
+      "name": "r_dsv11_paper.tar.gz",
+      "bytes": 7128,
+      "sha256": "2e263ba45cdadedfb8a2cfe605fd8c557e056c2283109a32c0249070ccaafa06",
+      "github_digest": "sha256:2e263ba45cdadedfb8a2cfe605fd8c557e056c2283109a32c0249070ccaafa06",
+      "asset_id": 624575322,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv11_paper.tar.gz"
+    },
+    {
+      "name": "r_dsv12.corrected-v2.tar.gz",
+      "bytes": 893275749,
+      "sha256": "6c65a58ec98beb7095614c42d35c83f4ed39d957f1090807b0dc729420b7ceff",
+      "github_digest": "sha256:6c65a58ec98beb7095614c42d35c83f4ed39d957f1090807b0dc729420b7ceff",
+      "asset_id": 624805848,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv12.corrected-v2.tar.gz"
+    },
+    {
+      "name": "r_dsv12_attempt1.tar.gz",
+      "bytes": 16256817,
+      "sha256": "d7f95ad35119c0abc045ffecbbcc78e5a3a96110651275dfae900550e6ab7747",
+      "github_digest": "sha256:d7f95ad35119c0abc045ffecbbcc78e5a3a96110651275dfae900550e6ab7747",
+      "asset_id": 624609392,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv12_attempt1.tar.gz"
+    },
+    {
+      "name": "r_dsv12_attempt2.tar.gz",
+      "bytes": 337961,
+      "sha256": "dc13836afedb91c643169abf327b6b6cb0524a0d4aa798c0f9aa886aa215a7ea",
+      "github_digest": "sha256:dc13836afedb91c643169abf327b6b6cb0524a0d4aa798c0f9aa886aa215a7ea",
+      "asset_id": 624609395,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv12_attempt2.tar.gz"
+    },
+    {
+      "name": "r_dsv12_attempt3.tar.gz",
+      "bytes": 23933860,
+      "sha256": "65ea2f8f9461d9d0d6b92a203699735e534f08f6ad5fa7d6654eac6bef797b00",
+      "github_digest": "sha256:65ea2f8f9461d9d0d6b92a203699735e534f08f6ad5fa7d6654eac6bef797b00",
+      "asset_id": 624621971,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv12_attempt3.tar.gz"
+    },
+    {
+      "name": "r_dsv12_attempt4.tar.gz",
+      "bytes": 22104793,
+      "sha256": "12c866d150f0a359df764c087154698c64ce6612f14f8959e357bffe52f2f49d",
+      "github_digest": "sha256:12c866d150f0a359df764c087154698c64ce6612f14f8959e357bffe52f2f49d",
+      "asset_id": 624621969,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv12_attempt4.tar.gz"
+    },
+    {
+      "name": "r_dsv12_attempt5.tar.gz",
+      "bytes": 24853721,
+      "sha256": "02c0a25060eb8d4bdc567e935e0904dc9f39f2584be695b6d070a185efd4461f",
+      "github_digest": "sha256:02c0a25060eb8d4bdc567e935e0904dc9f39f2584be695b6d070a185efd4461f",
+      "asset_id": 624621968,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv12_attempt5.tar.gz"
+    },
+    {
+      "name": "r_dsv13_gpt56_20261007.corrected-v2.tar.gz",
+      "bytes": 169934030,
+      "sha256": "55db6961315c574ba303d187432e8497853678142a010dc43410ad8aea6acdf8",
+      "github_digest": "sha256:55db6961315c574ba303d187432e8497853678142a010dc43410ad8aea6acdf8",
+      "asset_id": 624796300,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv13_gpt56_20261007.corrected-v2.tar.gz"
+    },
+    {
+      "name": "r_dsv13_gpt56_20261007_paper.tar.gz",
+      "bytes": 6825,
+      "sha256": "a868ab90abf2f1f4309e195a39183bf7a29b90db63b5e484833525a898c20132",
+      "github_digest": "sha256:a868ab90abf2f1f4309e195a39183bf7a29b90db63b5e484833525a898c20132",
+      "asset_id": 624622884,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv13_gpt56_20261007_paper.tar.gz"
+    },
+    {
+      "name": "r_dsv14_gpt56_20261008_retry.tar.gz",
+      "bytes": 13716083,
+      "sha256": "1dcf78dfb1cc697099821d069172e6b92769821e8f0fccabcb9730b8cf37b715",
+      "github_digest": "sha256:1dcf78dfb1cc697099821d069172e6b92769821e8f0fccabcb9730b8cf37b715",
+      "asset_id": 624623065,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv14_gpt56_20261008_retry.tar.gz"
+    },
+    {
+      "name": "r_dsv7.tar.gz",
+      "bytes": 21592529,
+      "sha256": "da5784c137a4b967a5d8923555a0095c52ef3a471549d5045965b038f0a00243",
+      "github_digest": "sha256:da5784c137a4b967a5d8923555a0095c52ef3a471549d5045965b038f0a00243",
+      "asset_id": 624623328,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv7.tar.gz"
+    },
+    {
+      "name": "r_dsv8.tar.gz",
+      "bytes": 45663206,
+      "sha256": "9ee4c72a6e1878c9cab5afb9859b1f6ff2fe068de3381f4a41d81c10cb8cfe9a",
+      "github_digest": "sha256:9ee4c72a6e1878c9cab5afb9859b1f6ff2fe068de3381f4a41d81c10cb8cfe9a",
+      "asset_id": 624624461,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv8.tar.gz"
+    },
+    {
+      "name": "r_dsv9.tar.gz",
+      "bytes": 4013755,
+      "sha256": "7bab4232957bd45537f31406fb15e48a844637ff3e5a9621da9063c818de29ee",
+      "github_digest": "sha256:7bab4232957bd45537f31406fb15e48a844637ff3e5a9621da9063c818de29ee",
+      "asset_id": 624625046,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_dsv9.tar.gz"
+    },
+    {
+      "name": "r_root_files.tar.gz",
+      "bytes": 50695,
+      "sha256": "e96282958f5782f13bb5018b659d5deb93b3eaa6a57582494a4f95a4d64983f9",
+      "github_digest": "sha256:e96282958f5782f13bb5018b659d5deb93b3eaa6a57582494a4f95a4d64983f9",
+      "asset_id": 624625844,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/r_root_files.tar.gz"
+    },
+    {
+      "name": "rr-runtime.bundle",
+      "bytes": 250675,
+      "sha256": "a2cf7fed2c5c8960e179a570f46650e4254a824b59fe51e9141b18538f323cd9",
+      "github_digest": "sha256:a2cf7fed2c5c8960e179a570f46650e4254a824b59fe51e9141b18538f323cd9",
+      "asset_id": 624540141,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/rr-runtime.bundle"
+    },
+    {
+      "name": "runtime_development_pilot_20261004_candidate_c2.tar.gz",
+      "bytes": 71091,
+      "sha256": "be316fa054fbf75128ee265169bdbf24266e97f3bcf07262987fe12b0cf55c49",
+      "github_digest": "sha256:be316fa054fbf75128ee265169bdbf24266e97f3bcf07262987fe12b0cf55c49",
+      "asset_id": 624655648,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_development_pilot_20261004_candidate_c2.tar.gz"
+    },
+    {
+      "name": "runtime_development_pilot_20261004_candidate_c3.tar.gz",
+      "bytes": 128818,
+      "sha256": "b9e4f14dbbb08d8bc443373f8d479eaee9788d6959c7ded82917a766130ab364",
+      "github_digest": "sha256:b9e4f14dbbb08d8bc443373f8d479eaee9788d6959c7ded82917a766130ab364",
+      "asset_id": 624655644,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_development_pilot_20261004_candidate_c3.tar.gz"
+    },
+    {
+      "name": "runtime_formal_v5_assets_20261004.corrected-v2.tar.gz",
+      "bytes": 150859865,
+      "sha256": "8bd8c026479b518d69be7df4dcd61fcae3264f8449273442fdc16b78f9c2b217",
+      "github_digest": "sha256:8bd8c026479b518d69be7df4dcd61fcae3264f8449273442fdc16b78f9c2b217",
+      "asset_id": 624799829,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_formal_v5_assets_20261004.corrected-v2.tar.gz"
+    },
+    {
+      "name": "runtime_formal_v6_assets_20261006.corrected-v2.tar.gz",
+      "bytes": 5761833,
+      "sha256": "f491b03b3ec40ec1c6270c03029c5befe06feb2db1bfb4b4a50021d7c6729c61",
+      "github_digest": "sha256:f491b03b3ec40ec1c6270c03029c5befe06feb2db1bfb4b4a50021d7c6729c61",
+      "asset_id": 624802094,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_formal_v6_assets_20261006.corrected-v2.tar.gz"
+    },
+    {
+      "name": "runtime_formal_v6_campaign_20261006.tar.gz",
+      "bytes": 310381,
+      "sha256": "75c2bb3eeff36117d429ef5d80bc2e506b8a2911be90ed39f5612cd697ea8112",
+      "github_digest": "sha256:75c2bb3eeff36117d429ef5d80bc2e506b8a2911be90ed39f5612cd697ea8112",
+      "asset_id": 624656875,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_formal_v6_campaign_20261006.tar.gz"
+    },
+    {
+      "name": "runtime_formal_v7_ours_assets_20261006.corrected-v2.tar.gz",
+      "bytes": 14572913,
+      "sha256": "b32848585436e30442749548ef02b9bf3dbc8810e71e4d8b5fd2b319f9e5105b",
+      "github_digest": "sha256:b32848585436e30442749548ef02b9bf3dbc8810e71e4d8b5fd2b319f9e5105b",
+      "asset_id": 624802218,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_formal_v7_ours_assets_20261006.corrected-v2.tar.gz"
+    },
+    {
+      "name": "runtime_gpt56_probe_current2.tar.gz",
+      "bytes": 1348,
+      "sha256": "5ab90c8a28f637eaf68aadeabfcc410ef9ff52e492fc9ee301b110987b8e4b23",
+      "github_digest": "sha256:5ab90c8a28f637eaf68aadeabfcc410ef9ff52e492fc9ee301b110987b8e4b23",
+      "asset_id": 624659506,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_gpt56_probe_current2.tar.gz"
+    },
+    {
+      "name": "runtime_identity_check.tar.gz",
+      "bytes": 139757,
+      "sha256": "5fa6e9c716ff93a0a8a78784a4937f26def1888ac42542b448ceffc815034d1f",
+      "github_digest": "sha256:5fa6e9c716ff93a0a8a78784a4937f26def1888ac42542b448ceffc815034d1f",
+      "asset_id": 624659511,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_identity_check.tar.gz"
+    },
+    {
+      "name": "runtime_independent_summary_20261006.tar.gz",
+      "bytes": 3885,
+      "sha256": "f2df9f1692c248a25203ecfe903067c1db8dcf0fde0fe1791a5f631ea50bcb39",
+      "github_digest": "sha256:f2df9f1692c248a25203ecfe903067c1db8dcf0fde0fe1791a5f631ea50bcb39",
+      "asset_id": 624659575,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_independent_summary_20261006.tar.gz"
+    },
+    {
+      "name": "runtime_independent_summary_20261006_retry1.tar.gz",
+      "bytes": 3710,
+      "sha256": "79219bbb99e2aeaba68778277a28aba9b08b80db161050288638862b15e64baa",
+      "github_digest": "sha256:79219bbb99e2aeaba68778277a28aba9b08b80db161050288638862b15e64baa",
+      "asset_id": 624659584,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_independent_summary_20261006_retry1.tar.gz"
+    },
+    {
+      "name": "runtime_independent_summary_v5_current.tar.gz",
+      "bytes": 3959,
+      "sha256": "4eadd5fe1f33474b6925ff3fa955d313826c8c976333f07c4441326fdf4d47fd",
+      "github_digest": "sha256:4eadd5fe1f33474b6925ff3fa955d313826c8c976333f07c4441326fdf4d47fd",
+      "asset_id": 624659657,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_independent_summary_v5_current.tar.gz"
+    },
+    {
+      "name": "runtime_independent_v7_ours_campaign_20261006.tar.gz",
+      "bytes": 276094,
+      "sha256": "3a45daae8e3dae31b6385bb5f1c8c991e88916a6bf199f578b10237a5e80a887",
+      "github_digest": "sha256:3a45daae8e3dae31b6385bb5f1c8c991e88916a6bf199f578b10237a5e80a887",
+      "asset_id": 624659666,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_independent_v7_ours_campaign_20261006.tar.gz"
+    },
+    {
+      "name": "runtime_root_results.tar.gz",
+      "bytes": 1204196,
+      "sha256": "41996bb03d070e7551f78436ef8beddc571d090eb2b8e9d6b6f648650ff3825d",
+      "github_digest": "sha256:41996bb03d070e7551f78436ef8beddc571d090eb2b8e9d6b6f648650ff3825d",
+      "asset_id": 624662640,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_root_results.tar.gz"
+    },
+    {
+      "name": "runtime_rr_opt_v2.tar.gz",
+      "bytes": 776364,
+      "sha256": "ee1992bc0f1ebee05967eb10ad0e3351d3d302f83418b76264998e972d3d5498",
+      "github_digest": "sha256:ee1992bc0f1ebee05967eb10ad0e3351d3d302f83418b76264998e972d3d5498",
+      "asset_id": 624659735,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_rr_opt_v2.tar.gz"
+    },
+    {
+      "name": "runtime_rr_test_recovery_construct.tar.gz",
+      "bytes": 183000,
+      "sha256": "4b91c85ac46038361bdcb7e304af64fafdcefe1d98f7e4f85e2fa3aedffd8a27",
+      "github_digest": "sha256:4b91c85ac46038361bdcb7e304af64fafdcefe1d98f7e4f85e2fa3aedffd8a27",
+      "asset_id": 624659768,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_rr_test_recovery_construct.tar.gz"
+    },
+    {
+      "name": "runtime_rr_test_recovery_dryrun.tar.gz",
+      "bytes": 139912,
+      "sha256": "eac6b38003ec010b3e24b9362d7791720e20609c4082e788fb7b58ff676fdd63",
+      "github_digest": "sha256:eac6b38003ec010b3e24b9362d7791720e20609c4082e788fb7b58ff676fdd63",
+      "asset_id": 624659786,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_rr_test_recovery_dryrun.tar.gz"
+    },
+    {
+      "name": "runtime_rr_test_recovery_dryrun2.tar.gz",
+      "bytes": 139914,
+      "sha256": "ebabfb84e8100f70ee8cbd873e9e468da5433e0df47068252ef190f703c81c25",
+      "github_digest": "sha256:ebabfb84e8100f70ee8cbd873e9e468da5433e0df47068252ef190f703c81c25",
+      "asset_id": 624659822,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_rr_test_recovery_dryrun2.tar.gz"
+    },
+    {
+      "name": "runtime_rr_test_recovery_dryrun3.tar.gz",
+      "bytes": 139913,
+      "sha256": "9caf268fb38dd7e85215d6aa91b1a6771673433628edce3627813f3ece74961b",
+      "github_digest": "sha256:9caf268fb38dd7e85215d6aa91b1a6771673433628edce3627813f3ece74961b",
+      "asset_id": 624659835,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_rr_test_recovery_dryrun3.tar.gz"
+    },
+    {
+      "name": "runtime_rr_test_recovery_dryrun4.tar.gz",
+      "bytes": 139965,
+      "sha256": "6092b7d1a87e9a6f422aa86e567548a2ec74c4b0c188cc40b9bd17dece6475e5",
+      "github_digest": "sha256:6092b7d1a87e9a6f422aa86e567548a2ec74c4b0c188cc40b9bd17dece6475e5",
+      "asset_id": 624659859,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_rr_test_recovery_dryrun4.tar.gz"
+    },
+    {
+      "name": "runtime_rr_test_recovery_pathcheck.tar.gz",
+      "bytes": 183001,
+      "sha256": "38472638a50dbdef9ca6590bd8da0a3242f1ae65eae4bdd072cc62750333e460",
+      "github_digest": "sha256:38472638a50dbdef9ca6590bd8da0a3242f1ae65eae4bdd072cc62750333e460",
+      "asset_id": 624659898,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_rr_test_recovery_pathcheck.tar.gz"
+    },
+    {
+      "name": "runtime_rr_test_recovery_rr33.tar.gz",
+      "bytes": 344266,
+      "sha256": "effe5a06f76e6a30e68683c07157d98a8f3450004cceee21f31d7eb69f7cbc71",
+      "github_digest": "sha256:effe5a06f76e6a30e68683c07157d98a8f3450004cceee21f31d7eb69f7cbc71",
+      "asset_id": 624659909,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_rr_test_recovery_rr33.tar.gz"
+    },
+    {
+      "name": "runtime_rr_test_recovery_rr33_w1.tar.gz",
+      "bytes": 23712576,
+      "sha256": "0594ee7d93c587a7d86de260f79b40fbc0ec826b2f0b71c22d7ad1a844653d2d",
+      "github_digest": "sha256:0594ee7d93c587a7d86de260f79b40fbc0ec826b2f0b71c22d7ad1a844653d2d",
+      "asset_id": 624659920,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_rr_test_recovery_rr33_w1.tar.gz"
+    },
+    {
+      "name": "runtime_v7c.tar.gz",
+      "bytes": 8892043,
+      "sha256": "8aaa7a794033a4c46f625cc0ccda6051063841265f4a4c1be8e611019f040f02",
+      "github_digest": "sha256:8aaa7a794033a4c46f625cc0ccda6051063841265f4a4c1be8e611019f040f02",
+      "asset_id": 624659958,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_v7c.tar.gz"
+    },
+    {
+      "name": "runtime_v7deepseek_judge.tar.gz",
+      "bytes": 11340788,
+      "sha256": "6ddcb0cb0a29f28a803f27a3c856b54566d8494274711598c86018be4e56798c",
+      "github_digest": "sha256:6ddcb0cb0a29f28a803f27a3c856b54566d8494274711598c86018be4e56798c",
+      "asset_id": 624659968,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_v7deepseek_judge.tar.gz"
+    },
+    {
+      "name": "runtime_v7deepseek_judge_w4.tar.gz",
+      "bytes": 13616148,
+      "sha256": "eb4708e609b5105b344f12cfb373ab99c052e74caab927fa7c0e58fd12d3aca6",
+      "github_digest": "sha256:eb4708e609b5105b344f12cfb373ab99c052e74caab927fa7c0e58fd12d3aca6",
+      "asset_id": 624660271,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_v7deepseek_judge_w4.tar.gz"
+    },
+    {
+      "name": "runtime_v7deepseek_judge_w4b.tar.gz",
+      "bytes": 12301481,
+      "sha256": "5662975d087e5e53cf92a7426c82ca514cd0b4d96e517be9b4610c51979f8fd5",
+      "github_digest": "sha256:5662975d087e5e53cf92a7426c82ca514cd0b4d96e517be9b4610c51979f8fd5",
+      "asset_id": 624660544,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_v7deepseek_judge_w4b.tar.gz"
+    },
+    {
+      "name": "runtime_v7final.tar.gz",
+      "bytes": 9421249,
+      "sha256": "f233dc7cd5e0b55aa78ce264eca561554b8eb3c040c5b11d4c4be7be2248afef",
+      "github_digest": "sha256:f233dc7cd5e0b55aa78ce264eca561554b8eb3c040c5b11d4c4be7be2248afef",
+      "asset_id": 624662156,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_v7final.tar.gz"
+    },
+    {
+      "name": "runtime_v7r.tar.gz",
+      "bytes": 29033186,
+      "sha256": "7e5cb8ad91af9169fcae0bbb0dea1975d5f0085d0b9a75a29104743d4d1c8f0d",
+      "github_digest": "sha256:7e5cb8ad91af9169fcae0bbb0dea1975d5f0085d0b9a75a29104743d4d1c8f0d",
+      "asset_id": 624662152,
+      "url": "https://github.com/chivector/JIT-Rubric-MAS/releases/download/experiment-results-20261009/runtime_v7r.tar.gz"
+    }
+  ]
+}
