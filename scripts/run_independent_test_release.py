@@ -135,9 +135,7 @@ class IndependentTestReleaseRunner:
         # evidence packs contain EVO+VAL+TEST IDs).  Reuse the immutable
         # source runtime split for these targets; static checker targets keep
         # the TEST-only wrapper below.
-        environment = getattr(self, "environment", None)
-        materials = getattr(environment, "materials", {})
-        material = materials.get(target, {})
+        material = self.environment.materials.get(target, {})
         sources = tuple(self.campaign.protocol.get("sources", SOURCES))
         if target in sources and material.get("evidence_dir"):
             run_id = next(iter(self.campaign.protocol.get("run_ids", (0,))))
