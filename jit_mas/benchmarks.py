@@ -23,6 +23,7 @@ from .schemas import PublicTask, digest
 BENCHMARK_NAMES = ("researchrubrics", "deepsearchqa", "deepresearch_bench_ii")
 ADDITIONAL_BENCHMARK_NAMES = ("writingbench", "ifeval", "ifbench")
 ALL_BENCHMARK_NAMES = BENCHMARK_NAMES + ADDITIONAL_BENCHMARK_NAMES
+
 DSQA_REVISION = "b2623f8653065c2672de6d941fc5434cd652376c"
 DSQA_NOTEBOOK_SHA256 = "aa1ace0a1e0023a5cad5e662968bcf18c6b4f5c0666cbad78a46ba5f813559b2"
 DSQA_NOTEBOOK = "https://www.kaggle.com/code/andrewmingwang/deepsearchqa-starter-code"

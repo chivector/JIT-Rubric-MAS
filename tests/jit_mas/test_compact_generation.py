@@ -195,6 +195,65 @@ def test_truncated_structured_output_is_preserved_without_a_rendered_answer():
     assert result["error"]["type"] == "IncompleteGeneration"
 
 
+def test_optional_construction_repair_records_two_attempts_and_preserves_first_raw_response():
+    class RepairModel:
+        def __init__(self):
+            self.responses = [
+                '{"gaps":{"gap_000":"shore", "gap_001":""}}',
+                '{"gaps":{"gap_000":"A", "gap_001":"view"}}',
+            ]
+            self.calls = 0
+
+        def __call__(self, messages, **kwargs):
+            self.calls += 1
+            return self.responses.pop(0)
+
+    provider = RepairModel()
+    ledger = BudgetLedger(max_calls=2, max_tokens=10000)
+    model = MeteredModel(provider, ledger, "inference", max_tokens=1000)
+    result = generate_one(task("Use word shore once."), model, ledger, literal=True,
+                          constraint_construction=True, construction_repair=True)
+    assert result["complete"] is True
+    assert result["answer"] == "A shore view"
+    assert result["construction_repair_attempted"] is True
+    assert len(result["generation_attempts"]) == len(result["raw_attempts"]) == 2
+    assert result["generation_attempts"][0]["error"]["type"] == "ValidationError"
+    assert result["generation_attempts"][1]["error"] is None
+    assert provider.calls == result["budget"]["model_calls"] == 2
+
+
+def test_construction_repair_stops_after_second_failure_and_does_not_retry_transport_errors():
+    class InvalidModel:
+        calls = 0
+
+        def __call__(self, messages, **kwargs):
+            self.calls += 1
+            return '{"gaps":{"gap_000":"shore", "gap_001":""}}'
+
+    provider = InvalidModel()
+    ledger = BudgetLedger(max_calls=2, max_tokens=10000)
+    model = MeteredModel(provider, ledger, "inference", max_tokens=1000)
+    result = generate_one(task("Use word shore once."), model, ledger, literal=True,
+                          constraint_construction=True, construction_repair=True)
+    assert provider.calls == result["budget"]["model_calls"] == 2
+    assert result["complete"] is False
+    assert len(result["generation_attempts"]) == 2
+
+    class FailedTransport:
+        calls = 0
+
+        def __call__(self, messages, **kwargs):
+            self.calls += 1
+            raise RuntimeError("upstream error")
+
+    provider = FailedTransport()
+    result = generate_one(task("Use word shore once."), provider,
+        BudgetLedger(max_calls=2, max_tokens=10000), literal=True,
+        constraint_construction=True, construction_repair=True)
+    assert provider.calls == 1
+    assert result["construction_repair_attempted"] is False
+
+
 def test_runner_preserves_generated_artifact_when_fixed_checker_raises(tmp_path, monkeypatch):
     config_path = tmp_path / "config.yaml"
     config_path.write_text("models:\n  exec:\n    model: fixture\n    endpoint: https://example.invalid/v1\n    key_env: COMPACT_TEST_KEY\n", encoding="utf-8")

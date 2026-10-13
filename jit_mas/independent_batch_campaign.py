@@ -9,7 +9,7 @@ from .checkpoints import CheckpointIntegrityError
 from .independent_campaign import IndependentCampaign, TERMINAL, _encode
 from .independent_batch_protocol import (
     BATCHES_PER_TRAJECTORY, SOURCES, TARGETS, RUN_IDS,
-    select_batch_candidate, validate_protocol, validation_summary,
+    candidate_is_noop, select_batch_candidate, validate_protocol, validation_summary,
 )
 from .independent_protocol import TEST_METHODS
 from .schemas import ExperienceSnapshot, digest, utc_now
@@ -164,8 +164,10 @@ class IndependentBatchCampaign(IndependentCampaign):
                 if not existing:
                     database.execute("INSERT INTO candidates VALUES(?,?,?,?,?)",
                                      (source, run_id, batch_index, body["candidate_index"], _encode(body)))
-                if body.get("snapshot") is None:
-                    self._mark_missing(database, source, run_id, reason="CandidateGenerationFailed",
+                if body.get("snapshot") is None or candidate_is_noop(body):
+                    reason = ("CandidateNoop" if candidate_is_noop(body)
+                              else "CandidateGenerationFailed")
+                    self._mark_missing(database, source, run_id, reason=reason,
                                        batch_index=batch_index, candidate_index=body["candidate_index"])
 
     def _ready(self, database, slot):
@@ -188,11 +190,15 @@ class IndependentBatchCampaign(IndependentCampaign):
                                   (f"update:{source}:run{run_id}:b{batch_index}",)).fetchone()
         if update is None or update["status"] not in TERMINAL:
             return None
-        row = database.execute("SELECT json_extract(body,'$.state_hash') AS state_hash, "
-                               "json_type(body,'$.snapshot') AS snapshot_type FROM candidates "
+        row = database.execute("SELECT body FROM candidates "
                                "WHERE source=? AND run_id=? AND batch_index=? AND candidate_index=?",
                                (source, run_id, batch_index, slot["candidate_index"])).fetchone()
-        return row["state_hash"] if row and row["snapshot_type"] not in (None, "null") else None
+        if row is None:
+            return None
+        candidate = json.loads(row["body"])
+        if candidate_is_noop(candidate) or candidate.get("snapshot") is None:
+            return None
+        return candidate.get("state_hash")
 
     def claim(self, owner, *, phase="full", kinds=("evolution", "batch_evolution", "validation"), prefer="validation"):
         if phase not in {"first-stage", "full"} or not str(owner).strip():
@@ -294,6 +300,7 @@ class IndependentBatchCampaign(IndependentCampaign):
                         candidates.append({"batch_index": batch_index, "candidate_index": candidate_index,
                                            "base_state_hash": candidate["base_state_hash"],
                                            "state_hash": candidate.get("state_hash") or digest({"failed_candidate": candidate["candidate_id"]}),
+                                           "candidate_noop": candidate_is_noop(candidate),
                                            **summary})
                     if len(candidates) != 3:
                         break

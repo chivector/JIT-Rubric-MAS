@@ -220,6 +220,52 @@ def test_local_update_cannot_conflict_with_specialization_or_removal(kind):
     assert get_profile(pool, "writer").version == 1
 
 
+def test_opt_in_specialization_composes_self_update_and_preserves_provenance(tmp_path):
+    pool = seed_pool()
+    before = pool.model_copy(deep=True)
+    writer = get_profile(pool, "writer")
+    update = local_update("writer", lesson_id="writer-current")
+    update.prompt = "Verify the evidence before final synthesis."
+    update.skills = {**writer.skills, **update.skills}
+    specialized = writer.model_copy(deep=True)
+    specialized.role = "Evidence Synthesis Writer"
+    specialized.skills["specialized_coverage"] = "Retain each supported dimension."
+    specialized.source_task_ids = ["evolution-1"]
+    specialized.evidence = ["run-1:judge"]
+    change = operation("specialize", ["writer"], [specialized], pool=pool)
+    result = apply_evolution(pool, [update], [change], source_task_id="evolution-1",
+                             compose_specializations=True)
+    saved = get_profile(result, "writer")
+    assert saved.role == specialized.role and saved.prompt == update.prompt
+    assert saved.skills == {**update.skills, "specialized_coverage": specialized.skills["specialized_coverage"]}
+    assert saved.memory == update.lessons and saved.source_task_ids == ["evolution-1"]
+    assert saved.evidence == ["run-1:judge"]
+    assert saved.version == 2 and result.version == 1
+    assert result.applied_updates == [update.update_id] and result.structural_history == [change]
+    assert pool == before
+    store = ExperienceStore(tmp_path / "composed.sqlite")
+    try:
+        committed = store.commit_evolution(source_task_id="evolution-1", base_version=0,
+            updates=[update], operations=[change], compose_specializations=True)
+        assert committed.agent_pool == result
+        persisted = store.snapshot()
+        assert get_profile(persisted.agent_pool, "writer").memory == update.lessons
+        receipt = store.db.execute("SELECT body FROM evolution_commits").fetchone()[0]
+        assert '"compose_specializations": true' in receipt
+    finally:
+        store.close()
+
+
+def test_opt_in_specialization_still_rejects_stale_versions():
+    pool = seed_pool()
+    specialized = profile("writer")
+    change = operation("specialize", ["writer"], [specialized], pool=pool)
+    change.base_agent_versions = {"writer": 99}
+    with pytest.raises(ValueError, match="Stale Agent Pool operation member version"):
+        apply_evolution(pool, [local_update("writer", lesson_id="writer-current")], [change],
+                        source_task_id="evolution-1", compose_specializations=True)
+
+
 def test_same_source_cannot_be_split_twice_in_one_structural_decision():
     pool = seed_pool()
     first = operation("split", ["generalist"], [profile("proof"), profile("numeric")], pool=pool)

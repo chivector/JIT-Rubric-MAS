@@ -621,6 +621,14 @@ class JsonModelCalls:
                     if phase == "reconcile" else "")
                 if correction is not None else "")
             if correction is not None:
+                if phase == "evolution_integrate":
+                    correction_system += (
+                        "\nEVOLUTION TRANSACTION REPAIR: a specialize operation replaces the direct "
+                        "update for each target member. Remove that member's update_id from "
+                        "agent_update_ids, or remove its specialize operation; return only one "
+                        "chosen path. Copy the exact bound base versions. Do not fix the rationale "
+                        "while retaining both conflicting paths."
+                    )
                 if getattr(self, "agent_pool", None) is not None:
                     correction_system += (
                         "\nAGENT HARNESS IDENTITY REPAIR: an existing pool selection must copy "

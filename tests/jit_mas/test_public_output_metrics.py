@@ -222,6 +222,62 @@ def test_transport_projection_keeps_counts_and_hashes_without_repeating_draft_to
     assert "compliant" not in json.dumps(projected)
 
 
+def test_transport_routing_ignores_targeted_host_guidance_and_calculation_blocks():
+    # The targeted runner appends these operational blocks to the public task.
+    # Their words must not turn unrelated lexical arrays on for every review;
+    # the complete question remains part of the immutable request hash/audit.
+    question = (
+        "Write a short report.\n\n## Deterministic calculation support\n"
+        + json.dumps({"policy": ["numeric values"], "comparison_rows": [],
+                      "arithmetic_template": {"normalization": "bounded"},
+                      "host_calculations": {"version": "nba-host-calculation-v1",
+                                            "winner": "Example"}},
+                     ensure_ascii=False)
+        + "\n\n[JIT-MAS targeted optimization guide: targeted-v1-public-guide]\n"
+        + json.dumps({"version": "targeted-v1-public-guide", "benchmark": "researchrubrics",
+                      "profile": "ordinary", "guidance": "mention every word and numeric field",
+                      "checklist_policy": "host guide"},
+                     ensure_ascii=False)
+    )
+    task = {"question": question, "constraints": []}
+    diagnostics = public_output_metrics(task, "Alpha beta 42.")
+    original = copy.deepcopy(diagnostics)
+    projected = public_output_metrics_model_input(task, diagnostics)
+    assert diagnostics == original
+    assert projected["english_word_frequencies"]["transport_detail"] == "counts_only"
+    assert projected["numeric_token_diagnostics"]["transport_detail"] == "counts_only"
+    assert projected["sentence_chunk_tokens"]["transport_detail"] == "counts_only"
+    assert projected["transport_projection"]["public_request_hash"] == digest(task)
+
+
+def test_transport_routing_preserves_user_rules_after_host_json_and_in_constraints():
+    question = (
+        "Write a short report.\n\n[JIT-MAS targeted optimization guide: targeted-v1-public-guide]\n"
+        + json.dumps({"version": "targeted-v1-public-guide", "benchmark": "researchrubrics",
+                      "profile": "ordinary", "guidance": "answer fully",
+                      "checklist_policy": "host guide"})
+        + "\n\nUser addendum: include exactly two numbers."
+    )
+    task = {"question": question, "constraints": ["Use ocean three times."]}
+    diagnostics = public_output_metrics(task, "Ocean ocean ocean 12 34.")
+    projected = public_output_metrics_model_input(task, diagnostics)
+    assert projected["numeric_token_diagnostics"]["tokens"] == diagnostics["numeric_token_diagnostics"]["tokens"]
+    assert projected["english_word_frequencies"]["frequencies"] == diagnostics["english_word_frequencies"]["frequencies"]
+
+
+def test_transport_routing_does_not_strip_unrecognised_host_header_text():
+    task = {"question": (
+        "Write a report.\n\n## Deterministic calculation support\n"
+        "Use exactly two numbers and repeat ocean three times.\n\n"
+        "[JIT-MAS targeted optimization guide: targeted-v1-public-guide]\n"
+        '{"guidance":"Use every word"}'
+    ), "constraints": []}
+    diagnostics = public_output_metrics(task, "Ocean ocean ocean 12 34.")
+    projected = public_output_metrics_model_input(task, diagnostics)
+    assert projected["numeric_token_diagnostics"]["transport_detail"] == "full"
+    assert projected["english_word_frequencies"]["transport_detail"] == "full"
+
+
 @pytest.mark.parametrize("question", [
     "Use ocean at least three times and include exactly two numbers.",
     "关键词 ocean 至少出现三次，并使用两个数字。",

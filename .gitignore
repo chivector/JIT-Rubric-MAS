@@ -2,6 +2,7 @@
 runs/
 outputs/
 .runtime/
+paper/experiments/repair_subset_20261009/
 .cache/
 .r/
 .tmp_*.json

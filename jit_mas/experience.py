@@ -226,7 +226,8 @@ class ExperienceStore:
             return candidate
 
     def commit_evolution(self, *, source_task_id, base_version, proposal=None, updates=(),
-                         operations=(), observations=(), update_id=None):
+                         operations=(), observations=(), update_id=None,
+                         compose_specializations=False):
         """Atomically persist both experience levels and dynamic Agent Pool decisions."""
         from .agent_pool import apply_evolution
         from .schemas import AgentEvolutionUpdate, AgentPoolObservation, AgentPoolOperation
@@ -269,8 +270,10 @@ class ExperienceStore:
                 raise ValueError("Stale evolution base version")
             return current
         body = {"source_task_id": source_task_id, "base_version": base_version,
-                "proposal": proposal.model_dump(mode="json") if proposal is not None else None,
-                "updates": [update.model_dump(mode="json") for update in normalized]}
+                 "proposal": proposal.model_dump(mode="json") if proposal is not None else None,
+                 "updates": [update.model_dump(mode="json") for update in normalized]}
+        if compose_specializations:
+            body["compose_specializations"] = True
         if normalized_operations:
             body["operations"] = [operation.model_dump(mode="json") for operation in normalized_operations]
         if normalized_observations:
@@ -305,7 +308,8 @@ class ExperienceStore:
             else:
                 candidate = base.model_copy(deep=True)
             candidate.agent_pool = apply_evolution(base.agent_pool, normalized,
-                normalized_operations, normalized_observations, source_task_id=source_task_id)
+                normalized_operations, normalized_observations, source_task_id=source_task_id,
+                compose_specializations=compose_specializations)
             candidate.policy_versions = {**candidate.policy_versions, "agent_pool": "dynamic-dual-evolution-v2"}
             version = int(self.db.execute("SELECT MAX(version) FROM snapshots").fetchone()[0]) + 1
             candidate.version = version

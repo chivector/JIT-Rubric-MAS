@@ -96,6 +96,28 @@ def test_meta_assignment_routes_additional_reflection_without_inventing_frozen_o
     assert not writer.causal_identification
 
 
+def test_meta_assignment_empty_known_agent_is_a_noop():
+    graph, team, alignment, feedback = routing_inputs()
+    assignments = build_credit_assignments(
+        graph, team, alignment, feedback,
+        meta_assignments={"writer": []},
+        meta_assignment_rationales={},
+    )
+    assert assignments["writer"].meta_assigned_evaluated_rubric_ids == []
+    assert assignments["writer"].assignment_rationale == ""
+
+
+def test_meta_assignment_empty_known_agent_with_rationale_is_a_noop():
+    graph, team, alignment, feedback = routing_inputs()
+    assignments = build_credit_assignments(
+        graph, team, alignment, feedback,
+        meta_assignments={"writer": []},
+        meta_assignment_rationales={"writer": "No additional evaluated criterion."},
+    )
+    assert assignments["writer"].meta_assigned_evaluated_rubric_ids == []
+    assert assignments["writer"].assignment_rationale == ""
+
+
 @pytest.mark.parametrize("assignments,rationales,error", [
     ({"unknown": ["judge-missed"]}, {"unknown": "Review context"}, "unknown agent"),
     ({"writer": ["invented"]}, {"writer": "Review context"}, "unknown evaluated rubric"),
@@ -107,6 +129,17 @@ def test_meta_assignment_validates_exact_references_and_nonempty_rationale(assig
     with pytest.raises(ValueError, match=error):
         build_credit_assignments(graph, team, alignment, feedback,
                                  meta_assignments=assignments, meta_assignment_rationales=rationales)
+
+
+def test_empty_meta_assignment_is_a_noop_without_rationale():
+    graph, team, alignment, feedback = routing_inputs()
+
+    assignments = build_credit_assignments(
+        graph, team, alignment, feedback,
+        meta_assignments={"writer": []}, meta_assignment_rationales={})
+
+    assert assignments["writer"].meta_assigned_evaluated_rubric_ids == []
+    assert assignments["writer"].assignment_rationale == ""
 
 
 @pytest.mark.parametrize("reference", ["predicted", "evaluated", "responsibility"])

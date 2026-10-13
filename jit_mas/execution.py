@@ -129,6 +129,61 @@ FINAL_QUALITY_SPINE = (
 )
 
 
+# These are public task-shape reminders, not evaluator hints.  They are keyed
+# only by the benchmark name already present in the public task identity and
+# contain no reference answers, hidden criteria, or held-out task data.
+PUBLIC_BENCHMARK_OUTPUT_PROFILES = {
+    "researchrubrics": (
+        "PUBLIC TASK PROFILE (ResearchRubrics): Map every explicit deliverable, "
+        "comparison, quantity and format requirement in the question to visible "
+        "answer content. Keep claims tied to supplied or observed evidence and "
+        "state consequential uncertainty locally."
+    ),
+    "deepsearchqa": (
+        "PUBLIC TASK PROFILE (DeepSearchQA): Answer the public factual question "
+        "directly. First parse its scope, time window, qualifiers and whether it "
+        "asks for one value or a set. For a set, normalize aliases, enumerate each "
+        "distinct supported item once, and avoid unsupported extras; separate useful "
+        "explanation from the answer items."
+    ),
+    "deepresearch_bench_ii": (
+        "PUBLIC TASK PROFILE (DeepResearch Bench II): Produce a self-contained "
+        "research report for the public request. Separate observed facts, analysis "
+        "and recommendations, preserve dates, units, assumptions and source scope, "
+        "and attach evidence or uncertainty to the claims it supports. Do not leave "
+        "a heading or process outline in place of the report."
+    ),
+    "writingbench": (
+        "PUBLIC TASK PROFILE (WritingBench): Deliver the complete artifact requested "
+        "by the public query in its requested genre, audience, voice, format and "
+        "length. Prefer concrete, coherent passages and an actual conclusion over "
+        "planning notes or generic filler; reread the whole draft for continuity."
+    ),
+    "ifeval": (
+        "PUBLIC TASK PROFILE (IFEval): Parse every instruction visible in the public "
+        "prompt before drafting. Satisfy exact counts, formats, delimiters, language, "
+        "length and lexical constraints simultaneously, then emit only the requested "
+        "artifact without protocol commentary."
+    ),
+    "ifbench": (
+        "PUBLIC TASK PROFILE (IFBench): Parse every instruction visible in the public "
+        "prompt before drafting. Satisfy exact counts, formats, delimiters, language, "
+        "length and lexical constraints simultaneously, then emit only the requested "
+        "artifact without protocol commentary."
+    ),
+}
+
+
+def _public_benchmark_output_guidance(public_task):
+    """Return generic public-only guidance for the task's benchmark family."""
+    task_id = getattr(public_task, "task_id", "")
+    if not isinstance(task_id, str):
+        return ""
+    name = task_id.split(":", 1)[0].casefold()
+    profile = PUBLIC_BENCHMARK_OUTPUT_PROFILES.get(name)
+    return ("\n" + profile) if profile else ""
+
+
 PUBLIC_POSITIONAL_DRAFT_GUIDANCE_VERSION = "public-positional-internal-draft-v1"
 PUBLIC_POSITIONAL_DRAFT_PROJECTION_VERSION = "public-positional-task-projection-v1"
 PUBLIC_POSITIONAL_DRAFT_GUIDANCE_PROMPT = (
@@ -1239,6 +1294,7 @@ def _run_agent_iterative(agent, team, ctx, services, *, state=None, one_turn=Fal
         "deliverable. Follow budget_policy's completion and quality-cost stopping guidance. "
         "budget_estimate is a forecast, not a fixed call or round limit."
     )
+    system += _public_benchmark_output_guidance(services.public_task)
     if _uses_fixed_evidence(services.public_task):
         system += FIXED_EVIDENCE_CITATION_PROMPT
     if synth:
@@ -1817,6 +1873,7 @@ def _run_agent(agent, team, ctx, services):
         "Express missing input or disputed evidence in the role-appropriate answer, ledger and checkpoint reports. "
         "Never claim unobserved evidence or broadcast private conversations."
     )
+    system += _public_benchmark_output_guidance(services.public_task)
     if _uses_fixed_evidence(services.public_task):
         system += FIXED_EVIDENCE_CITATION_PROMPT
     if not synth:

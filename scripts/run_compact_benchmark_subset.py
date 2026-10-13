@@ -41,6 +41,7 @@ def _code_identity() -> dict:
     files = ("jit_mas/compact_generation.py", "jit_mas/public_literal_constraints.py",
              "jit_mas/public_literal_slots.py", "jit_mas/public_numeric_template.py",
              "jit_mas/public_numeric_slots.py", "jit_mas/public_word_slots.py",
+             "jit_mas/public_response_constraints.py",
              "jit_mas/budget.py", "jit_mas/request_policy.py", "jit_mas/config.py",
              "jit_mas/benchmarks.py", "jit_mas/instruction_checkers.py",
              "jit_mas/schemas.py", "jit_mas/pipeline.py",
@@ -117,6 +118,7 @@ def _record_without_answer(record):
     safe = copy.deepcopy(record)
     safe.pop("answer", None)
     safe.pop("raw_response", None)
+    safe.pop("raw_attempts", None)
     return safe
 
 
@@ -141,6 +143,8 @@ def run(args) -> dict:
                               "numeric": args.numeric_construction,
                               "positional": args.positional_construction,
                               "literal": args.literal_construction,
+                              "constraint_construction": getattr(args, "constraint_construction", False),
+                              "construction_repair": getattr(args, "construction_repair", False),
                               "numeric_layout": args.numeric_layout})
     identity = frozen_identity(config_bytes=config_path.read_bytes(),
         dataset_sha256=dataset_hash, checker_identity=checker.identity,
@@ -156,8 +160,11 @@ def run(args) -> dict:
                 "construction_flags": {"numeric": args.numeric_construction,
                                         "positional": args.positional_construction,
                                         "literal": args.literal_construction,
+                                        "constraint_construction": getattr(args, "constraint_construction", False),
+                                        "construction_repair": getattr(args, "construction_repair", False),
                                         "numeric_layout": args.numeric_layout},
-                "one_call_per_task": True, "retry_policy": "none",
+                "one_call_per_task": not getattr(args, "construction_repair", False),
+                "retry_policy": "one public construction repair" if getattr(args, "construction_repair", False) else "none",
                 "scoring": "fixed checker after generation only"}
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -173,7 +180,8 @@ def run(args) -> dict:
                 raise RuntimeError("Frozen configuration, dataset or code changed during the run")
             checker.assert_frozen()
             task = dataset.tasks[task_id]
-            ledger = make_ledger(config.max_total_tokens, timeout=config.task_timeout or 900)
+            ledger = make_ledger(config.max_total_tokens, timeout=config.task_timeout or 900,
+                                 max_calls=2 if getattr(args, "construction_repair", False) else 1)
             row = {"task_id": task_id, "benchmark": args.benchmark,
                    "question_sha256": digest(task.question),
                    "constraints_sha256": digest(task.constraints),
@@ -184,9 +192,20 @@ def run(args) -> dict:
                     numeric=args.numeric_construction,
                     positional=args.positional_construction,
                     literal=args.literal_construction,
+                    constraint_construction=getattr(args, "constraint_construction", False),
+                    construction_repair=getattr(args, "construction_repair", False),
                     numeric_layout=args.numeric_layout,
                     max_tokens=config.models["exec"].max_tokens)
                 row.update(generated)
+                attempt_files = []
+                for attempt, raw_text in enumerate(generated.get("raw_attempts", []), 1):
+                    if raw_text is None:
+                        attempt_files.append(None)
+                        continue
+                    raw_path = output / "raw_responses" / f"{digest(task_id)}.attempt_{attempt}.txt"
+                    raw_path.write_text(raw_text, encoding="utf-8")
+                    attempt_files.append(str(raw_path.relative_to(output)))
+                row["raw_attempt_files"] = attempt_files
                 if generated["raw_response"] is not None:
                     raw_path = output / "raw_responses" / f"{digest(task_id)}.txt"
                     raw_text = generated["raw_response"]
@@ -266,6 +285,8 @@ def main(argv=None):
     parser.add_argument("--numeric-construction", action="store_true")
     parser.add_argument("--positional-construction", action="store_true")
     parser.add_argument("--literal-construction", action="store_true")
+    parser.add_argument("--constraint-construction", action="store_true")
+    parser.add_argument("--construction-repair", action="store_true")
     parser.add_argument("--numeric-layout", choices=["array", "template"], default="array")
     args = parser.parse_args(argv)
     try:

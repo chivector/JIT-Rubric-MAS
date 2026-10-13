@@ -71,3 +71,28 @@ def test_schema_requires_every_named_gap_and_has_no_extra_fields():
         plan.model.model_validate({"gaps": {"gap_000": "A"}})
     with pytest.raises(ValidationError):
         plan.model.model_validate({"gaps": {"gap_000": "A", "gap_001": "view", "extra": ""}})
+
+
+def test_optional_whole_word_mode_preserves_longer_words_without_extra_keyword_counts():
+    plan = literal_slots_plan(task("Use word rhythm twice."), whole_words=True)
+    parsed = plan.model.model_validate({"gaps": {"gap_000": "Daily rhythms and",
+        "gap_001": "carry meaning; a", "gap_002": "helps."}})
+    answer = render(parsed)
+    assert answer == "Daily rhythms and rhythm carry meaning; a rhythm helps."
+    assert plan.audit()["counting"] == "case-insensitive whole words"
+
+
+@pytest.mark.parametrize("gap", ["rhythm", "RHYTHM", "rhythm-rhythm", "rhythm's"])
+def test_optional_whole_word_mode_still_rejects_actual_reserved_word_occurrences(gap):
+    plan = literal_slots_plan(task("Use word rhythm twice."), whole_words=True)
+    with pytest.raises(ValidationError):
+        plan.model.model_validate({"gaps": {"gap_000": gap, "gap_001": "", "gap_002": ""}})
+
+
+def test_optional_whole_word_mode_revalidates_a_bypassed_extra_occurrence():
+    plan = literal_slots_plan(task("Use word rhythm twice."), whole_words=True)
+    parsed = plan.model.model_validate({"gaps": {"gap_000": "Daily rhythms and",
+        "gap_001": "carry meaning; a", "gap_002": "helps."}})
+    parsed.gaps.__dict__["gap_000"] = "RHYTHM"
+    with pytest.raises(ValidationError):
+        render(parsed)

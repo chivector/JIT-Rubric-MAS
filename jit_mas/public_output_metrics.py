@@ -8,6 +8,7 @@ tokenization, sentence segmentation, or counting rules.
 from __future__ import annotations
 
 import copy
+import json
 import re
 from collections import Counter
 
@@ -34,6 +35,57 @@ MAX_SENTENCE_CHUNKS = 128
 MAX_SENTENCE_TOKEN_ITEMS = 4096
 MAX_NUMERIC_TOKEN_ITEMS = 1024
 PUBLIC_DIAGNOSTICS_TRANSPORT_VERSION = "public-artifact-diagnostics-transport-v1"
+
+# The targeted campaign appends these two host-generated blocks to the public
+# question so the generation harness can use them.  They are not user
+# requirements and must not accidentally route mechanical diagnostic detail.
+# Keep the complete question and the complete diagnostics in the audit; this
+# helper is used only for the lexical routing decision below.
+_TARGETED_GUIDE_RE = re.compile(
+    r"\n\n\[JIT-MAS targeted optimization guide: (?P<version>[^\]\n]+)\]\n"
+)
+_DETERMINISTIC_SUPPORT_HEADER = "\n\n## Deterministic calculation support\n"
+
+
+def _host_routing_object(text: str, start: int):
+    """Read exactly one injected JSON object, never trailing user text."""
+    while start < len(text) and text[start].isspace():
+        start += 1
+    try:
+        parsed, end = json.JSONDecoder().raw_decode(text, start)
+    except (TypeError, ValueError):
+        return None, start
+    return (parsed if isinstance(parsed, dict) else None), end
+
+
+def _strip_host_routing_blocks(question: str) -> str:
+    """Remove known host-injected routing blocks while preserving user text.
+
+    Targeted runs add a JSON calculation-support block and a JSON optimization
+    guide after the original request.  Their words (for example ``numeric`` or
+    ``mentions``) must not turn full token/frequency arrays on for every review
+    call.  We remove a calculation block only when its payload parses as the
+    known machine-support object, and remove the guide only after its exact
+    marker and matching version. Malformed or unrecognised text, and all text
+    following the one JSON object, is left untouched conservatively.
+    """
+    if not isinstance(question, str):
+        return question
+    text = question
+    calc = text.find(_DETERMINISTIC_SUPPORT_HEADER)
+    if calc >= 0:
+        payload_start = calc + len(_DETERMINISTIC_SUPPORT_HEADER)
+        parsed, payload_end = _host_routing_object(text, payload_start)
+        if (isinstance(parsed, dict) and
+                {"policy", "comparison_rows", "arithmetic_template"} <= set(parsed)):
+            text = text[:calc] + text[payload_end:]
+    match = _TARGETED_GUIDE_RE.search(text)
+    if match is not None:
+        parsed, end = _host_routing_object(text, match.end())
+        if (isinstance(parsed, dict) and parsed.get("version") == match.group("version")
+                and {"benchmark", "profile", "guidance", "checklist_policy"} <= set(parsed)):
+            text = text[:match.start()] + text[end:]
+    return text
 _POSITION_DETAIL_HINT = re.compile(
     r"\b(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|"
     r"eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|"
@@ -249,7 +301,13 @@ def public_output_metrics(task, answer: str) -> dict:
 def public_output_metrics_model_input(task, diagnostics: dict) -> dict:
     """Project mechanical details while retaining complete diagnostics in the audit."""
     public_request = _public_diagnostic_request(task)
-    request = "\n".join([public_request["question"], *public_request["constraints"]])
+    # Targeted campaigns append machine guidance and deterministic calculation
+    # support to the task.  Those blocks are operational context, not user
+    # requests for lexical details; keep them in the audit while excluding them
+    # from this routing decision only.
+    routing_request = copy.deepcopy(public_request)
+    routing_request["question"] = _strip_host_routing_blocks(routing_request["question"])
+    request = "\n".join([routing_request["question"], *routing_request["constraints"]])
     projected = copy.deepcopy(diagnostics)
     selection = {}
     frequencies = projected.get("english_word_frequencies")
@@ -273,7 +331,7 @@ def public_output_metrics_model_input(task, diagnostics: dict) -> dict:
         if positional:
             from .public_word_slots import position_plan
 
-            position = position_plan(public_request)
+            position = position_plan(routing_request)
         mode = "requested_word_slots" if position is not None else "full" if positional else "counts_only"
         selection["sentence_chunk_tokens"] = mode
         if mode != "full":
@@ -302,7 +360,7 @@ def public_output_metrics_model_input(task, diagnostics: dict) -> dict:
         "full_diagnostics_hash": digest(diagnostics),
         "public_request_hash": digest(public_request),
         "detail_selection": selection,
-        "selection_basis": "Public question and constraint lexical hints route diagnostic detail; validated rendered fixed evidence is excluded from routing only. They do not classify instructions or establish compliance. Unsupported position hints retain all available token arrays.",
+        "selection_basis": "Public question and constraint lexical hints route diagnostic detail after removing recognized host-injected targeted guidance/calculation blocks; validated rendered fixed evidence is excluded from routing only. They do not classify instructions or establish compliance. Unsupported position hints retain all available token arrays.",
         "omission_policy": "Counts and counting conventions remain. Omitted lexical detail is available in the intact draft and complete audit; omission is not evidence of absence. Source truncation flags describe the complete diagnostics, independently of this projection.",
     }
     projected["transport_projection"] = projection

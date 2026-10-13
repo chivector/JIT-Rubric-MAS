@@ -51,6 +51,27 @@ def candidates(instance, claim):
     return receipts
 
 
+def noop_candidates(instance, claim, *, valid_index=None):
+    """Freeze audited preserve-the-base receipts, optionally with one valid state."""
+    base = ExperienceSnapshot()
+    receipts = []
+    for index in range(3):
+        if index == valid_index:
+            state = ExperienceSnapshot(version=1)
+            receipts.append({"candidate_index": index, "status": "complete",
+                             "snapshot": state.model_dump(mode="json"),
+                             "state_hash": digest(state), "budget": {"tokens": index}})
+        else:
+            receipts.append({"candidate_index": index, "status": "complete",
+                             "snapshot": base.model_dump(mode="json"),
+                             "state_hash": digest(base), "fallback_noop": True,
+                             "fallback_reason": "invalid_batch_meta_decision",
+                             "budget": {"tokens": index}})
+    instance.freeze_candidates(claim, receipts)
+    finish(instance, claim)
+    return receipts
+
+
 def test_registry_has_task_and_update_inventories(protocol):
     registry = slot_registry(protocol)
     assert registry["counts"] == {"evolution": 360, "batch_evolution": 72, "validation": 2160, "test": 2751, "total": 5343}
@@ -134,6 +155,42 @@ def test_candidate_validation_waits_for_batch_slot_commit(campaign):
     assert campaign.claim("val", kinds=("validation",)) is None
     finish(campaign, update)
     assert campaign.claim("val", kinds=("validation",)) is not None
+
+
+def test_noop_candidate_validation_is_missing_and_not_claimable(campaign):
+    update = first_batch(campaign)
+    noop_candidates(campaign, update)
+    validation = campaign.records(kind="validation", source="researchrubrics", run_id=0, batch_index=0)
+    assert validation and all(row["status"] == "missing" for row in validation)
+    assert campaign.claim("val", kinds=("validation",)) is None
+
+
+def test_mixed_noop_and_valid_candidates_select_only_valid_state(campaign):
+    update = first_batch(campaign)
+    receipts = noop_candidates(campaign, update, valid_index=2)
+    claims = [campaign.claim("val", kinds=("validation",)) for _ in range(10)]
+    assert all(claim and claim["candidate_index"] == 2 for claim in claims)
+    for claim in claims:
+        finish(campaign, claim, score=0.8916)
+    assert campaign.claim("val", kinds=("validation",)) is None
+    campaign.advance()
+    with campaign._database() as database:
+        body = database.execute(
+            "SELECT body FROM batch_selections WHERE source=? AND run_id=? AND batch_index=?",
+            ("researchrubrics", 0, 0)).fetchone()
+    selection = json.loads(body[0])
+    assert selection["selected"]["candidate_index"] == 2
+    assert campaign.checkpoint("researchrubrics", 0, 5)["state_hash"] == receipts[2]["state_hash"]
+
+
+def test_all_noop_candidates_make_batch_inconclusive(campaign):
+    update = first_batch(campaign)
+    noop_candidates(campaign, update)
+    campaign.advance()
+    selection = campaign.selection("researchrubrics", 0)
+    assert selection["status"] == "inconclusive"
+    assert selection["selected"] is None
+    assert campaign.checkpoint("researchrubrics", 0, 5) is None
 
 
 def test_candidate_rejects_nonprimary_operation_source_outside_evo(campaign):

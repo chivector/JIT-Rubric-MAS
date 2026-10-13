@@ -259,7 +259,8 @@ def _inherited_profile(profile, sources, operation, source_task_id, source_task_
 
 
 def apply_evolution(pool: AgentPoolSnapshot, updates=(), operations=(), observations=(), *,
-                    source_task_id: str, source_task_ids=None) -> AgentPoolSnapshot:
+                    source_task_id: str, source_task_ids=None,
+                    compose_specializations: bool = False) -> AgentPoolSnapshot:
     if not isinstance(source_task_id, str) or not source_task_id.strip():
         raise ValueError("Agent evolution requires a nonempty source task ID")
     batch_tasks = list(source_task_ids) if source_task_ids is not None else [source_task_id]
@@ -389,7 +390,7 @@ def apply_evolution(pool: AgentPoolSnapshot, updates=(), operations=(), observat
         elif operation.kind == "specialize":
             if len(targets) != 1 or len(outputs) != 1 or output_ids != targets:
                 raise ValueError("Specialize requires one target and a same-identity output")
-            if targets[0] in local_changed or targets[0] in specialized:
+            if (targets[0] in local_changed and not compose_specializations) or targets[0] in specialized:
                 raise ValueError("Duplicate harness changes for a specialized Agent Pool member")
             specialized.add(targets[0])
         elif operation.kind == "reorganize":
@@ -429,6 +430,22 @@ def apply_evolution(pool: AgentPoolSnapshot, updates=(), operations=(), observat
                     profile.parent_agent_id = targets[0]
                 profiles[profile.pool_agent_id] = profile
         elif operation.kind in {"merge", "specialize"}:
+            if operation.kind == "specialize" and compose_specializations and targets[0] in local_changed:
+                output = outputs[0].model_copy(deep=True)
+                updated = profiles[targets[0]]
+                original = base[targets[0]]
+                for field in ("role", "capabilities", "parent_agent_id", "prompt",
+                              "preferred_tools", "reasoning_strategy", "planning_strategy",
+                              "communication", "harness"):
+                    if getattr(output, field) == getattr(original, field) and getattr(updated, field) != getattr(original, field):
+                        setattr(output, field, getattr(updated, field))
+                for skill_id in set(original.skills) | set(updated.skills):
+                    if output.skills.get(skill_id) == original.skills.get(skill_id):
+                        if skill_id in updated.skills:
+                            output.skills[skill_id] = updated.skills[skill_id]
+                        else:
+                            output.skills.pop(skill_id, None)
+                outputs = [output]
             output = _inherited_profile(outputs[0], sources, operation, operation.source_task_id,
                 operation_tasks if source_task_ids is not None else None)
             if operation.kind == "merge" and output.parent_agent_id is None:

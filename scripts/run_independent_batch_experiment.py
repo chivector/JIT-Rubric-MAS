@@ -53,7 +53,9 @@ class IndependentBatchEnvironment(IndependentEnvironment):
                 "api_failure_action": action,
                 "batch_meta_max_tokens": max(0, int(os.getenv("JIT_MAS_BATCH_META_MAX_TOKENS", "0"))),
                 "batch_meta_corrections": max(1, int(os.getenv("JIT_MAS_BATCH_META_CORRECTIONS", "1"))),
-                "extra_corrections": os.getenv("JIT_MAS_ALLOW_EXTRA_CORRECTIONS", "0") == "1"}
+                "extra_corrections": os.getenv("JIT_MAS_ALLOW_EXTRA_CORRECTIONS", "0") == "1",
+                "batch_reflection_retries": max(0, int(os.getenv("JIT_MAS_BATCH_REFLECTION_RETRIES", "1"))),
+                "batch_candidate_workers": max(1, int(os.getenv("JIT_MAS_BATCH_CANDIDATE_WORKERS", "1")))}
 
     def assert_frozen(self):
         super().assert_frozen()

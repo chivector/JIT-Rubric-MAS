@@ -355,7 +355,7 @@ class IndependentCampaign:
             tests = [row for row in rows if json.loads(row["body"])["kind"] == "test"]
             required_test_slots = len(tests)
             if any(row["status"] not in TERMINAL for row in tests):
-                raise ValueError(f"All {required_test_slots} TEST slots must submit or terminate before scoring")
+                raise ValueError(f"All {required_test_slots:,} TEST slots must submit or terminate before scoring")
             hashes = {}
             for row in tests:
                 result = self._result(row)

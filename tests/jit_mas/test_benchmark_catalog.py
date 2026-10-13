@@ -11,6 +11,7 @@ from jit_mas.benchmarks import (BENCHMARK_NAMES, DeepResearchBenchIIEvaluator,
                                 DeepSearchQAEvaluator, load_benchmark,
                                 normalized_question_hash)
 from jit_mas.budget import BudgetLedger, MeteredModel
+from jit_mas.execution import _public_benchmark_output_guidance
 from jit_mas.pipeline import convert_feedback
 
 
@@ -65,6 +66,17 @@ def test_supported_benchmarks_are_explicit():
     assert BENCHMARK_NAMES == ("researchrubrics", "deepsearchqa", "deepresearch_bench_ii")
     with pytest.raises(ValueError, match="Unknown benchmark"):
         load_benchmark("unverified-benchmark", "missing")
+
+
+def test_public_benchmark_guidance_contains_no_private_evaluator_data():
+    class Task:
+        task_id = "deepsearchqa:synthetic"
+
+    guidance = _public_benchmark_output_guidance(Task())
+    assert "DeepSearchQA" in guidance
+    assert "reference" not in guidance.casefold()
+    assert "rubric" not in guidance.casefold()
+    assert "PRIVATE" not in guidance
 
 
 def test_deepsearchqa_public_projection_and_stable_identity(tmp_path):

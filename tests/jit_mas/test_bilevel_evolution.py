@@ -10,6 +10,7 @@ from jit_mas.config import MASConfig
 from jit_mas.experience import ExperienceStore
 from jit_mas.offline import FixtureModel, FixtureModels
 from jit_mas.pipeline import EvolutionDecision, MASPipeline, attribution_source_digest, submitted_source_digest
+from jit_mas.planning import JsonModelCalls
 from jit_mas.schemas import (AgentEvolutionUpdate, AgentPoolOperation, AttributionFinding,
                               EvaluationFeedback, RubricFeedback, digest)
 from jit_mas.agent_pool import seed_pool
@@ -120,9 +121,56 @@ def test_meta_rejects_direct_update_and_specialize_overlap():
         base_agent_version=writer.version, source_task_id="task", evidence=["evidence"])
     decision = EvolutionDecision(agent_update_ids=[update.update_id], pool_operations=[operation],
         rationale="Choose one atomic harness change.")
-    with pytest.raises(ValueError, match="cannot both change"):
+    with pytest.raises(ValueError, match="remove these agent_update_ids: update-writer"):
         MASPipeline._validate_evolution_decision(decision, [], [update], pool=pool,
             task_id="task", valid_ids={"evidence"})
+
+
+def test_meta_opt_in_accepts_composed_update_and_specialize_without_rewriting_selection():
+    pool = seed_pool()
+    writer = next(profile for profile in pool.profiles if profile.pool_agent_id == "writer")
+    output = writer.model_copy(update={"source_task_ids": ["task"], "evidence": ["evidence"]}, deep=True)
+    operation = AgentPoolOperation(operation_id="specialize-writer", kind="specialize",
+        source_task_id="task", base_pool_version=pool.version, target_agent_ids=["writer"],
+        base_agent_versions={"writer": writer.version}, profiles=[output], evidence=["evidence"],
+        rationale="Improve the retained writer harness.", expected_benefit="Better local quality.",
+        token_cost_tradeoff="No additional execution role.")
+    update = AgentEvolutionUpdate(update_id="update-writer", pool_agent_id="writer",
+        base_agent_version=writer.version, source_task_id="task", evidence=["evidence"])
+    decision = EvolutionDecision(agent_update_ids=[update.update_id], pool_operations=[operation],
+        rationale="Compose one atomic harness change.")
+    MASPipeline._validate_evolution_decision(decision, [], [update], pool=pool,
+        task_id="task", valid_ids={"evidence"}, compose_specializations=True)
+    assert decision.agent_update_ids == [update.update_id] and decision.pool_operations == [operation]
+
+
+def test_specialize_contract_correction_repairs_the_actual_update_selection():
+    pool = seed_pool()
+    writer = next(profile for profile in pool.profiles if profile.pool_agent_id == "writer")
+    writer.source_task_ids = ["task"]
+    writer.evidence = ["evidence"]
+    operation = AgentPoolOperation(operation_id="specialize-writer", kind="specialize",
+        source_task_id="task", base_pool_version=pool.version, target_agent_ids=["writer"],
+        base_agent_versions={"writer": writer.version}, profiles=[writer], evidence=["evidence"],
+        rationale="Refine the writer.", expected_benefit="Improve synthesis.",
+        token_cost_tradeoff="Reuse one role.")
+    update = AgentEvolutionUpdate(update_id="update-writer", pool_agent_id="writer",
+        base_agent_version=writer.version, source_task_id="task", evidence=["evidence"])
+    requests = []
+
+    def model(messages):
+        requests.append(messages)
+        corrected = "response_correction" in json.loads(messages[-1]["content"])
+        return EvolutionDecision(agent_update_ids=[] if corrected else [update.update_id],
+            pool_operations=[operation], rationale="Choose one path.").model_dump_json()
+
+    decision = JsonModelCalls(max_corrections=1).ask(model, "evolution_integrate", "Choose the update.", {},
+        EvolutionDecision, validate=lambda value: MASPipeline._validate_evolution_decision(
+            value, [], [update], pool=pool, task_id="task", valid_ids={"evidence"}))
+    assert decision.agent_update_ids == []
+    assert len(requests) == 2
+    assert "Remove that member's update_id" in requests[1][0]["content"]
+    assert "update-writer" in requests[1][-1]["content"]
 
 
 @pytest.mark.parametrize("meta_bank", ["rubric", "organization"])

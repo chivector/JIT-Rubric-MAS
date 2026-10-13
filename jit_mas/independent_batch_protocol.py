@@ -41,6 +41,19 @@ V7_PROTOCOL_VERSION = "jit-compose-independent-batch-protocol-v7"
 TERMINAL_TASK_STATUSES = frozenset({"complete", "incomplete", "failed", "missing"})
 
 
+def candidate_is_noop(candidate: Mapping) -> bool:
+    """Return whether a candidate is an audited preserve-the-base result.
+
+    Resilient batch execution can emit a complete receipt that deliberately
+    preserves the input snapshot after an invalid meta decision.  Such a
+    receipt is useful failure telemetry, but it must not compete with actual
+    candidate states during VAL selection.  ``no_evidence`` has the same
+    semantics when a batch has no complete attribution evidence.
+    """
+    return bool(candidate.get("candidate_noop") or candidate.get("fallback_noop")
+                or candidate.get("no_evidence"))
+
+
 def _unique_tasks(tasks: Iterable[str], expected: int, label: str) -> list[str]:
     values = list(tasks)
     if any(not isinstance(task, str) or not task.strip() for task in values):
@@ -330,7 +343,14 @@ def validation_summary(records: Iterable[Mapping], task_ids: Iterable[str],
 
 
 def select_batch_candidate(candidates: Iterable[Mapping], tolerance: float = 1e-12):
-    """Select one eligible candidate using fixed utility and deterministic ties."""
+    """Select one eligible non-noop candidate using fixed utility and ties.
+
+    The registry still requires all three candidate indices so that a batch is
+    auditable.  Audited preserve-the-base receipts remain in that registry and
+    in the selection record, but are excluded from the competition.  Their
+    validation counts are therefore not rewritten or treated as failed model
+    calls merely to satisfy the ordinary ``eligible == complete >= 9`` rule.
+    """
     candidates = list(candidates)
     if (len(candidates) != CANDIDATES_PER_BATCH
             or {row.get("candidate_index") for row in candidates} != set(range(CANDIDATES_PER_BATCH))):
@@ -351,7 +371,8 @@ def select_batch_candidate(candidates: Iterable[Mapping], tolerance: float = 1e-
     if (not isinstance(tolerance, (int, float)) or isinstance(tolerance, bool)
             or not math.isfinite(tolerance) or tolerance < 0):
         raise ValueError("Selection tolerance must be finite and nonnegative")
-    for row in candidates:
+    usable = [dict(row) for row in candidates if not candidate_is_noop(row)]
+    for row in usable:
         complete = row.get("complete_evaluations")
         utility = row.get("selection_utility")
         if (type(complete) is not int or complete not in range(VALIDATION_TASKS_PER_CANDIDATE + 1)
@@ -360,7 +381,7 @@ def select_batch_candidate(candidates: Iterable[Mapping], tolerance: float = 1e-
         if (isinstance(utility, bool) or not isinstance(utility, (int, float))
                 or not math.isfinite(utility) or not 0 <= utility <= 1):
             raise ValueError("Candidate utility must be a finite normalized value")
-    rows = [dict(row) for row in candidates if row.get("eligible")]
+    rows = [row for row in usable if row.get("eligible")]
     if not rows:
         return None
     maximum = max(float(row["selection_utility"]) for row in rows)

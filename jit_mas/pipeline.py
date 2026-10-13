@@ -10,7 +10,8 @@ from pathlib import Path
 
 from pydantic import Field
 
-from .attribution import RubricAttributor, _compact_duplicate_event_content, feedback_view
+from .attribution import (TRACE_REFERENCE_PROMPT, RubricAttributor,
+                          _compact_duplicate_event_content, compact_local_execution_task, feedback_view)
 from .budget import BudgetLedger
 from .config import MASConfig
 from .experience import ExperienceStore, retrieve
@@ -174,7 +175,8 @@ def code_fingerprint():
                      "preflight_independent_experiment.py", "verify_instruction_checkers.py",
                      "prepare_independent_protocol.py", "prepare_public_evidence.py",
                      "prepare_batch_subset.py", "run_independent_batch_experiment.py",
-                     "run_independent_test_release.py", "summarize_independent_paper.py"):
+                     "run_independent_test_release.py", "summarize_independent_paper.py",
+                     "run_targeted_batch_experiment.py"):
         path = root / "scripts" / filename
         if path.is_file():
             files.append((path.relative_to(root).as_posix(), digest(path.read_text(encoding="utf-8"))))
@@ -324,7 +326,8 @@ class MASPipeline:
 
     @staticmethod
     def _validate_evolution_decision(decision, proposals, updates, *, pool=None, task_id=None,
-                                     observations=(), valid_ids=(), creations=()):
+                                     observations=(), valid_ids=(), creations=(),
+                                     compose_specializations=False):
         if decision.proposal_id is not None and decision.proposal_id not in {
                 proposal.proposal_id for proposal in proposals}:
             raise ValueError("Meta evolution selected an unknown proposal")
@@ -341,9 +344,14 @@ class MASPipeline:
                                if operation.kind == "specialize"
                                for agent_id in operation.target_agent_ids}
         overlapping_members = {update.pool_agent_id for update in selected} & specialized_targets
-        if overlapping_members:
+        if overlapping_members and not compose_specializations:
+            conflicting_ids = [update.update_id for update in selected
+                               if update.pool_agent_id in overlapping_members]
             raise ValueError("Agent update and specialize cannot both change the same member: "
-                             + ", ".join(sorted(overlapping_members)))
+                             + ", ".join(sorted(overlapping_members))
+                             + ". Keep specialize and remove these agent_update_ids: "
+                             + ", ".join(conflicting_ids)
+                             + "; or keep the updates and remove their specialize operations.")
         members = {profile.pool_agent_id for profile in pool.profiles}
         if any(update.pool_agent_id not in members for update in selected):
             raise ValueError("Temporary harness retention requires an Add operation")
@@ -360,7 +368,8 @@ class MASPipeline:
                             or profile.capabilities != original["capabilities"]):
                         raise ValueError("Temporary retention must bind an executed creation's role and capabilities")
         apply_evolution(pool, selected, decision.pool_operations, observations,
-                        source_task_id=task_id)
+                        source_task_id=task_id,
+                        compose_specializations=compose_specializations)
 
     @staticmethod
     def _pool_observations(task, team, result, feedback):
@@ -439,19 +448,26 @@ class MASPipeline:
         valid_ids = self._pool_evidence(pool, result, feedback, creations)
         caller = JsonModelCalls(max_corrections=1)
         decision, complete = None, False
+        evolution_prompt = META_EVOLUTION_PROMPT
+        if self.config.compose_specialize_updates:
+            evolution_prompt = evolution_prompt.replace(
+                "Within one decision, an existing member may be changed by a direct agent update or a\nspecialize operation, never both.",
+                "Within one decision, an existing member may receive both a selected direct agent update and\na specialize operation. The host composes them atomically, retaining the selected update's\nlessons, evidence and provenance. Explicit specialization policy changes take precedence;\nunchanged base fields retain the direct update's changes.")
         try:
             decision = caller.ask(self.models.create("global", "meta-evolution", ledger, "update"),
-                "evolution_integrate", META_EVOLUTION_PROMPT,
+                "evolution_integrate", evolution_prompt,
                 {"task": task, "team": team, "base_version": snapshot.version,
                  "findings": findings, "candidate_proposals": proposals, "agent_reflections": updates,
                  "source_task_id": task.task_id, "agent_pool": pool,
+                 "compose_specialize_updates": self.config.compose_specialize_updates,
                  "base_pool_version": pool.version, "pool_observations": observations,
                  "temporary_agents": creations, "valid_evidence_ids": sorted(valid_ids),
                  "retention_candidates": self._retention_candidates(team, updates, task.task_id),
                  "evaluation_summary": self._agent_reflection_evidence("", [], feedback)["evaluation_summary"]},
                 EvolutionDecision, validate=lambda item: self._validate_evolution_decision(item, proposals, updates,
                     pool=pool, task_id=task.task_id, observations=observations,
-                    valid_ids=valid_ids, creations=creations))
+                    valid_ids=valid_ids, creations=creations,
+                    compose_specializations=self.config.compose_specialize_updates))
             complete = True
             return ([proposal for proposal in proposals if proposal.proposal_id == decision.proposal_id],
                     [update for update in updates if update.update_id in decision.agent_update_ids],
@@ -461,6 +477,7 @@ class MASPipeline:
                 "candidate_proposals": [proposal.model_dump(mode="json") for proposal in proposals],
                 "agent_reflections": [update.model_dump(mode="json") for update in updates],
                 "base_pool_hash": digest(pool),
+                "compose_specialize_updates": self.config.compose_specialize_updates,
                 "pool_observations": [item.model_dump(mode="json") for item in observations],
                 "decision": decision.model_dump(mode="json") if decision is not None else None,
                 "calls": caller.call_records})
@@ -502,7 +519,8 @@ class MASPipeline:
                         if agent.agent_id in finding.agent_ids]
             findings = self._localize_agent_findings(findings, valid_ids)
             payload = {"task": task, "agent": agent, "team": team, "agent_profile": profile,
-                       "local_execution": local, "attribution_findings": findings,
+                       "local_execution": compact_local_execution_task(local, task),
+                       "attribution_findings": findings,
                        "credit_assignment": assignment,
                        "assigned_predicted_rubrics": [rubric for rubric in planned_graph.rubrics
                                                       if rubric.rubric_id in assignment.predicted_rubric_ids],
@@ -514,7 +532,7 @@ class MASPipeline:
             model = self.models.create("local", agent.agent_id, ledger, "update")
             caller = JsonModelCalls(max_corrections=1)
             try:
-                update = caller.ask(model, "agent_evolve", AGENT_EVOLVE_PROMPT, payload,
+                update = caller.ask(model, "agent_evolve", AGENT_EVOLVE_PROMPT + "\n" + TRACE_REFERENCE_PROMPT, payload,
                                     AgentEvolutionUpdate, agent_id=agent.agent_id,
                                     validate=lambda item, p=profile, ids=valid_ids, uid=payload["update_id"]:
                                         self._validate_agent_update(item, p, task.task_id, ids, uid))
@@ -749,7 +767,8 @@ class MASPipeline:
                 valid_ids = self._pool_evidence(replay_pool, result, feedback, creations)
                 self._validate_evolution_decision(decision, candidate_proposals, candidate_updates,
                     pool=replay_pool, task_id=task.task_id, observations=replay_observations,
-                    valid_ids=valid_ids, creations=creations)
+                    valid_ids=valid_ids, creations=creations,
+                    compose_specializations=self.config.compose_specialize_updates)
                 selected_proposals = [proposal for proposal in candidate_proposals
                                       if proposal.proposal_id == decision.proposal_id]
                 selected_updates = [update for update in candidate_updates
@@ -1223,7 +1242,8 @@ class MASPipeline:
                     try:
                         written = self.store.commit_evolution(source_task_id=task_id,
                             base_version=baseline, proposal=proposal, updates=raw_agent_updates,
-                            operations=raw_operations, observations=raw_observations, update_id=update_id)
+                            operations=raw_operations, observations=raw_observations, update_id=update_id,
+                            compose_specializations=self.config.compose_specialize_updates)
                     except Exception as exc:
                         exc.jit_mas_run_failure = {"task_id": task_id, "mode": mode,
                             "run_dir": outcome["run_dir"], "error_type": type(exc).__name__,

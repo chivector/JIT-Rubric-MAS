@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Sequence
@@ -90,17 +91,34 @@ def build_credit_assignments(planned_graph: RubricGraph, team: TeamSpec,
         for predicted_id in match.predicted_ids:
             predicted_to_evaluated.setdefault(predicted_id, set()).update(match.evaluated_ids)
 
-    meta_assignments = meta_assignments or {}
-    meta_assignment_rationales = meta_assignment_rationales or {}
-    if not set(meta_assignments) <= {agent.agent_id for agent in team.agents}:
+    meta_assignments = dict(meta_assignments or {})
+    meta_assignment_rationales = dict(meta_assignment_rationales or {})
+    known_agents = {agent.agent_id for agent in team.agents}
+    if not set(meta_assignments) <= known_agents:
         raise ValueError("Meta rubric assignment references an unknown agent")
-    if set(meta_assignments) != set(meta_assignment_rationales):
-        raise ValueError("Every meta rubric assignment needs a rationale")
+    # A model may explicitly emit an empty assignment for a known agent to say
+    # that the agent has no additional evaluated criteria to inspect. Treat
+    # that as a no-op; non-empty assignments still require an exact rationale
+    # key and remain strictly bound to the evaluated feedback.
+    nonempty_agents = {agent_id for agent_id, rubric_ids in meta_assignments.items()
+                       if rubric_ids}
+    missing = sorted(nonempty_agents - set(meta_assignment_rationales))
+    extra = sorted(set(meta_assignment_rationales) - set(meta_assignments))
+    if missing or extra:
+        raise ValueError("Every meta rubric assignment needs a rationale; "
+                         f"missing_agent_ids={missing}; extra_agent_ids={extra}. "
+                         "Use identical agent keys in rubric_assignments and "
+                         "rubric_assignment_rationale, with a nonempty rationale per key.")
     for aid, rubric_ids in meta_assignments.items():
-        if not rubric_ids or not set(rubric_ids) <= evaluated_ids:
-            raise ValueError("Meta rubric assignment references an unknown evaluated rubric")
-        if not meta_assignment_rationales[aid].strip():
+        if aid in nonempty_agents and not meta_assignment_rationales[aid].strip():
             raise ValueError("Meta rubric assignment rationale cannot be empty")
+    meta_assignments = {agent_id: rubric_ids for agent_id, rubric_ids in meta_assignments.items()
+                        if rubric_ids}
+    meta_assignment_rationales = {agent_id: meta_assignment_rationales[agent_id]
+                                 for agent_id in meta_assignments}
+    for aid, rubric_ids in meta_assignments.items():
+        if not set(rubric_ids) <= evaluated_ids:
+            raise ValueError("Meta rubric assignment references an unknown evaluated rubric")
 
     assignments = {}
     for agent in team.agents:
@@ -130,7 +148,8 @@ def build_credit_assignments(planned_graph: RubricGraph, team: TeamSpec,
     return assignments
 
 
-def _compact_duplicate_event_content(events: Sequence[dict], local_execution: dict | None) -> list[dict]:
+def _compact_duplicate_event_content(events: Sequence[dict], local_execution: dict | None,
+                                     *, submission: dict | None = None) -> list[dict]:
     """Remove only exact I/O duplicates from attribution payloads.
 
     ``local_execution`` is the authoritative complete trace.  Execution events
@@ -140,20 +159,23 @@ def _compact_duplicate_event_content(events: Sequence[dict], local_execution: di
     a path in the complete local trace.  Unique content remains untouched, and
     persisted execution logs are never modified.
     """
-    if not local_execution:
+    if not local_execution and not submission:
         return [copy.deepcopy(event) for event in events]
-    references: dict[str, tuple[Any, str]] = {}
+    references: dict[str, tuple[Any, str, str]] = {}
 
-    def register(value, path):
+    def register(value, path, source="local_execution"):
         if value is not None:
-            references.setdefault(digest(value), (value, path))
+            references.setdefault(digest(value), (value, path, source))
 
+    local_execution = local_execution or {}
     for index, step in enumerate(local_execution.get("trajectory", [])):
         register(step.get("model_output_messages"),
                  f"local_execution.trajectory[{index}].model_output_messages")
         register(step.get("action_output"),
                  f"local_execution.trajectory[{index}].action_output")
     register(local_execution.get("answer"), "local_execution.answer")
+    if submission:
+        register(submission.get("answer"), "submission.answer", "submission")
 
     compacted = []
     for event in events:
@@ -163,9 +185,54 @@ def _compact_duplicate_event_content(events: Sequence[dict], local_execution: di
             duplicate = references.get(content_hash)
             if duplicate is not None and item["content"] == duplicate[0]:
                 item.pop("content", None)
-                item["content_ref"] = {"source": "local_execution", "path": duplicate[1],
+                item["content_ref"] = {"source": duplicate[2], "path": duplicate[1],
                                         "content_hash": content_hash}
         compacted.append(item)
+    return compacted
+
+
+TRACE_REFERENCE_PROMPT = """Trace input content may replace an exact duplicate
+public_task or task value with content_ref={source:task,path:task,content_hash:...}.
+Read that value as the complete top-level task in this request. An event's
+content_ref similarly points to complete content in local_execution or submission.
+local_execution.answer may also reference the identical original action_output in
+its trajectory. Read that full value as the original answer when assessing quality.
+All other original inputs, outputs, observations and evidence IDs remain visible;
+references avoid repeated text and do not imply missing evidence."""
+
+
+def compact_local_execution_task(local_execution: dict, task: PublicTask | dict) -> dict:
+    """Reference exact duplicate tasks and answers while retaining complete trace values."""
+    compacted = copy.deepcopy(local_execution)
+    task_data = as_json(task)
+    reference = {"content_ref": {"source": "task", "path": "task", "content_hash": digest(task_data)}}
+    for step in compacted.get("trajectory", []):
+        for message in step.get("model_input_messages", []):
+            content = message.get("content")
+            if message.get("role") != "user" or not isinstance(content, str):
+                continue
+            try:
+                decoded = json.loads(content)
+            except ValueError:
+                continue
+            if not isinstance(decoded, dict):
+                continue
+            changed = False
+            for field in ("public_task", "task"):
+                if decoded.get(field) == task_data:
+                    decoded[field] = copy.deepcopy(reference)
+                    changed = True
+            if changed:
+                message["content"] = json.dumps(decoded, ensure_ascii=False)
+    answer = compacted.get("answer")
+    if isinstance(answer, str) and len(answer) >= 512:
+        for index, step in enumerate(compacted.get("trajectory", [])):
+            if step.get("action_output") == answer:
+                compacted["answer"] = {"content_ref": {
+                    "source": "local_execution",
+                    "path": f"local_execution.trajectory[{index}].action_output",
+                    "content_hash": digest(answer)}}
+                break
     return compacted
 
 
@@ -246,7 +313,11 @@ copy evidence references exactly from evidence_ids. Use only exact evidence IDs 
 supporting_evidence and opposing_evidence: opposing_evidence is a list of evidence IDs,
 not an explanation in prose. Put alternatives, explanations and uncertainty in their
 dedicated text fields. A feedback:<rubric_id> reference is an evidence ID, not a rubric
-ID. Quote verification flags describe whether the quoted text was found verbatim; do not treat unverified quotes as exact observations or change the recorded official score based on this diagnostic.""" + "\n" + SIGNED_SCORE_PROMPT + "\n" + EVIDENCE_QUALITY_PROMPT
+ID. Public ledger source labels such as search-0, web-0 or query-plan are not
+attribution evidence IDs; keep them in source/ledger references and never put them
+in supporting_evidence or opposing_evidence. Quote verification flags describe whether
+the quoted text was found verbatim; do not treat unverified quotes as exact observations
+or change the recorded official score based on this diagnostic.""" + "\n" + SIGNED_SCORE_PROMPT + "\n" + EVIDENCE_QUALITY_PROMPT
 
 LOCAL_ATTRIBUTION_PROMPT = """Analyze your own execution with your complete observable local
 context, the relevant rubric feedback, global questions and upstream/downstream evidence.
@@ -468,6 +539,8 @@ class RubricAttributor(JsonModelCalls):
                    "evidence_ids": [*event_by_id, submission_id,
                                     *["feedback:" + r.rubric_id for r in feedback.rubrics],
                                     "planning:global", "planning:planned", "planning:team"]}
+        context["shared_artifacts"] = _compact_duplicate_event_content(
+            shared, None, submission=context["submission"])
         known_agents = {agent.agent_id for agent in team.agents}
         valid_evidence = set(context["evidence_ids"])
         valid_rubrics = ({r.rubric_id for r in planned_graph.rubrics}
@@ -521,7 +594,7 @@ class RubricAttributor(JsonModelCalls):
                 meta_assignments=outline.rubric_assignments,
                 meta_assignment_rationales=outline.rubric_assignment_rationale)
 
-        outline = self.ask(self.global_model, "attribute_global", OUTLINE_PROMPT + "\n" + COST_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
+        outline = self.ask(self.global_model, "attribute_global", OUTLINE_PROMPT + "\n" + COST_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT + "\n" + TRACE_REFERENCE_PROMPT,
                            context, AttributionOutline, validate=validate_outline)
         self.last_global_outline = outline
         self.last_credit_assignments = build_credit_assignments(planned_graph, team,
@@ -549,7 +622,8 @@ class RubricAttributor(JsonModelCalls):
                        or event.get("recipient") == aid
                        or event.get("agent_id") in agent.depends_on and event.get("kind") in {
                            "artifact", "artifact_created", "artifact_published", "handoff", "message_sent"}]
-            payload = {"task": task, "agent": agent, "local_execution": local_runs[aid],
+            payload = {"task": task, "agent": agent,
+                       "local_execution": compact_local_execution_task(local_runs[aid], task),
                        "credit_assignment": assignment,
                        "assigned_predicted_rubrics": [rubric for rubric in planned_graph.rubrics
                            if rubric.rubric_id in assignment.predicted_rubric_ids],
@@ -571,12 +645,12 @@ class RubricAttributor(JsonModelCalls):
                 if findings.evidence_requests:
                     raise ValueError("Local attribution exceeded its evidence exchange limit")
 
-            findings = self.ask(model, "attribute_local", LOCAL_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
+            findings = self.ask(model, "attribute_local", LOCAL_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT + "\n" + TRACE_REFERENCE_PROMPT,
                                 payload, Findings, agent_id=aid, validate=validate_requests)
             requested = list(dict.fromkeys(findings.evidence_requests))
             if requested:
                 findings = self.ask(model, "attribute_local_followup",
-                                    LOCAL_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
+                                    LOCAL_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT + "\n" + TRACE_REFERENCE_PROMPT,
                                     {**payload, "prior_analysis": findings,
                                      "requested_evidence": _compact_duplicate_event_content(
                                          [event_by_id[eid] for eid in requested], local_runs[aid]),
@@ -592,7 +666,7 @@ class RubricAttributor(JsonModelCalls):
         def validate_final_findings(final):
             _validate_findings(final, phase="attribute_integrate", unique_ids=True)
 
-        final = self.ask(self.global_model, "attribute_integrate", INTEGRATE_PROMPT + "\n" + COST_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT,
+        final = self.ask(self.global_model, "attribute_integrate", INTEGRATE_PROMPT + "\n" + COST_ATTRIBUTION_PROMPT + "\n" + FEEDBACK_IDS_PROMPT + "\n" + TRACE_REFERENCE_PROMPT,
                          {**context, "global_outline": outline,
                           "local_findings": self.last_local_findings}, Findings,
                          validate=validate_final_findings)

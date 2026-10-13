@@ -93,6 +93,8 @@ class MASConfig(Record):
     local_attribution: bool = True
     persistent_experience: bool = True
     evolving_agent_pool: bool = True
+    compose_specialize_updates: bool = Field(default=False,
+        description="Compose a member's selected self-update with its specialization in one transaction")
     # Compatibility with frozen configs that explicitly disabled the removed
     # difficulty-to-roster rule; new runs cannot re-enable that rule.
     adaptive_budget_enforcement: Literal[False] = False

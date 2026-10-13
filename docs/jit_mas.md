@@ -169,6 +169,18 @@ Estimates must fit the remaining shared resources and role response ceilings; th
 create extra call or round caps. Actors receive current resources and their role estimate.
 Observed role costs enter evidence-linked evolution reflection, with unknown usage flagged
 and monetary prices left null. Estimates guide design; actual ledger guards enforce limits.
+`adaptive_budget_enforcement: false` disables only the retired difficulty-to-roster rule;
+live budget context, typed plans and ledger limits remain active. A very large token/call
+allowance can produce no budget-exhaustion events without indicating a disabled mechanism.
+
+`compose_specialize_updates` defaults to `false`, retaining the historical contract that a
+member receives either a direct self-update or a specialization in one decision. Set it to
+`true` when both supported changes should be applied together: selected update IDs, lessons,
+task provenance and evidence are retained; explicit specialization policy changes take
+precedence, while unchanged base fields keep self-update changes. The member version advances
+once. Source, evidence, stale-version, duplicate-operation and removal checks still apply.
+The flag is recorded in integration receipts and the atomic commit body. Changed configurations
+use a new experiment directory, because cached and frozen task receipts bind the configuration.
 
 `execution_mode` defaults to `single_pass`. See the [single-pass executor contract](jit_mas_single_pass.md)
 for its unidirectional architecture and migration boundaries. For `iterative_shared_ledger`,

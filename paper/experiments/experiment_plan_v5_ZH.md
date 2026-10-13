@@ -26,7 +26,7 @@
 
 ## 迁移 TEST 与论文数据
 
-本源 TEST 使用对应来源、对应 run 的 Selected。三个迁移 benchmark 均测试全部 `3 来源 × 3 run`，不在目标上进化或重新选版。Initial、Direct、matched JIT、固定 rubric-MAS 每题各一份静态产物，跨来源和 run 共享。
+本源 TEST 使用对应来源、对应 run 的 Selected。三个迁移 benchmark 均测试全部 `3 来源 × 3 run`，不在目标上进化或重新选版。Initial、Direct、matched JIT、固定 rubric-MAS 每题各一份静态产物，跨来源和 run 共享。：
 
 完整库存为 **360 EVO + 2,160 VAL + 2,751 TEST = 5,271 槽位**；另计 **216 次候选生成**及其成本。任务内允许多次模型调用和协作；统一 token/时间预算、工具权限与并发设置在执行前冻结。静态或已选定状态的 TEST 可按依赖就绪生成，但全部 TEST 产物及失败/缺失统一封存后才评分。
 
