@@ -1,0 +1,62 @@
+schema_version: '1.0'
+backend: native_jit
+execution_mode: iterative_shared_ledger
+unsafe_local: false
+models:
+  meta: &model
+    schema_version: '1.0'
+    model: ${JIT_BENCHMARK_MODEL:-deepseek-v4-flash-vision}
+    endpoint: ${JIT_BENCHMARK_API_BASE}
+    key_env: JIT_BENCHMARK_API_KEY
+    max_tokens: 8192
+    max_inflight_requests: 8
+    timeout: 180.0
+    temperature: 0.0
+    reasoning_effort: none
+    context_window: 131072
+    context_margin: 2048
+    context_policy: oldest_turns
+    http_trust_env: false
+  global: *model
+  local: *model
+  exec:
+    <<: *model
+    max_tokens: 16000
+  judge:
+    <<: *model
+    max_tokens: 24000
+    context_policy: reject
+max_agents: 3
+max_parallel: 8
+max_total_tokens: 2000000
+max_repairs: 2
+candidates: 1
+execution_timeout: 900.0
+task_timeout: 900.0
+max_inflight_requests: 8
+local_planning: true
+planning_response_format: json_schema
+public_refinement: true
+public_refinement_guard: true
+public_revision_mode: full
+public_membership_observations: false
+public_membership_input_format: full
+public_membership_attention_checks: false
+public_construction_validation_retries: 1
+public_refinement_response_format: json_schema_review
+public_positional_construction: true
+public_positional_draft_guidance: true
+public_positional_draft_projection: true
+public_numeric_construction: true
+public_construction_response_format: json_schema
+local_rounds: 1
+local_attribution: true
+persistent_experience: true
+evolving_agent_pool: true
+explicit_rubrics: true
+fixed_team: null
+seed: 0
+available_tools: []
+judge_parallel: 8
+adaptive_budget_enforcement: false
+compose_specialize_updates: true

@@ -1,0 +1,7 @@
+benchmark,condition,metric,score,coverage,tokens,api_calls,failure_rate,notes
+ResearchRubrics,adapted TEST33,compliance,0.8946257079,33/33,5039652,866,0.008083,highest retained adapted receipt
+IFEval,adapted TEST40,prompt_strict_accuracy,0.9750000000,40/40,18427,41,0.000000,highest retained adapted receipt
+IFBench,adapted TEST40,strict_loose_prompt_instruction,1.0000000000,40/40,34348,42,0.000000,highest retained adapted receipt
+WritingBench,formal source TEST,native_normalized_mean,0.8040816327,49/50,15051823,1137,,source receipt did not expose failure rate
+DeepSearchQA,adapted ACT + country subset,P/R/F1,1.0/1.0/1.0,2/2,15469,3,0.000000,adapted subset; not full split
+DeepResearch Bench II,adapted one-task subset,overall,0.8620689655,1/1,30398,3,0.000000,adapted subset; not full split
